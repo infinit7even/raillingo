@@ -1,6 +1,7 @@
 import { redirect, type RequestHandler } from '@sveltejs/kit';
+import { env } from '$env/dynamic/private';
 
-const CLIENT_ID = '1533519975476629564';
+const CLIENT_ID = env.DISCORD_CLIENT_ID || process.env.DISCORD_CLIENT_ID || '1533519975476629564';
 
 export const GET: RequestHandler = async ({ url }) => {
 	const redirectUri = `${url.origin}/api/auth/callback`;
