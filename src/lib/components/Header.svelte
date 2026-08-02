@@ -234,6 +234,12 @@
 		height: 18px;
 	}
 
+	@media (min-width: 1024px) {
+		.app-header {
+			display: none;
+		}
+	}
+
 	@media (max-width: 640px) {
 		.app-subtitle, .theme-name-text {
 			display: none;

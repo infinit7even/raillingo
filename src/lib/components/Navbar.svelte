@@ -2,11 +2,11 @@
 	import { page } from '$app/state';
 
 	const primaryNavItems = [
-		{ href: '/', label: 'Home', emoji: '🏠', activeColor: '#ffc800' },
-		{ href: '/ripasso', label: 'Ripasso', emoji: '👄', activeColor: '#ff4b4b' },
-		{ href: '/quiz', label: 'Esercizi', emoji: '🏋️', activeColor: '#1cb0f6' },
-		{ href: '/reels', label: 'Reels', emoji: '🎬', activeColor: '#ce82ff' },
-		{ href: '/wiki', label: 'Indice', emoji: '🏆', activeColor: '#ff9600' }
+		{ href: '/', label: 'IMPARA', emoji: '🏠', activeColor: '#ffc800' },
+		{ href: '/ripasso', label: 'RIPASSO', emoji: '👄', activeColor: '#ff4b4b' },
+		{ href: '/quiz', label: 'CLASSIFICHE', emoji: '🛡️', activeColor: '#1cb0f6' },
+		{ href: '/reels', label: 'MISSIONI', emoji: '📦', activeColor: '#ce82ff' },
+		{ href: '/wiki', label: 'WIKI', emoji: '📚', activeColor: '#ff9600' }
 	];
 
 	const moreNavItems = [
@@ -23,7 +23,15 @@
 	);
 </script>
 
-<nav class="bottom-nav">
+<nav class="duo-navigation">
+	<!-- Desktop Sidebar Header Brand (Hidden on Mobile) -->
+	<div class="sidebar-brand">
+		<a href="/" class="brand-link">
+			<span class="brand-icon">🇮🇹</span>
+			<span class="brand-title">duofocus</span>
+		</a>
+	</div>
+
 	<div class="nav-container">
 		{#each primaryNavItems as item}
 			{@const isActive = page.url.pathname === item.href}
@@ -50,7 +58,7 @@
 				<div class="icon-wrapper" class:active-outline={isMoreActive || showMoreMenu}>
 					<span class="nav-emoji">💬</span>
 				</div>
-				<span class="nav-label">Altro</span>
+				<span class="nav-label">MOSTRA ALTRO</span>
 			</button>
 
 			<!-- Popover Drawer for More Options -->
@@ -84,7 +92,11 @@
 </nav>
 
 <style>
-	.bottom-nav {
+	.sidebar-brand {
+		display: none;
+	}
+
+	.duo-navigation {
 		position: fixed;
 		bottom: 0;
 		left: 0;
@@ -158,7 +170,7 @@
 		font-family: 'Outfit', sans-serif;
 		font-weight: 800;
 		font-size: 0.72rem;
-		letter-spacing: 0.02em;
+		letter-spacing: 0.04em;
 	}
 
 	.more-menu-wrapper {
@@ -256,34 +268,94 @@
 		color: var(--text-muted);
 	}
 
-	@media (min-width: 768px) {
-		.bottom-nav {
-			top: 57px;
-			bottom: auto;
+	/* 🖥️ Desktop Sidebar Navigation (>= 1024px) */
+	@media (min-width: 1024px) {
+		.duo-navigation {
+			top: 0;
+			bottom: 0;
+			right: auto;
+			width: 240px;
 			border-top: none;
-			border-bottom: 2px solid var(--border-color);
-			padding: 0.25rem 1rem;
+			border-right: 2px solid var(--border-color);
+			padding: 1.5rem 1rem;
+			display: flex;
+			flex-direction: column;
+			gap: 2rem;
+			box-shadow: none;
 		}
+
+		.sidebar-brand {
+			display: block;
+			padding: 0.5rem 0.5rem 0 0.5rem;
+		}
+
+		.brand-link {
+			display: flex;
+			align-items: center;
+			gap: 0.6rem;
+			text-decoration: none;
+		}
+
+		.brand-icon {
+			font-size: 1.8rem;
+		}
+
+		.brand-title {
+			font-family: 'Outfit', sans-serif;
+			font-size: 1.8rem;
+			font-weight: 900;
+			color: var(--green-color);
+			letter-spacing: -0.04em;
+		}
+
 		.nav-container {
-			max-width: 900px;
+			flex-direction: column;
+			max-width: none;
+			width: 100%;
+			gap: 0.5rem;
+			align-items: stretch;
 		}
+
 		.nav-item {
 			flex-direction: row;
-			gap: 0.5rem;
-			font-size: 0.85rem;
+			align-items: center;
+			gap: 1rem;
 			max-width: none;
-			padding: 0.4rem 0.85rem;
+			width: 100%;
+			padding: 0.75rem 1rem;
+			border-radius: 16px;
+			border: 2px solid transparent;
+			text-align: left;
+			font-size: 0.85rem;
 		}
+
+		.nav-item.active {
+			border-color: var(--accent-color);
+			background-color: var(--accent-light-bg);
+		}
+
 		.icon-wrapper {
-			width: 34px;
-			height: 34px;
+			width: 32px;
+			height: 32px;
+			background: none !important;
+			border: none !important;
+			transform: none !important;
 		}
+
 		.nav-emoji {
-			font-size: 1.15rem;
+			font-size: 1.3rem;
 		}
+
+		.more-menu-wrapper {
+			max-width: none;
+			width: 100%;
+		}
+
 		.more-popover {
 			bottom: auto;
-			top: calc(100% + 8px);
+			top: 0;
+			left: calc(100% + 12px);
+			right: auto;
 		}
 	}
 
@@ -292,4 +364,5 @@
 		to { opacity: 1; transform: translateY(0); }
 	}
 </style>
+
 

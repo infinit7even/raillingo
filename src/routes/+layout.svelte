@@ -90,14 +90,19 @@
 	.main-content {
 		flex: 1;
 		width: 100%;
-		max-width: 1200px;
+		max-width: 1350px;
 		margin: 0 auto;
-		padding: 1.25rem 1rem 6rem 1rem;
+		padding: 1rem 1rem 6rem 1rem;
+		box-sizing: border-box;
 	}
 
-	@media (min-width: 768px) {
+	@media (min-width: 1024px) {
+		.layout-wrapper {
+			padding-left: 240px;
+		}
+
 		.main-content {
-			padding: 4rem 1.5rem 2rem 1.5rem;
+			padding: 1.5rem 2rem 3rem 2rem;
 		}
 	}
 </style>
