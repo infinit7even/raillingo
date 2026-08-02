@@ -19,7 +19,16 @@
 		<a href="/" class="brand-link">
 			<img src="/emoji/triangular_flag_3d.png" alt="Bandiera" class="brand-emoji" />
 			<span class="brand-title">
-				Rai<span class="ll-track-box">l<img src="/emoji/railway_track_3d.png" alt="Binario" class="brand-track-img" />l</span>ingo
+				Rai<svg class="ll-track-svg" viewBox="0 0 24 32" fill="currentColor" aria-hidden="true">
+					<!-- Left Rail ('l') -->
+					<rect x="2.5" y="2" width="4.5" height="28" rx="2.25" />
+					<!-- Right Rail ('l') -->
+					<rect x="17" y="2" width="4.5" height="28" rx="2.25" />
+					<!-- Horizontal Track Ties (Traverse) -->
+					<rect x="5.5" y="7" width="13" height="3" rx="1" opacity="0.8" />
+					<rect x="5.5" y="14.5" width="13" height="3" rx="1" opacity="0.8" />
+					<rect x="5.5" y="22" width="13" height="3" rx="1" opacity="0.8" />
+				</svg>ingo
 			</span>
 		</a>
 	</div>
@@ -183,18 +192,12 @@
 			align-items: center;
 		}
 
-		.ll-track-box {
-			display: inline-flex;
-			align-items: center;
-			justify-content: center;
-			position: relative;
-		}
-
-		.brand-track-img {
-			width: 0.75em;
-			height: 0.75em;
-			object-fit: contain;
-			margin: 0 -0.08em;
+		.ll-track-svg {
+			height: 0.85em;
+			width: auto;
+			margin: 0 -0.03em;
+			color: var(--green-color);
+			vertical-align: middle;
 		}
 
 		.nav-container {
