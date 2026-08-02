@@ -67,7 +67,7 @@
 	<!-- Wiki Header -->
 	<div class="wiki-header">
 		<div class="header-badge">Dizionario Ferroviario</div>
-		<h1 class="wiki-title">Wiki & Indice Alfabetico</h1>
+		<h1 class="wiki-title">Wiki</h1>
 		<p class="wiki-subtitle">
 			Consultazione rapida di tutti gli acronimi in ordine alfabetico e ricerca globale nell'intero corso.
 		</p>
