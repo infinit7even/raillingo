@@ -54,7 +54,17 @@ export async function initDb() {
 				ON CONFLICT (user_id) DO NOTHING;
 			`);
 
-			// 3. Seed cards from static/data/cards.json if table is empty
+			// 3. Create Announcements Table
+			await client.query(`
+				CREATE TABLE IF NOT EXISTS announcements (
+					id SERIAL PRIMARY KEY,
+					content TEXT NOT NULL,
+					author TEXT DEFAULT 'Amministrazione',
+					updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+				);
+			`);
+
+			// 4. Seed default cards from static/data/cards.json if table is empty
 			const cardsCountRes = await client.query('SELECT COUNT(*) FROM cards');
 			const count = parseInt(cardsCountRes.rows[0].count, 10);
 
@@ -88,6 +98,32 @@ export async function initDb() {
 		}
 	} catch (err) {
 		console.warn('PostgreSQL Database connection or initialization note:', err);
+	}
+}
+
+export async function getDbAnnouncement() {
+	await initDb();
+	try {
+		const res = await pool.query('SELECT * FROM announcements ORDER BY id DESC LIMIT 1');
+		if (res.rows.length > 0) {
+			return res.rows[0].content;
+		}
+	} catch (e) {
+		// Fallback
+	}
+	return '';
+}
+
+export async function setDbAnnouncement(content: string, author = 'Amministrazione') {
+	await initDb();
+	try {
+		await pool.query('INSERT INTO announcements (content, author, updated_at) VALUES ($1, $2, NOW())', [
+			content,
+			author
+		]);
+		return true;
+	} catch (e) {
+		return false;
 	}
 }
 

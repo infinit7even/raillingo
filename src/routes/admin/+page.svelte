@@ -21,11 +21,34 @@
 	let uploading = $state(false);
 
 	let searchQuery = $state('');
+	let announcementText = $state('');
+	let announcementSaved = $state(false);
 
 	onMount(() => {
 		const unsubscribe = cardsStore.subscribe((c) => (cards = c));
+		fetch('/api/announcements')
+			.then((res) => res.json())
+			.then((d) => {
+				if (d.announcement) announcementText = d.announcement;
+			})
+			.catch(() => {});
 		return unsubscribe;
 	});
+
+	async function handleSaveAnnouncement(e: Event) {
+		e.preventDefault();
+		try {
+			const res = await fetch('/api/announcements', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ content: announcementText })
+			});
+			if (res.ok) {
+				announcementSaved = true;
+				setTimeout(() => (announcementSaved = false), 3000);
+			}
+		} catch (err) {}
+	}
 
 	function resetForm() {
 		editingCardId = null;
@@ -195,6 +218,33 @@
 					</a>
 				</div>
 			</div>
+
+			<!-- Platform Announcement Form -->
+			<form class="announcement-card duo-card" onsubmit={handleSaveAnnouncement}>
+				<h2 class="form-title">📢 Annuncio di Piattaforma (Visibile in Home)</h2>
+				<p class="form-desc">Scrivi un annuncio o messaggio per tutti gli utenti da mostrare nell'intestazione della Home.</p>
+
+				{#if announcementSaved}
+					<div class="save-success-banner">
+						✓ Annuncio salvato e pubblicato in Home!
+					</div>
+				{/if}
+
+				<div class="form-group">
+					<textarea
+						bind:value={announcementText}
+						placeholder="Scrivi qui l'annuncio dell'amministratore (es: Nuovi acronimi caricati nel DB!)..."
+						rows="2"
+						class="duo-input form-textarea"
+					></textarea>
+				</div>
+
+				<div class="form-actions">
+					<button type="submit" class="duo-btn duo-btn-purple save-btn">
+						📢 PUBBLICA ANNUNCIO IN HOME
+					</button>
+				</div>
+			</form>
 
 			<!-- Card Editor Form -->
 			<form class="editor-card duo-card" onsubmit={handleSaveCard}>

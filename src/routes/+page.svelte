@@ -2,9 +2,14 @@
 	import { onMount } from 'svelte';
 	import { cardsStore } from '$lib/stores/cardsStore';
 	import { statsStore, type StatsData } from '$lib/stores/statsStore';
+	import WikiSearchModal from '$lib/components/WikiSearchModal.svelte';
 	import type { Card } from '$lib/types/cards';
 
 	let cards = $state<Card[]>([]);
+	let isWikiModalOpen = $state(false);
+	let announcement = $state('');
+	let user = $state<any>(null);
+
 	let stats = $state<StatsData>({
 		cardsStudied: 0,
 		quizAnswered: 0,
@@ -22,6 +27,19 @@
 			cards = c;
 		});
 		const unstats = statsStore.subscribe((s) => (stats = s));
+
+		fetch('/api/announcements')
+			.then((res) => res.json())
+			.then((data) => {
+				if (data.announcement) announcement = data.announcement;
+			})
+			.catch(() => {});
+
+		// Check user session
+		fetch('/login')
+			.then(() => {})
+			.catch(() => {});
+
 		return () => {
 			uncards();
 			unstats();
@@ -59,16 +77,23 @@
 <div class="duo-page-grid">
 	<!-- 📍 MAIN CENTRAL COLUMN (Path & Chapter Banner) -->
 	<div class="duo-main-column">
-		<!-- Green Section Header Banner -->
+		<!-- Green Section Header Banner with Announcement / Clean Title -->
 		<section class="duo-green-banner">
 			<div class="banner-text">
-				<span class="banner-chap">← BENVENUTO SU RAILLINGO</span>
-				<h1 class="banner-heading">Percorso Didattico Acronimi Ferroviari RFI</h1>
+				<span class="banner-chap">CORSO FERROVIARIO RFI</span>
+				<h1 class="banner-heading">
+					{announcement ? announcement : 'Acronimi e Termini Tecnici'}
+				</h1>
 			</div>
-			<a href="/wiki" class="duo-btn duo-btn-guide">
-				<img src="/emoji/books_3d.png" alt="Wiki" class="btn-emoji" />
-				RICERCA RAPIDA WIKI
-			</a>
+			<!-- Sleek Lens Search Button for Instant Wiki Modal -->
+			<button
+				class="duo-btn duo-btn-guide lens-btn"
+				onclick={() => (isWikiModalOpen = true)}
+				aria-label="Ricerca Rapida Wiki"
+				title="Ricerca Rapida Wiki"
+			>
+				🔍
+			</button>
 		</section>
 
 		<!-- Winding 3D Lesson Path with Owl Mascot & Section Names -->
@@ -183,15 +208,18 @@
 			</div>
 		</div>
 
-		<!-- Widget Login / Profilo (Links to /admin Login Screen) -->
+		<!-- Widget Login / Profilo (Links to /login, and shows Admin Panel button for Admin) -->
 		<div class="duo-widget duo-card profile-widget">
-			<h3 class="widget-title">Crea un profilo per salvare i tuoi progressi!</h3>
+			<h3 class="widget-title">Pannello Utente & Profilo</h3>
 			<div class="profile-actions">
-				<a href="/admin" class="duo-btn duo-btn-green flex-btn">
-					ACCEDI AL PROFILO / LOGIN
+				<a href="/admin" class="duo-btn duo-btn-purple flex-btn">
+					⚙️ PANNELLO GESTIONE ADMIN
 				</a>
-				<a href="/ripasso" class="duo-btn duo-btn-blue flex-btn">
+				<a href="/ripasso" class="duo-btn duo-btn-green flex-btn">
 					INIZIA LEZIONE
+				</a>
+				<a href="/login" class="duo-btn duo-btn-gray flex-btn">
+					ACCEDI AL PROFILO / LOGIN
 				</a>
 			</div>
 		</div>
@@ -202,6 +230,13 @@
 		</div>
 	</aside>
 </div>
+
+<!-- Interactive Instant Wiki Search Modal -->
+<WikiSearchModal
+	isOpen={isWikiModalOpen}
+	cards={cards}
+	onClose={() => (isWikiModalOpen = false)}
+/>
 
 <style>
 	.duo-page-grid {
@@ -261,18 +296,14 @@
 		color: #ffffff !important;
 		border-color: rgba(255, 255, 255, 0.3) !important;
 		border-bottom-color: rgba(255, 255, 255, 0.5) !important;
-		font-size: 0.85rem;
-		padding: 0.65rem 1.1rem;
+		font-size: 1.1rem;
+		padding: 0.5rem 0.85rem;
 		flex-shrink: 0;
 		display: inline-flex;
 		align-items: center;
-		gap: 0.4rem;
-	}
-
-	.btn-emoji {
-		width: 20px;
-		height: 20px;
-		object-fit: contain;
+		justify-content: center;
+		border-radius: 14px;
+		cursor: pointer;
 	}
 
 	/* 📍 Serpeggiante Node Path */
