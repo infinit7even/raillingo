@@ -2,157 +2,141 @@
 	import { onMount } from 'svelte';
 	import { cardsStore } from '$lib/stores/cardsStore';
 	import { statsStore } from '$lib/stores/statsStore';
+	import { tts } from '$lib/utils/tts';
 	import type { Card } from '$lib/types/cards';
 
 	let cards = $state<Card[]>([]);
-	let revealedMap = $state<Record<string, boolean>>({});
-	let quizMap = $state<Record<string, { options: string[]; selected: string | null; isCorrect: boolean | null }>>({});
+	let flippedMap = $state<Record<string, boolean>>({});
+	let imageIndexMap = $state<Record<string, number>>({});
 
 	onMount(() => {
-		const unsubscribe = cardsStore.subscribe((c) => {
-			cards = c;
-			initQuizMap(c);
-		});
+		const unsubscribe = cardsStore.subscribe((c) => (cards = c));
 		return unsubscribe;
 	});
 
-	function initQuizMap(cardList: Card[]) {
-		const map: Record<string, { options: string[]; selected: string | null; isCorrect: boolean | null }> = {};
-		for (const card of cardList) {
-			const distractors = cardList
-				.filter((c) => c.id !== card.id)
-				.map((c) => c.description)
-				.sort(() => 0.5 - Math.random())
-				.slice(0, 2);
-
-			const allOpts = [card.description, ...distractors].sort(() => 0.5 - Math.random());
-			map[card.id] = {
-				options: allOpts,
-				selected: null,
-				isCorrect: null
-			};
-		}
-		quizMap = map;
-	}
-
-	function toggleReveal(cardId: string) {
-		revealedMap[cardId] = !revealedMap[cardId];
-		if (revealedMap[cardId]) {
+	function toggleFlip(cardId: string) {
+		flippedMap[cardId] = !flippedMap[cardId];
+		if (flippedMap[cardId]) {
 			statsStore.recordStudySession();
 		}
 	}
 
-	function selectOption(card: Card, optionText: string) {
-		const current = quizMap[card.id];
-		if (!current) return;
+	function speakAudio(e: MouseEvent, card: Card) {
+		e.stopPropagation();
+		const isFlipped = flippedMap[card.id];
+		const text = isFlipped ? `${card.title}. ${card.description}` : card.title;
+		tts.speak(text);
+	}
 
-		const isCorrect = optionText === card.description;
-		quizMap[card.id] = {
-			...current,
-			selected: optionText,
-			isCorrect
-		};
-
-		statsStore.recordQuizAnswer(isCorrect);
+	function nextImage(e: MouseEvent, card: Card) {
+		e.stopPropagation();
+		if (card.images && card.images.length > 0) {
+			const curr = imageIndexMap[card.id] || 0;
+			imageIndexMap[card.id] = (curr + 1) % card.images.length;
+		}
 	}
 </script>
 
 <div class="reels-feed-container">
 	{#if cards.length > 0}
 		{#each cards as card, index}
-			{@const isRevealed = revealedMap[card.id] || false}
-			{@const quizState = quizMap[card.id]}
-			{@const hasImage = card.images && card.images.length > 0}
+			{@const isFlipped = flippedMap[card.id] || false}
+			{@const imgIdx = imageIndexMap[card.id] || 0}
+			{@const hasImages = card.images && card.images.length > 0}
 
 			<div class="reel-slide">
-				<!-- Background Image or Gradient -->
-				<div class="reel-bg-wrapper">
-					{#if hasImage}
-						<img src={card.images![0]} alt={card.title} class="reel-bg-img" />
-						<div class="reel-overlay"></div>
-					{:else}
-						<div class="reel-bg-gradient"></div>
-					{/if}
-				</div>
-
-				<!-- Header Badge & Index -->
+				<!-- Header Index Bar -->
 				<div class="reel-top-bar">
 					<span class="reel-badge">🎬 Reel Ferroviario</span>
-					<span class="reel-index">{index + 1} / {cards.length}</span>
+					
+					<div class="right-top-actions">
+						<button class="audio-btn" onclick={(e) => speakAudio(e, card)}>
+							🔊 Audio
+						</button>
+						<span class="reel-index">{index + 1} / {cards.length}</span>
+					</div>
 				</div>
 
-				<!-- Main Reel Content -->
-				<div class="reel-card-content">
-					<div class="title-section">
-						{#if card.category}
-							<span class="category-tag">{card.category}</span>
-						{/if}
-						<h1 class="card-title">{card.title}</h1>
+				<!-- 3D Flipping Reel Card -->
+				<div
+					class="scene"
+					onclick={() => toggleFlip(card.id)}
+					role="button"
+					tabindex="0"
+					onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && toggleFlip(card.id)}
+				>
+					<div class="card" class:is-flipped={isFlipped}>
+						<!-- FRONT (Acronym / Title) -->
+						<div class="card-face front">
+							<div class="face-overlay"></div>
+							
+							{#if hasImages}
+								<img src={card.images![imgIdx]} alt={card.title} class="bg-card-img" />
+							{/if}
+
+							<div class="front-content">
+								{#if card.category}
+									<span class="category-tag">{card.category}</span>
+								{/if}
+
+								<h1 class="card-title">{card.title}</h1>
+								
+								<div class="tap-flip-hint">
+									<span>👇 Tocca la card per girarla</span>
+									<svg class="flip-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+									</svg>
+								</div>
+							</div>
+						</div>
+
+						<!-- BACK (Description + Photos) -->
+						<div class="card-face back">
+							<div class="back-content">
+								<div class="back-header">
+									<h2 class="card-title-small">{card.title}</h2>
+									<span class="back-badge">Spiegazione</span>
+								</div>
+
+								<div class="description-box">
+									<p>{card.description}</p>
+								</div>
+
+								{#if hasImages}
+									<div class="gallery-section">
+										<img src={card.images![imgIdx]} alt={card.title} class="back-img" />
+										{#if card.images!.length > 1}
+											<button class="next-img-btn" onclick={(e) => nextImage(e, card)}>
+												Foto successiva ({imgIdx + 1}/{card.images!.length})
+											</button>
+										{/if}
+									</div>
+								{/if}
+
+								{#if card.tags && card.tags.length > 0}
+									<div class="tag-row">
+										{#each card.tags as tag}
+											<span class="tag">#{tag}</span>
+										{/each}
+									</div>
+								{/if}
+
+								<div class="tap-flip-hint back-hint">
+									<span>Tocca per girare di nuovo</span>
+								</div>
+							</div>
+						</div>
 					</div>
-
-					<!-- Interactive Section: Tap to Reveal Description OR Quiz -->
-					{#if !isRevealed}
-						<div class="reel-action-box">
-							<p class="prompt-text">🗣️ Di' a voce di che si tratta, oppure scegli l'opzione corretta:</p>
-
-							<!-- Inline Mini Quiz Choices -->
-							{#if quizState}
-								<div class="quiz-choices">
-									{#each quizState.options as opt}
-										{@const isSelected = quizState.selected === opt}
-										{@const isRight = isSelected && quizState.isCorrect}
-										{@const isWrong = isSelected && !quizState.isCorrect}
-
-										<button
-											class="choice-btn"
-											class:right={isRight}
-											class:wrong={isWrong}
-											onclick={() => selectOption(card, opt)}
-										>
-											<span class="choice-text">{opt}</span>
-											{#if isRight}
-												<span class="icon">✓</span>
-											{:else if isWrong}
-												<span class="icon">✗</span>
-											{/if}
-										</button>
-									{/each}
-								</div>
-							{/if}
-
-							<button class="reveal-btn" onclick={() => toggleReveal(card.id)}>
-								👁️ Mostra Spiegazione Completa
-							</button>
-						</div>
-					{:else}
-						<!-- Full Description Box -->
-						<div class="reel-description-box">
-							<span class="box-label">A cosa serve / Descrizione:</span>
-							<p class="desc-text">{card.description}</p>
-
-							{#if card.tags && card.tags.length > 0}
-								<div class="tag-row">
-									{#each card.tags as tag}
-										<span class="tag">#{tag}</span>
-									{/each}
-								</div>
-							{/if}
-
-							<button class="hide-btn" onclick={() => toggleReveal(card.id)}>
-								Nascondi
-							</button>
-						</div>
-					{/if}
 				</div>
 
 				<!-- Scroll Hint Bottom -->
 				<div class="reel-scroll-hint">
-					<span class="swipe-text">Scorri verso l'alto ⬇️</span>
+					<span class="swipe-text">Scorri verso l'alto per la prossima card ⬇️</span>
 				</div>
 			</div>
 		{/each}
 	{:else}
-		<div class="empty-reels">Caricamento Reels Ferroviari...</div>
+		<div class="empty-reels">Caricamento Reels...</div>
 	{/if}
 </div>
 
@@ -163,7 +147,7 @@
 		overflow-y: scroll;
 		scroll-snap-type: y mandatory;
 		border-radius: 28px;
-		background: #000;
+		background: #090d16;
 		position: relative;
 	}
 
@@ -184,48 +168,16 @@
 		display: flex;
 		flex-direction: column;
 		justify-content: space-between;
-		padding: 1.5rem;
+		padding: 1.25rem;
 		box-sizing: border-box;
 		overflow: hidden;
 	}
 
-	.reel-bg-wrapper {
-		position: absolute;
-		top: 0;
-		left: 0;
-		right: 0;
-		bottom: 0;
-		z-index: 0;
-	}
-
-	.reel-bg-img {
-		width: 100%;
-		height: 100%;
-		object-fit: cover;
-		filter: brightness(0.65);
-	}
-
-	.reel-overlay {
-		position: absolute;
-		top: 0;
-		left: 0;
-		right: 0;
-		bottom: 0;
-		background: linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.85) 100%);
-	}
-
-	.reel-bg-gradient {
-		width: 100%;
-		height: 100%;
-		background: linear-gradient(145deg, #0f172a, #1e1b4b);
-	}
-
 	.reel-top-bar {
-		position: relative;
-		z-index: 10;
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
+		z-index: 20;
 	}
 
 	.reel-badge {
@@ -233,10 +185,28 @@
 		border-radius: 9999px;
 		font-size: 0.75rem;
 		font-weight: 800;
-		background: rgba(255, 255, 255, 0.2);
+		background: rgba(255, 255, 255, 0.15);
 		backdrop-filter: blur(10px);
 		color: white;
+		border: 1px solid rgba(255, 255, 255, 0.2);
+	}
+
+	.right-top-actions {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+	}
+
+	.audio-btn {
+		padding: 0.3rem 0.65rem;
+		border-radius: 10px;
+		background: rgba(255, 255, 255, 0.2);
+		backdrop-filter: blur(10px);
 		border: 1px solid rgba(255, 255, 255, 0.3);
+		color: white;
+		font-size: 0.75rem;
+		font-weight: 700;
+		cursor: pointer;
 	}
 
 	.reel-index {
@@ -245,20 +215,77 @@
 		color: rgba(255, 255, 255, 0.8);
 	}
 
-	.reel-card-content {
-		position: relative;
-		z-index: 10;
-		display: flex;
-		flex-direction: column;
-		gap: 1.25rem;
-		margin-bottom: auto;
-		margin-top: auto;
+	/* 3D Scene */
+	.scene {
+		width: 100%;
+		height: calc(100% - 90px);
+		perspective: 1200px;
+		cursor: pointer;
+		margin: auto 0;
 	}
 
-	.title-section {
+	.card {
+		width: 100%;
+		height: 100%;
+		position: relative;
+		transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+		transform-style: preserve-3d;
+	}
+
+	.card.is-flipped {
+		transform: rotateY(180deg);
+	}
+
+	.card-face {
+		position: absolute;
+		width: 100%;
+		height: 100%;
+		backface-visibility: hidden;
+		-webkit-backface-visibility: hidden;
+		border-radius: 24px;
+		border: 1px solid rgba(255, 255, 255, 0.15);
+		box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+		overflow: hidden;
+		box-sizing: border-box;
+	}
+
+	.card-face.front {
+		background: linear-gradient(145deg, #1e293b, #0f172a);
 		display: flex;
 		flex-direction: column;
-		gap: 0.4rem;
+		justify-content: flex-end;
+		padding: 2rem;
+	}
+
+	.bg-card-img {
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		z-index: 0;
+		filter: brightness(0.6);
+	}
+
+	.face-overlay {
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		z-index: 1;
+		background: linear-gradient(180deg, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.85) 100%);
+	}
+
+	.front-content {
+		position: relative;
+		z-index: 2;
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
 	}
 
 	.category-tag {
@@ -266,107 +293,109 @@
 		font-size: 0.75rem;
 		font-weight: 800;
 		text-transform: uppercase;
-		color: var(--accent-color);
-		background: rgba(56, 189, 248, 0.2);
-		padding: 0.2rem 0.6rem;
+		color: #38bdf8;
+		background: rgba(56, 189, 248, 0.25);
+		padding: 0.25rem 0.75rem;
 		border-radius: 8px;
 	}
 
 	.card-title {
-		font-size: 2.8rem;
+		font-size: 3.2rem;
 		font-weight: 900;
 		color: white;
 		margin: 0;
 		line-height: 1.1;
-		text-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+		text-shadow: 0 4px 16px rgba(0, 0, 0, 0.7);
 	}
 
-	.reel-action-box {
-		background: rgba(15, 23, 42, 0.85);
-		backdrop-filter: blur(16px);
-		border: 1px solid rgba(255, 255, 255, 0.15);
-		border-radius: 20px;
-		padding: 1.25rem;
+	.tap-flip-hint {
 		display: flex;
-		flex-direction: column;
-		gap: 0.85rem;
-	}
-
-	.prompt-text {
-		font-size: 0.85rem;
-		color: #cbd5e1;
-		margin: 0;
-	}
-
-	.quiz-choices {
-		display: flex;
-		flex-direction: column;
+		align-items: center;
 		gap: 0.5rem;
+		font-size: 0.85rem;
+		font-weight: 700;
+		color: #cbd5e1;
+		margin-top: 0.5rem;
 	}
 
-	.choice-btn {
-		padding: 0.75rem 1rem;
-		border-radius: 12px;
-		background: rgba(255, 255, 255, 0.08);
-		border: 1px solid rgba(255, 255, 255, 0.15);
-		color: white;
-		font-size: 0.85rem;
-		text-align: left;
-		cursor: pointer;
+	.flip-icon {
+		width: 18px;
+		height: 18px;
+	}
+
+	.card-face.back {
+		transform: rotateY(180deg);
+		background: linear-gradient(145deg, #1e293b, #0f172a);
+		padding: 1.75rem;
+		overflow-y: auto;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.back-content {
+		display: flex;
+		flex-direction: column;
+		gap: 1.2rem;
+		height: 100%;
+		justify-content: space-between;
+	}
+
+	.back-header {
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		transition: all 0.2s ease;
 	}
 
-	.choice-btn.right {
-		background: rgba(34, 197, 94, 0.3);
-		border-color: #22c55e;
-		color: #4ade80;
+	.card-title-small {
+		font-size: 2rem;
+		font-weight: 900;
+		color: #38bdf8;
+		margin: 0;
 	}
 
-	.choice-btn.wrong {
-		background: rgba(239, 68, 68, 0.3);
-		border-color: #ef4444;
-		color: #f87171;
-	}
-
-	.reveal-btn {
-		width: 100%;
-		padding: 0.85rem;
-		border-radius: 14px;
-		background: linear-gradient(135deg, var(--accent-color), #0284c7);
-		color: white;
-		border: none;
-		font-weight: 800;
-		font-size: 0.9rem;
-		cursor: pointer;
-	}
-
-	.reel-description-box {
-		background: rgba(15, 23, 42, 0.9);
-		backdrop-filter: blur(20px);
-		border: 1px solid var(--accent-color);
-		border-radius: 20px;
-		padding: 1.25rem;
-		display: flex;
-		flex-direction: column;
-		gap: 0.75rem;
-		animation: fadeIn 0.3s ease;
-	}
-
-	.box-label {
+	.back-badge {
 		font-size: 0.75rem;
 		font-weight: 800;
 		text-transform: uppercase;
-		color: var(--accent-color);
+		color: #94a3b8;
+		background: rgba(255, 255, 255, 0.1);
+		padding: 0.2rem 0.6rem;
+		border-radius: 6px;
 	}
 
-	.desc-text {
+	.description-box {
+		background: rgba(255, 255, 255, 0.06);
+		border: 1px solid rgba(255, 255, 255, 0.15);
+		border-radius: 16px;
+		padding: 1.25rem;
 		font-size: 1.05rem;
-		line-height: 1.5;
+		line-height: 1.6;
 		color: white;
-		margin: 0;
+	}
+
+	.gallery-section {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+		align-items: center;
+	}
+
+	.back-img {
+		width: 100%;
+		max-height: 180px;
+		object-fit: cover;
+		border-radius: 12px;
+		border: 1px solid rgba(255, 255, 255, 0.2);
+	}
+
+	.next-img-btn {
+		font-size: 0.75rem;
+		padding: 0.35rem 0.75rem;
+		border-radius: 8px;
+		background: rgba(56, 189, 248, 0.2);
+		color: #38bdf8;
+		border: 1px solid rgba(56, 189, 248, 0.4);
+		cursor: pointer;
 	}
 
 	.tag-row {
@@ -377,28 +406,20 @@
 
 	.tag {
 		font-size: 0.75rem;
-		color: #cbd5e1;
-		background: rgba(255, 255, 255, 0.1);
+		color: #94a3b8;
+		background: rgba(255, 255, 255, 0.08);
 		padding: 0.15rem 0.5rem;
 		border-radius: 6px;
 	}
 
-	.hide-btn {
-		align-self: flex-end;
-		background: transparent;
-		border: 1px solid rgba(255, 255, 255, 0.3);
-		color: white;
-		padding: 0.35rem 0.75rem;
-		border-radius: 8px;
-		font-size: 0.8rem;
-		cursor: pointer;
+	.back-hint {
+		justify-content: center;
+		color: #94a3b8;
 	}
 
 	.reel-scroll-hint {
-		position: relative;
-		z-index: 10;
+		z-index: 20;
 		text-align: center;
-		padding-top: 0.5rem;
 	}
 
 	.swipe-text {
@@ -412,11 +433,6 @@
 		color: white;
 		text-align: center;
 		padding: 4rem;
-	}
-
-	@keyframes fadeIn {
-		from { opacity: 0; transform: translateY(8px); }
-		to { opacity: 1; transform: translateY(0); }
 	}
 
 	@keyframes bounce {
