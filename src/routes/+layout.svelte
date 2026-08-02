@@ -15,8 +15,8 @@
 
 	function handleTouchStart(e: TouchEvent) {
 		const target = e.target as HTMLElement;
-		// Don't swipe if typing in input/textarea or inside scrollable reels
-		if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.closest('.reels-feed-container')) {
+		// Don't swipe if typing in input/textarea
+		if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
 			return;
 		}
 		touchStartX = e.touches[0].clientX;

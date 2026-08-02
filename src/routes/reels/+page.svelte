@@ -231,7 +231,7 @@
 	.scene {
 		width: 100%;
 		height: calc(100% - 90px);
-		perspective: 1200px;
+		perspective: 1400px;
 		cursor: pointer;
 		margin: auto 0;
 	}
@@ -240,8 +240,12 @@
 		width: 100%;
 		height: 100%;
 		position: relative;
-		transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+		transition: transform 0.7s cubic-bezier(0.34, 1.56, 0.64, 1);
 		transform-style: preserve-3d;
+	}
+
+	.card:active {
+		transform: scale(0.98);
 	}
 
 	.card.is-flipped {
