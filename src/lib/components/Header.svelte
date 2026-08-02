@@ -256,11 +256,32 @@
 			display: none;
 		}
 		.header-container {
-			padding: 0.5rem 0.75rem;
+			padding: 0.45rem 0.65rem;
+		}
+		.flag-img {
+			width: 24px;
+			height: 24px;
+		}
+		.app-title {
+			font-size: 1.1rem;
+		}
+		.duo-top-stats {
+			gap: 0.35rem;
 		}
 		.stat-pill {
-			padding: 0.25rem 0.45rem;
-			font-size: 0.8rem;
+			padding: 0.2rem 0.4rem;
+			font-size: 0.78rem;
+			gap: 0.25rem;
+		}
+		.pill-emoji {
+			width: 18px;
+			height: 18px;
+		}
+		.pill-label {
+			display: none;
+		}
+		.duo-header-btn {
+			padding: 0.35rem 0.5rem;
 		}
 	}
 </style>

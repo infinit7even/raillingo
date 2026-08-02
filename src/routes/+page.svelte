@@ -679,4 +679,50 @@
 		0%, 100% { transform: translateY(0); }
 		50% { transform: translateY(-8px); }
 	}
+
+	@media (max-width: 640px) {
+		.duo-green-banner {
+			padding: 1rem 1.15rem;
+			border-radius: 18px;
+		}
+
+		.banner-heading {
+			font-size: 1.35rem;
+		}
+
+		.duo-path-section {
+			padding: 2rem 0;
+		}
+
+		.nodes-container {
+			max-width: 320px;
+			gap: 1.8rem;
+		}
+
+		.duo-mascot-box {
+			right: -25px;
+			top: 110px;
+		}
+
+		.mascot-img {
+			width: 64px;
+			height: 64px;
+		}
+
+		.path-node-btn {
+			width: 60px;
+			height: 60px;
+			border-bottom-width: 5px;
+		}
+
+		.node-emoji-img {
+			width: 30px;
+			height: 30px;
+		}
+
+		.path-node-label {
+			font-size: 0.7rem;
+			padding: 0.15rem 0.4rem;
+		}
+	}
 </style>
