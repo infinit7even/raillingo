@@ -22,7 +22,6 @@
 		const uncards = cardsStore.subscribe((c) => {
 			cards = c;
 			if (c.length > 0 && !dailyCard) {
-				// Pick a deterministic card of the day based on date
 				const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / (1000 * 60 * 60 * 24));
 				dailyCard = c[dayOfYear % c.length];
 			}
@@ -57,7 +56,8 @@
 			desc: 'Vedi il titolo, ripeti a voce la risposta e tocca per rivelare la descrizione e le foto.',
 			href: '/ripasso',
 			icon: '📖',
-			color: 'linear-gradient(135deg, #0284c7, #38bdf8)'
+			btnColor: 'duo-btn-blue',
+			btnText: 'INIZIA RIPASSO'
 		},
 		{
 			id: 'ripasso-foto',
@@ -66,7 +66,8 @@
 			desc: 'Guarda l\'immagine, scopri prima il titolo e con un secondo click la descrizione.',
 			href: '/ripasso-foto',
 			icon: '📷',
-			color: 'linear-gradient(135deg, #7c3aed, #a855f7)'
+			btnColor: 'duo-btn-purple',
+			btnText: 'SCOPRI FOTO'
 		},
 		{
 			id: 'ripasso-inverso',
@@ -75,7 +76,8 @@
 			desc: 'Leggi la spiegazione e indovina qual è l\'acronimo o termine corrispondente.',
 			href: '/ripasso-inverso',
 			icon: '🔄',
-			color: 'linear-gradient(135deg, #059669, #34d399)'
+			btnColor: 'duo-btn-green',
+			btnText: 'SFIDA INVERSA'
 		},
 		{
 			id: 'quiz',
@@ -84,7 +86,8 @@
 			desc: 'Scegli l\'opzione corretta fra 5 alternative. Tentativi infiniti disponibili!',
 			href: '/quiz',
 			icon: '🎯',
-			color: 'linear-gradient(135deg, #d97706, #fbbf24)'
+			btnColor: 'duo-btn-orange',
+			btnText: 'FAIR QUIZ'
 		},
 		{
 			id: 'scrittura',
@@ -93,7 +96,8 @@
 			desc: 'Scrivi a mano le risposte per fissare meglio la memoria visiva e la grafia.',
 			href: '/scrittura',
 			icon: '✍️',
-			color: 'linear-gradient(135deg, #e11d48, #fb7185)'
+			btnColor: 'duo-btn-blue',
+			btnText: 'PRATICA SCRITTURA'
 		},
 		{
 			id: 'reels',
@@ -102,7 +106,8 @@
 			desc: 'Scorri in verticale scheda per scheda, rispondi ai quiz al volo e scopri la risposta.',
 			href: '/reels',
 			icon: '🎬',
-			color: 'linear-gradient(135deg, #8b5cf6, #ec4899)'
+			btnColor: 'duo-btn-purple',
+			btnText: 'APRI REELS'
 		},
 		{
 			id: 'wiki',
@@ -111,101 +116,126 @@
 			desc: 'Elenco completo di tutti gli acronimi in ordine alfabetico e ricerca globale.',
 			href: '/wiki',
 			icon: '📚',
-			color: 'linear-gradient(135deg, #06b6d4, #3b82f6)'
+			btnColor: 'duo-btn-gray',
+			btnText: 'SFOGLIA WIKI'
 		}
 	];
+
+	let totalXP = $derived(stats.quizCorrect * 15 + stats.cardsStudied * 5);
+	let gems = $derived(stats.cardsStudied * 10 + 100);
 </script>
 
 <div class="dashboard-container">
-	<!-- Gamified Hero Header -->
-	<section class="hero-section">
-		<div class="hero-header-row">
-			<div class="streak-badge">
-				🔥 <span class="streak-count">{stats.streakDays}</span> Giorni di Serie
-			</div>
-			<div class="hero-badge">Corso Ferroviario RFI</div>
+	<!-- Duolingo Section Header Banner (Screenshot 1) -->
+	<section class="duo-chapter-banner">
+		<div class="banner-content">
+			<span class="banner-subtitle">SEZIONE 1, CAPITOLO 1</span>
+			<h1 class="banner-title">Acronimi e Normativa Ferroviaria RFI</h1>
+			<p class="banner-desc">Impariamo i termini, i segnali e la trazione con gli esercizi tattili Duolingo</p>
 		</div>
+		<a href="/ripasso" class="duo-btn duo-btn-blue banner-action-btn">
+			🚀 INIZIA LEZIONE
+		</a>
+	</section>
 
-		<div class="hero-content">
-			<h1 class="hero-title">RF - Rail Focus</h1>
-			<p class="hero-desc">
-				Impara e memorizza ogni acronimo del corso ferroviario con minigiochi, quiz e visualizzazioni interattive.
-			</p>
-			
-			<div class="hero-actions">
-				<a href="/ripasso" class="primary-btn">
-					🚀 Inizia Ripasso Rapido
-				</a>
-				<a href="/reels" class="secondary-btn">
-					🎬 Apri Reels Ferroviari
-				</a>
+	<!-- Duolingo Panoramica Profile Card (Screenshot 4) -->
+	<section class="duo-panoramica-card duo-card">
+		<h2 class="panoramica-title">Panoramica dello Studio</h2>
+		<div class="panoramica-grid">
+			<div class="panoramica-item">
+				<div class="item-icon-box streak-bg">🔥</div>
+				<div class="item-text">
+					<span class="item-val">{stats.streakDays}</span>
+					<span class="item-lbl">Giorni di slancio</span>
+				</div>
 			</div>
-		</div>
 
-		<!-- Quick Stats Banner -->
-		<div class="stats-banner">
-			<div class="stat-item">
-				<span class="stat-value">{cards.length}</span>
-				<span class="stat-label">Schede nel DB</span>
+			<div class="panoramica-item">
+				<div class="item-icon-box xp-bg">⚡</div>
+				<div class="item-text">
+					<span class="item-val">{totalXP}</span>
+					<span class="item-lbl">Totale XP</span>
+				</div>
 			</div>
-			<div class="stat-divider"></div>
-			<div class="stat-item">
-				<span class="stat-value">{stats.cardsStudied}</span>
-				<span class="stat-label">Ripassi Effettuati</span>
+
+			<div class="panoramica-item">
+				<div class="item-icon-box gem-bg">💎</div>
+				<div class="item-text">
+					<span class="item-val">{gems}</span>
+					<span class="item-lbl">Gemme Ferroviarie</span>
+				</div>
 			</div>
-			<div class="stat-divider"></div>
-			<div class="stat-item">
-				<span class="stat-value">{stats.quizAnswered > 0 ? Math.round((stats.quizCorrect / stats.quizAnswered) * 100) : 0}%</span>
-				<span class="stat-label">Accuratezza Quiz</span>
+
+			<div class="panoramica-item">
+				<div class="item-icon-box accuracy-bg">🎯</div>
+				<div class="item-text">
+					<span class="item-val">{stats.quizAnswered > 0 ? Math.round((stats.quizCorrect / stats.quizAnswered) * 100) : 0}%</span>
+					<span class="item-lbl">Accuratezza Quiz</span>
+				</div>
 			</div>
 		</div>
 	</section>
 
-	<!-- Daily Featured Card Widget -->
+	<!-- Daily Featured Card Widget (Screenshot 2 style) -->
 	{#if dailyCard}
-		<section class="daily-card-widget">
-			<div class="widget-header">
-				<span class="widget-label">⚡ Acronimo del Giorno</span>
-				<span class="widget-cat">{dailyCard.category || 'Generale'}</span>
+		<section class="duo-daily-widget duo-card">
+			<div class="widget-top">
+				<span class="duo-badge">⚡ Acronimo del Giorno</span>
+				<span class="cat-pill">{dailyCard.category || 'Generale'}</span>
 			</div>
 			<div class="widget-body">
-				<h2 class="widget-title">{dailyCard.title}</h2>
-				<p class="widget-desc">{dailyCard.description}</p>
+				<h2 class="widget-term">{dailyCard.title}</h2>
+				<p class="widget-meaning">{dailyCard.description}</p>
 			</div>
+			<a href="/ripasso" class="duo-btn duo-btn-green widget-btn">
+				INIZIA ESERCIZIO
+			</a>
 		</section>
 	{/if}
 
-	<!-- Minigames Selector Grid -->
+	<!-- Minigames Selector Grid (Screenshot 5 style) -->
 	<section class="games-section">
-		<h2 class="section-title">🎮 Scegli la Modalità di Studio</h2>
+		<h2 class="section-heading">🎮 Modalità di Allenamento</h2>
 		<div class="games-grid">
 			{#each minigames as game}
-				<a href={game.href} class="game-card">
-					<div class="game-icon-box" style="background: {game.color}">
-						<span>{game.icon}</span>
+				<div class="duo-game-card duo-card">
+					<div class="card-header-row">
+						<div class="game-emoji-box">
+							<span>{game.icon}</span>
+						</div>
+						<div class="game-titles">
+							<span class="game-subtitle">{game.subtitle}</span>
+							<h3 class="game-title">{game.title}</h3>
+						</div>
 					</div>
-					<div class="game-info">
-						<span class="game-subtitle">{game.subtitle}</span>
-						<h3 class="game-title">{game.title}</h3>
-						<p class="game-desc">{game.desc}</p>
+
+					<p class="game-desc">{game.desc}</p>
+
+					<!-- Progress bar effect -->
+					<div class="duo-progress-track">
+						<div class="duo-progress-fill" style="width: {Math.min(100, Math.max(15, stats.cardsStudied * 8))}%"></div>
 					</div>
-				</a>
+
+					<a href={game.href} class="duo-btn {game.btnColor} game-action-btn">
+						{game.btnText}
+					</a>
+				</div>
 			{/each}
 		</div>
 	</section>
 
 	<!-- Catalog / Search Section -->
 	<section class="catalog-section">
-		<div class="catalog-header">
-			<h2 class="section-title">📚 Consultazione Rapida ({filteredCards.length})</h2>
-			<div class="search-bar">
+		<div class="catalog-header-row">
+			<h2 class="section-heading">📚 Dizionario Rapido ({filteredCards.length})</h2>
+			<div class="search-controls">
 				<input
 					type="text"
 					bind:value={searchQuery}
 					placeholder="Cerca acronimo o parola chiave..."
-					class="search-input"
+					class="duo-input search-input"
 				/>
-				<select bind:value={selectedCategory} class="category-select">
+				<select bind:value={selectedCategory} class="duo-input category-select">
 					<option value="all">Tutte le Categorie</option>
 					{#each categories as cat}
 						<option value={cat}>{cat}</option>
@@ -216,20 +246,20 @@
 
 		<div class="cards-grid">
 			{#each filteredCards as card}
-				<div class="item-card">
-					<div class="item-header">
-						<h3 class="item-title">{card.title}</h3>
+				<div class="duo-card catalog-card">
+					<div class="card-top">
+						<h3 class="card-term">{card.title}</h3>
 						{#if card.category}
-							<span class="item-cat">{card.category}</span>
+							<span class="duo-badge">{card.category}</span>
 						{/if}
 					</div>
-					<p class="item-desc">{card.description}</p>
+					<p class="card-meaning">{card.description}</p>
 					{#if card.images && card.images.length > 0}
-						<div class="has-photo-badge">📷 {card.images.length} foto</div>
+						<div class="photo-indicator">📷 {card.images.length} immagini allegate</div>
 					{/if}
 				</div>
 			{:else}
-				<div class="empty-state">
+				<div class="duo-card empty-state">
 					Nessun acronimo trovato con i filtri correnti.
 				</div>
 			{/each}
@@ -241,194 +271,191 @@
 	.dashboard-container {
 		display: flex;
 		flex-direction: column;
-		gap: 2.5rem;
-	}
-
-	.hero-section {
-		background: linear-gradient(145deg, var(--card-bg), var(--card-bg-subtle));
-		border: 1px solid var(--border-color);
-		border-radius: 32px;
-		padding: 2.5rem 2rem;
-		box-shadow: 0 16px 40px var(--shadow-color);
-		display: flex;
-		flex-direction: column;
 		gap: 2rem;
-		position: relative;
-		overflow: hidden;
 	}
 
-	.hero-header-row {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		flex-wrap: wrap;
-		gap: 0.75rem;
-	}
-
-	.streak-badge {
-		background: rgba(245, 158, 11, 0.15);
-		border: 1px solid rgba(245, 158, 11, 0.3);
-		color: #f59e0b;
-		padding: 0.35rem 0.85rem;
-		border-radius: 9999px;
-		font-weight: 800;
-		font-size: 0.8rem;
-	}
-
-	.hero-badge {
-		padding: 0.35rem 0.85rem;
-		border-radius: 9999px;
-		font-size: 0.75rem;
-		font-weight: 800;
-		text-transform: uppercase;
-		background: var(--accent-light-bg);
-		color: var(--accent-color);
-		border: 1px solid var(--border-color);
-	}
-
-	.hero-content {
-		max-width: 650px;
-		display: flex;
-		flex-direction: column;
-		gap: 1.2rem;
-	}
-
-	.hero-title {
-		font-size: 3.2rem;
-		font-weight: 900;
-		letter-spacing: -0.03em;
-		background: linear-gradient(135deg, var(--text-color), var(--accent-color));
-		background-clip: text;
-		-webkit-background-clip: text;
-		-webkit-text-fill-color: transparent;
-		line-height: 1.1;
-	}
-
-	.hero-desc {
-		font-size: 1.15rem;
-		line-height: 1.6;
-		color: var(--text-muted);
-	}
-
-	.hero-actions {
-		display: flex;
-		gap: 1rem;
-		flex-wrap: wrap;
-		margin-top: 0.5rem;
-	}
-
-	.primary-btn, .secondary-btn {
-		display: inline-flex;
-		align-items: center;
-		padding: 1rem 1.75rem;
-		border-radius: 18px;
-		font-weight: 800;
-		font-size: 1.05rem;
-		text-decoration: none;
-		transition: transform 0.2s ease, box-shadow 0.2s ease;
-	}
-
-	.primary-btn {
-		background: linear-gradient(135deg, var(--accent-color), #0284c7);
-		color: white;
-		box-shadow: 0 6px 20px rgba(2, 132, 199, 0.4);
-	}
-
-	.secondary-btn {
-		background: var(--card-bg-subtle);
-		color: var(--text-color);
-		border: 1px solid var(--border-color);
-	}
-
-	.primary-btn:hover, .secondary-btn:hover {
-		transform: translateY(-2px);
-	}
-
-	.stats-banner {
-		display: flex;
-		align-items: center;
-		justify-content: space-around;
-		background: var(--bg-color);
-		padding: 1.25rem 1.5rem;
-		border-radius: 22px;
-		border: 1px solid var(--border-color);
-	}
-
-	.stat-item {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-	}
-
-	.stat-value {
-		font-size: 1.75rem;
-		font-weight: 900;
-		color: var(--accent-color);
-	}
-
-	.stat-label {
-		font-size: 0.8rem;
-		font-weight: 700;
-		color: var(--text-muted);
-	}
-
-	.stat-divider {
-		width: 1px;
-		height: 36px;
-		background-color: var(--border-color);
-	}
-
-	/* Daily Card Widget */
-	.daily-card-widget {
-		background: linear-gradient(135deg, var(--accent-light-bg), var(--card-bg));
-		border: 1px solid var(--accent-color);
+	/* Duolingo Section Header Banner (Screenshot 1) */
+	.duo-chapter-banner {
+		background: #1cb0f6;
+		border: 2px solid #1899d6;
+		border-bottom: 5px solid #1899d6;
 		border-radius: 24px;
-		padding: 1.5rem;
+		padding: 1.75rem 1.5rem;
+		color: #ffffff;
 		display: flex;
 		flex-direction: column;
-		gap: 0.75rem;
+		gap: 1.25rem;
+		box-shadow: 0 8px 24px rgba(28, 176, 246, 0.25);
 	}
 
-	.widget-header {
+	@media (min-width: 640px) {
+		.duo-chapter-banner {
+			flex-direction: row;
+			align-items: center;
+			justify-content: space-between;
+			padding: 2rem 2.25rem;
+		}
+	}
+
+	.banner-content {
 		display: flex;
-		justify-content: space-between;
-		align-items: center;
+		flex-direction: column;
+		gap: 0.4rem;
 	}
 
-	.widget-label {
+	.banner-subtitle {
 		font-size: 0.75rem;
-		font-weight: 800;
+		font-weight: 900;
+		letter-spacing: 0.08em;
 		text-transform: uppercase;
-		color: var(--accent-color);
+		opacity: 0.9;
 	}
 
-	.widget-cat {
-		font-size: 0.7rem;
-		font-weight: 700;
-		background: var(--card-bg-subtle);
-		padding: 0.2rem 0.6rem;
-		border-radius: 6px;
-		color: var(--text-muted);
+	.banner-title {
+		font-size: 1.8rem;
+		font-weight: 900;
+		margin: 0;
+		color: #ffffff;
+		line-height: 1.2;
 	}
 
-	.widget-title {
-		font-size: 1.75rem;
+	.banner-desc {
+		font-size: 0.95rem;
+		font-weight: 600;
+		opacity: 0.92;
+		margin: 0;
+	}
+
+	.banner-action-btn {
+		background-color: #ffffff !important;
+		color: #1cb0f6 !important;
+		border-color: #e5e5e5 !important;
+		border-bottom-color: #cecece !important;
+		font-size: 1rem;
+		padding: 0.9rem 1.6rem;
+		align-self: flex-start;
+	}
+
+	@media (min-width: 640px) {
+		.banner-action-btn {
+			align-self: center;
+			flex-shrink: 0;
+		}
+	}
+
+	/* Duolingo Panoramica Card (Screenshot 4) */
+	.duo-panoramica-card {
+		display: flex;
+		flex-direction: column;
+		gap: 1.25rem;
+	}
+
+	.panoramica-title {
+		font-size: 1.3rem;
 		font-weight: 900;
 		color: var(--text-color);
 		margin: 0;
 	}
 
-	.widget-desc {
+	.panoramica-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+		gap: 0.85rem;
+	}
+
+	.panoramica-item {
+		background: var(--card-bg-subtle);
+		border: 2px solid var(--border-color);
+		border-bottom: 3px solid var(--border-depth-color);
+		border-radius: 16px;
+		padding: 0.85rem;
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+	}
+
+	.item-icon-box {
+		width: 40px;
+		height: 40px;
+		border-radius: 12px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 1.3rem;
+		flex-shrink: 0;
+	}
+
+	.streak-bg { background: rgba(255, 150, 0, 0.15); border: 1px solid var(--orange-color); }
+	.xp-bg { background: rgba(255, 200, 0, 0.15); border: 1px solid var(--yellow-color); }
+	.gem-bg { background: rgba(28, 176, 246, 0.15); border: 1px solid var(--accent-color); }
+	.accuracy-bg { background: rgba(88, 204, 2, 0.15); border: 1px solid var(--green-color); }
+
+	.item-text {
+		display: flex;
+		flex-direction: column;
+		line-height: 1.1;
+	}
+
+	.item-val {
+		font-size: 1.2rem;
+		font-weight: 900;
+		color: var(--text-color);
+	}
+
+	.item-lbl {
+		font-size: 0.7rem;
+		font-weight: 700;
+		color: var(--text-muted);
+	}
+
+	/* Daily Widget */
+	.duo-daily-widget {
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+		background: linear-gradient(145deg, var(--card-bg), var(--card-bg-subtle));
+		border-color: var(--green-color);
+		border-bottom-color: var(--green-depth);
+	}
+
+	.widget-top {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+	}
+
+	.cat-pill {
+		font-size: 0.75rem;
+		font-weight: 800;
+		background: var(--card-bg-subtle);
+		color: var(--text-muted);
+		padding: 0.25rem 0.65rem;
+		border-radius: 8px;
+		border: 1px solid var(--border-color);
+	}
+
+	.widget-term {
+		font-size: 1.8rem;
+		font-weight: 900;
+		color: var(--green-color);
+		margin: 0 0 0.35rem 0;
+	}
+
+	.widget-meaning {
 		font-size: 0.95rem;
 		line-height: 1.5;
 		color: var(--text-muted);
 		margin: 0;
 	}
 
-	.section-title {
-		font-size: 1.6rem;
+	.widget-btn {
+		align-self: flex-start;
+	}
+
+	.section-heading {
+		font-size: 1.4rem;
 		font-weight: 900;
-		margin-bottom: 1.25rem;
+		margin-bottom: 1rem;
 		color: var(--text-color);
 	}
 
@@ -438,53 +465,47 @@
 		gap: 1.25rem;
 	}
 
-	.game-card {
-		background: var(--card-bg);
-		border: 1px solid var(--border-color);
-		border-radius: 24px;
-		padding: 1.5rem;
-		text-decoration: none;
+	.duo-game-card {
 		display: flex;
-		gap: 1.25rem;
-		align-items: flex-start;
-		transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-		box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+		flex-direction: column;
+		gap: 1rem;
+		justify-content: space-between;
 	}
 
-	.game-card:hover {
-		transform: translateY(-4px);
-		border-color: var(--accent-color);
-		box-shadow: 0 12px 32px var(--shadow-color);
+	.card-header-row {
+		display: flex;
+		gap: 1rem;
+		align-items: center;
 	}
 
-	.game-icon-box {
-		width: 54px;
-		height: 54px;
-		border-radius: 18px;
+	.game-emoji-box {
+		width: 50px;
+		height: 50px;
+		border-radius: 16px;
+		background: var(--card-bg-subtle);
+		border: 2px solid var(--border-color);
 		display: flex;
 		align-items: center;
 		justify-content: center;
 		font-size: 1.6rem;
-		color: white;
 		flex-shrink: 0;
-		box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
 	}
 
-	.game-info {
+	.game-titles {
 		display: flex;
 		flex-direction: column;
-		gap: 0.35rem;
+		line-height: 1.2;
 	}
 
 	.game-subtitle {
-		font-size: 0.75rem;
+		font-size: 0.72rem;
 		font-weight: 800;
 		text-transform: uppercase;
 		color: var(--accent-color);
 	}
 
 	.game-title {
-		font-size: 1.3rem;
+		font-size: 1.2rem;
 		font-weight: 900;
 		color: var(--text-color);
 		margin: 0;
@@ -497,7 +518,29 @@
 		margin: 0;
 	}
 
-	.catalog-header {
+	/* Duolingo Progress Track */
+	.duo-progress-track {
+		width: 100%;
+		height: 12px;
+		background: var(--card-bg-subtle);
+		border-radius: 9999px;
+		overflow: hidden;
+		border: 1px solid var(--border-color);
+	}
+
+	.duo-progress-fill {
+		height: 100%;
+		background: var(--green-color);
+		border-radius: 9999px;
+		transition: width 0.4s ease;
+	}
+
+	.game-action-btn {
+		width: 100%;
+	}
+
+	/* Catalog / Search Section */
+	.catalog-header-row {
 		display: flex;
 		flex-direction: column;
 		gap: 1rem;
@@ -505,26 +548,34 @@
 	}
 
 	@media (min-width: 640px) {
-		.catalog-header {
+		.catalog-header-row {
 			flex-direction: row;
 			justify-content: space-between;
 			align-items: center;
 		}
 	}
 
-	.search-bar {
+	.search-controls {
 		display: flex;
 		gap: 0.75rem;
 		flex-wrap: wrap;
 	}
 
-	.search-input, .category-select {
-		padding: 0.8rem 1rem;
-		border-radius: 16px;
+	.duo-input {
+		padding: 0.75rem 1rem;
+		border-radius: 14px;
 		background: var(--card-bg);
-		border: 1px solid var(--border-color);
+		border: 2px solid var(--border-color);
+		border-bottom-width: 3px;
 		color: var(--text-color);
 		font-size: 0.9rem;
+		font-family: 'Outfit', sans-serif;
+		font-weight: 700;
+		outline: none;
+	}
+
+	.duo-input:focus {
+		border-color: var(--accent-color);
 	}
 
 	.search-input {
@@ -538,49 +589,36 @@
 		gap: 1rem;
 	}
 
-	.item-card {
-		background: var(--card-bg);
-		border: 1px solid var(--border-color);
-		border-radius: 20px;
-		padding: 1.25rem;
+	.catalog-card {
 		display: flex;
 		flex-direction: column;
 		gap: 0.75rem;
 	}
 
-	.item-header {
+	.card-top {
 		display: flex;
 		justify-content: space-between;
 		align-items: flex-start;
 	}
 
-	.item-title {
+	.card-term {
 		font-size: 1.3rem;
 		font-weight: 900;
 		color: var(--accent-color);
 		margin: 0;
 	}
 
-	.item-cat {
-		font-size: 0.7rem;
-		font-weight: 700;
-		padding: 0.2rem 0.5rem;
-		border-radius: 6px;
-		background: var(--badge-bg);
-		color: var(--text-muted);
-	}
-
-	.item-desc {
+	.card-meaning {
 		font-size: 0.875rem;
 		line-height: 1.5;
 		color: var(--text-muted);
 		margin: 0;
 	}
 
-	.has-photo-badge {
+	.photo-indicator {
 		font-size: 0.75rem;
+		font-weight: 800;
 		color: var(--accent-color);
-		font-weight: 700;
 	}
 
 	.empty-state {
@@ -588,8 +626,6 @@
 		text-align: center;
 		padding: 3rem;
 		color: var(--text-muted);
-		background: var(--card-bg);
-		border-radius: 20px;
-		border: 1px dashed var(--border-color);
 	}
 </style>
+
