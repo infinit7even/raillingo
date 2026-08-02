@@ -15,7 +15,6 @@
 	let title = $state('');
 	let description = $state('');
 	let category = $state('');
-	let tagInput = $state('');
 	let images = $state<string[]>([]);
 	let newImageUrl = $state('');
 	let uploading = $state(false);
@@ -24,6 +23,8 @@
 	let announcementText = $state('');
 	let announcementSaved = $state(false);
 	let usersList = $state<Array<{ discordId: string; email: string; username: string; role: string }>>([]);
+
+	let existingCategories = $derived([...new Set(cards.map((c) => c.category).filter((cat): cat is string => Boolean(cat)))].sort());
 
 	onMount(() => {
 		const unsubscribe = cardsStore.subscribe((c) => (cards = c));
@@ -82,7 +83,6 @@
 		title = '';
 		description = '';
 		category = '';
-		tagInput = '';
 		images = [];
 		newImageUrl = '';
 	}
@@ -92,7 +92,6 @@
 		title = card.title;
 		description = card.description;
 		category = card.category || '';
-		tagInput = card.tags ? card.tags.join(', ') : '';
 		images = card.images ? [...card.images] : [];
 		window.scrollTo({ top: 0, behavior: 'smooth' });
 	}
@@ -139,11 +138,6 @@
 		e.preventDefault();
 		if (!title.trim() || !description.trim()) return;
 
-		const tags = tagInput
-			.split(',')
-			.map((t) => t.trim())
-			.filter((t) => t.length > 0);
-
 		if (editingCardId) {
 			const existing = cards.find((c) => c.id === editingCardId);
 			if (existing) {
@@ -152,7 +146,6 @@
 					title: title.trim(),
 					description: description.trim(),
 					category: category.trim() || undefined,
-					tags: tags.length > 0 ? tags : undefined,
 					images: images.length > 0 ? images : undefined
 				});
 			}
@@ -161,7 +154,6 @@
 				title: title.trim(),
 				description: description.trim(),
 				category: category.trim() || undefined,
-				tags: tags.length > 0 ? tags : undefined,
 				images: images.length > 0 ? images : undefined
 			});
 		}
@@ -323,14 +315,20 @@
 					</div>
 
 					<div class="form-group">
-						<label for="card-cat">Categoria</label>
+						<label for="card-cat">Categoria ({existingCategories.length} esistenti)</label>
 						<input
 							id="card-cat"
+							list="categories-list"
 							type="text"
 							bind:value={category}
-							placeholder="Es: Segnalamento, Normativa, Trazione..."
+							placeholder="Cerca o inserisci categoria..."
 							class="duo-input form-input"
 						/>
+						<datalist id="categories-list">
+							{#each existingCategories as cat}
+								<option value={cat}></option>
+							{/each}
+						</datalist>
 					</div>
 				</div>
 
@@ -344,17 +342,6 @@
 						required
 						class="duo-input form-textarea"
 					></textarea>
-				</div>
-
-				<div class="form-group">
-					<label for="card-tags">Tag / Etichette (separati da virgola)</label>
-					<input
-						id="card-tags"
-						type="text"
-						bind:value={tagInput}
-						placeholder="Es: Sicurezza, Bordo, FS"
-						class="duo-input form-input"
-					/>
 				</div>
 
 				<!-- Images Section -->
