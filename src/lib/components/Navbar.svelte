@@ -1,5 +1,14 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { themeStore, type ThemePreset } from '$lib/stores/themeStore';
+	import { onMount } from 'svelte';
+
+	let currentTheme = $state<ThemePreset>('dark');
+
+	onMount(() => {
+		const unTheme = themeStore.subscribe((t) => (currentTheme = t));
+		return unTheme;
+	});
 
 	const navItems = [
 		{ href: '/', label: 'HOME', emoji: '/emoji/house_3d.png' },
@@ -39,10 +48,22 @@
 			{/each}
 		</div>
 	</div>
+
+	<!-- Desktop Sidebar Theme Toggle Button -->
+	<div class="sidebar-desktop-theme">
+		<button
+			class="duo-btn duo-btn-gray desktop-theme-btn"
+			onclick={() => themeStore.setTheme(currentTheme === 'dark' ? 'light' : 'dark')}
+			title="Alterna Scuro/Chiaro"
+		>
+			<span class="theme-dot" style="background: {currentTheme === 'dark' ? '#1cb0f6' : '#ffc800'}"></span>
+			<span>TEMA: {currentTheme === 'dark' ? 'SCURO 🌙' : 'CHIARO ☀️'}</span>
+		</button>
+	</div>
 </nav>
 
 <style>
-	.sidebar-brand {
+	.sidebar-brand, .sidebar-desktop-theme {
 		display: none;
 	}
 
@@ -153,9 +174,34 @@
 			padding: 1.5rem 1rem;
 			display: flex;
 			flex-direction: column;
+			justify-content: space-between;
 			gap: 1.5rem;
 			box-shadow: none;
 			backdrop-filter: none;
+		}
+
+		.sidebar-desktop-theme {
+			display: block;
+			width: 100%;
+			margin-top: auto;
+			padding-top: 1rem;
+			border-top: 2px solid var(--border-color);
+		}
+
+		.desktop-theme-btn {
+			width: 100%;
+			font-size: 0.75rem;
+			padding: 0.65rem;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			gap: 0.5rem;
+		}
+
+		.theme-dot {
+			width: 10px;
+			height: 10px;
+			border-radius: 50%;
 		}
 
 		.sidebar-brand {

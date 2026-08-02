@@ -48,8 +48,6 @@
 				<div class="reel-slide">
 					<!-- Header Index Bar -->
 					<div class="reel-top-bar">
-						<span class="reel-badge">🎬 Reel Ferroviario</span>
-						
 						<div class="right-top-actions">
 							<button class="audio-btn" onclick={(e) => speakAudio(e, card)}>
 								🔊 Audio
@@ -193,21 +191,11 @@
 		z-index: 20;
 	}
 
-	.reel-badge {
-		padding: 0.35rem 0.85rem;
-		border-radius: 9999px;
-		font-size: 0.75rem;
-		font-weight: 800;
-		background: rgba(255, 255, 255, 0.15);
-		backdrop-filter: blur(10px);
-		color: white;
-		border: 1px solid rgba(255, 255, 255, 0.2);
-	}
-
 	.right-top-actions {
 		display: flex;
 		align-items: center;
 		gap: 0.75rem;
+		margin-left: auto;
 	}
 
 	.audio-btn {

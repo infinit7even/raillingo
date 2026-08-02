@@ -420,6 +420,42 @@
 		.kbd-badge {
 			display: none;
 		}
+
+		.scene, .card {
+			min-height: 360px;
+		}
+
+		.card-face {
+			padding: 1.25rem;
+			border-radius: 20px;
+		}
+
+		.card-title {
+			font-size: 2.3rem;
+		}
+
+		.card-title-small {
+			font-size: 1.4rem;
+		}
+
+		.description-box {
+			padding: 0.9rem;
+			font-size: 0.95rem;
+		}
+
+		.card-controls {
+			gap: 0.4rem;
+		}
+
+		.nav-btn {
+			padding: 0.75rem 0.85rem;
+			font-size: 0.8rem;
+		}
+
+		.reveal-btn {
+			padding: 0.75rem 0.6rem;
+			font-size: 0.85rem;
+		}
 	}
 </style>
 
