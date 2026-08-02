@@ -15,7 +15,8 @@ export type StudyMode =
 	| 'ripasso-inverso'  // Descrizione -> Acronimo
 	| 'quiz'             // Quiz a 5 scelte
 	| 'scrittura'        // Esercizio digitazione
-	| 'reels';           // Modalità Reels verticale Instagram style
+	| 'reels'            // Feed Reels verticale
+	| 'wiki';            // Dizionario & Indice alfabetico Wiki
 
 export type WritingSubMode = 'title-to-desc' | 'desc-to-title' | 'photo-to-title';
 
