@@ -154,9 +154,9 @@
 			top: 0;
 			left: 0;
 			right: 0;
-			bottom: 60px;
+			bottom: 62px;
 			width: 100vw;
-			height: calc(100dvh - 60px);
+			height: calc(100dvh - 62px);
 			z-index: 10;
 		}
 
@@ -167,6 +167,10 @@
 			border-radius: 0;
 			border: none;
 			box-shadow: none;
+		}
+
+		.reel-slide {
+			padding: 58px 1rem 1rem 1rem;
 		}
 	}
 
