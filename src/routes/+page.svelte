@@ -71,14 +71,9 @@
 			</a>
 		</section>
 
-		<!-- Winding 3D Lesson Path with Train, Tracks, and Traffic Signal -->
+		<!-- Winding 3D Lesson Path with Owl Mascot & Section Names -->
 		<section class="duo-path-section">
 			<div class="nodes-container">
-				<!-- Traffic Light Railway Signal on Path Header -->
-				<div class="path-signal-left">
-					<img src="/emoji/vertical_traffic_light_3d.png" alt="Semaforo Ferroviario" class="signal-img" />
-				</div>
-
 				{#each lessonNodes as node, i}
 					<div class="node-wrapper" style="transform: translateX({node.offset}px)">
 						{#if i === 0}
@@ -97,15 +92,13 @@
 						>
 							<img src={node.icon} alt={node.title} class="node-emoji-img" />
 						</a>
-
-						<!-- Railway Track graphic under path nodes -->
-						<img src="/emoji/railway_track_3d.png" alt="Binario" class="path-track-img" />
+						<span class="path-node-label">{node.title}</span>
 					</div>
 				{/each}
 
-				<!-- 🚂 Train Mascot Illustration on Path -->
+				<!-- 🦉 Duolingo Owl Mascot Illustration on Path -->
 				<div class="duo-mascot-box">
-					<img src="/emoji/train_3d.png" alt="Treno Raillingo" class="mascot-img" />
+					<img src="/emoji/owl_3d.png" alt="Mascotte Gufo" class="mascot-img" />
 				</div>
 			</div>
 		</section>
@@ -299,32 +292,25 @@
 		max-width: 400px;
 	}
 
-	.path-signal-left {
-		position: absolute;
-		left: -35px;
-		top: -10px;
-	}
-
-	.signal-img {
-		width: 38px;
-		height: 38px;
-		object-fit: contain;
-	}
-
 	.node-wrapper {
 		position: relative;
 		display: flex;
 		flex-direction: column;
 		align-items: center;
 		transition: transform 0.3s ease;
+		gap: 0.35rem;
 	}
 
-	.path-track-img {
-		width: 28px;
-		height: 28px;
-		object-fit: contain;
-		margin-top: 4px;
-		opacity: 0.7;
+	.path-node-label {
+		font-family: 'Outfit', sans-serif;
+		font-weight: 800;
+		font-size: 0.75rem;
+		color: var(--text-color);
+		background: var(--card-bg-subtle);
+		padding: 0.2rem 0.5rem;
+		border-radius: 8px;
+		border: 1px solid var(--border-color);
+		white-space: nowrap;
 	}
 
 	/* Tooltip Bubble "INIZIA" */
