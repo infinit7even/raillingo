@@ -1,20 +1,71 @@
 import { browser } from '$app/environment';
 
-export type ThemePreset = 'dark' | 'light' | 'frecciarossa' | 'emerald' | 'purple';
+export type ThemePreset =
+	| 'dark'
+	| 'light'
+	| 'purple'
+	| 'frecciarossa'
+	| 'emerald'
+	| 'amber';
 
 export interface ThemeOption {
 	id: ThemePreset;
 	name: string;
+	desc: string;
 	color: string;
 	bg: string;
+	cardBg: string;
 }
 
 export const THEME_OPTIONS: ThemeOption[] = [
-	{ id: 'dark', name: 'Notte Ferroviaria', color: '#38bdf8', bg: '#0b0f19' },
-	{ id: 'light', name: 'Giorno RFI', color: '#0284c7', bg: '#f8fafc' },
-	{ id: 'frecciarossa', name: 'Frecciarossa', color: '#ef4444', bg: '#18080a' },
-	{ id: 'emerald', name: 'Trazione Verde', color: '#10b981', bg: '#061a14' },
-	{ id: 'purple', name: 'Alta Velocità', color: '#a855f7', bg: '#13091f' }
+	{
+		id: 'dark',
+		name: 'Duolingo Dark',
+		desc: 'Notte blu teal iconico con bordi 3D',
+		color: '#1cb0f6',
+		bg: '#131f24',
+		cardBg: '#18252d'
+	},
+	{
+		id: 'light',
+		name: 'Duolingo Light',
+		desc: 'Chiaro pulito ad alto contrasto',
+		color: '#58cc02',
+		bg: '#ffffff',
+		cardBg: '#ffffff'
+	},
+	{
+		id: 'purple',
+		name: 'Super Duolingo',
+		desc: 'Viola galattico e ciano brillante',
+		color: '#ce82ff',
+		bg: '#11091e',
+		cardBg: '#1d1033'
+	},
+	{
+		id: 'frecciarossa',
+		name: 'Frecciarossa Speed',
+		desc: 'Rosso scuro sportivo con accento rosso',
+		color: '#ff4b4b',
+		bg: '#16080a',
+		cardBg: '#261114'
+	},
+	{
+		id: 'emerald',
+		name: 'Trazione Verde',
+		desc: 'Verde smeraldo e lime energizzante',
+		color: '#58cc02',
+		bg: '#051913',
+		cardBg: '#0d2d22'
+	},
+	{
+		id: 'amber',
+		name: 'Italo Gold',
+		desc: 'Toni ambra caldo e oro trofeo',
+		color: '#ff9600',
+		bg: '#14100a',
+		cardBg: '#241a10'
+	}
 ];
 
 class ThemeStore {

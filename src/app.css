@@ -1,58 +1,146 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800;900&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap');
 
 :root, [data-theme='dark'] {
-	/* 🌌 Notte Ferroviaria (Default Dark) */
-	--bg-color: #0b0f19;
-	--header-bg: rgba(11, 15, 25, 0.82);
-	--nav-bg: rgba(15, 23, 42, 0.88);
-	--active-nav-bg: rgba(56, 189, 248, 0.18);
-	--card-bg: #151d30;
-	--card-bg-subtle: #1e293b;
-	--hover-bg: #243048;
-	--border-color: rgba(255, 255, 255, 0.1);
-	--text-color: #f8fafc;
-	--text-muted: #94a3b8;
-	--accent-color: #38bdf8;
-	--accent-light: #7dd3fc;
-	--accent-light-bg: rgba(56, 189, 248, 0.14);
-	--badge-bg: #1e293b;
+	/* 🦉 Duolingo Dark (Default) */
+	--bg-color: #131f24;
+	--header-bg: #131f24;
+	--nav-bg: #131f24;
+	--active-nav-bg: rgba(28, 176, 246, 0.15);
+	--card-bg: #18252d;
+	--card-bg-subtle: #202f36;
+	--hover-bg: #2b3840;
+	--border-color: #37464f;
+	--border-depth-color: #202f36;
+	--text-color: #ffffff;
+	--text-muted: #93a5b1;
+	
+	/* 🎨 Duolingo Palette Colors */
+	--accent-color: #1cb0f6;      /* Sky Blue */
+	--accent-depth: #1899d6;
+	--accent-light: #84d8ff;
+	--accent-light-bg: rgba(28, 176, 246, 0.15);
+
+	--green-color: #58cc02;       /* Duolingo Green */
+	--green-depth: #46a302;
+	
+	--orange-color: #ff9600;      /* Streak Orange */
+	--orange-depth: #e58700;
+
+	--yellow-color: #ffc800;      /* Gold / Stars */
+	--yellow-depth: #e5b200;
+
+	--purple-color: #ce82ff;      /* Super Purple */
+	--purple-depth: #a560e8;
+
+	--pink-color: #ff4b4b;        /* Energy / Hearts */
+	--pink-depth: #ea2b2b;
+
+	--badge-bg: #202f36;
 	--shadow-color: rgba(0, 0, 0, 0.4);
 }
 
 [data-theme='light'] {
-	/* ☀️ Giorno RFI (Light Mode) */
-	--bg-color: #f8fafc;
-	--header-bg: rgba(255, 255, 255, 0.88);
-	--nav-bg: rgba(255, 255, 255, 0.92);
-	--active-nav-bg: rgba(2, 132, 199, 0.12);
+	/* ☀️ Duolingo Light */
+	--bg-color: #ffffff;
+	--header-bg: #ffffff;
+	--nav-bg: #ffffff;
+	--active-nav-bg: rgba(28, 176, 246, 0.12);
 	--card-bg: #ffffff;
-	--card-bg-subtle: #f1f5f9;
-	--hover-bg: #e2e8f0;
-	--border-color: rgba(0, 0, 0, 0.08);
-	--text-color: #0f172a;
-	--text-muted: #64748b;
-	--accent-color: #0284c7;
-	--accent-light: #0369a1;
-	--accent-light-bg: rgba(2, 132, 199, 0.08);
-	--badge-bg: #e2e8f0;
-	--shadow-color: rgba(0, 0, 0, 0.06);
+	--card-bg-subtle: #f7f7f7;
+	--hover-bg: #e5e5e5;
+	--border-color: #e5e5e5;
+	--border-depth-color: #cecece;
+	--text-color: #4b4b4b;
+	--text-muted: #777777;
+
+	--accent-color: #1cb0f6;
+	--accent-depth: #1899d6;
+	--accent-light: #0284c7;
+	--accent-light-bg: rgba(28, 176, 246, 0.08);
+
+	--green-color: #58cc02;
+	--green-depth: #46a302;
+
+	--orange-color: #ff9600;
+	--orange-depth: #e58700;
+
+	--yellow-color: #ffc800;
+	--yellow-depth: #e5b200;
+
+	--purple-color: #ce82ff;
+	--purple-depth: #a560e8;
+
+	--pink-color: #ff4b4b;
+	--pink-depth: #ea2b2b;
+
+	--badge-bg: #f7f7f7;
+	--shadow-color: rgba(0, 0, 0, 0.08);
+}
+
+[data-theme='purple'] {
+	/* 🔮 Super Duolingo Cosmic */
+	--bg-color: #11091e;
+	--header-bg: #11091e;
+	--nav-bg: #11091e;
+	--active-nav-bg: rgba(206, 130, 255, 0.2);
+	--card-bg: #1d1033;
+	--card-bg-subtle: #291747;
+	--hover-bg: #371f5e;
+	--border-color: #4c2882;
+	--border-depth-color: #291747;
+	--text-color: #faf5ff;
+	--text-muted: #c084fc;
+
+	--accent-color: #ce82ff;
+	--accent-depth: #a560e8;
+	--accent-light: #e0b0ff;
+	--accent-light-bg: rgba(206, 130, 255, 0.15);
+
+	--green-color: #58cc02;
+	--green-depth: #46a302;
+	--orange-color: #ff9600;
+	--orange-depth: #e58700;
+	--yellow-color: #ffc800;
+	--yellow-depth: #e5b200;
+	--purple-color: #ce82ff;
+	--purple-depth: #a560e8;
+	--pink-color: #ff4b4b;
+	--pink-depth: #ea2b2b;
+
+	--badge-bg: #291747;
+	--shadow-color: rgba(168, 85, 247, 0.25);
 }
 
 [data-theme='frecciarossa'] {
-	/* 🔴 Frecciarossa */
+	/* 🔴 Frecciarossa Speed */
 	--bg-color: #16080a;
-	--header-bg: rgba(22, 8, 10, 0.85);
-	--nav-bg: rgba(28, 11, 14, 0.92);
-	--active-nav-bg: rgba(239, 68, 68, 0.2);
+	--header-bg: #16080a;
+	--nav-bg: #16080a;
+	--active-nav-bg: rgba(255, 75, 75, 0.2);
 	--card-bg: #261114;
 	--card-bg-subtle: #36171c;
 	--hover-bg: #471d23;
-	--border-color: rgba(239, 68, 68, 0.25);
+	--border-color: #5e222b;
+	--border-depth-color: #36171c;
 	--text-color: #fff1f2;
 	--text-muted: #fda4af;
-	--accent-color: #ef4444;
+
+	--accent-color: #ff4b4b;
+	--accent-depth: #ea2b2b;
 	--accent-light: #f87171;
-	--accent-light-bg: rgba(239, 68, 68, 0.15);
+	--accent-light-bg: rgba(255, 75, 75, 0.15);
+
+	--green-color: #58cc02;
+	--green-depth: #46a302;
+	--orange-color: #ff9600;
+	--orange-depth: #e58700;
+	--yellow-color: #ffc800;
+	--yellow-depth: #e5b200;
+	--purple-color: #ce82ff;
+	--purple-depth: #a560e8;
+	--pink-color: #ff4b4b;
+	--pink-depth: #ea2b2b;
+
 	--badge-bg: #36171c;
 	--shadow-color: rgba(239, 68, 68, 0.2);
 }
@@ -60,39 +148,69 @@
 [data-theme='emerald'] {
 	/* 🟢 Trazione Verde */
 	--bg-color: #051913;
-	--header-bg: rgba(5, 25, 19, 0.85);
-	--nav-bg: rgba(8, 35, 26, 0.92);
-	--active-nav-bg: rgba(16, 185, 129, 0.2);
+	--header-bg: #051913;
+	--nav-bg: #051913;
+	--active-nav-bg: rgba(88, 204, 2, 0.2);
 	--card-bg: #0d2d22;
 	--card-bg-subtle: #143d2f;
 	--hover-bg: #1c5240;
-	--border-color: rgba(16, 185, 129, 0.25);
+	--border-color: #24634f;
+	--border-depth-color: #143d2f;
 	--text-color: #ecfdf5;
 	--text-muted: #6ee7b7;
-	--accent-color: #10b981;
-	--accent-light: #34d399;
-	--accent-light-bg: rgba(16, 185, 129, 0.15);
+
+	--accent-color: #58cc02;
+	--accent-depth: #46a302;
+	--accent-light: #78c800;
+	--accent-light-bg: rgba(88, 204, 2, 0.15);
+
+	--green-color: #58cc02;
+	--green-depth: #46a302;
+	--orange-color: #ff9600;
+	--orange-depth: #e58700;
+	--yellow-color: #ffc800;
+	--yellow-depth: #e5b200;
+	--purple-color: #ce82ff;
+	--purple-depth: #a560e8;
+	--pink-color: #ff4b4b;
+	--pink-depth: #ea2b2b;
+
 	--badge-bg: #143d2f;
-	--shadow-color: rgba(16, 185, 129, 0.2);
+	--shadow-color: rgba(88, 204, 2, 0.2);
 }
 
-[data-theme='purple'] {
-	/* 💜 Alta Velocità Viola */
-	--bg-color: #11091e;
-	--header-bg: rgba(17, 9, 30, 0.85);
-	--nav-bg: rgba(24, 13, 42, 0.92);
-	--active-nav-bg: rgba(168, 85, 247, 0.2);
-	--card-bg: #1d1033;
-	--card-bg-subtle: #291747;
-	--hover-bg: #371f5e;
-	--border-color: rgba(168, 85, 247, 0.25);
-	--text-color: #faf5ff;
-	--text-muted: #c084fc;
-	--accent-color: #a855f7;
-	--accent-light: #c084fc;
-	--accent-light-bg: rgba(168, 85, 247, 0.15);
-	--badge-bg: #291747;
-	--shadow-color: rgba(168, 85, 247, 0.2);
+[data-theme='amber'] {
+	/* 🏎️ Italo Gold */
+	--bg-color: #14100a;
+	--header-bg: #14100a;
+	--nav-bg: #14100a;
+	--active-nav-bg: rgba(255, 150, 0, 0.2);
+	--card-bg: #241a10;
+	--card-bg-subtle: #332517;
+	--hover-bg: #45321f;
+	--border-color: #57422b;
+	--border-depth-color: #332517;
+	--text-color: #fffbe8;
+	--text-muted: #fcd34d;
+
+	--accent-color: #ff9600;
+	--accent-depth: #e58700;
+	--accent-light: #fbbf24;
+	--accent-light-bg: rgba(255, 150, 0, 0.15);
+
+	--green-color: #58cc02;
+	--green-depth: #46a302;
+	--orange-color: #ff9600;
+	--orange-depth: #e58700;
+	--yellow-color: #ffc800;
+	--yellow-depth: #e5b200;
+	--purple-color: #ce82ff;
+	--purple-depth: #a560e8;
+	--pink-color: #ff4b4b;
+	--pink-depth: #ea2b2b;
+
+	--badge-bg: #332517;
+	--shadow-color: rgba(255, 150, 0, 0.2);
 }
 
 * {
@@ -102,22 +220,130 @@
 }
 
 body {
-	font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+	font-family: 'Outfit', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
 	background-color: var(--bg-color);
 	color: var(--text-color);
 	min-height: 100vh;
-	transition: background-color 0.4s ease, color 0.4s ease;
+	transition: background-color 0.3s ease, color 0.3s ease;
 	-webkit-font-smoothing: antialiased;
 	padding-bottom: 5.5rem;
 	overflow-x: hidden;
 }
 
 h1, h2, h3, h4, .app-title {
-	font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+	font-family: 'Outfit', sans-serif;
+	font-weight: 800;
+	letter-spacing: -0.01em;
 }
 
 button, input, textarea, select {
 	font-family: inherit;
+}
+
+/* 🎮 Duolingo 3D Tactile Buttons */
+.duo-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.6rem;
+	padding: 0.85rem 1.4rem;
+	border-radius: 16px;
+	font-family: 'Outfit', sans-serif;
+	font-weight: 800;
+	font-size: 0.95rem;
+	text-transform: uppercase;
+	letter-spacing: 0.8px;
+	cursor: pointer;
+	text-decoration: none;
+	user-select: none;
+	border: 2px solid transparent;
+	border-bottom: 4px solid transparent;
+	transition: transform 0.1s ease, border-width 0.1s ease, background-color 0.15s ease;
+}
+
+.duo-btn:active:not(:disabled) {
+	transform: translateY(2px);
+	border-bottom-width: 2px;
+	margin-bottom: -2px;
+}
+
+.duo-btn-blue {
+	background-color: var(--accent-color);
+	color: #ffffff;
+	border-color: var(--accent-depth);
+}
+
+.duo-btn-blue:hover:not(:disabled) {
+	background-color: #2fb9fc;
+}
+
+.duo-btn-green {
+	background-color: var(--green-color);
+	color: #ffffff;
+	border-color: var(--green-depth);
+}
+
+.duo-btn-green:hover:not(:disabled) {
+	background-color: #61df02;
+}
+
+.duo-btn-purple {
+	background-color: var(--purple-color);
+	color: #ffffff;
+	border-color: var(--purple-depth);
+}
+
+.duo-btn-purple:hover:not(:disabled) {
+	background-color: #d697ff;
+}
+
+.duo-btn-orange {
+	background-color: var(--orange-color);
+	color: #ffffff;
+	border-color: var(--orange-depth);
+}
+
+.duo-btn-gray {
+	background-color: var(--card-bg-subtle);
+	color: var(--text-color);
+	border-color: var(--border-color);
+	border-bottom-color: var(--border-depth-color);
+}
+
+.duo-btn-gray:hover:not(:disabled) {
+	background-color: var(--hover-bg);
+}
+
+.duo-btn:disabled {
+	opacity: 0.45;
+	cursor: not-allowed;
+	transform: none !important;
+}
+
+/* 📦 Duolingo Card Container */
+.duo-card {
+	background-color: var(--card-bg);
+	border: 2px solid var(--border-color);
+	border-bottom: 4px solid var(--border-depth-color);
+	border-radius: 20px;
+	padding: 1.25rem;
+	transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+/* 🏷️ Duolingo Badge */
+.duo-badge {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+	padding: 0.35rem 0.8rem;
+	border-radius: 9999px;
+	font-weight: 800;
+	font-size: 0.75rem;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	background-color: var(--badge-bg);
+	color: var(--text-muted);
+	border: 1.5px solid var(--border-color);
 }
 
 /* Scrollbar stilizzata */
@@ -138,3 +364,4 @@ button, input, textarea, select {
 ::-webkit-scrollbar-thumb:hover {
 	background: var(--text-muted);
 }
+
