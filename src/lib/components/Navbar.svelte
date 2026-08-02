@@ -3,9 +3,9 @@
 
 	const primaryNavItems = [
 		{ href: '/', label: 'IMPARA', emoji: '🏠', activeColor: '#ffc800' },
-		{ href: '/ripasso', label: 'RIPASSO', emoji: '👄', activeColor: '#ff4b4b' },
-		{ href: '/quiz', label: 'CLASSIFICHE', emoji: '🛡️', activeColor: '#1cb0f6' },
-		{ href: '/reels', label: 'MISSIONI', emoji: '📦', activeColor: '#ce82ff' },
+		{ href: '/ripasso', label: 'FLASHCARD', emoji: '📖', activeColor: '#ff4b4b' },
+		{ href: '/quiz', label: 'QUIZ', emoji: '🎯', activeColor: '#1cb0f6' },
+		{ href: '/reels', label: 'REELS', emoji: '🎬', activeColor: '#ce82ff' },
 		{ href: '/wiki', label: 'WIKI', emoji: '📚', activeColor: '#ff9600' }
 	];
 
