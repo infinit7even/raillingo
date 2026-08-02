@@ -267,7 +267,7 @@
 
 				<!-- Images Section -->
 				<div class="form-group">
-					<label>Immagini per la card ({images.length})</label>
+					<span class="group-title-label">Immagini per la card ({images.length})</span>
 					
 					<div class="image-uploader">
 						<div class="url-input-row">
@@ -571,7 +571,7 @@
 		gap: 0.4rem;
 	}
 
-	.form-group label {
+	.form-group label, .group-title-label {
 		font-size: 0.85rem;
 		font-weight: 700;
 		color: var(--text-color);

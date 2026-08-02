@@ -230,6 +230,7 @@
 		font-weight: 900;
 		letter-spacing: -0.03em;
 		background: linear-gradient(135deg, var(--text-color), var(--accent-color));
+		background-clip: text;
 		-webkit-background-clip: text;
 		-webkit-text-fill-color: transparent;
 		line-height: 1.1;

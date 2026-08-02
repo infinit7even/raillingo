@@ -38,9 +38,9 @@
 		};
 
 		// 4 random distractors from other cards
-		const otherCards = allCards.filter((c) => c.id !== targetCard.id);
+		const otherCards = allCards.filter((c: Card) => c.id !== targetCard.id);
 		const shuffledOthers = [...otherCards].sort(() => 0.5 - Math.random());
-		const distractors: QuizOption[] = shuffledOthers.slice(0, 4).map((c) => ({
+		const distractors: QuizOption[] = shuffledOthers.slice(0, 4).map((c: Card) => ({
 			id: c.id,
 			text: c.description,
 			isCorrect: false

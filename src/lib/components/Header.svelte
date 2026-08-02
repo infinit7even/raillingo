@@ -116,16 +116,15 @@
 		flex-direction: column;
 		line-height: 1.1;
 	}
-
 	.app-title {
 		font-weight: 900;
 		font-size: 1.25rem;
 		letter-spacing: -0.02em;
 		background: linear-gradient(135deg, var(--accent-color), var(--accent-light));
+		background-clip: text;
 		-webkit-background-clip: text;
 		-webkit-text-fill-color: transparent;
 	}
-
 	.app-subtitle {
 		font-size: 0.75rem;
 		font-weight: 600;
