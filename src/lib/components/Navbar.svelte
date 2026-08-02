@@ -2,7 +2,7 @@
 	import { page } from '$app/state';
 
 	const navItems = [
-		{ href: '/', label: 'BENVENUTO', emoji: '/emoji/house_3d.png' },
+		{ href: '/', label: 'HOME', emoji: '/emoji/house_3d.png' },
 		{ href: '/ripasso', label: 'FLASHCARD', emoji: '/emoji/open_book_3d.png' },
 		{ href: '/quiz', label: 'QUIZ', emoji: '/emoji/star_3d.png' },
 		{ href: '/reels', label: 'REELS', emoji: '/emoji/camera_3d.png' },
@@ -155,6 +155,7 @@
 			flex-direction: column;
 			gap: 1.5rem;
 			box-shadow: none;
+			backdrop-filter: none;
 		}
 
 		.sidebar-brand {
@@ -201,11 +202,12 @@
 
 		.nav-container {
 			overflow-x: visible;
+			max-width: none;
 		}
 
 		.nav-scroll-wrapper {
 			flex-direction: column;
-			gap: 0.4rem;
+			gap: 0.5rem;
 			width: 100%;
 			align-items: stretch;
 			padding: 0;
@@ -216,34 +218,42 @@
 			align-items: center;
 			gap: 0.85rem;
 			min-width: 0;
+			max-width: 100%;
 			width: 100%;
-			padding: 0.65rem 0.85rem;
+			padding: 0.75rem 1rem;
 			border-radius: 16px;
 			border: 2px solid transparent;
 			text-align: left;
-			font-size: 0.82rem;
+			font-size: 0.85rem;
+			box-sizing: border-box;
 		}
 
 		.nav-item.active {
-			border-color: var(--accent-color);
+			border: 2px solid var(--accent-color);
+			border-bottom: 4px solid var(--accent-color);
 			background-color: var(--accent-light-bg);
+			color: var(--accent-color);
+			font-weight: 900;
 		}
 
-		.icon-wrapper {
-			width: 28px;
-			height: 28px;
+		.icon-wrapper, .icon-wrapper.active-outline {
+			width: 32px !important;
+			height: 32px !important;
 			background: none !important;
 			border: none !important;
 			transform: none !important;
+			box-shadow: none !important;
 		}
 
 		.nav-emoji-img {
-			width: 26px;
-			height: 26px;
+			width: 28px;
+			height: 28px;
 		}
 
 		.nav-label {
-			font-size: 0.8rem;
+			font-size: 0.85rem;
+			font-weight: 900;
+			letter-spacing: 0.04em;
 		}
 	}
 </style>
