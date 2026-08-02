@@ -135,14 +135,6 @@
 		downloadAnchor.remove();
 	}
 
-	function enableLocalDevAdmin() {
-		user = {
-			userId: '691289686093725736',
-			username: 'Admin Sviluppo Locale',
-			avatar: null
-		};
-	}
-
 	let filteredCards = $derived(
 		cards.filter(
 			(c) =>
@@ -176,13 +168,6 @@
 				</svg>
 				Accedi con Discord
 			</a>
-
-			<div class="dev-option">
-				<span>Oppure per test e sviluppo locale:</span>
-				<button class="dev-btn" onclick={enableLocalDevAdmin}>
-					🔑 Sblocca Accesso Admin Locale
-				</button>
-			</div>
 		</div>
 	{:else}
 		<!-- Admin Panel Dashboard -->
@@ -436,26 +421,6 @@
 	.discord-icon {
 		width: 24px;
 		height: 24px;
-	}
-
-	.dev-option {
-		margin-top: 1rem;
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-		font-size: 0.85rem;
-		color: var(--text-muted);
-	}
-
-	.dev-btn {
-		background: var(--card-bg-subtle);
-		border: 1px solid var(--border-color);
-		color: var(--text-color);
-		padding: 0.6rem 1rem;
-		border-radius: 10px;
-		font-size: 0.85rem;
-		font-weight: 600;
-		cursor: pointer;
 	}
 
 	/* Dashboard */
