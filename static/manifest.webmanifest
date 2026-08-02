@@ -1,7 +1,7 @@
 {
-  "name": "RF - Rail Focus",
-  "short_name": "Rail Focus",
-  "description": "Applicazione per la memorizzazione di acronimi e terminologia del corso ferroviario",
+  "name": "Raillingo - Apprendimento Ferroviario",
+  "short_name": "Raillingo",
+  "description": "Applicazione Raillingo per la memorizzazione di acronimi e terminologia del corso ferroviario",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0f172a",

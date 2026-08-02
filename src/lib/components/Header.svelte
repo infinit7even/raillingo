@@ -35,7 +35,9 @@
 		<a href="/" class="brand">
 			<img src="/emoji/triangular_flag_3d.png" alt="Bandiera" class="emoji-img flag-img" />
 			<div class="title-group">
-				<span class="app-title">RF</span>
+				<span class="app-title">
+					Rai<span class="ll-track-box">l<img src="/emoji/railway_track_3d.png" alt="Binario" class="brand-track-img-sm" />l</span>ingo
+				</span>
 				<span class="app-subtitle">Rail Focus</span>
 			</div>
 		</a>
@@ -128,9 +130,25 @@
 
 	.app-title {
 		font-weight: 900;
-		font-size: 1.2rem;
-		letter-spacing: -0.02em;
+		font-size: 1.25rem;
+		letter-spacing: -0.03em;
 		color: var(--accent-color);
+		display: inline-flex;
+		align-items: center;
+	}
+
+	.ll-track-box {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		position: relative;
+	}
+
+	.brand-track-img-sm {
+		width: 0.7em;
+		height: 0.7em;
+		object-fit: contain;
+		margin: 0 -0.06em;
 	}
 
 	.app-subtitle {

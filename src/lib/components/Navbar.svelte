@@ -18,7 +18,9 @@
 	<div class="sidebar-brand">
 		<a href="/" class="brand-link">
 			<img src="/emoji/triangular_flag_3d.png" alt="Bandiera" class="brand-emoji" />
-			<span class="brand-title">duofocus</span>
+			<span class="brand-title">
+				Rai<span class="ll-track-box">l<img src="/emoji/railway_track_3d.png" alt="Binario" class="brand-track-img" />l</span>ingo
+			</span>
 		</a>
 	</div>
 
@@ -177,6 +179,22 @@
 			font-weight: 900;
 			color: var(--green-color);
 			letter-spacing: -0.04em;
+			display: inline-flex;
+			align-items: center;
+		}
+
+		.ll-track-box {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			position: relative;
+		}
+
+		.brand-track-img {
+			width: 0.75em;
+			height: 0.75em;
+			object-fit: contain;
+			margin: 0 -0.08em;
 		}
 
 		.nav-container {
