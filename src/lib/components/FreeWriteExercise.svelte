@@ -14,7 +14,6 @@
 	let submitted = $state(false);
 
 	$effect(() => {
-		// Traccia la variazione dell'ID card o della sottovariante per resettare il testo
 		const _cardId = card.id;
 		const _subMode = subMode;
 		userInput = '';
@@ -32,7 +31,7 @@
 
 <div class="freewrite-container">
 	<div class="header">
-		<span class="badge">
+		<span class="duo-badge">
 			{#if subMode === 'title-to-desc'}
 				Scrivi Descrizione
 			{:else if subMode === 'desc-to-title'}
@@ -41,11 +40,16 @@
 				Scrivi da Foto
 			{/if}
 		</span>
-		<span class="counter">{currentIndex + 1} / {totalCards}</span>
+		<span class="counter-text">{currentIndex + 1} / {totalCards}</span>
+	</div>
+
+	<!-- Duolingo Progress Track -->
+	<div class="duo-progress-track">
+		<div class="duo-progress-fill" style="width: {((currentIndex + 1) / totalCards) * 100}%"></div>
 	</div>
 
 	<!-- Prompt Box -->
-	<div class="prompt-card">
+	<div class="prompt-card duo-card">
 		{#if subMode === 'title-to-desc'}
 			<span class="label">Acronimo / Titolo:</span>
 			<h2 class="title">{card.title}</h2>
@@ -70,7 +74,7 @@
 				bind:value={userInput}
 				placeholder="Scrivi qui la descrizione..."
 				rows="4"
-				class="input-textarea"
+				class="duo-input input-textarea"
 				disabled={submitted}
 			></textarea>
 		{:else}
@@ -78,29 +82,29 @@
 				type="text"
 				bind:value={userInput}
 				placeholder="Scrivi qui la risposta..."
-				class="input-field"
+				class="duo-input input-field"
 				disabled={submitted}
 			/>
 		{/if}
 
 		{#if !submitted}
-			<button type="submit" class="submit-btn" disabled={!userInput.trim()}>
-				Invia Risposta & Verifica
+			<button type="submit" class="duo-btn duo-btn-blue submit-btn" disabled={!userInput.trim()}>
+				INVIA RISPOSTA & VERIFICA
 			</button>
 		{/if}
 	</form>
 
 	<!-- Reveal / Self-Verification Box -->
 	{#if submitted}
-		<div class="comparison-card">
+		<div class="comparison-card duo-card">
 			<div class="result-header">
 				🎯 Risposta Esatta del Database:
 			</div>
 
 			{#if subMode === 'title-to-desc'}
-				<div class="exact-answer">{card.description}</div>
+				<div class="exact-answer duo-card">{card.description}</div>
 			{:else}
-				<div class="exact-answer title-highlight">{card.title}</div>
+				<div class="exact-answer duo-card title-highlight">{card.title}</div>
 				<div class="exact-sub">{card.description}</div>
 			{/if}
 
@@ -109,8 +113,8 @@
 				<p class="user-text">{userInput || '(Nessun testo inserito)'}</p>
 			</div>
 
-			<button class="next-btn" onclick={onNext}>
-				Prossima Scheda →
+			<button class="duo-btn duo-btn-green next-btn" onclick={onNext}>
+				PROSSIMA SCHEDA →
 			</button>
 		</div>
 	{/if}
@@ -132,38 +136,40 @@
 		align-items: center;
 	}
 
-	.badge {
-		padding: 0.25rem 0.75rem;
-		border-radius: 9999px;
-		font-size: 0.75rem;
-		font-weight: 700;
-		text-transform: uppercase;
-		background-color: var(--accent-light-bg);
-		color: var(--accent-color);
-		border: 1px solid var(--border-color);
+	.counter-text {
+		font-family: 'Outfit', sans-serif;
+		font-size: 0.9rem;
+		font-weight: 800;
+		color: var(--text-muted);
 	}
 
-	.counter {
-		font-size: 0.875rem;
-		font-weight: 600;
-		color: var(--text-muted);
+	.duo-progress-track {
+		width: 100%;
+		height: 12px;
+		background: var(--card-bg-subtle);
+		border-radius: 9999px;
+		overflow: hidden;
+		border: 1.5px solid var(--border-color);
+	}
+
+	.duo-progress-fill {
+		height: 100%;
+		background: var(--green-color);
+		border-radius: 9999px;
+		transition: width 0.3s ease;
 	}
 
 	.prompt-card {
 		background: var(--card-bg);
-		border: 1px solid var(--border-color);
-		border-radius: 20px;
-		padding: 1.5rem;
-		box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
 	}
 
 	.label {
 		font-size: 0.75rem;
-		font-weight: 700;
+		font-weight: 900;
 		text-transform: uppercase;
 		color: var(--accent-color);
 		display: block;
-		margin-bottom: 0.5rem;
+		margin-bottom: 0.4rem;
 	}
 
 	.title {
@@ -186,6 +192,7 @@
 		object-fit: cover;
 		border-radius: 14px;
 		margin-bottom: 0.75rem;
+		border: 2px solid var(--border-color);
 	}
 
 	.instruction {
@@ -197,49 +204,20 @@
 	.write-form {
 		display: flex;
 		flex-direction: column;
-		gap: 0.75rem;
+		gap: 0.85rem;
 	}
 
 	.input-field, .input-textarea {
 		width: 100%;
-		padding: 1rem;
-		border-radius: 16px;
-		background: var(--card-bg);
-		border: 2px solid var(--border-color);
-		color: var(--text-color);
-		font-size: 1rem;
-		font-family: inherit;
 		box-sizing: border-box;
-		transition: border-color 0.2s ease;
-	}
-
-	.input-field:focus, .input-textarea:focus {
-		outline: none;
-		border-color: var(--accent-color);
 	}
 
 	.submit-btn {
-		padding: 1rem;
-		border-radius: 16px;
-		background: linear-gradient(135deg, var(--accent-color), #0284c7);
-		color: white;
-		border: none;
-		font-weight: 800;
+		width: 100%;
 		font-size: 1rem;
-		cursor: pointer;
-		box-shadow: 0 4px 14px rgba(2, 132, 199, 0.4);
-	}
-
-	.submit-btn:disabled {
-		opacity: 0.5;
-		cursor: not-allowed;
 	}
 
 	.comparison-card {
-		background: var(--card-bg-subtle);
-		border: 1px solid var(--border-color);
-		border-radius: 20px;
-		padding: 1.5rem;
 		display: flex;
 		flex-direction: column;
 		gap: 1rem;
@@ -247,25 +225,23 @@
 	}
 
 	.result-header {
-		font-weight: 800;
+		font-weight: 900;
 		color: var(--accent-color);
 		font-size: 0.95rem;
 	}
 
 	.exact-answer {
-		background: var(--card-bg);
 		padding: 1rem;
-		border-radius: 12px;
-		border-left: 4px solid var(--accent-color);
 		font-size: 1.05rem;
 		line-height: 1.6;
 		color: var(--text-color);
+		border-left: 4px solid var(--accent-color);
 	}
 
 	.exact-answer.title-highlight {
 		font-size: 1.75rem;
 		font-weight: 900;
-		border-left-color: #22c55e;
+		border-left-color: var(--green-color);
 	}
 
 	.exact-sub {
@@ -285,17 +261,8 @@
 	}
 
 	.next-btn {
-		padding: 0.9rem;
-		border-radius: 14px;
-		background: var(--card-bg);
-		color: var(--text-color);
-		border: 1px solid var(--border-color);
-		font-weight: 700;
-		cursor: pointer;
-	}
-
-	.next-btn:hover {
-		border-color: var(--accent-color);
+		width: 100%;
+		font-size: 1rem;
 	}
 
 	@keyframes fadeIn {
@@ -303,3 +270,4 @@
 		to { opacity: 1; transform: translateY(0); }
 	}
 </style>
+

@@ -17,7 +17,6 @@
 	let isSpeaking = $state(false);
 
 	$effect(() => {
-		// Reset flip state when card changes
 		flipped = false;
 		currentImageIndex = 0;
 		isFav = statsStore.isFavorite(card.id);
@@ -72,13 +71,13 @@
 <svelte:window onkeydown={handleKeyDown} />
 
 <div class="flashcard-container">
-	<!-- Counter, Favorite & Audio Header -->
+	<!-- Top Progress / Bar Header -->
 	<div class="card-top-bar">
-		<span class="badge category">{card.category || 'Generale'}</span>
+		<span class="duo-badge">{card.category || 'Generale'}</span>
 		
 		<div class="top-actions">
 			<button
-				class="audio-btn"
+				class="duo-btn duo-btn-gray audio-btn"
 				class:speaking={isSpeaking}
 				onclick={speakAudio}
 				aria-label="Ascolta pronuncia audio"
@@ -86,11 +85,16 @@
 			>
 				🔊 Ascolta
 			</button>
-			<span class="counter">{currentIndex + 1} / {totalCards}</span>
+			<span class="counter-text">{currentIndex + 1} / {totalCards}</span>
 			<button class="fav-btn" class:active={isFav} onclick={toggleFavorite} aria-label="Preferito">
 				★
 			</button>
 		</div>
+	</div>
+
+	<!-- Progress Track -->
+	<div class="duo-progress-track">
+		<div class="duo-progress-fill" style="width: {((currentIndex + 1) / totalCards) * 100}%"></div>
 	</div>
 
 	<!-- 3D Flip Card Scene -->
@@ -103,9 +107,9 @@
 	>
 		<div class="card" class:is-flipped={flipped}>
 			<!-- FRONT (Acronym / Title) -->
-			<div class="card-face front">
+			<div class="card-face front duo-card">
 				<div class="face-content">
-					<span class="title-badge">Acronimo / Termine</span>
+					<span class="title-badge">ACRONIMO / TERMINE</span>
 					<h2 class="card-title">{card.title}</h2>
 					<p class="instruction">
 						🗣️ Pronuncia a voce la definizione, poi <strong>tocca per verificare</strong>
@@ -115,13 +119,13 @@
 				<div class="tap-hint">
 					<span>Tocca per girare <kbd class="kbd-badge">Spazio</kbd></span>
 					<svg class="flip-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
 					</svg>
 				</div>
 			</div>
 
 			<!-- BACK (Description + Photos) -->
-			<div class="card-face back">
+			<div class="card-face back duo-card">
 				<div class="face-content">
 					<div class="back-header">
 						<h3 class="card-title-small">{card.title}</h3>
@@ -134,7 +138,7 @@
 						{/if}
 					</div>
 
-					<div class="description-box">
+					<div class="description-box duo-card">
 						<p>{card.description}</p>
 					</div>
 
@@ -147,7 +151,7 @@
 								class="card-img"
 							/>
 							{#if card.images.length > 1}
-								<button class="next-img-btn" onclick={nextImage}>
+								<button class="duo-btn duo-btn-purple next-img-btn" onclick={nextImage}>
 									Foto successiva ({currentImageIndex + 1}/{card.images.length})
 								</button>
 							{/if}
@@ -164,14 +168,14 @@
 
 	<!-- Controls Footer -->
 	<div class="card-controls">
-		<button class="nav-btn prev-btn" onclick={onPrev} disabled={currentIndex === 0}>
-			← Indietro <kbd class="kbd-badge">←</kbd>
+		<button class="duo-btn duo-btn-gray nav-btn" onclick={onPrev} disabled={currentIndex === 0}>
+			← Indietro
 		</button>
-		<button class="reveal-btn" onclick={handleCardClick}>
-			{flipped ? 'Nascondi' : 'Mostra Risposta'}
+		<button class="duo-btn duo-btn-green reveal-btn" onclick={handleCardClick}>
+			{flipped ? 'NASCONDI' : 'MOSTRA RISPOSTA'}
 		</button>
-		<button class="nav-btn next-btn" onclick={onNext} disabled={currentIndex === totalCards - 1}>
-			Avanti → <kbd class="kbd-badge">→</kbd>
+		<button class="duo-btn duo-btn-blue nav-btn" onclick={onNext} disabled={currentIndex === totalCards - 1}>
+			Avanti →
 		</button>
 	</div>
 </div>
@@ -193,18 +197,6 @@
 		padding: 0 0.25rem;
 	}
 
-	.badge {
-		padding: 0.3rem 0.85rem;
-		border-radius: 9999px;
-		font-size: 0.75rem;
-		font-weight: 800;
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
-		background-color: var(--accent-light-bg);
-		color: var(--accent-color);
-		border: 1px solid var(--border-color);
-	}
-
 	.top-actions {
 		display: flex;
 		align-items: center;
@@ -212,46 +204,51 @@
 	}
 
 	.audio-btn {
-		padding: 0.35rem 0.75rem;
-		border-radius: 10px;
-		background: var(--card-bg-subtle);
-		border: 1px solid var(--border-color);
-		color: var(--text-color);
+		padding: 0.4rem 0.75rem;
 		font-size: 0.75rem;
-		font-weight: 700;
-		cursor: pointer;
-		transition: all 0.2s ease;
 	}
 
-	.audio-btn:hover {
-		border-color: var(--accent-color);
-		transform: scale(1.05);
-	}
-
-	.counter {
-		font-size: 0.875rem;
-		font-weight: 700;
+	.counter-text {
+		font-family: 'Outfit', sans-serif;
+		font-size: 0.9rem;
+		font-weight: 800;
 		color: var(--text-muted);
 	}
 
 	.fav-btn {
 		background: none;
 		border: none;
-		font-size: 1.4rem;
+		font-size: 1.5rem;
 		color: var(--text-muted);
 		cursor: pointer;
 		transition: color 0.2s ease, transform 0.2s ease;
 	}
 
 	.fav-btn.active {
-		color: #f59e0b;
+		color: var(--yellow-color);
 		transform: scale(1.2);
+	}
+
+	.duo-progress-track {
+		width: 100%;
+		height: 12px;
+		background: var(--card-bg-subtle);
+		border-radius: 9999px;
+		overflow: hidden;
+		border: 1.5px solid var(--border-color);
+	}
+
+	.duo-progress-fill {
+		height: 100%;
+		background: var(--green-color);
+		border-radius: 9999px;
+		transition: width 0.3s ease;
 	}
 
 	/* 3D Scene */
 	.scene {
 		width: 100%;
-		min-height: 400px;
+		min-height: 420px;
 		perspective: 1200px;
 		cursor: pointer;
 	}
@@ -259,7 +256,7 @@
 	.card {
 		width: 100%;
 		height: 100%;
-		min-height: 400px;
+		min-height: 420px;
 		position: relative;
 		transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
 		transform-style: preserve-3d;
@@ -275,24 +272,16 @@
 		height: 100%;
 		backface-visibility: hidden;
 		-webkit-backface-visibility: hidden;
-		border-radius: 28px;
+		border-radius: 24px;
 		padding: 2rem;
-		background: var(--card-bg);
-		border: 1px solid var(--border-color);
-		box-shadow: 0 16px 40px var(--shadow-color);
 		display: flex;
 		flex-direction: column;
 		justify-content: space-between;
 		box-sizing: border-box;
 	}
 
-	.card-face.front {
-		background: linear-gradient(145deg, var(--card-bg), var(--card-bg-subtle));
-	}
-
 	.card-face.back {
 		transform: rotateY(180deg);
-		background: linear-gradient(145deg, var(--card-bg-subtle), var(--card-bg));
 		overflow-y: auto;
 	}
 
@@ -306,7 +295,7 @@
 
 	.title-badge {
 		font-size: 0.75rem;
-		font-weight: 800;
+		font-weight: 900;
 		text-transform: uppercase;
 		color: var(--accent-color);
 		letter-spacing: 0.1em;
@@ -335,10 +324,8 @@
 	}
 
 	.description-box {
-		background: var(--card-bg-subtle);
 		padding: 1.25rem;
 		border-radius: 18px;
-		border: 1px solid var(--border-color);
 		font-size: 1.05rem;
 		line-height: 1.6;
 		color: var(--text-color);
@@ -356,10 +343,12 @@
 
 	.tag {
 		font-size: 0.75rem;
+		font-weight: 800;
 		color: var(--text-muted);
 		background-color: var(--badge-bg);
-		padding: 0.15rem 0.5rem;
+		padding: 0.2rem 0.5rem;
 		border-radius: 6px;
+		border: 1px solid var(--border-color);
 	}
 
 	.image-gallery {
@@ -375,17 +364,12 @@
 		max-height: 220px;
 		object-fit: cover;
 		border-radius: 14px;
-		border: 1px solid var(--border-color);
+		border: 2px solid var(--border-color);
 	}
 
 	.next-img-btn {
 		font-size: 0.75rem;
-		padding: 0.35rem 0.75rem;
-		border-radius: 8px;
-		background-color: var(--accent-light-bg);
-		color: var(--accent-color);
-		border: 1px solid var(--border-color);
-		cursor: pointer;
+		padding: 0.4rem 0.8rem;
 	}
 
 	.tap-hint {
@@ -394,7 +378,7 @@
 		justify-content: center;
 		gap: 0.5rem;
 		font-size: 0.85rem;
-		font-weight: 600;
+		font-weight: 800;
 		color: var(--text-muted);
 		margin-top: 1rem;
 	}
@@ -403,7 +387,7 @@
 		font-size: 0.7rem;
 		font-family: inherit;
 		background: var(--card-bg-subtle);
-		border: 1px solid var(--border-color);
+		border: 1.5px solid var(--border-color);
 		padding: 0.1rem 0.4rem;
 		border-radius: 6px;
 		color: var(--text-muted);
@@ -423,42 +407,13 @@
 		align-items: center;
 	}
 
-	.nav-btn, .reveal-btn {
-		padding: 0.9rem 1.25rem;
-		border-radius: 16px;
-		font-weight: 800;
-		font-size: 0.95rem;
-		border: 1px solid var(--border-color);
-		cursor: pointer;
-		transition: all 0.2s ease;
-	}
-
 	.nav-btn {
-		background-color: var(--card-bg);
-		color: var(--text-color);
-	}
-
-	.nav-btn:hover:not(:disabled) {
-		background-color: var(--hover-bg);
-		transform: translateY(-2px);
-	}
-
-	.nav-btn:disabled {
-		opacity: 0.4;
-		cursor: not-allowed;
+		font-size: 0.85rem;
 	}
 
 	.reveal-btn {
 		flex: 1;
-		background: linear-gradient(135deg, var(--accent-color), #0284c7);
-		color: white;
-		border: none;
-		box-shadow: 0 6px 20px rgba(2, 132, 199, 0.4);
-	}
-
-	.reveal-btn:hover {
-		transform: translateY(-2px);
-		box-shadow: 0 8px 26px rgba(2, 132, 199, 0.5);
+		font-size: 1rem;
 	}
 
 	@media (max-width: 600px) {
@@ -467,3 +422,4 @@
 		}
 	}
 </style>
+

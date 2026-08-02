@@ -10,9 +10,6 @@
 		totalCards: number;
 	}>();
 
-	// Step 0: Only Photo visible
-	// Step 1: Photo + Title visible
-	// Step 2: Photo + Title + Description visible
 	let step = $state<0 | 1 | 2>(0);
 	let currentImageIndex = $state(0);
 
@@ -42,12 +39,17 @@
 
 <div class="photo-study-container">
 	<div class="top-bar">
-		<span class="badge">Modalità Foto</span>
-		<span class="counter">{currentIndex + 1} / {totalCards}</span>
+		<span class="duo-badge">Modalità Foto</span>
+		<span class="counter-text">{currentIndex + 1} / {totalCards}</span>
+	</div>
+
+	<!-- Duolingo Progress Track -->
+	<div class="duo-progress-track">
+		<div class="duo-progress-fill" style="width: {((currentIndex + 1) / totalCards) * 100}%"></div>
 	</div>
 
 	<div
-		class="study-card"
+		class="study-card duo-card"
 		onclick={advanceStep}
 		role="button"
 		tabindex="0"
@@ -62,7 +64,7 @@
 					class="photo-main"
 				/>
 				{#if card.images.length > 1}
-					<button class="img-badge" onclick={nextImage}>
+					<button class="duo-btn duo-btn-gray img-badge" onclick={nextImage}>
 						Foto {currentImageIndex + 1}/{card.images.length} 🔄
 					</button>
 				{/if}
@@ -75,7 +77,7 @@
 		{#if step === 0}
 			<div class="prompt-box step-0">
 				<p class="hint-text">🗣️ Guarda la foto e di' a voce di cosa si tratta.</p>
-				<button class="action-btn">
+				<button class="duo-btn duo-btn-purple action-btn">
 					<span>Tocca 1° volta: Mostra Titolo / Acronimo</span>
 				</button>
 			</div>
@@ -83,7 +85,7 @@
 
 		<!-- Step 1: Title Revealed -->
 		{#if step >= 1}
-			<div class="reveal-section title-reveal">
+			<div class="reveal-section duo-card title-reveal">
 				<span class="section-label">Titolo / Acronimo:</span>
 				<h2 class="card-title">{card.title}</h2>
 				{#if step === 1}
@@ -94,7 +96,7 @@
 
 		<!-- Step 2: Description Revealed -->
 		{#if step === 2}
-			<div class="reveal-section desc-reveal">
+			<div class="reveal-section duo-card desc-reveal">
 				<span class="section-label">A cosa serve / Descrizione:</span>
 				<p class="card-desc">{card.description}</p>
 			</div>
@@ -103,19 +105,19 @@
 
 	<!-- Controls -->
 	<div class="controls">
-		<button class="nav-btn" onclick={onPrev} disabled={currentIndex === 0}>
+		<button class="duo-btn duo-btn-gray nav-btn" onclick={onPrev} disabled={currentIndex === 0}>
 			← Indietro
 		</button>
-		<button class="step-btn" onclick={advanceStep}>
+		<button class="duo-btn duo-btn-green step-btn" onclick={advanceStep}>
 			{#if step === 0}
-				Mostra Titolo (Click 1)
+				MOSTRA TITOLO (Click 1)
 			{:else if step === 1}
-				Mostra Descrizione (Click 2)
+				MOSTRA DESCRIZIONE (Click 2)
 			{:else}
-				Ricomincia Scheda
+				RICOMINCIA SCHEDA
 			{/if}
 		</button>
-		<button class="nav-btn" onclick={onNext} disabled={currentIndex === totalCards - 1}>
+		<button class="duo-btn duo-btn-blue nav-btn" onclick={onNext} disabled={currentIndex === totalCards - 1}>
 			Avanti →
 		</button>
 	</div>
@@ -137,38 +139,35 @@
 		align-items: center;
 	}
 
-	.badge {
-		padding: 0.25rem 0.75rem;
-		border-radius: 9999px;
-		font-size: 0.75rem;
-		font-weight: 700;
-		text-transform: uppercase;
-		background-color: var(--accent-light-bg);
-		color: var(--accent-color);
-		border: 1px solid var(--border-color);
+	.counter-text {
+		font-family: 'Outfit', sans-serif;
+		font-size: 0.9rem;
+		font-weight: 800;
+		color: var(--text-muted);
 	}
 
-	.counter {
-		font-size: 0.875rem;
-		color: var(--text-muted);
-		font-weight: 600;
+	.duo-progress-track {
+		width: 100%;
+		height: 12px;
+		background: var(--card-bg-subtle);
+		border-radius: 9999px;
+		overflow: hidden;
+		border: 1.5px solid var(--border-color);
+	}
+
+	.duo-progress-fill {
+		height: 100%;
+		background: var(--green-color);
+		border-radius: 9999px;
+		transition: width 0.3s ease;
 	}
 
 	.study-card {
 		background: var(--card-bg);
-		border: 1px solid var(--border-color);
-		border-radius: 24px;
-		padding: 1.25rem;
 		display: flex;
 		flex-direction: column;
 		gap: 1.25rem;
 		cursor: pointer;
-		box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-		transition: transform 0.2s ease, border-color 0.2s ease;
-	}
-
-	.study-card:hover {
-		border-color: var(--accent-color);
 	}
 
 	.photo-wrapper {
@@ -181,6 +180,7 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
+		border: 2px solid var(--border-color);
 	}
 
 	.photo-main {
@@ -194,15 +194,8 @@
 		position: absolute;
 		bottom: 12px;
 		right: 12px;
-		background: rgba(15, 23, 42, 0.85);
-		backdrop-filter: blur(8px);
-		color: white;
-		border: 1px solid rgba(255, 255, 255, 0.2);
 		padding: 0.35rem 0.75rem;
-		border-radius: 20px;
 		font-size: 0.75rem;
-		font-weight: 600;
-		cursor: pointer;
 	}
 
 	.no-photo {
@@ -226,26 +219,18 @@
 	}
 
 	.action-btn {
-		background: var(--card-bg-subtle);
-		border: 1px dashed var(--accent-color);
-		color: var(--accent-color);
-		padding: 0.75rem 1rem;
-		border-radius: 12px;
-		font-weight: 700;
-		font-size: 0.85rem;
+		width: 100%;
+		font-size: 0.9rem;
 	}
 
 	.reveal-section {
-		background: var(--card-bg-subtle);
 		padding: 1.25rem;
-		border-radius: 16px;
-		border: 1px solid var(--border-color);
 		animation: fadeIn 0.3s ease;
 	}
 
 	.section-label {
 		font-size: 0.75rem;
-		font-weight: 700;
+		font-weight: 900;
 		text-transform: uppercase;
 		color: var(--accent-color);
 		letter-spacing: 0.05em;
@@ -273,32 +258,13 @@
 		align-items: center;
 	}
 
-	.nav-btn, .step-btn {
-		padding: 0.85rem 1.25rem;
-		border-radius: 14px;
-		font-weight: 700;
-		font-size: 0.95rem;
-		border: 1px solid var(--border-color);
-		cursor: pointer;
-		transition: all 0.2s ease;
-	}
-
 	.nav-btn {
-		background: var(--card-bg);
-		color: var(--text-color);
-	}
-
-	.nav-btn:disabled {
-		opacity: 0.4;
-		cursor: not-allowed;
+		font-size: 0.85rem;
 	}
 
 	.step-btn {
 		flex: 1;
-		background: linear-gradient(135deg, var(--accent-color), #0284c7);
-		color: white;
-		border: none;
-		box-shadow: 0 4px 14px rgba(2, 132, 199, 0.4);
+		font-size: 0.95rem;
 	}
 
 	@keyframes fadeIn {
@@ -306,3 +272,4 @@
 		to { opacity: 1; transform: translateY(0); }
 	}
 </style>
+

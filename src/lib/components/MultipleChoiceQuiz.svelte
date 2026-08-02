@@ -22,7 +22,6 @@
 	let isSolved = $state(false);
 
 	$effect(() => {
-		// Generate 5 options whenever targetCard changes
 		generateOptions();
 		selectedOptionId = null;
 		wrongAttempts = new Set();
@@ -30,14 +29,12 @@
 	});
 
 	function generateOptions() {
-		// Correct option
 		const correct: QuizOption = {
 			id: targetCard.id,
 			text: targetCard.description,
 			isCorrect: true
 		};
 
-		// 4 random distractors from other cards
 		const otherCards = allCards.filter((c: Card) => c.id !== targetCard.id);
 		const shuffledOthers = [...otherCards].sort(() => 0.5 - Math.random());
 		const distractors: QuizOption[] = shuffledOthers.slice(0, 4).map((c: Card) => ({
@@ -46,7 +43,6 @@
 			isCorrect: false
 		}));
 
-		// Combine and shuffle 5 options
 		const combined = [correct, ...distractors].sort(() => 0.5 - Math.random());
 		options = combined;
 	}
@@ -68,24 +64,29 @@
 
 <div class="quiz-container">
 	<div class="quiz-header">
-		<span class="badge">Quiz Scelta Multipla</span>
-		<span class="counter">Domanda {currentIndex + 1} / {totalCards}</span>
+		<span class="duo-badge">Quiz Scelta Multipla</span>
+		<span class="counter-text">Domanda {currentIndex + 1} / {totalCards}</span>
+	</div>
+
+	<!-- Duolingo Progress Track -->
+	<div class="duo-progress-track">
+		<div class="duo-progress-fill" style="width: {((currentIndex + 1) / totalCards) * 100}%"></div>
 	</div>
 
 	<!-- Question Box -->
-	<div class="question-card">
+	<div class="question-card duo-card">
 		<span class="question-label">Domanda:</span>
 		<h2 class="question-title">Che cos'è <span>"{targetCard.title}"</span>?</h2>
 	</div>
 
-	<!-- 5 Choice Options -->
+	<!-- 5 Choice Options with 3D Duolingo Buttons -->
 	<div class="options-list">
 		{#each options as option, i}
 			{@const isWrong = wrongAttempts.has(option.id)}
 			{@const isRight = isSolved && option.isCorrect}
 			
 			<button
-				class="option-btn"
+				class="duo-option-btn duo-card"
 				class:correct={isRight}
 				class:wrong={isWrong}
 				disabled={isRight}
@@ -96,7 +97,7 @@
 				{#if isRight}
 					<div class="status-icon right">✓</div>
 				{:else if isWrong}
-					<div class="status-icon wrong">✗</div>
+					<div class="status-icon wrong">✕</div>
 				{/if}
 			</button>
 		{/each}
@@ -105,14 +106,14 @@
 	<!-- Feedback & Next Button -->
 	<div class="quiz-footer">
 		{#if isSolved}
-			<div class="success-banner">
+			<div class="success-banner duo-card">
 				🎉 Esatto! Hai selezionato la risposta corretta.
 			</div>
-			<button class="next-btn" onclick={onNext}>
-				Prossima Domanda →
+			<button class="duo-btn duo-btn-green next-btn" onclick={onNext}>
+				PROSSIMA DOMANDA →
 			</button>
 		{:else if wrongAttempts.size > 0}
-			<div class="retry-banner">
+			<div class="retry-banner duo-card">
 				❌ Risposta errata! Riprova pure (tentativi infiniti disponibili).
 			</div>
 		{/if}
@@ -135,38 +136,40 @@
 		align-items: center;
 	}
 
-	.badge {
-		padding: 0.25rem 0.75rem;
-		border-radius: 9999px;
-		font-size: 0.75rem;
-		font-weight: 700;
-		text-transform: uppercase;
-		background-color: var(--accent-light-bg);
-		color: var(--accent-color);
-		border: 1px solid var(--border-color);
+	.counter-text {
+		font-family: 'Outfit', sans-serif;
+		font-size: 0.9rem;
+		font-weight: 800;
+		color: var(--text-muted);
 	}
 
-	.counter {
-		font-size: 0.875rem;
-		font-weight: 600;
-		color: var(--text-muted);
+	.duo-progress-track {
+		width: 100%;
+		height: 12px;
+		background: var(--card-bg-subtle);
+		border-radius: 9999px;
+		overflow: hidden;
+		border: 1.5px solid var(--border-color);
+	}
+
+	.duo-progress-fill {
+		height: 100%;
+		background: var(--green-color);
+		border-radius: 9999px;
+		transition: width 0.3s ease;
 	}
 
 	.question-card {
 		background: var(--card-bg);
-		border: 1px solid var(--border-color);
-		border-radius: 20px;
-		padding: 1.5rem;
-		box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
 	}
 
 	.question-label {
 		font-size: 0.8rem;
-		font-weight: 700;
+		font-weight: 900;
 		text-transform: uppercase;
 		color: var(--accent-color);
 		display: block;
-		margin-bottom: 0.5rem;
+		margin-bottom: 0.4rem;
 	}
 
 	.question-title {
@@ -183,43 +186,46 @@
 	.options-list {
 		display: flex;
 		flex-direction: column;
-		gap: 0.75rem;
+		gap: 0.85rem;
 	}
 
-	.option-btn {
+	.duo-option-btn {
 		display: flex;
 		align-items: center;
 		gap: 1rem;
 		padding: 1rem 1.25rem;
-		background: var(--card-bg);
-		border: 1px solid var(--border-color);
-		border-radius: 16px;
 		color: var(--text-color);
 		font-size: 0.95rem;
+		font-weight: 700;
 		line-height: 1.5;
 		text-align: left;
 		cursor: pointer;
-		transition: all 0.2s ease;
-		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+		user-select: none;
+		border-radius: 18px;
+		transition: all 0.15s ease;
 	}
 
-	.option-btn:hover:not(:disabled) {
+	.duo-option-btn:hover:not(:disabled) {
 		border-color: var(--accent-color);
 		background: var(--hover-bg);
-		transform: translateY(-1px);
+		transform: translateY(-2px);
+	}
+
+	.duo-option-btn:active:not(:disabled) {
+		transform: translateY(1px);
 	}
 
 	.option-index {
-		width: 28px;
-		height: 28px;
-		border-radius: 50%;
+		width: 32px;
+		height: 32px;
+		border-radius: 10px;
 		background: var(--card-bg-subtle);
-		border: 1px solid var(--border-color);
+		border: 2px solid var(--border-color);
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		font-weight: 800;
-		font-size: 0.85rem;
+		font-weight: 900;
+		font-size: 0.9rem;
 		flex-shrink: 0;
 	}
 
@@ -227,30 +233,32 @@
 		flex: 1;
 	}
 
-	.option-btn.correct {
-		background: rgba(34, 197, 94, 0.15);
-		border-color: #22c55e;
-		color: #15803d;
+	.duo-option-btn.correct {
+		background: rgba(88, 204, 2, 0.15);
+		border-color: var(--green-color);
+		border-bottom-color: var(--green-depth);
+		color: var(--green-color);
 	}
 
-	.option-btn.wrong {
-		background: rgba(239, 68, 68, 0.15);
-		border-color: #ef4444;
-		color: #b91c1c;
-		opacity: 0.7;
+	.duo-option-btn.wrong {
+		background: rgba(255, 75, 75, 0.15);
+		border-color: var(--pink-color);
+		border-bottom-color: var(--pink-depth);
+		color: var(--pink-color);
+		opacity: 0.85;
 	}
 
 	.status-icon {
-		font-size: 1.2rem;
+		font-size: 1.3rem;
 		font-weight: 900;
 	}
 
 	.status-icon.right {
-		color: #22c55e;
+		color: var(--green-color);
 	}
 
 	.status-icon.wrong {
-		color: #ef4444;
+		color: var(--pink-color);
 	}
 
 	.quiz-footer {
@@ -260,41 +268,27 @@
 	}
 
 	.success-banner {
-		background: rgba(34, 197, 94, 0.15);
-		border: 1px solid #22c55e;
-		color: #166534;
+		background: rgba(88, 204, 2, 0.15);
+		border-color: var(--green-color);
+		color: var(--green-color);
 		padding: 1rem;
-		border-radius: 14px;
-		font-weight: 700;
+		font-weight: 800;
 		text-align: center;
 	}
 
 	.retry-banner {
-		background: rgba(239, 68, 68, 0.15);
-		border: 1px solid #ef4444;
-		color: #991b1b;
-		padding: 0.75rem;
-		border-radius: 12px;
+		background: rgba(255, 75, 75, 0.15);
+		border-color: var(--pink-color);
+		color: var(--pink-color);
+		padding: 0.85rem;
 		font-size: 0.9rem;
-		font-weight: 600;
+		font-weight: 800;
 		text-align: center;
 	}
 
 	.next-btn {
 		width: 100%;
-		padding: 1rem;
-		border-radius: 16px;
-		background: linear-gradient(135deg, var(--accent-color), #0284c7);
-		color: white;
-		border: none;
-		font-weight: 800;
-		font-size: 1.05rem;
-		cursor: pointer;
-		box-shadow: 0 4px 14px rgba(2, 132, 199, 0.4);
-		transition: transform 0.2s ease;
-	}
-
-	.next-btn:hover {
-		transform: translateY(-2px);
+		font-size: 1rem;
 	}
 </style>
+
