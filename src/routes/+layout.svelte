@@ -12,15 +12,22 @@
 
 	let touchStartX = 0;
 	let touchStartY = 0;
+	let touchStartTime = 0;
 
 	function handleTouchStart(e: TouchEvent) {
 		const target = e.target as HTMLElement;
-		// Don't swipe if typing in input/textarea
-		if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+		// Don't swipe if typing in input/textarea, inside modals, or horizontal scroll boxes
+		if (
+			target.tagName === 'INPUT' ||
+			target.tagName === 'TEXTAREA' ||
+			target.closest('.search-modal-backdrop') ||
+			target.closest('.nav-scroll-wrapper')
+		) {
 			return;
 		}
 		touchStartX = e.touches[0].clientX;
 		touchStartY = e.touches[0].clientY;
+		touchStartTime = Date.now();
 	}
 
 	function handleTouchEnd(e: TouchEvent) {
@@ -28,12 +35,16 @@
 
 		const touchEndX = e.changedTouches[0].clientX;
 		const touchEndY = e.changedTouches[0].clientY;
+		const touchDuration = Date.now() - touchStartTime;
 
 		const diffX = touchEndX - touchStartX;
 		const diffY = touchEndY - touchStartY;
 
-		// Require horizontal swipe threshold > 60px and diffX dominating diffY
-		if (Math.abs(diffX) > 60 && Math.abs(diffX) > Math.abs(diffY) * 1.5) {
+		// Fast swipe gesture (duration < 250ms) or distance > 45px with horizontal dominance
+		const isFastSwipe = touchDuration < 250 && Math.abs(diffX) > 30;
+		const isDistanceSwipe = Math.abs(diffX) > 45;
+
+		if ((isFastSwipe || isDistanceSwipe) && Math.abs(diffX) > Math.abs(diffY) * 1.6) {
 			const currentPath = page.url.pathname;
 			const currentIndex = routeOrder.indexOf(currentPath);
 
@@ -50,6 +61,7 @@
 
 		touchStartX = 0;
 		touchStartY = 0;
+		touchStartTime = 0;
 	}
 </script>
 
