@@ -173,7 +173,7 @@
 		<!-- Admin Panel Dashboard -->
 		<div class="admin-panel">
 			<!-- Header Admin Bar -->
-			<div class="admin-top">
+			<div class="admin-top duo-card">
 				<div class="user-info">
 					{#if user.avatar}
 						<img src={user.avatar} alt={user.username} class="avatar" />
@@ -182,24 +182,24 @@
 					{/if}
 					<div>
 						<span class="user-name">{user.username}</span>
-						<span class="user-role">Amministratore Autorizzato</span>
+						<span class="user-role">Amministratore Autorizzato (DB PostgreSQL Attivo)</span>
 					</div>
 				</div>
 
 				<div class="top-actions">
-					<button class="export-btn" onclick={exportJSON}>
-						📥 Esporta JSON DB
+					<button class="duo-btn duo-btn-blue export-btn" onclick={exportJSON}>
+						📥 ESPORTA DB JSON
 					</button>
-					<a href="/api/auth/logout" class="logout-btn">
+					<a href="/api/auth/logout" class="duo-btn duo-btn-gray logout-btn">
 						Esci
 					</a>
 				</div>
 			</div>
 
 			<!-- Card Editor Form -->
-			<form class="editor-card" onsubmit={handleSaveCard}>
+			<form class="editor-card duo-card" onsubmit={handleSaveCard}>
 				<h2 class="form-title">
-					{editingCardId ? '✏️ Modifica Scheda' : '➕ Aggiungi Nuova Card Informativa'}
+					{editingCardId ? '✏️ Modifica Scheda' : '➕ Aggiungi Nuova Card Informativa (PostgreSQL DB)'}
 				</h2>
 
 				<div class="form-grid">
@@ -211,7 +211,7 @@
 							bind:value={title}
 							placeholder="Es: RFI, SCMT, ETCS..."
 							required
-							class="form-input"
+							class="duo-input form-input"
 						/>
 					</div>
 
@@ -222,7 +222,7 @@
 							type="text"
 							bind:value={category}
 							placeholder="Es: Segnalamento, Normativa, Trazione..."
-							class="form-input"
+							class="duo-input form-input"
 						/>
 					</div>
 				</div>
@@ -235,7 +235,7 @@
 						placeholder="Scrivi esattamente a cosa serve o la spiegazione dettagliata..."
 						rows="4"
 						required
-						class="form-textarea"
+						class="duo-input form-textarea"
 					></textarea>
 				</div>
 
@@ -246,7 +246,7 @@
 						type="text"
 						bind:value={tagInput}
 						placeholder="Es: Sicurezza, Bordo, FS"
-						class="form-input"
+						class="duo-input form-input"
 					/>
 				</div>
 
@@ -260,15 +260,15 @@
 								type="url"
 								bind:value={newImageUrl}
 								placeholder="Inserisci URL immagine (https://...)"
-								class="form-input"
+								class="duo-input form-input"
 							/>
-							<button type="button" class="add-img-btn" onclick={addImageUrl}>
+							<button type="button" class="duo-btn duo-btn-gray add-img-btn" onclick={addImageUrl}>
 								+ Aggiungi URL
 							</button>
 						</div>
 
 						<div class="file-input-row">
-							<label class="file-upload-label">
+							<label class="duo-btn duo-btn-gray file-upload-label">
 								📁 {uploading ? 'Caricamento...' : 'Carica da dispositivo'}
 								<input type="file" accept="image/*" onchange={handleFileUpload} disabled={uploading} hidden />
 							</label>
@@ -292,12 +292,12 @@
 				<!-- Form Actions -->
 				<div class="form-actions">
 					{#if editingCardId}
-						<button type="button" class="cancel-btn" onclick={resetForm}>
+						<button type="button" class="duo-btn duo-btn-gray cancel-btn" onclick={resetForm}>
 							Annulla
 						</button>
 					{/if}
-					<button type="submit" class="save-btn">
-						{editingCardId ? 'Salva Modifiche' : '➕ Aggiungi al Database'}
+					<button type="submit" class="duo-btn duo-btn-green save-btn">
+						{editingCardId ? 'Salva Modifiche DB' : '➕ AGGIUNGI AL DB POSTGRESQL'}
 					</button>
 				</div>
 			</form>

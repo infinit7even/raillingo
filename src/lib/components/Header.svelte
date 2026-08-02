@@ -36,7 +36,7 @@
 			<img src="/emoji/triangular_flag_3d.png" alt="Bandiera" class="emoji-img flag-img" />
 			<div class="title-group">
 				<span class="app-title">
-					Rai<span class="ll-rail-font">ll</span>ingo
+					Rai<span class="ll-track-box">l<img src="/emoji/railway_track_3d.png" alt="Binario" class="brand-track-img-sm" />l</span>ingo
 				</span>
 				<span class="app-subtitle">Rail Focus</span>
 			</div>
@@ -47,18 +47,21 @@
 			<!-- Streak Flame -->
 			<div class="stat-pill streak" title="Giorni di slancio consecutivi">
 				<img src="/emoji/fire_3d.png" alt="Serie" class="emoji-img pill-emoji" />
+				<span class="pill-label">Serie</span>
 				<span class="pill-value">{stats.streakDays}</span>
 			</div>
 
 			<!-- Gems / Studied Cards -->
-			<div class="stat-pill gems" title="Totale schede imparate">
+			<div class="stat-pill gems" title="Gemme totali per quiz corretti">
 				<img src="/emoji/gem_stone_3d.png" alt="Gemme" class="emoji-img pill-emoji" />
-				<span class="pill-value">{stats.cardsStudied * 10 + 100}</span>
+				<span class="pill-label">Gemme</span>
+				<span class="pill-value">{stats.quizCorrect * 10 + 100}</span>
 			</div>
 
-			<!-- Energy / XP Hearts -->
-			<div class="stat-pill energy" title="Punti XP guadagnati">
+			<!-- Energy / XP -->
+			<div class="stat-pill energy" title="Punti XP guadagnati da interazioni">
 				<img src="/emoji/high_voltage_3d.png" alt="XP" class="emoji-img pill-emoji" />
+				<span class="pill-label">XP</span>
 				<span class="pill-value">{stats.quizCorrect * 15 + stats.cardsStudied * 5}</span>
 			</div>
 		</div>
@@ -133,31 +136,22 @@
 		font-size: 1.25rem;
 		letter-spacing: -0.03em;
 		color: var(--accent-color);
+		display: inline-flex;
+		align-items: center;
 	}
 
-	.ll-rail-font {
+	.ll-track-box {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
 		position: relative;
-		display: inline-block;
-		letter-spacing: 0.04em;
 	}
 
-	.ll-rail-font::after {
-		content: '';
-		position: absolute;
-		left: 1px;
-		right: 1px;
-		top: 25%;
-		bottom: 15%;
-		background: linear-gradient(
-			to bottom,
-			currentColor 0%, currentColor 15%,
-			transparent 15%, transparent 40%,
-			currentColor 40%, currentColor 55%,
-			transparent 55%, transparent 80%,
-			currentColor 80%, currentColor 95%
-		);
-		opacity: 0.85;
-		pointer-events: none;
+	.brand-track-img-sm {
+		width: 0.7em;
+		height: 0.7em;
+		object-fit: contain;
+		margin: 0 -0.06em;
 	}
 
 	.app-subtitle {
@@ -197,6 +191,14 @@
 
 	.stat-pill.energy {
 		color: var(--pink-color);
+	}
+
+	.pill-label {
+		font-size: 0.72rem;
+		font-weight: 800;
+		opacity: 0.85;
+		text-transform: uppercase;
+		letter-spacing: 0.03em;
 	}
 
 	.pill-value {

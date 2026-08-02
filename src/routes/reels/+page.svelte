@@ -1,77 +1,18 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { cardsStore } from '$lib/stores/cardsStore';
-	import { statsStore, type StatsData } from '$lib/stores/statsStore';
+	import { statsStore } from '$lib/stores/statsStore';
 	import { tts } from '$lib/utils/tts';
 	import type { Card } from '$lib/types/cards';
 
 	let cards = $state<Card[]>([]);
-	let activeTab = $state<'missions' | 'reels'>('missions');
 	let flippedMap = $state<Record<string, boolean>>({});
 	let imageIndexMap = $state<Record<string, number>>({});
-	let claimedMissions = $state<Record<string, boolean>>({});
-	let stats = $state<StatsData>({
-		cardsStudied: 0,
-		quizAnswered: 0,
-		quizCorrect: 0,
-		streakDays: 1,
-		lastStudiedDate: '',
-		favorites: []
-	});
 
 	onMount(() => {
-		const uncards = cardsStore.subscribe((c) => (cards = c));
-		const unstats = statsStore.subscribe((s) => (stats = s));
-		return () => {
-			uncards();
-			unstats();
-		};
+		const unsubscribe = cardsStore.subscribe((c) => (cards = c));
+		return unsubscribe;
 	});
-
-	let userXP = $derived(stats.quizCorrect * 15 + stats.cardsStudied * 5);
-
-	let missionsList = $derived([
-		{
-			id: 'm1',
-			title: 'Guadagna 10 XP',
-			desc: 'Rispondi ai quiz o studia le schede per accumulare XP.',
-			current: Math.min(10, userXP),
-			target: 10,
-			reward: '+20 Gemme 💎',
-			completed: userXP >= 10
-		},
-		{
-			id: 'm2',
-			title: 'Studia 5 Flashcard',
-			desc: 'Rivela il retro di almeno 5 schede nella sezione Flashcard o Reels.',
-			current: Math.min(5, stats.cardsStudied),
-			target: 5,
-			reward: '+15 XP ⚡',
-			completed: stats.cardsStudied >= 5
-		},
-		{
-			id: 'm3',
-			title: 'Completa 3 Quiz',
-			desc: 'Rispondi correttamente a 3 domande nel quiz a 5 opzioni.',
-			current: Math.min(3, stats.quizCorrect),
-			target: 3,
-			reward: '+30 Gemme 💎',
-			completed: stats.quizCorrect >= 3
-		},
-		{
-			id: 'm4',
-			title: 'Serie di 1 Giorno',
-			desc: 'Effettua il login e studia oggi per mantenere la serie attiva.',
-			current: Math.min(1, stats.streakDays),
-			target: 1,
-			reward: '+1 Giorno 🔥',
-			completed: stats.streakDays >= 1
-		}
-	]);
-
-	function claimReward(missionId: string) {
-		claimedMissions[missionId] = true;
-	}
 
 	function toggleFlip(cardId: string) {
 		flippedMap[cardId] = !flippedMap[cardId];
@@ -96,397 +37,117 @@
 	}
 </script>
 
-<div class="missioni-page-container">
-	<!-- Tab Selector -->
-	<div class="duo-tab-bar">
-		<button
-			class="duo-tab-btn"
-			class:active={activeTab === 'missions'}
-			onclick={() => (activeTab = 'missions')}
-		>
-			<img src="/emoji/package_3d.png" alt="Missioni" class="tab-emoji" />
-			MISSIONI GIORNALIERE
-		</button>
-		<button
-			class="duo-tab-btn"
-			class:active={activeTab === 'reels'}
-			onclick={() => (activeTab = 'reels')}
-		>
-			<img src="/emoji/camera_3d.png" alt="Reels" class="tab-emoji" />
-			REELS FERROVIARI
-		</button>
-	</div>
+<div class="reels-page-wrapper">
+	<div class="reels-feed-container">
+		{#if cards.length > 0}
+			{#each cards as card, index}
+				{@const isFlipped = flippedMap[card.id] || false}
+				{@const imgIdx = imageIndexMap[card.id] || 0}
+				{@const hasImages = card.images && card.images.length > 0}
 
-	{#if activeTab === 'missions'}
-		<!-- 📦 MISSIONI GIORNALIERE DUOLINGO -->
-		<div class="missions-card duo-card">
-			<div class="missions-header">
-				<img src="/emoji/package_3d.png" alt="Missioni" class="missions-icon-img" />
-				<div class="missions-titles">
-					<span class="missions-subtitle">SFIDE E OBIETTIVI</span>
-					<h1 class="missions-heading">Missioni Giornaliere</h1>
-					<p class="missions-desc">Completa le missioni quotidiane per sbloccare gemme ed XP!</p>
-				</div>
-			</div>
-
-			<div class="missions-list">
-				{#each missionsList as m}
-					{@const isClaimed = claimedMissions[m.id]}
-					{@const pct = Math.min(100, Math.round((m.current / m.target) * 100))}
-
-					<div class="mission-row duo-card" class:completed-row={m.completed}>
-						<div class="mission-main">
-							<div class="mission-top">
-								<h3 class="m-title">{m.title}</h3>
-								<span class="m-reward">{m.reward}</span>
-							</div>
-							<p class="m-desc">{m.desc}</p>
-
-							<div class="duo-progress-track">
-								<div class="duo-progress-fill" style="width: {pct}%"></div>
-							</div>
-							<span class="m-count">{m.current} / {m.target}</span>
-						</div>
-
-						<div class="mission-action">
-							{#if isClaimed}
-								<span class="claimed-badge">Riscattato ✓</span>
-							{:else if m.completed}
-								<button class="duo-btn duo-btn-green claim-btn" onclick={() => claimReward(m.id)}>
-									RISCATTA
-								</button>
-							{:else}
-								<span class="lock-badge">In corso</span>
-							{/if}
+				<div class="reel-slide">
+					<!-- Header Index Bar -->
+					<div class="reel-top-bar">
+						<span class="reel-badge">🎬 Reel Ferroviario</span>
+						
+						<div class="right-top-actions">
+							<button class="audio-btn" onclick={(e) => speakAudio(e, card)}>
+								🔊 Audio
+							</button>
+							<span class="reel-index">{index + 1} / {cards.length}</span>
 						</div>
 					</div>
-				{/each}
-			</div>
 
-			<div class="reels-cta-box">
-				<p>Vuoi velocizzare il completamento delle missioni? Guarda i Reels ed esegui i ripassi!</p>
-				<button class="duo-btn duo-btn-blue cta-btn" onclick={() => (activeTab = 'reels')}>
-					APRI REELS FERROVIARI 🎬
-				</button>
-			</div>
-		</div>
-	{:else}
-		<!-- 🎬 REELS FEED VERTICALE -->
-		<div class="reels-feed-container">
-			{#if cards.length > 0}
-				{#each cards as card, index}
-					{@const isFlipped = flippedMap[card.id] || false}
-					{@const imgIdx = imageIndexMap[card.id] || 0}
-					{@const hasImages = card.images && card.images.length > 0}
+					<!-- 3D Flipping Reel Card -->
+					<div
+						class="scene"
+						onclick={() => toggleFlip(card.id)}
+						role="button"
+						tabindex="0"
+						onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && toggleFlip(card.id)}
+					>
+						<div class="card" class:is-flipped={isFlipped}>
+							<!-- FRONT (Acronym / Title) -->
+							<div class="card-face front">
+								<div class="face-overlay"></div>
+								
+								{#if hasImages}
+									<img src={card.images![imgIdx]} alt={card.title} class="bg-card-img" />
+								{/if}
 
-					<div class="reel-slide">
-						<!-- Header Index Bar -->
-						<div class="reel-top-bar">
-							<span class="reel-badge">🎬 Reel Ferroviario</span>
-							
-							<div class="right-top-actions">
-								<button class="audio-btn" onclick={(e) => speakAudio(e, card)}>
-									🔊 Audio
-								</button>
-								<span class="reel-index">{index + 1} / {cards.length}</span>
-							</div>
-						</div>
-
-						<!-- 3D Flipping Reel Card -->
-						<div
-							class="scene"
-							onclick={() => toggleFlip(card.id)}
-							role="button"
-							tabindex="0"
-							onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && toggleFlip(card.id)}
-						>
-							<div class="card" class:is-flipped={isFlipped}>
-								<!-- FRONT (Acronym / Title) -->
-								<div class="card-face front">
-									<div class="face-overlay"></div>
-									
-									{#if hasImages}
-										<img src={card.images![imgIdx]} alt={card.title} class="bg-card-img" />
+								<div class="front-content">
+									{#if card.category}
+										<span class="category-tag">{card.category}</span>
 									{/if}
 
-									<div class="front-content">
-										{#if card.category}
-											<span class="category-tag">{card.category}</span>
-										{/if}
-
-										<h1 class="card-title">{card.title}</h1>
-										
-										<div class="tap-flip-hint">
-											<span>👇 Tocca la card per girarla</span>
-										</div>
+									<h1 class="card-title">{card.title}</h1>
+									
+									<div class="tap-flip-hint">
+										<span>👇 Tocca la card per girarla</span>
 									</div>
 								</div>
+							</div>
 
-								<!-- BACK (Description + Photos) -->
-								<div class="card-face back">
-									<div class="back-content">
-										<div class="back-header">
-											<h2 class="card-title-small">{card.title}</h2>
-											<span class="back-badge">Spiegazione</span>
+							<!-- BACK (Description + Photos) -->
+							<div class="card-face back">
+								<div class="back-content">
+									<div class="back-header">
+										<h2 class="card-title-small">{card.title}</h2>
+										<span class="back-badge">Spiegazione</span>
+									</div>
+
+									<div class="description-box">
+										<p>{card.description}</p>
+									</div>
+
+									{#if hasImages}
+										<div class="gallery-section">
+											<img src={card.images![imgIdx]} alt={card.title} class="back-img" />
+											{#if card.images!.length > 1}
+												<button class="next-img-btn" onclick={(e) => nextImage(e, card)}>
+													Foto successiva ({imgIdx + 1}/{card.images!.length})
+												</button>
+											{/if}
 										</div>
+									{/if}
 
-										<div class="description-box">
-											<p>{card.description}</p>
-										</div>
-
-										{#if hasImages}
-											<div class="gallery-section">
-												<img src={card.images![imgIdx]} alt={card.title} class="back-img" />
-												{#if card.images!.length > 1}
-													<button class="next-img-btn" onclick={(e) => nextImage(e, card)}>
-														Foto successiva ({imgIdx + 1}/{card.images!.length})
-													</button>
-												{/if}
-											</div>
-										{/if}
-
-										<div class="tap-flip-hint back-hint">
-											<span>Tocca per girare di nuovo</span>
-										</div>
+									<div class="tap-flip-hint back-hint">
+										<span>Tocca per girare di nuovo</span>
 									</div>
 								</div>
 							</div>
 						</div>
-
-						<div class="reel-scroll-hint">
-							<span class="swipe-text">Scorri verso l'alto per la prossima card ⬇️</span>
-						</div>
 					</div>
-				{/each}
-			{:else}
-				<div class="empty-reels">Caricamento Reels...</div>
-			{/if}
-		</div>
-	{/if}
+
+					<div class="reel-scroll-hint">
+						<span class="swipe-text">Scorri verso l'alto per la prossima card ⬇️</span>
+					</div>
+				</div>
+			{/each}
+		{:else}
+			<div class="empty-reels">Caricamento Reels...</div>
+		{/if}
+	</div>
 </div>
 
 <style>
-	.missioni-page-container {
-		max-width: 620px;
-		margin: 0 auto;
+	.reels-page-wrapper {
+		width: 100%;
 		display: flex;
-		flex-direction: column;
-		gap: 1.5rem;
-	}
-
-	.duo-tab-bar {
-		display: flex;
-		gap: 0.5rem;
-		background: var(--card-bg-subtle);
-		padding: 0.4rem;
-		border-radius: 18px;
-		border: 2px solid var(--border-color);
-	}
-
-	.duo-tab-btn {
-		flex: 1;
-		display: flex;
-		align-items: center;
 		justify-content: center;
-		gap: 0.6rem;
-		padding: 0.75rem 1rem;
-		border-radius: 14px;
-		border: 2px solid transparent;
-		background: none;
-		color: var(--text-muted);
-		font-family: 'Outfit', sans-serif;
-		font-weight: 800;
-		font-size: 0.85rem;
-		cursor: pointer;
-		transition: all 0.2s ease;
 	}
 
-	.duo-tab-btn.active {
-		background: var(--card-bg);
-		color: var(--accent-color);
-		border-color: var(--accent-color);
-		box-shadow: 0 4px 12px var(--shadow-color);
-	}
-
-	.tab-emoji {
-		width: 22px;
-		height: 22px;
-		object-fit: contain;
-	}
-
-	.missions-card {
-		display: flex;
-		flex-direction: column;
-		gap: 1.5rem;
-	}
-
-	.missions-header {
-		display: flex;
-		gap: 1.25rem;
-		align-items: center;
-		padding-bottom: 1rem;
-		border-bottom: 2px solid var(--border-color);
-	}
-
-	.missions-icon-img {
-		width: 64px;
-		height: 64px;
-		object-fit: contain;
-	}
-
-	.missions-titles {
-		display: flex;
-		flex-direction: column;
-		gap: 0.25rem;
-	}
-
-	.missions-subtitle {
-		font-size: 0.75rem;
-		font-weight: 900;
-		text-transform: uppercase;
-		color: var(--yellow-color);
-		letter-spacing: 0.08em;
-	}
-
-	.missions-heading {
-		font-size: 1.6rem;
-		font-weight: 900;
-		color: var(--text-color);
-		margin: 0;
-	}
-
-	.missions-desc {
-		font-size: 0.85rem;
-		color: var(--text-muted);
-		margin: 0;
-	}
-
-	.missions-list {
-		display: flex;
-		flex-direction: column;
-		gap: 1rem;
-	}
-
-	.mission-row {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		gap: 1rem;
-		padding: 1rem;
-	}
-
-	.mission-main {
-		flex: 1;
-		display: flex;
-		flex-direction: column;
-		gap: 0.4rem;
-	}
-
-	.mission-top {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-	}
-
-	.m-title {
-		font-size: 1rem;
-		font-weight: 900;
-		color: var(--text-color);
-		margin: 0;
-	}
-
-	.m-reward {
-		font-size: 0.8rem;
-		font-weight: 900;
-		color: var(--yellow-color);
-	}
-
-	.m-desc {
-		font-size: 0.8rem;
-		color: var(--text-muted);
-		margin: 0;
-	}
-
-	.duo-progress-track {
-		width: 100%;
-		height: 10px;
-		background: var(--card-bg-subtle);
-		border-radius: 9999px;
-		overflow: hidden;
-		border: 1px solid var(--border-color);
-		margin-top: 0.25rem;
-	}
-
-	.duo-progress-fill {
-		height: 100%;
-		background: var(--green-color);
-		border-radius: 9999px;
-		transition: width 0.3s ease;
-	}
-
-	.m-count {
-		font-size: 0.7rem;
-		font-weight: 800;
-		color: var(--text-muted);
-	}
-
-	.mission-action {
-		display: flex;
-		align-items: center;
-		flex-shrink: 0;
-	}
-
-	.claim-btn {
-		padding: 0.5rem 0.9rem;
-		font-size: 0.8rem;
-	}
-
-	.claimed-badge {
-		font-size: 0.75rem;
-		font-weight: 900;
-		color: var(--green-color);
-		background: rgba(88, 204, 2, 0.15);
-		padding: 0.3rem 0.65rem;
-		border-radius: 8px;
-	}
-
-	.lock-badge {
-		font-size: 0.75rem;
-		font-weight: 800;
-		color: var(--text-muted);
-	}
-
-	.reels-cta-box {
-		background: var(--card-bg-subtle);
-		padding: 1.25rem;
-		border-radius: 18px;
-		border: 2px dashed var(--yellow-color);
-		display: flex;
-		flex-direction: column;
-		gap: 0.85rem;
-		text-align: center;
-	}
-
-	.reels-cta-box p {
-		font-size: 0.85rem;
-		color: var(--text-muted);
-		margin: 0;
-	}
-
-	.cta-btn {
-		width: 100%;
-		font-size: 0.95rem;
-	}
-
-	/* REELS CSS */
 	.reels-feed-container {
 		width: 100%;
-		height: calc(100vh - 170px);
+		max-width: 480px;
+		height: calc(100vh - 140px);
 		overflow-y: scroll;
 		scroll-snap-type: y mandatory;
 		border-radius: 28px;
 		background: #090d16;
 		position: relative;
+		border: 2px solid var(--border-color);
+		box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
 	}
 
 	.reel-slide {
@@ -751,4 +412,3 @@
 		60% { transform: translateY(-3px); }
 	}
 </style>
-

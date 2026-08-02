@@ -22,28 +22,31 @@
 	}
 </script>
 
-<div class="mode-page">
-	<div class="submode-selector">
+<div class="scrittura-page-container">
+	<div class="duo-tab-bar">
 		<button
-			class="submode-btn"
+			class="duo-tab-btn"
 			class:active={selectedSubMode === 'title-to-desc'}
 			onclick={() => { selectedSubMode = 'title-to-desc'; currentIndex = 0; }}
 		>
-			📝 Acronimo ➔ Descrizione
+			<img src="/emoji/writing_hand_3d_default.png" alt="Scrittura" class="tab-emoji" />
+			ACRONIMO ➔ DESCRIZIONE
 		</button>
 		<button
-			class="submode-btn"
+			class="duo-tab-btn"
 			class:active={selectedSubMode === 'desc-to-title'}
 			onclick={() => { selectedSubMode = 'desc-to-title'; currentIndex = 0; }}
 		>
-			🔄 Descrizione ➔ Acronimo
+			<img src="/emoji/counterclockwise_arrows_button_3d.png" alt="Inverso" class="tab-emoji" />
+			DESCRIZIONE ➔ ACRONIMO
 		</button>
 		<button
-			class="submode-btn"
+			class="duo-tab-btn"
 			class:active={selectedSubMode === 'photo-to-title'}
 			onclick={() => { selectedSubMode = 'photo-to-title'; currentIndex = 0; }}
 		>
-			📷 Foto ➔ Scrittura
+			<img src="/emoji/camera_3d.png" alt="Foto" class="tab-emoji" />
+			FOTO ➔ SCRITTURA
 		</button>
 	</div>
 
@@ -56,48 +59,57 @@
 			onNext={handleNext}
 		/>
 	{:else}
-		<div class="empty-box">Caricamento esercizio...</div>
+		<div class="duo-card empty-box">Caricamento esercizio...</div>
 	{/if}
 </div>
 
 <style>
-	.mode-page {
-		padding: 1rem 0;
-		display: flex;
-		flex-direction: column;
-		gap: 1.5rem;
-	}
-
-	.submode-selector {
-		display: flex;
-		gap: 0.5rem;
-		justify-content: center;
-		flex-wrap: wrap;
+	.scrittura-page-container {
 		max-width: 600px;
 		margin: 0 auto;
+		display: flex;
+		flex-direction: column;
+		gap: 1.25rem;
 	}
 
-	.submode-btn {
-		padding: 0.6rem 1rem;
-		border-radius: 12px;
-		background: var(--card-bg);
-		border: 1px solid var(--border-color);
+	.duo-tab-bar {
+		display: flex;
+		gap: 0.35rem;
+		background: var(--card-bg-subtle);
+		padding: 0.4rem;
+		border-radius: 18px;
+		border: 2px solid var(--border-color);
+	}
+
+	.duo-tab-btn {
+		flex: 1;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.4rem;
+		padding: 0.65rem 0.4rem;
+		border-radius: 14px;
+		border: 2px solid transparent;
+		background: none;
 		color: var(--text-muted);
-		font-size: 0.85rem;
-		font-weight: 700;
+		font-family: 'Outfit', sans-serif;
+		font-weight: 800;
+		font-size: 0.72rem;
 		cursor: pointer;
 		transition: all 0.2s ease;
 	}
 
-	.submode-btn:hover {
-		color: var(--text-color);
-		border-color: var(--accent-color);
-	}
-
-	.submode-btn.active {
-		background: var(--accent-light-bg);
+	.duo-tab-btn.active {
+		background: var(--card-bg);
 		color: var(--accent-color);
 		border-color: var(--accent-color);
+		box-shadow: 0 4px 12px var(--shadow-color);
+	}
+
+	.tab-emoji {
+		width: 18px;
+		height: 18px;
+		object-fit: contain;
 	}
 
 	.empty-box {

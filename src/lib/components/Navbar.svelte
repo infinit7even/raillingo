@@ -2,12 +2,10 @@
 	import { page } from '$app/state';
 
 	const navItems = [
-		{ href: '/', label: 'IMPARA', emoji: '/emoji/house_3d.png' },
+		{ href: '/', label: 'BENVENUTO', emoji: '/emoji/house_3d.png' },
 		{ href: '/ripasso', label: 'FLASHCARD', emoji: '/emoji/open_book_3d.png' },
-		{ href: '/quiz', label: 'CLASSIFICHE', emoji: '/emoji/shield_3d.png' },
-		{ href: '/reels', label: 'MISSIONI', emoji: '/emoji/package_3d.png' },
-		{ href: '/ripasso-foto', label: 'FOTO', emoji: '/emoji/camera_3d.png' },
-		{ href: '/ripasso-inverso', label: 'INVERSO', emoji: '/emoji/counterclockwise_arrows_button_3d.png' },
+		{ href: '/quiz', label: 'QUIZ', emoji: '/emoji/star_3d.png' },
+		{ href: '/reels', label: 'REELS', emoji: '/emoji/camera_3d.png' },
 		{ href: '/scrittura', label: 'SCRITTURA', emoji: '/emoji/writing_hand_3d_default.png' },
 		{ href: '/wiki', label: 'WIKI', emoji: '/emoji/books_3d.png' }
 	];
@@ -19,7 +17,7 @@
 		<a href="/" class="brand-link">
 			<img src="/emoji/triangular_flag_3d.png" alt="Bandiera" class="brand-emoji" />
 			<span class="brand-title">
-				Rai<span class="ll-rail-font">ll</span>ingo
+				Rai<span class="ll-track-box">l<img src="/emoji/railway_track_3d.png" alt="Binario" class="brand-track-img" />l</span>ingo
 			</span>
 		</a>
 	</div>
@@ -178,32 +176,23 @@
 			font-size: 1.8rem;
 			font-weight: 900;
 			color: var(--green-color);
-			letter-spacing: -0.03em;
+			letter-spacing: -0.04em;
+			display: inline-flex;
+			align-items: center;
 		}
 
-		.ll-rail-font {
+		.ll-track-box {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
 			position: relative;
-			display: inline-block;
-			letter-spacing: 0.04em;
 		}
 
-		.ll-rail-font::after {
-			content: '';
-			position: absolute;
-			left: 2px;
-			right: 2px;
-			top: 25%;
-			bottom: 15%;
-			background: linear-gradient(
-				to bottom,
-				currentColor 0%, currentColor 15%,
-				transparent 15%, transparent 40%,
-				currentColor 40%, currentColor 55%,
-				transparent 55%, transparent 80%,
-				currentColor 80%, currentColor 95%
-			);
-			opacity: 0.85;
-			pointer-events: none;
+		.brand-track-img {
+			width: 0.75em;
+			height: 0.75em;
+			object-fit: contain;
+			margin: 0 -0.08em;
 		}
 
 		.nav-container {

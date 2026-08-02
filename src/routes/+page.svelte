@@ -45,16 +45,15 @@
 
 	const lessonNodes = [
 		{ id: 1, title: 'Inizia Flashcard', href: '/ripasso', icon: '/emoji/open_book_3d.png', state: 'active', offset: 0 },
-		{ id: 2, title: 'Modalità Foto', href: '/ripasso-foto', icon: '/emoji/camera_3d.png', state: 'unlocked', offset: -40 },
-		{ id: 3, title: 'Ripasso Inverso', href: '/ripasso-inverso', icon: '/emoji/counterclockwise_arrows_button_3d.png', state: 'unlocked', offset: 30 },
-		{ id: 4, title: 'Missioni', href: '/reels', icon: '/emoji/package_3d.png', state: 'unlocked', offset: -35 },
-		{ id: 5, title: 'Classifiche', href: '/quiz', icon: '/emoji/shield_3d.png', state: 'unlocked', offset: 0 },
-		{ id: 6, title: 'Scrittura Libera', href: '/scrittura', icon: '/emoji/writing_hand_3d_default.png', state: 'unlocked', offset: 35 },
-		{ id: 7, title: 'Wiki & Indice', href: '/wiki', icon: '/emoji/books_3d.png', state: 'unlocked', offset: 0 }
+		{ id: 2, title: 'Quiz a 5 Scelte', href: '/quiz', icon: '/emoji/star_3d.png', state: 'unlocked', offset: -40 },
+		{ id: 3, title: 'Reels Ferroviari', href: '/reels', icon: '/emoji/camera_3d.png', state: 'unlocked', offset: 35 },
+		{ id: 4, title: 'Scrittura Libera', href: '/scrittura', icon: '/emoji/writing_hand_3d_default.png', state: 'unlocked', offset: -35 },
+		{ id: 5, title: 'Wiki & Indice', href: '/wiki', icon: '/emoji/books_3d.png', state: 'unlocked', offset: 0 }
 	];
 
+	// XP for interactions, Gems for correct quiz answers
 	let totalXP = $derived(stats.quizCorrect * 15 + stats.cardsStudied * 5);
-	let gems = $derived(stats.cardsStudied * 10 + 100);
+	let gems = $derived(stats.quizCorrect * 10 + 100);
 </script>
 
 <div class="duo-page-grid">
@@ -63,18 +62,23 @@
 		<!-- Green Section Header Banner -->
 		<section class="duo-green-banner">
 			<div class="banner-text">
-				<span class="banner-chap">← SEZIONE 1, CAPITOLO 1</span>
-				<h1 class="banner-heading">Concetti e Acronimi Ferroviari RFI</h1>
+				<span class="banner-chap">← BENVENUTO SU RAILLINGO</span>
+				<h1 class="banner-heading">Percorso Didattico Acronimi Ferroviari RFI</h1>
 			</div>
 			<a href="/wiki" class="duo-btn duo-btn-guide">
-				<img src="/emoji/clipboard_3d.png" alt="Guida" class="btn-emoji" />
-				GUIDA
+				<img src="/emoji/books_3d.png" alt="Wiki" class="btn-emoji" />
+				RICERCA RAPIDA WIKI
 			</a>
 		</section>
 
-		<!-- Winding 3D Lesson Path (Node Tree) -->
+		<!-- Winding 3D Lesson Path with Train, Tracks, and Traffic Signal -->
 		<section class="duo-path-section">
 			<div class="nodes-container">
+				<!-- Traffic Light Railway Signal on Path Header -->
+				<div class="path-signal-left">
+					<img src="/emoji/vertical_traffic_light_3d.png" alt="Semaforo Ferroviario" class="signal-img" />
+				</div>
+
 				{#each lessonNodes as node, i}
 					<div class="node-wrapper" style="transform: translateX({node.offset}px)">
 						{#if i === 0}
@@ -93,12 +97,15 @@
 						>
 							<img src={node.icon} alt={node.title} class="node-emoji-img" />
 						</a>
+
+						<!-- Railway Track graphic under path nodes -->
+						<img src="/emoji/railway_track_3d.png" alt="Binario" class="path-track-img" />
 					</div>
 				{/each}
 
-				<!-- Duolingo Owl Mascot Illustration on Path -->
+				<!-- 🚂 Train Mascot Illustration on Path -->
 				<div class="duo-mascot-box">
-					<img src="/emoji/owl_3d.png" alt="Mascotte" class="mascot-img" />
+					<img src="/emoji/train_3d.png" alt="Treno Raillingo" class="mascot-img" />
 				</div>
 			</div>
 		</section>
@@ -145,43 +152,30 @@
 
 	<!-- 📊 RIGHT SIDEBAR COLUMN (Desktop Widgets) -->
 	<aside class="duo-right-sidebar">
-		<!-- Top Stats Row (Flag, Streak, Gems, Hearts) -->
+		<!-- Top Stats Row (Serie, Gemme, XP) -->
 		<div class="desktop-top-stats duo-card">
-			<div class="stat-item" title="Corso">
-				<img src="/emoji/triangular_flag_3d.png" alt="Corso" class="widget-emoji-img" />
-			</div>
 			<div class="stat-item streak" title="Giorni di serie">
 				<img src="/emoji/fire_3d.png" alt="Serie" class="widget-emoji-img" />
+				<span class="stat-lbl">Serie</span>
 				<span class="stat-val">{stats.streakDays}</span>
 			</div>
-			<div class="stat-item gems" title="Gemme totali">
+			<div class="stat-item gems" title="Gemme da quiz corretti">
 				<img src="/emoji/gem_stone_3d.png" alt="Gemme" class="widget-emoji-img" />
+				<span class="stat-lbl">Gemme</span>
 				<span class="stat-val">{gems}</span>
 			</div>
-			<div class="stat-item hearts" title="Punti XP">
+			<div class="stat-item hearts" title="Punti XP da interazioni">
 				<img src="/emoji/high_voltage_3d.png" alt="XP" class="widget-emoji-img" />
+				<span class="stat-lbl">XP</span>
 				<span class="stat-val">{totalXP}</span>
 			</div>
 		</div>
 
-		<!-- Widget 1: Sblocca le classifiche! -->
-		<div class="duo-widget duo-card">
-			<h3 class="widget-title">Sblocca le classifiche!</h3>
-			<div class="widget-row">
-				<div class="lock-icon-box">
-					<img src="/emoji/locked_3d.png" alt="Lucchetto" class="widget-emoji-img" />
-				</div>
-				<p class="widget-text">
-					Completa altre 3 lezioni per partecipare alle classifiche settimanali.
-				</p>
-			</div>
-		</div>
-
-		<!-- Widget 2: Missioni Giornaliere -->
+		<!-- Widget Missioni Giornaliere (Links ONLY to /missioni when clicking VEDI TUTTE) -->
 		<div class="duo-widget duo-card">
 			<div class="widget-header-row">
 				<h3 class="widget-title">Missioni giornaliere</h3>
-				<a href="/reels" class="widget-link">VEDI TUTTE</a>
+				<a href="/missioni" class="widget-link">VEDI TUTTE &gt;</a>
 			</div>
 			<div class="mission-item">
 				<img src="/emoji/high_voltage_3d.png" alt="XP" class="widget-emoji-img" />
@@ -196,17 +190,22 @@
 			</div>
 		</div>
 
-		<!-- Widget 3: Salva i tuoi progressi / Profilo -->
+		<!-- Widget Login / Profilo (Links to /admin Login Screen) -->
 		<div class="duo-widget duo-card profile-widget">
 			<h3 class="widget-title">Crea un profilo per salvare i tuoi progressi!</h3>
 			<div class="profile-actions">
-				<a href="/ripasso" class="duo-btn duo-btn-green flex-btn">
+				<a href="/admin" class="duo-btn duo-btn-green flex-btn">
+					ACCEDI AL PROFILO / LOGIN
+				</a>
+				<a href="/ripasso" class="duo-btn duo-btn-blue flex-btn">
 					INIZIA LEZIONE
 				</a>
-				<a href="/quiz" class="duo-btn duo-btn-blue flex-btn">
-					CLASSIFICHE
-				</a>
 			</div>
+		</div>
+
+		<!-- Footer Link to Privacy Policy -->
+		<div class="sidebar-privacy-footer">
+			<a href="/privacy" class="privacy-link">Informativa sulla Privacy</a>
 		</div>
 	</aside>
 </div>
@@ -300,12 +299,32 @@
 		max-width: 400px;
 	}
 
+	.path-signal-left {
+		position: absolute;
+		left: -35px;
+		top: -10px;
+	}
+
+	.signal-img {
+		width: 38px;
+		height: 38px;
+		object-fit: contain;
+	}
+
 	.node-wrapper {
 		position: relative;
 		display: flex;
 		flex-direction: column;
 		align-items: center;
 		transition: transform 0.3s ease;
+	}
+
+	.path-track-img {
+		width: 28px;
+		height: 28px;
+		object-fit: contain;
+		margin-top: 4px;
+		opacity: 0.7;
 	}
 
 	/* Tooltip Bubble "INIZIA" */
@@ -372,14 +391,14 @@
 
 	.duo-mascot-box {
 		position: absolute;
-		right: -40px;
+		right: -45px;
 		top: 140px;
 		animation: floatMascot 3s ease-in-out infinite;
 	}
 
 	.mascot-img {
-		width: 72px;
-		height: 72px;
+		width: 80px;
+		height: 80px;
 		object-fit: contain;
 	}
 
@@ -472,24 +491,30 @@
 		display: flex;
 		align-items: center;
 		justify-content: space-around;
-		padding: 0.75rem 1rem;
+		padding: 0.75rem 0.85rem;
 	}
 
 	.stat-item {
 		display: flex;
 		align-items: center;
-		gap: 0.4rem;
+		gap: 0.3rem;
 		font-weight: 900;
-		font-size: 1rem;
+		font-size: 0.9rem;
 	}
 
 	.stat-item.streak { color: var(--orange-color); }
 	.stat-item.gems { color: var(--accent-color); }
 	.stat-item.hearts { color: var(--pink-color); }
 
+	.stat-lbl {
+		font-size: 0.68rem;
+		text-transform: uppercase;
+		opacity: 0.8;
+	}
+
 	.widget-emoji-img {
-		width: 26px;
-		height: 26px;
+		width: 24px;
+		height: 24px;
 		object-fit: contain;
 	}
 
@@ -503,31 +528,6 @@
 		font-size: 1.05rem;
 		font-weight: 900;
 		color: var(--text-color);
-		margin: 0;
-	}
-
-	.widget-row {
-		display: flex;
-		gap: 0.85rem;
-		align-items: center;
-	}
-
-	.lock-icon-box {
-		width: 44px;
-		height: 44px;
-		border-radius: 14px;
-		background: var(--card-bg-subtle);
-		border: 2px solid var(--border-color);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		flex-shrink: 0;
-	}
-
-	.widget-text {
-		font-size: 0.85rem;
-		color: var(--text-muted);
-		line-height: 1.4;
 		margin: 0;
 	}
 
@@ -597,7 +597,25 @@
 
 	.flex-btn {
 		width: 100%;
-		font-size: 0.9rem;
+		font-size: 0.85rem;
+		text-align: center;
+		text-decoration: none;
+	}
+
+	.sidebar-privacy-footer {
+		text-align: center;
+		padding: 0.5rem 0;
+	}
+
+	.privacy-link {
+		font-size: 0.75rem;
+		color: var(--text-muted);
+		text-decoration: none;
+		font-weight: 700;
+	}
+
+	.privacy-link:hover {
+		color: var(--accent-color);
 	}
 
 	@keyframes bounce {
@@ -610,5 +628,3 @@
 		50% { transform: translateY(-8px); }
 	}
 </style>
-
-
