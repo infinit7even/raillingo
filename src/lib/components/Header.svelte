@@ -75,7 +75,7 @@
 				aria-label="Cambia tema"
 				title="Alterna Scuro/Chiaro"
 			>
-				<span class="theme-dot" style="background: {activeThemeObj.color}"></span>
+				<span class="theme-icon-symbol">{currentTheme === 'dark' ? '🌙' : '☀️'}</span>
 				<span class="theme-name-text">{currentTheme === 'dark' ? 'Scuro' : 'Chiaro'}</span>
 			</button>
 		</div>
@@ -86,26 +86,28 @@
 	.app-header {
 		position: sticky;
 		top: 0;
-		z-index: 50;
+		z-index: 150;
 		background-color: var(--header-bg);
 		border-bottom: 2px solid var(--border-color);
+		box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+		backdrop-filter: blur(12px);
 		transition: background-color 0.3s ease, border-color 0.3s ease;
 	}
 
 	.header-container {
 		max-width: 1200px;
 		margin: 0 auto;
-		padding: 0.6rem 1rem;
+		padding: 0.5rem 0.85rem;
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		gap: 0.5rem;
+		gap: 0.4rem;
 	}
 
 	.brand {
 		display: flex;
 		align-items: center;
-		gap: 0.6rem;
+		gap: 0.5rem;
 		text-decoration: none;
 		color: var(--text-color);
 	}
@@ -121,8 +123,8 @@
 	}
 
 	.pill-emoji {
-		width: 22px;
-		height: 22px;
+		width: 20px;
+		height: 20px;
 	}
 
 	.title-group {
@@ -133,7 +135,7 @@
 
 	.app-title {
 		font-weight: 900;
-		font-size: 1.25rem;
+		font-size: 1.2rem;
 		letter-spacing: -0.03em;
 		color: var(--accent-color);
 		display: inline-flex;
@@ -166,35 +168,40 @@
 	.duo-top-stats {
 		display: flex;
 		align-items: center;
-		gap: 0.6rem;
+		gap: 0.4rem;
 	}
 
 	.stat-pill {
 		display: inline-flex;
 		align-items: center;
-		gap: 0.35rem;
-		padding: 0.35rem 0.65rem;
+		gap: 0.25rem;
+		padding: 0.3rem 0.55rem;
 		border-radius: 12px;
-		font-weight: 800;
-		font-size: 0.9rem;
+		font-weight: 900;
+		font-size: 0.85rem;
 		user-select: none;
-		border: 1.5px solid transparent;
+		background: var(--card-bg-subtle);
+		border: 1.5px solid var(--border-color);
+		box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
 	}
 
 	.stat-pill.streak {
 		color: var(--orange-color);
+		border-color: rgba(255, 150, 0, 0.3);
 	}
 
 	.stat-pill.gems {
 		color: var(--accent-color);
+		border-color: rgba(28, 176, 246, 0.3);
 	}
 
 	.stat-pill.energy {
 		color: var(--pink-color);
+		border-color: rgba(255, 75, 75, 0.3);
 	}
 
 	.pill-label {
-		font-size: 0.72rem;
+		font-size: 0.7rem;
 		font-weight: 800;
 		opacity: 0.85;
 		text-transform: uppercase;
@@ -209,40 +216,34 @@
 	.actions {
 		display: flex;
 		align-items: center;
-		gap: 0.5rem;
+		gap: 0.4rem;
 	}
 
 	.duo-header-btn {
 		display: inline-flex;
 		align-items: center;
-		gap: 0.4rem;
-		padding: 0.45rem 0.75rem;
-		border-radius: 12px;
+		gap: 0.35rem;
+		padding: 0.4rem 0.65rem;
+		border-radius: 14px;
 		background-color: var(--card-bg-subtle);
 		border: 2px solid var(--border-color);
 		border-bottom: 3px solid var(--border-depth-color);
 		color: var(--text-color);
-		font-size: 0.8rem;
+		font-size: 0.82rem;
 		font-weight: 800;
 		cursor: pointer;
 		text-decoration: none;
-		transition: all 0.15s ease;
-	}
-
-	.duo-header-btn:hover {
-		background-color: var(--hover-bg);
-		border-color: var(--accent-color);
+		transition: all 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
 	}
 
 	.duo-header-btn:active {
-		transform: translateY(1px);
+		transform: translateY(2px);
 		border-bottom-width: 1.5px;
 	}
 
-	.theme-dot {
-		width: 10px;
-		height: 10px;
-		border-radius: 50%;
+	.theme-icon-symbol {
+		font-size: 1rem;
+		line-height: 1;
 	}
 
 	@media (min-width: 1024px) {
@@ -256,22 +257,23 @@
 			display: none;
 		}
 		.header-container {
-			padding: 0.45rem 0.65rem;
+			padding: 0.35rem 0.5rem;
 		}
 		.flag-img {
 			width: 24px;
 			height: 24px;
 		}
 		.app-title {
-			font-size: 1.1rem;
+			font-size: 1.05rem;
 		}
 		.duo-top-stats {
-			gap: 0.35rem;
+			gap: 0.25rem;
 		}
 		.stat-pill {
 			padding: 0.2rem 0.4rem;
 			font-size: 0.78rem;
-			gap: 0.25rem;
+			gap: 0.2rem;
+			border-radius: 10px;
 		}
 		.pill-emoji {
 			width: 18px;
@@ -281,7 +283,8 @@
 			display: none;
 		}
 		.duo-header-btn {
-			padding: 0.35rem 0.5rem;
+			padding: 0.35rem 0.45rem;
+			border-radius: 10px;
 		}
 	}
 </style>
