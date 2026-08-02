@@ -63,7 +63,7 @@
 			onclick={() => { subMode = 'foto'; currentIndex = 0; }}
 		>
 			<img src="/emoji/camera_3d.png" alt="Foto" class="tab-emoji" />
-			MODALITÀ FOTO
+			FOTO
 		</button>
 		<button
 			class="duo-tab-btn"
@@ -71,7 +71,7 @@
 			onclick={() => { subMode = 'inverso'; currentIndex = 0; }}
 		>
 			<img src="/emoji/counterclockwise_arrows_button_3d.png" alt="Inverso" class="tab-emoji" />
-			RIPASSO INVERSO
+			INVERSO
 		</button>
 	</div>
 
@@ -107,7 +107,7 @@
 			{@const currentCard = cards[currentIndex]}
 			<div class="reverse-container duo-card">
 				<div class="top-bar">
-					<span class="duo-badge">Ripasso Inverso</span>
+					<span class="duo-badge">Inverso</span>
 					<span class="counter">{currentIndex + 1} / {cards.length}</span>
 				</div>
 

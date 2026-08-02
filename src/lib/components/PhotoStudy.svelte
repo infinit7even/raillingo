@@ -39,7 +39,7 @@
 
 <div class="photo-study-container">
 	<div class="top-bar">
-		<span class="duo-badge">Modalità Foto</span>
+		<span class="duo-badge">Foto</span>
 		<span class="counter-text">{currentIndex + 1} / {totalCards}</span>
 	</div>
 

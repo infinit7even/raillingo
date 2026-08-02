@@ -41,6 +41,6 @@ export interface Card {
 ## Modalità di Studio
 1. **Ripasso**: Mostra Acronimo -> Tap mostra Descrizione e Foto -> Avanti
 2. **Ripasso Foto**: Mostra Foto -> Tap 1 mostra Titolo -> Tap 2 mostra Descrizione
-3. **Ripasso Inverso**: Mostra Descrizione -> Tap mostra Acronimo
+3. **Inverso**: Mostra Descrizione -> Tap mostra Acronimo
 4. **Quiz**: Domanda a scelta multipla con 5 opzioni e retry infinito
 5. **Scrittura Libera**: Esercizio di digitazione senza blocco severo per incentivare la memorizzazione visiva e motoria.

@@ -44,7 +44,7 @@
 
 		<div class="reverse-container">
 			<div class="top-bar">
-				<span class="badge">Ripasso Inverso</span>
+				<span class="badge">Inverso</span>
 				<span class="counter">{currentIndex + 1} / {cards.length}</span>
 			</div>
 
