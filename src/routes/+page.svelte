@@ -16,9 +16,17 @@
 
 	let searchQuery = $state('');
 	let selectedCategory = $state<string>('all');
+	let dailyCard = $state<Card | null>(null);
 
 	onMount(() => {
-		const uncards = cardsStore.subscribe((c) => (cards = c));
+		const uncards = cardsStore.subscribe((c) => {
+			cards = c;
+			if (c.length > 0 && !dailyCard) {
+				// Pick a deterministic card of the day based on date
+				const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / (1000 * 60 * 60 * 24));
+				dailyCard = c[dayOfYear % c.length];
+			}
+		});
 		const unstats = statsStore.subscribe((s) => (stats = s));
 		return () => {
 			uncards();
@@ -95,23 +103,41 @@
 			href: '/reels',
 			icon: '🎬',
 			color: 'linear-gradient(135deg, #8b5cf6, #ec4899)'
+		},
+		{
+			id: 'wiki',
+			title: 'Wiki & Indice A-Z',
+			subtitle: 'Dizionario Ferroviario',
+			desc: 'Elenco completo di tutti gli acronimi in ordine alfabetico e ricerca globale.',
+			href: '/wiki',
+			icon: '📚',
+			color: 'linear-gradient(135deg, #06b6d4, #3b82f6)'
 		}
 	];
 </script>
 
 <div class="dashboard-container">
-	<!-- Hero Header -->
+	<!-- Gamified Hero Header -->
 	<section class="hero-section">
+		<div class="hero-header-row">
+			<div class="streak-badge">
+				🔥 <span class="streak-count">{stats.streakDays}</span> Giorni di Serie
+			</div>
+			<div class="hero-badge">Corso Ferroviario RFI</div>
+		</div>
+
 		<div class="hero-content">
-			<span class="hero-badge">Ferrovie dello Stato Italiane</span>
 			<h1 class="hero-title">RF - Rail Focus</h1>
 			<p class="hero-desc">
-				La tua piattaforma interattiva per memorizzare acronimi, segnali e terminologie del corso ferroviario.
+				Impara e memorizza ogni acronimo del corso ferroviario con minigiochi, quiz e visualizzazioni interattive.
 			</p>
 			
 			<div class="hero-actions">
 				<a href="/ripasso" class="primary-btn">
-					🚀 Inizia Subito il Ripasso
+					🚀 Inizia Ripasso Rapido
+				</a>
+				<a href="/reels" class="secondary-btn">
+					🎬 Apri Reels Ferroviari
 				</a>
 			</div>
 		</div>
@@ -120,7 +146,7 @@
 		<div class="stats-banner">
 			<div class="stat-item">
 				<span class="stat-value">{cards.length}</span>
-				<span class="stat-label">Schede in DB</span>
+				<span class="stat-label">Schede nel DB</span>
 			</div>
 			<div class="stat-divider"></div>
 			<div class="stat-item">
@@ -134,6 +160,20 @@
 			</div>
 		</div>
 	</section>
+
+	<!-- Daily Featured Card Widget -->
+	{#if dailyCard}
+		<section class="daily-card-widget">
+			<div class="widget-header">
+				<span class="widget-label">⚡ Acronimo del Giorno</span>
+				<span class="widget-cat">{dailyCard.category || 'Generale'}</span>
+			</div>
+			<div class="widget-body">
+				<h2 class="widget-title">{dailyCard.title}</h2>
+				<p class="widget-desc">{dailyCard.description}</p>
+			</div>
+		</section>
+	{/if}
 
 	<!-- Minigames Selector Grid -->
 	<section class="games-section">
@@ -157,7 +197,7 @@
 	<!-- Catalog / Search Section -->
 	<section class="catalog-section">
 		<div class="catalog-header">
-			<h2 class="section-title">📚 Consultazione Acronimi ({filteredCards.length})</h2>
+			<h2 class="section-title">📚 Consultazione Rapida ({filteredCards.length})</h2>
 			<div class="search-bar">
 				<input
 					type="text"
@@ -205,25 +245,37 @@
 	}
 
 	.hero-section {
-		background: linear-gradient(135deg, var(--card-bg), var(--card-bg-subtle));
+		background: linear-gradient(145deg, var(--card-bg), var(--card-bg-subtle));
 		border: 1px solid var(--border-color);
-		border-radius: 28px;
+		border-radius: 32px;
 		padding: 2.5rem 2rem;
-		box-shadow: 0 12px 36px rgba(0, 0, 0, 0.15);
+		box-shadow: 0 16px 40px var(--shadow-color);
 		display: flex;
 		flex-direction: column;
 		gap: 2rem;
+		position: relative;
+		overflow: hidden;
 	}
 
-	.hero-content {
-		max-width: 650px;
+	.hero-header-row {
 		display: flex;
-		flex-direction: column;
-		gap: 1rem;
+		justify-content: space-between;
+		align-items: center;
+		flex-wrap: wrap;
+		gap: 0.75rem;
+	}
+
+	.streak-badge {
+		background: rgba(245, 158, 11, 0.15);
+		border: 1px solid rgba(245, 158, 11, 0.3);
+		color: #f59e0b;
+		padding: 0.35rem 0.85rem;
+		border-radius: 9999px;
+		font-weight: 800;
+		font-size: 0.8rem;
 	}
 
 	.hero-badge {
-		align-self: flex-start;
 		padding: 0.35rem 0.85rem;
 		border-radius: 9999px;
 		font-size: 0.75rem;
@@ -234,8 +286,15 @@
 		border: 1px solid var(--border-color);
 	}
 
+	.hero-content {
+		max-width: 650px;
+		display: flex;
+		flex-direction: column;
+		gap: 1.2rem;
+	}
+
 	.hero-title {
-		font-size: 3rem;
+		font-size: 3.2rem;
 		font-weight: 900;
 		letter-spacing: -0.03em;
 		background: linear-gradient(135deg, var(--text-color), var(--accent-color));
@@ -246,28 +305,43 @@
 	}
 
 	.hero-desc {
-		font-size: 1.1rem;
+		font-size: 1.15rem;
 		line-height: 1.6;
 		color: var(--text-muted);
 	}
 
-	.primary-btn {
+	.hero-actions {
+		display: flex;
+		gap: 1rem;
+		flex-wrap: wrap;
+		margin-top: 0.5rem;
+	}
+
+	.primary-btn, .secondary-btn {
 		display: inline-flex;
 		align-items: center;
 		padding: 1rem 1.75rem;
-		border-radius: 16px;
-		background: linear-gradient(135deg, var(--accent-color), #0284c7);
-		color: white;
+		border-radius: 18px;
 		font-weight: 800;
-		font-size: 1.1rem;
+		font-size: 1.05rem;
 		text-decoration: none;
-		box-shadow: 0 6px 20px rgba(2, 132, 199, 0.4);
 		transition: transform 0.2s ease, box-shadow 0.2s ease;
 	}
 
-	.primary-btn:hover {
+	.primary-btn {
+		background: linear-gradient(135deg, var(--accent-color), #0284c7);
+		color: white;
+		box-shadow: 0 6px 20px rgba(2, 132, 199, 0.4);
+	}
+
+	.secondary-btn {
+		background: var(--card-bg-subtle);
+		color: var(--text-color);
+		border: 1px solid var(--border-color);
+	}
+
+	.primary-btn:hover, .secondary-btn:hover {
 		transform: translateY(-2px);
-		box-shadow: 0 8px 26px rgba(2, 132, 199, 0.5);
 	}
 
 	.stats-banner {
@@ -276,7 +350,7 @@
 		justify-content: space-around;
 		background: var(--bg-color);
 		padding: 1.25rem 1.5rem;
-		border-radius: 20px;
+		border-radius: 22px;
 		border: 1px solid var(--border-color);
 	}
 
@@ -294,7 +368,7 @@
 
 	.stat-label {
 		font-size: 0.8rem;
-		font-weight: 600;
+		font-weight: 700;
 		color: var(--text-muted);
 	}
 
@@ -304,9 +378,56 @@
 		background-color: var(--border-color);
 	}
 
-	.section-title {
-		font-size: 1.5rem;
+	/* Daily Card Widget */
+	.daily-card-widget {
+		background: linear-gradient(135deg, var(--accent-light-bg), var(--card-bg));
+		border: 1px solid var(--accent-color);
+		border-radius: 24px;
+		padding: 1.5rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+	}
+
+	.widget-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+	}
+
+	.widget-label {
+		font-size: 0.75rem;
 		font-weight: 800;
+		text-transform: uppercase;
+		color: var(--accent-color);
+	}
+
+	.widget-cat {
+		font-size: 0.7rem;
+		font-weight: 700;
+		background: var(--card-bg-subtle);
+		padding: 0.2rem 0.6rem;
+		border-radius: 6px;
+		color: var(--text-muted);
+	}
+
+	.widget-title {
+		font-size: 1.75rem;
+		font-weight: 900;
+		color: var(--text-color);
+		margin: 0;
+	}
+
+	.widget-desc {
+		font-size: 0.95rem;
+		line-height: 1.5;
+		color: var(--text-muted);
+		margin: 0;
+	}
+
+	.section-title {
+		font-size: 1.6rem;
+		font-weight: 900;
 		margin-bottom: 1.25rem;
 		color: var(--text-color);
 	}
@@ -320,33 +441,33 @@
 	.game-card {
 		background: var(--card-bg);
 		border: 1px solid var(--border-color);
-		border-radius: 22px;
+		border-radius: 24px;
 		padding: 1.5rem;
 		text-decoration: none;
 		display: flex;
 		gap: 1.25rem;
 		align-items: flex-start;
-		transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+		transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 		box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
 	}
 
 	.game-card:hover {
-		transform: translateY(-3px);
+		transform: translateY(-4px);
 		border-color: var(--accent-color);
-		box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+		box-shadow: 0 12px 32px var(--shadow-color);
 	}
 
 	.game-icon-box {
-		width: 52px;
-		height: 52px;
-		border-radius: 16px;
+		width: 54px;
+		height: 54px;
+		border-radius: 18px;
 		display: flex;
 		align-items: center;
 		justify-content: center;
 		font-size: 1.6rem;
 		color: white;
 		flex-shrink: 0;
-		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+		box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
 	}
 
 	.game-info {
@@ -357,14 +478,14 @@
 
 	.game-subtitle {
 		font-size: 0.75rem;
-		font-weight: 700;
+		font-weight: 800;
 		text-transform: uppercase;
 		color: var(--accent-color);
 	}
 
 	.game-title {
-		font-size: 1.25rem;
-		font-weight: 800;
+		font-size: 1.3rem;
+		font-weight: 900;
 		color: var(--text-color);
 		margin: 0;
 	}
@@ -398,8 +519,8 @@
 	}
 
 	.search-input, .category-select {
-		padding: 0.75rem 1rem;
-		border-radius: 14px;
+		padding: 0.8rem 1rem;
+		border-radius: 16px;
 		background: var(--card-bg);
 		border: 1px solid var(--border-color);
 		color: var(--text-color);
@@ -420,7 +541,7 @@
 	.item-card {
 		background: var(--card-bg);
 		border: 1px solid var(--border-color);
-		border-radius: 18px;
+		border-radius: 20px;
 		padding: 1.25rem;
 		display: flex;
 		flex-direction: column;
@@ -434,8 +555,8 @@
 	}
 
 	.item-title {
-		font-size: 1.25rem;
-		font-weight: 800;
+		font-size: 1.3rem;
+		font-weight: 900;
 		color: var(--accent-color);
 		margin: 0;
 	}
@@ -459,7 +580,7 @@
 	.has-photo-badge {
 		font-size: 0.75rem;
 		color: var(--accent-color);
-		font-weight: 600;
+		font-weight: 700;
 	}
 
 	.empty-state {
@@ -468,7 +589,7 @@
 		padding: 3rem;
 		color: var(--text-muted);
 		background: var(--card-bg);
-		border-radius: 18px;
+		border-radius: 20px;
 		border: 1px dashed var(--border-color);
 	}
 </style>

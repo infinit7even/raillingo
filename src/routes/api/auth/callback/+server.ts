@@ -3,7 +3,10 @@ import { env } from '$env/dynamic/private';
 
 const CLIENT_ID = env.DISCORD_CLIENT_ID || process.env.DISCORD_CLIENT_ID || '1533519975476629564';
 const CLIENT_SECRET = env.DISCORD_CLIENT_SECRET || process.env.DISCORD_CLIENT_SECRET || 'BiwE65HiOYsZOjND8P5GlsqwsvUXbpEw';
-const ALLOWED_ADMIN_ID = env.DISCORD_ADMIN_ID || process.env.DISCORD_ADMIN_ID || '691289686093725736';
+
+// Supporta lista di ID admin separati da virgola in DISCORD_ADMIN_IDS
+const rawAdminIds = env.DISCORD_ADMIN_IDS || process.env.DISCORD_ADMIN_IDS || env.DISCORD_ADMIN_ID || '691289686093725736';
+const ALLOWED_ADMIN_IDS = rawAdminIds.split(',').map((id) => id.trim());
 
 export const GET: RequestHandler = async ({ url, cookies }) => {
 	const code = url.searchParams.get('code');
@@ -48,9 +51,9 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 
 		const userData = await userRes.json();
 
-		// 3. Verifica che l'ID corrisponda all'ID amministratore autorizzato
-		if (userData.id !== ALLOWED_ADMIN_ID) {
-			console.warn(`Tentativo di accesso admin non autorizzato da ID: ${userData.id}`);
+		// 3. Verifica se l'ID fa parte della lista degli amministratori autorizzati
+		if (!ALLOWED_ADMIN_IDS.includes(userData.id)) {
+			console.warn(`Tentativo di accesso admin non autorizzato da ID Discord: ${userData.id}`);
 			throw redirect(302, '/admin?error=unauthorized');
 		}
 

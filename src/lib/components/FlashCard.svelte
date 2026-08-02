@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Card } from '$lib/types/cards';
 	import { statsStore } from '$lib/stores/statsStore';
+	import { tts } from '$lib/utils/tts';
 
 	let { card, onNext, onPrev, currentIndex, totalCards } = $props<{
 		card: Card;
@@ -13,12 +14,15 @@
 	let flipped = $state(false);
 	let currentImageIndex = $state(0);
 	let isFav = $state(false);
+	let isSpeaking = $state(false);
 
 	$effect(() => {
 		// Reset flip state when card changes
 		flipped = false;
 		currentImageIndex = 0;
 		isFav = statsStore.isFavorite(card.id);
+		tts.stop();
+		isSpeaking = false;
 	});
 
 	function handleCardClick() {
@@ -34,44 +38,82 @@
 		isFav = !isFav;
 	}
 
+	function speakAudio(e: MouseEvent) {
+		e.stopPropagation();
+		const textToRead = flipped
+			? `${card.title}. ${card.description}`
+			: `${card.title}`;
+		tts.speak(textToRead);
+		isSpeaking = true;
+	}
+
 	function nextImage(e: MouseEvent) {
 		e.stopPropagation();
 		if (card.images && card.images.length > 0) {
 			currentImageIndex = (currentImageIndex + 1) % card.images.length;
 		}
 	}
+
+	function handleKeyDown(e: KeyboardEvent) {
+		const target = e.target as HTMLElement;
+		if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
+
+		if (e.key === ' ' || e.key === 'Enter') {
+			e.preventDefault();
+			handleCardClick();
+		} else if (e.key === 'ArrowRight') {
+			if (currentIndex < totalCards - 1) onNext();
+		} else if (e.key === 'ArrowLeft') {
+			if (currentIndex > 0) onPrev();
+		}
+	}
 </script>
 
+<svelte:window onkeydown={handleKeyDown} />
+
 <div class="flashcard-container">
-	<!-- Counter & Favorite Header -->
+	<!-- Counter, Favorite & Audio Header -->
 	<div class="card-top-bar">
 		<span class="badge category">{card.category || 'Generale'}</span>
-		<span class="counter">{currentIndex + 1} / {totalCards}</span>
-		<button class="fav-btn" class:active={isFav} onclick={toggleFavorite} aria-label="Preferito">
-			★
-		</button>
+		
+		<div class="top-actions">
+			<button
+				class="audio-btn"
+				class:speaking={isSpeaking}
+				onclick={speakAudio}
+				aria-label="Ascolta pronuncia audio"
+				title="Ascolta pronuncia"
+			>
+				🔊 Ascolta
+			</button>
+			<span class="counter">{currentIndex + 1} / {totalCards}</span>
+			<button class="fav-btn" class:active={isFav} onclick={toggleFavorite} aria-label="Preferito">
+				★
+			</button>
+		</div>
 	</div>
 
 	<!-- 3D Flip Card Scene -->
 	<div
 		class="scene"
 		onclick={handleCardClick}
+		onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && handleCardClick()}
 		role="button"
 		tabindex="0"
-		onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && handleCardClick()}
 	>
 		<div class="card" class:is-flipped={flipped}>
 			<!-- FRONT (Acronym / Title) -->
 			<div class="card-face front">
 				<div class="face-content">
-					<div class="title-badge">Acronimo / Termine</div>
+					<span class="title-badge">Acronimo / Termine</span>
 					<h2 class="card-title">{card.title}</h2>
 					<p class="instruction">
-						🗣️ Pronuncia o pensa alla definizione, poi <strong>tocca per scoprire</strong>
+						🗣️ Pronuncia a voce la definizione, poi <strong>tocca per verificare</strong>
 					</p>
 				</div>
+				
 				<div class="tap-hint">
-					<span>Tocca per girare</span>
+					<span>Tocca per girare <kbd class="kbd-badge">Spazio</kbd></span>
 					<svg class="flip-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
 					</svg>
@@ -123,13 +165,13 @@
 	<!-- Controls Footer -->
 	<div class="card-controls">
 		<button class="nav-btn prev-btn" onclick={onPrev} disabled={currentIndex === 0}>
-			← Indietro
+			← Indietro <kbd class="kbd-badge">←</kbd>
 		</button>
 		<button class="reveal-btn" onclick={handleCardClick}>
 			{flipped ? 'Nascondi' : 'Mostra Risposta'}
 		</button>
 		<button class="nav-btn next-btn" onclick={onNext} disabled={currentIndex === totalCards - 1}>
-			Avanti →
+			Avanti → <kbd class="kbd-badge">→</kbd>
 		</button>
 	</div>
 </div>
@@ -137,7 +179,7 @@
 <style>
 	.flashcard-container {
 		width: 100%;
-		max-width: 540px;
+		max-width: 560px;
 		margin: 0 auto;
 		display: flex;
 		flex-direction: column;
@@ -152,10 +194,10 @@
 	}
 
 	.badge {
-		padding: 0.25rem 0.75rem;
+		padding: 0.3rem 0.85rem;
 		border-radius: 9999px;
 		font-size: 0.75rem;
-		font-weight: 700;
+		font-weight: 800;
 		text-transform: uppercase;
 		letter-spacing: 0.05em;
 		background-color: var(--accent-light-bg);
@@ -163,9 +205,32 @@
 		border: 1px solid var(--border-color);
 	}
 
+	.top-actions {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+	}
+
+	.audio-btn {
+		padding: 0.35rem 0.75rem;
+		border-radius: 10px;
+		background: var(--card-bg-subtle);
+		border: 1px solid var(--border-color);
+		color: var(--text-color);
+		font-size: 0.75rem;
+		font-weight: 700;
+		cursor: pointer;
+		transition: all 0.2s ease;
+	}
+
+	.audio-btn:hover {
+		border-color: var(--accent-color);
+		transform: scale(1.05);
+	}
+
 	.counter {
 		font-size: 0.875rem;
-		font-weight: 600;
+		font-weight: 700;
 		color: var(--text-muted);
 	}
 
@@ -186,17 +251,17 @@
 	/* 3D Scene */
 	.scene {
 		width: 100%;
-		min-height: 380px;
-		perspective: 1000px;
+		min-height: 400px;
+		perspective: 1200px;
 		cursor: pointer;
 	}
 
 	.card {
 		width: 100%;
 		height: 100%;
-		min-height: 380px;
+		min-height: 400px;
 		position: relative;
-		transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+		transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
 		transform-style: preserve-3d;
 	}
 
@@ -210,11 +275,11 @@
 		height: 100%;
 		backface-visibility: hidden;
 		-webkit-backface-visibility: hidden;
-		border-radius: 24px;
-		padding: 1.75rem;
+		border-radius: 28px;
+		padding: 2rem;
 		background: var(--card-bg);
 		border: 1px solid var(--border-color);
-		box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+		box-shadow: 0 16px 40px var(--shadow-color);
 		display: flex;
 		flex-direction: column;
 		justify-content: space-between;
@@ -241,29 +306,30 @@
 
 	.title-badge {
 		font-size: 0.75rem;
-		font-weight: 700;
+		font-weight: 800;
 		text-transform: uppercase;
 		color: var(--accent-color);
 		letter-spacing: 0.1em;
 	}
 
 	.card-title {
-		font-size: 2.75rem;
+		font-size: 3.2rem;
 		font-weight: 900;
 		letter-spacing: -0.03em;
 		color: var(--text-color);
 		margin: auto 0;
+		line-height: 1.1;
 	}
 
 	.card-title-small {
-		font-size: 1.5rem;
-		font-weight: 800;
+		font-size: 1.75rem;
+		font-weight: 900;
 		color: var(--accent-color);
 		margin: 0;
 	}
 
 	.instruction {
-		font-size: 0.9rem;
+		font-size: 0.95rem;
 		color: var(--text-muted);
 		line-height: 1.5;
 	}
@@ -271,9 +337,9 @@
 	.description-box {
 		background: var(--card-bg-subtle);
 		padding: 1.25rem;
-		border-radius: 16px;
+		border-radius: 18px;
 		border: 1px solid var(--border-color);
-		font-size: 1rem;
+		font-size: 1.05rem;
 		line-height: 1.6;
 		color: var(--text-color);
 		text-align: left;
@@ -306,9 +372,9 @@
 
 	.card-img {
 		width: 100%;
-		max-height: 200px;
+		max-height: 220px;
 		object-fit: cover;
-		border-radius: 12px;
+		border-radius: 14px;
 		border: 1px solid var(--border-color);
 	}
 
@@ -327,10 +393,21 @@
 		align-items: center;
 		justify-content: center;
 		gap: 0.5rem;
-		font-size: 0.8rem;
+		font-size: 0.85rem;
 		font-weight: 600;
 		color: var(--text-muted);
 		margin-top: 1rem;
+	}
+
+	.kbd-badge {
+		font-size: 0.7rem;
+		font-family: inherit;
+		background: var(--card-bg-subtle);
+		border: 1px solid var(--border-color);
+		padding: 0.1rem 0.4rem;
+		border-radius: 6px;
+		color: var(--text-muted);
+		margin-left: 0.25rem;
 	}
 
 	.flip-icon {
@@ -347,9 +424,9 @@
 	}
 
 	.nav-btn, .reveal-btn {
-		padding: 0.85rem 1.25rem;
-		border-radius: 14px;
-		font-weight: 700;
+		padding: 0.9rem 1.25rem;
+		border-radius: 16px;
+		font-weight: 800;
 		font-size: 0.95rem;
 		border: 1px solid var(--border-color);
 		cursor: pointer;
@@ -376,11 +453,17 @@
 		background: linear-gradient(135deg, var(--accent-color), #0284c7);
 		color: white;
 		border: none;
-		box-shadow: 0 4px 14px rgba(2, 132, 199, 0.4);
+		box-shadow: 0 6px 20px rgba(2, 132, 199, 0.4);
 	}
 
 	.reveal-btn:hover {
 		transform: translateY(-2px);
-		box-shadow: 0 6px 20px rgba(2, 132, 199, 0.5);
+		box-shadow: 0 8px 26px rgba(2, 132, 199, 0.5);
+	}
+
+	@media (max-width: 600px) {
+		.kbd-badge {
+			display: none;
+		}
 	}
 </style>
