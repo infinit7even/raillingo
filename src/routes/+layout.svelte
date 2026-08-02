@@ -60,9 +60,13 @@
 	<meta name="description" content="Raillingo - PWA in stile Duolingo per imparare e memorizzare gli acronimi e i concetti del corso ferroviario RFI." />
 	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
 	<meta name="theme-color" content="#0f172a" />
-	<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+	<link rel="shortcut icon" href="/favicon.ico" />
+	<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+	<link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png" />
+	<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+	<link rel="apple-touch-icon" sizes="180x180" href="/apple-icon-180x180.png" />
+	<link rel="apple-touch-icon" href="/apple-icon.png" />
 	<link rel="manifest" href="/manifest.webmanifest" />
-	<link rel="apple-touch-icon" href="/favicon.svg" />
 </svelte:head>
 
 <div
