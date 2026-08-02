@@ -74,13 +74,11 @@
 <div class="duo-page-grid">
 	<!-- 📍 MAIN CENTRAL COLUMN (Path & Chapter Banner) -->
 	<div class="duo-main-column">
-		<!-- Green Section Header Banner with Announcement / Clean Title -->
+		<!-- Green Section Header Banner -->
 		<section class="duo-green-banner">
 			<div class="banner-text">
 				<span class="banner-chap">CORSO FERROVIARIO RFI</span>
-				<h1 class="banner-heading">
-					{announcement ? announcement : 'Acronimi e Termini Tecnici'}
-				</h1>
+				<h1 class="banner-heading">Acronimi e Termini Tecnici</h1>
 			</div>
 			<!-- Sleek Lens Search Button for Instant Wiki Modal -->
 			<button
@@ -92,6 +90,14 @@
 				🔍
 			</button>
 		</section>
+
+		{#if announcement && announcement.trim()}
+			<!-- Platform Announcement Box (Rendered ONLY if admin posted an announcement) -->
+			<div class="announcement-banner-box duo-card">
+				<span class="announcement-badge">📢 ANNUNCIO PIATTAFORMA</span>
+				<p class="announcement-content-text">{announcement}</p>
+			</div>
+		{/if}
 
 		<!-- Winding 3D Lesson Path with Owl Mascot & Section Names -->
 		<section class="duo-path-section">
@@ -272,6 +278,30 @@
 		align-items: center;
 		gap: 1rem;
 		box-shadow: 0 6px 20px rgba(88, 204, 2, 0.2);
+	}
+
+	.announcement-banner-box {
+		margin-top: 1rem;
+		background: linear-gradient(135deg, rgba(168, 85, 247, 0.15), rgba(59, 130, 246, 0.15));
+		border: 2px solid #a855f7;
+		display: flex;
+		flex-direction: column;
+		gap: 0.4rem;
+	}
+
+	.announcement-badge {
+		font-size: 0.72rem;
+		font-weight: 900;
+		color: #a855f7;
+		letter-spacing: 0.06em;
+	}
+
+	.announcement-content-text {
+		font-size: 0.95rem;
+		font-weight: 700;
+		line-height: 1.45;
+		color: var(--text-color);
+		margin: 0;
 	}
 
 	.banner-text {
