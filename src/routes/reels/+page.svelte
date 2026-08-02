@@ -150,6 +150,28 @@
 		box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
 	}
 
+	@media (max-width: 768px) {
+		.reels-page-wrapper {
+			position: fixed;
+			top: 0;
+			left: 0;
+			right: 0;
+			bottom: 60px;
+			width: 100vw;
+			height: calc(100dvh - 60px);
+			z-index: 10;
+		}
+
+		.reels-feed-container {
+			max-width: 100vw;
+			width: 100vw;
+			height: 100%;
+			border-radius: 0;
+			border: none;
+			box-shadow: none;
+		}
+	}
+
 	.reel-slide {
 		width: 100%;
 		height: 100%;

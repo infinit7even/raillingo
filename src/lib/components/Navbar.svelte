@@ -51,15 +51,17 @@
 		bottom: 0;
 		left: 0;
 		right: 0;
-		z-index: 50;
-		background: var(--nav-bg);
+		z-index: 200;
+		background: var(--card-bg);
 		border-top: 2px solid var(--border-color);
-		padding: 0.35rem 0.25rem 0.4rem 0.25rem;
-		box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.2);
+		padding: 0.4rem 0.25rem;
+		box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.25);
+		backdrop-filter: blur(12px);
 	}
 
 	.nav-container {
 		width: 100%;
+		max-width: 600px;
 		margin: 0 auto;
 		overflow-x: auto;
 		-webkit-overflow-scrolling: touch;
@@ -72,9 +74,9 @@
 	.nav-scroll-wrapper {
 		display: flex;
 		align-items: center;
-		justify-content: space-between;
-		min-width: min-content;
-		padding: 0 0.25rem;
+		justify-content: space-around;
+		width: 100%;
+		padding: 0 0.2rem;
 		gap: 0.1rem;
 	}
 
@@ -82,15 +84,16 @@
 		display: flex;
 		flex-direction: column;
 		align-items: center;
-		gap: 0.15rem;
-		padding: 0.25rem 0.35rem;
+		gap: 0.18rem;
+		padding: 0.25rem 0.3rem;
 		color: var(--text-muted);
 		text-decoration: none;
-		font-size: 0.68rem;
+		font-size: 0.65rem;
 		font-weight: 800;
-		transition: all 0.15s ease;
-		flex-shrink: 0;
-		min-width: 62px;
+		transition: all 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+		flex: 1;
+		min-width: 52px;
+		max-width: 72px;
 		text-align: center;
 		background: none;
 		border: none;
@@ -99,12 +102,12 @@
 	}
 
 	.icon-wrapper {
-		width: 36px;
-		height: 34px;
+		width: 38px;
+		height: 36px;
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		border-radius: 12px;
+		border-radius: 14px;
 		border: 2px solid transparent;
 		transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 	}
@@ -112,12 +115,13 @@
 	.icon-wrapper.active-outline {
 		border-color: var(--accent-color);
 		background-color: var(--accent-light-bg);
-		transform: translateY(-2px);
+		transform: translateY(-3px) scale(1.06);
+		box-shadow: 0 4px 12px rgba(88, 204, 2, 0.25);
 	}
 
 	.nav-emoji-img {
-		width: 24px;
-		height: 24px;
+		width: 26px;
+		height: 26px;
 		object-fit: contain;
 	}
 
