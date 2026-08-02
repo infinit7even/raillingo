@@ -64,7 +64,25 @@ export async function initDb() {
 				);
 			`);
 
-			// 4. Seed default cards from static/data/cards.json if table is empty
+			// 4. Create App Users Table (Discord ID & Email, Role)
+			await client.query(`
+				CREATE TABLE IF NOT EXISTS users (
+					discord_id TEXT PRIMARY KEY,
+					email TEXT,
+					username TEXT,
+					role TEXT DEFAULT 'user',
+					created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+				);
+			`);
+
+			// Seed main admin user (Discord ID: 691289686093725736)
+			await client.query(`
+				INSERT INTO users (discord_id, email, username, role)
+				VALUES ('691289686093725736', 'admin@raillingo.it', 'Admin Iniziale', 'admin')
+				ON CONFLICT (discord_id) DO NOTHING;
+			`);
+
+			// 5. Seed default cards from static/data/cards.json if table is empty
 			const cardsCountRes = await client.query('SELECT COUNT(*) FROM cards');
 			const count = parseInt(cardsCountRes.rows[0].count, 10);
 
@@ -125,6 +143,61 @@ export async function setDbAnnouncement(content: string, author = 'Amministrazio
 	} catch (e) {
 		return false;
 	}
+}
+
+export async function upsertDbUser(discordId: string, email: string, username = '', defaultRole = 'user') {
+	await initDb();
+	try {
+		// Hardcoded admin ID fallback
+		const initialRole = discordId === '691289686093725736' ? 'admin' : defaultRole;
+		await pool.query(
+			`INSERT INTO users (discord_id, email, username, role)
+			 VALUES ($1, $2, $3, $4)
+			 ON CONFLICT (discord_id) DO UPDATE SET
+				email = EXCLUDED.email,
+				username = COALESCE(NULLIF(EXCLUDED.username, ''), users.username);`,
+			[discordId, email, username, initialRole]
+		);
+		const res = await pool.query('SELECT role FROM users WHERE discord_id = $1', [discordId]);
+		return res.rows[0]?.role || initialRole;
+	} catch (e) {
+		return discordId === '691289686093725736' ? 'admin' : 'user';
+	}
+}
+
+export async function getAllDbUsers() {
+	await initDb();
+	try {
+		const res = await pool.query('SELECT discord_id, email, username, role, created_at FROM users ORDER BY created_at DESC');
+		return res.rows.map((r) => ({
+			discordId: r.discord_id,
+			email: r.email || 'N/D',
+			username: r.username || r.discord_id,
+			role: r.role || 'user',
+			createdAt: r.created_at
+		}));
+	} catch (e) {
+		return [];
+	}
+}
+
+export async function updateDbUserRole(discordId: string, role: string) {
+	await initDb();
+	try {
+		await pool.query('UPDATE users SET role = $1 WHERE discord_id = $2', [role, discordId]);
+		return true;
+	} catch (e) {
+		return false;
+	}
+}
+
+export async function getDbUserRole(discordId: string) {
+	await initDb();
+	try {
+		const res = await pool.query('SELECT role FROM users WHERE discord_id = $1', [discordId]);
+		if (res.rows.length > 0) return res.rows[0].role;
+	} catch (e) {}
+	return discordId === '691289686093725736' ? 'admin' : 'user';
 }
 
 export async function getDbCards() {

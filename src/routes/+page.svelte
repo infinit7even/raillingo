@@ -5,10 +5,12 @@
 	import WikiSearchModal from '$lib/components/WikiSearchModal.svelte';
 	import type { Card } from '$lib/types/cards';
 
+	let { data } = $props();
+
 	let cards = $state<Card[]>([]);
 	let isWikiModalOpen = $state(false);
 	let announcement = $state('');
-	let user = $state<any>(null);
+	let user = $derived(data.user);
 
 	let stats = $state<StatsData>({
 		cardsStudied: 0,
@@ -30,14 +32,9 @@
 
 		fetch('/api/announcements')
 			.then((res) => res.json())
-			.then((data) => {
-				if (data.announcement) announcement = data.announcement;
+			.then((d) => {
+				if (d.announcement) announcement = d.announcement;
 			})
-			.catch(() => {});
-
-		// Check user session
-		fetch('/login')
-			.then(() => {})
 			.catch(() => {});
 
 		return () => {
@@ -208,19 +205,27 @@
 			</div>
 		</div>
 
-		<!-- Widget Login / Profilo (Links to /login, and shows Admin Panel button for Admin) -->
+		<!-- Widget Login / Profilo (Shows "Pannello Admin" ONLY IF user is logged in AND is admin) -->
 		<div class="duo-widget duo-card profile-widget">
-			<h3 class="widget-title">Pannello Utente & Profilo</h3>
+			<h3 class="widget-title">{user ? `Ciao, ${user.username}` : 'Piattaforma Raillingo'}</h3>
 			<div class="profile-actions">
-				<a href="/admin" class="duo-btn duo-btn-purple flex-btn">
-					⚙️ PANNELLO GESTIONE ADMIN
-				</a>
+				{#if user && user.isAdmin}
+					<a href="/admin" class="duo-btn duo-btn-purple flex-btn">
+						⚙️ Pannello Admin
+					</a>
+				{/if}
 				<a href="/ripasso" class="duo-btn duo-btn-green flex-btn">
 					INIZIA LEZIONE
 				</a>
-				<a href="/login" class="duo-btn duo-btn-gray flex-btn">
-					ACCEDI AL PROFILO / LOGIN
-				</a>
+				{#if !user}
+					<a href="/login" class="duo-btn duo-btn-blue flex-btn">
+						ACCEDI / LOGIN
+					</a>
+				{:else}
+					<a href="/api/auth/logout" class="duo-btn duo-btn-gray flex-btn">
+						DISCONNETTI
+					</a>
+				{/if}
 			</div>
 		</div>
 

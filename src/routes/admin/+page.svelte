@@ -23,6 +23,7 @@
 	let searchQuery = $state('');
 	let announcementText = $state('');
 	let announcementSaved = $state(false);
+	let usersList = $state<Array<{ discordId: string; email: string; username: string; role: string }>>([]);
 
 	onMount(() => {
 		const unsubscribe = cardsStore.subscribe((c) => (cards = c));
@@ -32,8 +33,34 @@
 				if (d.announcement) announcementText = d.announcement;
 			})
 			.catch(() => {});
+
+		fetchUsers();
 		return unsubscribe;
 	});
+
+	async function fetchUsers() {
+		try {
+			const res = await fetch('/api/users');
+			if (res.ok) {
+				const d = await res.json();
+				if (d.users) usersList = d.users;
+			}
+		} catch (e) {}
+	}
+
+	async function toggleRole(u: { discordId: string; role: string }) {
+		const newRole = u.role === 'admin' ? 'user' : 'admin';
+		try {
+			const res = await fetch('/api/users', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ discordId: u.discordId, role: newRole })
+			});
+			if (res.ok) {
+				await fetchUsers();
+			}
+		} catch (e) {}
+	}
 
 	async function handleSaveAnnouncement(e: Event) {
 		e.preventDefault();
@@ -195,17 +222,12 @@
 	{:else}
 		<!-- Admin Panel Dashboard -->
 		<div class="admin-panel">
-			<!-- Header Admin Bar -->
+			<!-- Header Admin Bar (NO photos as requested) -->
 			<div class="admin-top duo-card">
 				<div class="user-info">
-					{#if user.avatar}
-						<img src={user.avatar} alt={user.username} class="avatar" />
-					{:else}
-						<div class="avatar-fallback">👤</div>
-					{/if}
 					<div>
-						<span class="user-name">{user.username}</span>
-						<span class="user-role">Amministratore Autorizzato (DB PostgreSQL Attivo)</span>
+						<span class="user-name">👤 {user.username}</span>
+						<span class="user-role">ID Discord: {user.userId} • Email: {user.email || 'N/D'}</span>
 					</div>
 				</div>
 
@@ -216,6 +238,41 @@
 					<a href="/api/auth/logout" class="duo-btn duo-btn-gray logout-btn">
 						Esci
 					</a>
+				</div>
+			</div>
+
+			<!-- User Management Card (Gestione Utenti e Cambia Ruolo Admin) -->
+			<div class="users-card duo-card">
+				<h2 class="form-title">👥 Gestione Utenti e Ruoli ({usersList.length})</h2>
+				<p class="form-desc">Elenco di tutti gli utenti registrati tramite Discord ID ed Email. Puoi promuovere o declassare gli utenti ad Admin.</p>
+
+				<div class="users-list">
+					{#each usersList as u}
+						<div class="user-item-row duo-card">
+							<div class="user-details">
+								<div class="user-id-row">
+									<strong class="discord-id-text">ID Discord: {u.discordId}</strong>
+									<span class="role-pill" class:admin-pill={u.role === 'admin'}>
+										{u.role === 'admin' ? '⭐ ADMIN' : '👤 UTENTE'}
+									</span>
+								</div>
+								<div class="user-email-text">✉️ Email: {u.email} ({u.username})</div>
+							</div>
+
+							<div class="user-action">
+								<button
+									class="duo-btn {u.role === 'admin' ? 'duo-btn-gray' : 'duo-btn-purple'}"
+									onclick={() => toggleRole(u)}
+								>
+									{u.role === 'admin' ? 'Declassa a Utente' : '⭐ Rendi Admin'}
+								</button>
+							</div>
+						</div>
+					{:else}
+						<div class="empty-state duo-card">
+							Nessun utente ancora registrato nel DB.
+						</div>
+					{/each}
 				</div>
 			</div>
 
@@ -496,22 +553,80 @@
 		gap: 0.85rem;
 	}
 
-	.avatar {
-		width: 44px;
-		height: 44px;
-		border-radius: 50%;
-		object-fit: cover;
+	/* Users List Styling */
+	.users-card {
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
 	}
 
-	.avatar-fallback {
-		width: 44px;
-		height: 44px;
-		border-radius: 50%;
-		background: var(--accent-light-bg);
+	.users-list {
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+	}
+
+	.user-item-row {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 1rem 1.25rem;
+		background: var(--card-bg-subtle);
+		gap: 1rem;
+	}
+
+	@media (max-width: 600px) {
+		.user-item-row {
+			flex-direction: column;
+			align-items: flex-start;
+		}
+		.user-action {
+			width: 100%;
+		}
+		.user-action button {
+			width: 100%;
+		}
+	}
+
+	.user-details {
+		display: flex;
+		flex-direction: column;
+		gap: 0.35rem;
+	}
+
+	.user-id-row {
 		display: flex;
 		align-items: center;
-		justify-content: center;
-		font-size: 1.2rem;
+		gap: 0.6rem;
+		flex-wrap: wrap;
+	}
+
+	.discord-id-text {
+		font-size: 1rem;
+		color: var(--accent-color);
+		font-weight: 800;
+	}
+
+	.role-pill {
+		font-size: 0.7rem;
+		font-weight: 900;
+		padding: 0.15rem 0.5rem;
+		border-radius: 6px;
+		background: var(--card-bg);
+		color: var(--text-muted);
+		border: 1px solid var(--border-color);
+	}
+
+	.role-pill.admin-pill {
+		background: rgba(168, 85, 247, 0.15);
+		color: #a855f7;
+		border-color: #a855f7;
+	}
+
+	.user-email-text {
+		font-size: 0.85rem;
+		color: var(--text-muted);
+		font-weight: 700;
 	}
 
 	.user-name {
