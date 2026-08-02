@@ -14,6 +14,9 @@
 	let submitted = $state(false);
 
 	$effect(() => {
+		// Traccia la variazione dell'ID card o della sottovariante per resettare il testo
+		const _cardId = card.id;
+		const _subMode = subMode;
 		userInput = '';
 		submitted = false;
 	});

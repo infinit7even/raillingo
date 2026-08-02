@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { themeStore, type Theme } from '$lib/stores/themeStore';
+	import { themeStore, THEME_OPTIONS, type ThemePreset } from '$lib/stores/themeStore';
 
-	let currentTheme = $state<Theme>('dark');
+	let currentTheme = $state<ThemePreset>('dark');
+	let showThemeMenu = $state(false);
 
 	onMount(() => {
 		const unsubscribe = themeStore.subscribe((t) => {
@@ -11,8 +12,9 @@
 		return unsubscribe;
 	});
 
-	function toggleTheme() {
-		themeStore.toggle();
+	function selectTheme(themeId: ThemePreset) {
+		themeStore.setTheme(themeId);
+		showThemeMenu = false;
 	}
 </script>
 
@@ -33,27 +35,38 @@
 		</a>
 
 		<div class="actions">
-			<button class="theme-btn" onclick={toggleTheme} aria-label="Cambia tema">
-				{#if currentTheme === 'dark'}
-					<!-- Sole -->
-					<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-						<circle cx="12" cy="12" r="5"></circle>
-						<line x1="12" y1="1" x2="12" y2="3"></line>
-						<line x1="12" y1="21" x2="12" y2="23"></line>
-						<line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-						<line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-						<line x1="1" y1="12" x2="3" y2="12"></line>
-						<line x1="21" y1="12" x2="23" y2="12"></line>
-						<line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-						<line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-					</svg>
-				{:else}
-					<!-- Luna -->
-					<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-						<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-					</svg>
+			<!-- Theme Selector Dropdown Trigger -->
+			<div class="theme-dropdown-wrapper">
+				<button
+					class="theme-btn"
+					onclick={() => (showThemeMenu = !showThemeMenu)}
+					aria-label="Scegli tema"
+				>
+					<span class="palette-icon">🎨</span>
+					<span class="theme-name-text">Temi</span>
+				</button>
+
+				{#if showThemeMenu}
+					<div class="theme-popover">
+						<div class="popover-title">Scegli il Tema</div>
+						<div class="theme-list">
+							{#each THEME_OPTIONS as option}
+								<button
+									class="theme-option-btn"
+									class:selected={currentTheme === option.id}
+									onclick={() => selectTheme(option.id)}
+								>
+									<span class="theme-swatch" style="background: {option.color}"></span>
+									<span class="theme-label">{option.name}</span>
+									{#if currentTheme === option.id}
+										<span class="check-mark">✓</span>
+									{/if}
+								</button>
+							{/each}
+						</div>
+					</div>
 				{/if}
-			</button>
+			</div>
 
 			<a href="/admin" class="admin-link" aria-label="Pannello Amministratore">
 				<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -103,7 +116,7 @@
 		align-items: center;
 		justify-content: center;
 		color: white;
-		box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 	}
 
 	.logo-icon {
@@ -116,6 +129,7 @@
 		flex-direction: column;
 		line-height: 1.1;
 	}
+
 	.app-title {
 		font-weight: 900;
 		font-size: 1.25rem;
@@ -125,6 +139,7 @@
 		-webkit-background-clip: text;
 		-webkit-text-fill-color: transparent;
 	}
+
 	.app-subtitle {
 		font-size: 0.75rem;
 		font-weight: 600;
@@ -139,17 +154,21 @@
 		gap: 0.75rem;
 	}
 
+	.theme-dropdown-wrapper {
+		position: relative;
+	}
+
 	.theme-btn, .admin-link {
 		display: inline-flex;
 		align-items: center;
 		gap: 0.5rem;
 		padding: 0.5rem 0.85rem;
-		border-radius: 10px;
+		border-radius: 12px;
 		background-color: var(--card-bg-subtle);
 		border: 1px solid var(--border-color);
 		color: var(--text-color);
 		font-size: 0.875rem;
-		font-weight: 600;
+		font-weight: 700;
 		cursor: pointer;
 		text-decoration: none;
 		transition: all 0.2s ease;
@@ -161,9 +180,83 @@
 		transform: translateY(-1px);
 	}
 
+	.palette-icon {
+		font-size: 1rem;
+	}
+
 	.icon {
 		width: 18px;
 		height: 18px;
+	}
+
+	.theme-popover {
+		position: absolute;
+		top: calc(100% + 8px);
+		right: 0;
+		background: var(--card-bg);
+		border: 1px solid var(--border-color);
+		border-radius: 18px;
+		padding: 0.85rem;
+		box-shadow: 0 12px 36px var(--shadow-color);
+		min-width: 200px;
+		z-index: 100;
+		animation: fadeIn 0.2s ease;
+	}
+
+	.popover-title {
+		font-size: 0.75rem;
+		font-weight: 800;
+		text-transform: uppercase;
+		color: var(--text-muted);
+		margin-bottom: 0.6rem;
+		padding-left: 0.4rem;
+	}
+
+	.theme-list {
+		display: flex;
+		flex-direction: column;
+		gap: 0.35rem;
+	}
+
+	.theme-option-btn {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		padding: 0.6rem 0.75rem;
+		border-radius: 10px;
+		background: transparent;
+		border: 1px solid transparent;
+		color: var(--text-color);
+		font-size: 0.85rem;
+		font-weight: 600;
+		cursor: pointer;
+		text-align: left;
+		transition: all 0.15s ease;
+	}
+
+	.theme-option-btn:hover {
+		background: var(--card-bg-subtle);
+	}
+
+	.theme-option-btn.selected {
+		background: var(--accent-light-bg);
+		border-color: var(--accent-color);
+		color: var(--accent-color);
+	}
+
+	.theme-swatch {
+		width: 14px;
+		height: 14px;
+		border-radius: 50%;
+		flex-shrink: 0;
+	}
+
+	.theme-label {
+		flex: 1;
+	}
+
+	.check-mark {
+		font-weight: 900;
 	}
 
 	@media (max-width: 640px) {
@@ -171,8 +264,12 @@
 			display: none;
 		}
 		.theme-btn, .admin-link {
-			padding: 0.5rem;
-			border-radius: 50%;
+			padding: 0.5rem 0.65rem;
 		}
+	}
+
+	@keyframes fadeIn {
+		from { opacity: 0; transform: translateY(-4px); }
+		to { opacity: 1; transform: translateY(0); }
 	}
 </style>

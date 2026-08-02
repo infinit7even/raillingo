@@ -86,6 +86,15 @@
 			href: '/scrittura',
 			icon: '✍️',
 			color: 'linear-gradient(135deg, #e11d48, #fb7185)'
+		},
+		{
+			id: 'reels',
+			title: 'Reels Ferroviari',
+			subtitle: 'Feed Verticale Instagram Style',
+			desc: 'Scorri in verticale scheda per scheda, rispondi ai quiz al volo e scopri la risposta.',
+			href: '/reels',
+			icon: '🎬',
+			color: 'linear-gradient(135deg, #8b5cf6, #ec4899)'
 		}
 	];
 </script>

@@ -1,15 +1,30 @@
 import { browser } from '$app/environment';
 
-export type Theme = 'dark' | 'light';
+export type ThemePreset = 'dark' | 'light' | 'frecciarossa' | 'emerald' | 'purple';
+
+export interface ThemeOption {
+	id: ThemePreset;
+	name: string;
+	color: string;
+	bg: string;
+}
+
+export const THEME_OPTIONS: ThemeOption[] = [
+	{ id: 'dark', name: 'Notte Ferroviaria', color: '#38bdf8', bg: '#0b0f19' },
+	{ id: 'light', name: 'Giorno RFI', color: '#0284c7', bg: '#f8fafc' },
+	{ id: 'frecciarossa', name: 'Frecciarossa', color: '#ef4444', bg: '#18080a' },
+	{ id: 'emerald', name: 'Trazione Verde', color: '#10b981', bg: '#061a14' },
+	{ id: 'purple', name: 'Alta Velocità', color: '#a855f7', bg: '#13091f' }
+];
 
 class ThemeStore {
-	private currentTheme: Theme = 'dark';
-	private listeners = new Set<(theme: Theme) => void>();
+	private currentTheme: ThemePreset = 'dark';
+	private listeners = new Set<(theme: ThemePreset) => void>();
 
 	constructor() {
 		if (browser) {
-			const saved = localStorage.getItem('rf_theme') as Theme | null;
-			if (saved && (saved === 'dark' || saved === 'light')) {
+			const saved = localStorage.getItem('rf_theme') as ThemePreset | null;
+			if (saved && THEME_OPTIONS.some((t) => t.id === saved)) {
 				this.currentTheme = saved;
 			} else {
 				const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -19,11 +34,11 @@ class ThemeStore {
 		}
 	}
 
-	public get theme(): Theme {
+	public get theme(): ThemePreset {
 		return this.currentTheme;
 	}
 
-	public subscribe(run: (theme: Theme) => void): () => void {
+	public subscribe(run: (theme: ThemePreset) => void): () => void {
 		this.listeners.add(run);
 		run(this.currentTheme);
 		return () => {
@@ -31,12 +46,7 @@ class ThemeStore {
 		};
 	}
 
-	public toggle() {
-		const next = this.currentTheme === 'dark' ? 'light' : 'dark';
-		this.setTheme(next);
-	}
-
-	public setTheme(theme: Theme) {
+	public setTheme(theme: ThemePreset) {
 		this.currentTheme = theme;
 		if (browser) {
 			localStorage.setItem('rf_theme', theme);
@@ -45,15 +55,14 @@ class ThemeStore {
 		this.notify();
 	}
 
-	private applyTheme(theme: Theme) {
+	private applyTheme(theme: ThemePreset) {
 		if (!browser) return;
 		const root = document.documentElement;
-		if (theme === 'dark') {
-			root.classList.add('dark');
-			root.setAttribute('data-theme', 'dark');
-		} else {
+		root.setAttribute('data-theme', theme);
+		if (theme === 'light') {
 			root.classList.remove('dark');
-			root.setAttribute('data-theme', 'light');
+		} else {
+			root.classList.add('dark');
 		}
 	}
 

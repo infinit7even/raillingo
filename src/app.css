@@ -1,26 +1,26 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
-:root {
-	/* Tema Scuro (Default) */
+:root, [data-theme='dark'] {
+	/* 🌌 Notte Ferroviaria (Default Dark) */
 	--bg-color: #0b0f19;
-	--header-bg: rgba(11, 15, 25, 0.85);
+	--header-bg: rgba(11, 15, 25, 0.82);
 	--nav-bg: rgba(15, 23, 42, 0.88);
-	--active-nav-bg: rgba(56, 189, 248, 0.15);
+	--active-nav-bg: rgba(56, 189, 248, 0.18);
 	--card-bg: #151d30;
 	--card-bg-subtle: #1e293b;
 	--hover-bg: #243048;
-	--border-color: #2e3d59;
+	--border-color: rgba(255, 255, 255, 0.1);
 	--text-color: #f8fafc;
 	--text-muted: #94a3b8;
 	--accent-color: #38bdf8;
 	--accent-light: #7dd3fc;
-	--accent-light-bg: rgba(56, 189, 248, 0.12);
+	--accent-light-bg: rgba(56, 189, 248, 0.14);
 	--badge-bg: #1e293b;
 	--shadow-color: rgba(0, 0, 0, 0.4);
 }
 
 [data-theme='light'] {
-	/* Tema Chiaro */
+	/* ☀️ Giorno RFI (Light Mode) */
 	--bg-color: #f8fafc;
 	--header-bg: rgba(255, 255, 255, 0.88);
 	--nav-bg: rgba(255, 255, 255, 0.92);
@@ -28,7 +28,7 @@
 	--card-bg: #ffffff;
 	--card-bg-subtle: #f1f5f9;
 	--hover-bg: #e2e8f0;
-	--border-color: #e2e8f0;
+	--border-color: rgba(0, 0, 0, 0.08);
 	--text-color: #0f172a;
 	--text-muted: #64748b;
 	--accent-color: #0284c7;
@@ -36,6 +36,63 @@
 	--accent-light-bg: rgba(2, 132, 199, 0.08);
 	--badge-bg: #e2e8f0;
 	--shadow-color: rgba(0, 0, 0, 0.06);
+}
+
+[data-theme='frecciarossa'] {
+	/* 🔴 Frecciarossa */
+	--bg-color: #16080a;
+	--header-bg: rgba(22, 8, 10, 0.85);
+	--nav-bg: rgba(28, 11, 14, 0.92);
+	--active-nav-bg: rgba(239, 68, 68, 0.2);
+	--card-bg: #261114;
+	--card-bg-subtle: #36171c;
+	--hover-bg: #471d23;
+	--border-color: rgba(239, 68, 68, 0.25);
+	--text-color: #fff1f2;
+	--text-muted: #fda4af;
+	--accent-color: #ef4444;
+	--accent-light: #f87171;
+	--accent-light-bg: rgba(239, 68, 68, 0.15);
+	--badge-bg: #36171c;
+	--shadow-color: rgba(239, 68, 68, 0.2);
+}
+
+[data-theme='emerald'] {
+	/* 🟢 Trazione Verde */
+	--bg-color: #051913;
+	--header-bg: rgba(5, 25, 19, 0.85);
+	--nav-bg: rgba(8, 35, 26, 0.92);
+	--active-nav-bg: rgba(16, 185, 129, 0.2);
+	--card-bg: #0d2d22;
+	--card-bg-subtle: #143d2f;
+	--hover-bg: #1c5240;
+	--border-color: rgba(16, 185, 129, 0.25);
+	--text-color: #ecfdf5;
+	--text-muted: #6ee7b7;
+	--accent-color: #10b981;
+	--accent-light: #34d399;
+	--accent-light-bg: rgba(16, 185, 129, 0.15);
+	--badge-bg: #143d2f;
+	--shadow-color: rgba(16, 185, 129, 0.2);
+}
+
+[data-theme='purple'] {
+	/* 💜 Alta Velocità Viola */
+	--bg-color: #11091e;
+	--header-bg: rgba(17, 9, 30, 0.85);
+	--nav-bg: rgba(24, 13, 42, 0.92);
+	--active-nav-bg: rgba(168, 85, 247, 0.2);
+	--card-bg: #1d1033;
+	--card-bg-subtle: #291747;
+	--hover-bg: #371f5e;
+	--border-color: rgba(168, 85, 247, 0.25);
+	--text-color: #faf5ff;
+	--text-muted: #c084fc;
+	--accent-color: #a855f7;
+	--accent-light: #c084fc;
+	--accent-light-bg: rgba(168, 85, 247, 0.15);
+	--badge-bg: #291747;
+	--shadow-color: rgba(168, 85, 247, 0.2);
 }
 
 * {
@@ -49,16 +106,16 @@ body {
 	background-color: var(--bg-color);
 	color: var(--text-color);
 	min-height: 100vh;
-	transition: background-color 0.3s ease, color 0.3s ease;
+	transition: background-color 0.4s ease, color 0.4s ease;
 	-webkit-font-smoothing: antialiased;
-	padding-bottom: 5rem;
+	padding-bottom: 5.5rem;
+	overflow-x: hidden;
 }
 
 h1, h2, h3, h4, .app-title {
 	font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
 }
 
-/* Pulsanti e input standard */
 button, input, textarea, select {
 	font-family: inherit;
 }

@@ -14,7 +14,8 @@ export type StudyMode =
 	| 'ripasso-foto'     // Immagine -> Acronimo -> Descrizione
 	| 'ripasso-inverso'  // Descrizione -> Acronimo
 	| 'quiz'             // Quiz a 5 scelte
-	| 'scrittura';       // Esercizio digitazione
+	| 'scrittura'        // Esercizio digitazione
+	| 'reels';           // Modalità Reels verticale Instagram style
 
 export type WritingSubMode = 'title-to-desc' | 'desc-to-title' | 'photo-to-title';
 

@@ -2,9 +2,55 @@
 	import '../app.css';
 	import Header from '$lib/components/Header.svelte';
 	import Navbar from '$lib/components/Navbar.svelte';
-	import favicon from '$lib/assets/favicon.svg';
+	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
 
 	let { children } = $props();
+
+	// Route sequence for lateral swipe navigation
+	const routeOrder = ['/', '/ripasso', '/ripasso-foto', '/ripasso-inverso', '/quiz', '/scrittura', '/reels'];
+
+	let touchStartX = 0;
+	let touchStartY = 0;
+
+	function handleTouchStart(e: TouchEvent) {
+		const target = e.target as HTMLElement;
+		// Don't swipe if typing in input/textarea or inside scrollable reels
+		if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.closest('.reels-feed-container')) {
+			return;
+		}
+		touchStartX = e.touches[0].clientX;
+		touchStartY = e.touches[0].clientY;
+	}
+
+	function handleTouchEnd(e: TouchEvent) {
+		if (!touchStartX || !touchStartY) return;
+
+		const touchEndX = e.changedTouches[0].clientX;
+		const touchEndY = e.changedTouches[0].clientY;
+
+		const diffX = touchEndX - touchStartX;
+		const diffY = touchEndY - touchStartY;
+
+		// Require horizontal swipe threshold > 60px and diffX dominating diffY
+		if (Math.abs(diffX) > 60 && Math.abs(diffX) > Math.abs(diffY) * 1.5) {
+			const currentPath = page.url.pathname;
+			const currentIndex = routeOrder.indexOf(currentPath);
+
+			if (currentIndex !== -1) {
+				if (diffX < 0 && currentIndex < routeOrder.length - 1) {
+					// Swipe left -> Next route
+					goto(routeOrder[currentIndex + 1]);
+				} else if (diffX > 0 && currentIndex > 0) {
+					// Swipe right -> Previous route
+					goto(routeOrder[currentIndex - 1]);
+				}
+			}
+		}
+
+		touchStartX = 0;
+		touchStartY = 0;
+	}
 </script>
 
 <svelte:head>
@@ -19,7 +65,12 @@
 	<link rel="apple-touch-icon" href="/favicon.svg" />
 </svelte:head>
 
-<div class="layout-wrapper">
+<div
+	class="layout-wrapper"
+	role="presentation"
+	ontouchstart={handleTouchStart}
+	ontouchend={handleTouchEnd}
+>
 	<Header />
 	
 	<main class="main-content">
