@@ -19,16 +19,7 @@
 		<a href="/" class="brand-link">
 			<img src="/emoji/triangular_flag_3d.png" alt="Bandiera" class="brand-emoji" />
 			<span class="brand-title">
-				Rai<svg class="ll-track-svg" viewBox="0 0 24 32" fill="currentColor" aria-hidden="true">
-					<!-- Left Rail ('l') -->
-					<rect x="2.5" y="2" width="4.5" height="28" rx="2.25" />
-					<!-- Right Rail ('l') -->
-					<rect x="17" y="2" width="4.5" height="28" rx="2.25" />
-					<!-- Horizontal Track Ties (Traverse) -->
-					<rect x="5.5" y="7" width="13" height="3" rx="1" opacity="0.8" />
-					<rect x="5.5" y="14.5" width="13" height="3" rx="1" opacity="0.8" />
-					<rect x="5.5" y="22" width="13" height="3" rx="1" opacity="0.8" />
-				</svg>ingo
+				Rai<span class="ll-rail-font">ll</span>ingo
 			</span>
 		</a>
 	</div>
@@ -187,17 +178,32 @@
 			font-size: 1.8rem;
 			font-weight: 900;
 			color: var(--green-color);
-			letter-spacing: -0.04em;
-			display: inline-flex;
-			align-items: center;
+			letter-spacing: -0.03em;
 		}
 
-		.ll-track-svg {
-			height: 0.85em;
-			width: auto;
-			margin: 0 -0.03em;
-			color: var(--green-color);
-			vertical-align: middle;
+		.ll-rail-font {
+			position: relative;
+			display: inline-block;
+			letter-spacing: 0.04em;
+		}
+
+		.ll-rail-font::after {
+			content: '';
+			position: absolute;
+			left: 2px;
+			right: 2px;
+			top: 25%;
+			bottom: 15%;
+			background: linear-gradient(
+				to bottom,
+				currentColor 0%, currentColor 15%,
+				transparent 15%, transparent 40%,
+				currentColor 40%, currentColor 55%,
+				transparent 55%, transparent 80%,
+				currentColor 80%, currentColor 95%
+			);
+			opacity: 0.85;
+			pointer-events: none;
 		}
 
 		.nav-container {
