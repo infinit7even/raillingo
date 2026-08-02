@@ -1,92 +1,42 @@
 <script lang="ts">
 	import { page } from '$app/state';
 
-	const primaryNavItems = [
-		{ href: '/', label: 'IMPARA', emoji: '🏠', activeColor: '#ffc800' },
-		{ href: '/ripasso', label: 'FLASHCARD', emoji: '📖', activeColor: '#ff4b4b' },
-		{ href: '/quiz', label: 'QUIZ', emoji: '🎯', activeColor: '#1cb0f6' },
-		{ href: '/reels', label: 'REELS', emoji: '🎬', activeColor: '#ce82ff' },
-		{ href: '/wiki', label: 'WIKI', emoji: '📚', activeColor: '#ff9600' }
+	const navItems = [
+		{ href: '/', label: 'IMPARA', emoji: '/emoji/house_3d.png' },
+		{ href: '/ripasso', label: 'FLASHCARD', emoji: '/emoji/open_book_3d.png' },
+		{ href: '/quiz', label: 'CLASSIFICHE', emoji: '/emoji/shield_3d.png' },
+		{ href: '/reels', label: 'MISSIONI', emoji: '/emoji/package_3d.png' },
+		{ href: '/ripasso-foto', label: 'FOTO', emoji: '/emoji/camera_3d.png' },
+		{ href: '/ripasso-inverso', label: 'INVERSO', emoji: '/emoji/counterclockwise_arrows_button_3d.png' },
+		{ href: '/scrittura', label: 'SCRITTURA', emoji: '/emoji/writing_hand_3d_default.png' },
+		{ href: '/wiki', label: 'WIKI', emoji: '/emoji/books_3d.png' }
 	];
-
-	const moreNavItems = [
-		{ href: '/ripasso-foto', label: 'Ripasso Foto', icon: '📷', desc: 'Identifica il termine dall\'immagine' },
-		{ href: '/ripasso-inverso', label: 'Ripasso Inverso', icon: '🔄', desc: 'Dalla descrizione all\'acronimo' },
-		{ href: '/scrittura', label: 'Scrittura Libera', icon: '✍️', desc: 'Digitazione e autocontrollo' },
-		{ href: '/admin', label: 'Pannello Admin', icon: '⚙️', desc: 'Aggiungi o modifica schede' }
-	];
-
-	let showMoreMenu = $state(false);
-
-	let isMoreActive = $derived(
-		moreNavItems.some((item) => page.url.pathname === item.href)
-	);
 </script>
 
 <nav class="duo-navigation">
 	<!-- Desktop Sidebar Header Brand (Hidden on Mobile) -->
 	<div class="sidebar-brand">
 		<a href="/" class="brand-link">
-			<span class="brand-icon">🇮🇹</span>
+			<img src="/emoji/triangular_flag_3d.png" alt="Bandiera" class="brand-emoji" />
 			<span class="brand-title">duofocus</span>
 		</a>
 	</div>
 
 	<div class="nav-container">
-		{#each primaryNavItems as item}
-			{@const isActive = page.url.pathname === item.href}
-			<a
-				href={item.href}
-				class="nav-item"
-				class:active={isActive}
-				onclick={() => (showMoreMenu = false)}
-			>
-				<div class="icon-wrapper" class:active-outline={isActive}>
-					<span class="nav-emoji">{item.emoji}</span>
-				</div>
-				<span class="nav-label">{item.label}</span>
-			</a>
-		{/each}
-
-		<!-- More Menu Button -->
-		<div class="more-menu-wrapper">
-			<button
-				class="nav-item more-btn"
-				class:active={isMoreActive || showMoreMenu}
-				onclick={() => (showMoreMenu = !showMoreMenu)}
-			>
-				<div class="icon-wrapper" class:active-outline={isMoreActive || showMoreMenu}>
-					<span class="nav-emoji">💬</span>
-				</div>
-				<span class="nav-label">MOSTRA ALTRO</span>
-			</button>
-
-			<!-- Popover Drawer for More Options -->
-			{#if showMoreMenu}
-				<div class="more-popover duo-card">
-					<div class="popover-header">
-						<span>Altre Modalità e Strumenti</span>
-						<button class="close-pop-btn" onclick={() => (showMoreMenu = false)}>✕</button>
+		<div class="nav-scroll-wrapper">
+			{#each navItems as item}
+				{@const isActive = page.url.pathname === item.href}
+				<a
+					href={item.href}
+					class="nav-item"
+					class:active={isActive}
+				>
+					<div class="icon-wrapper" class:active-outline={isActive}>
+						<img src={item.emoji} alt={item.label} class="nav-emoji-img" />
 					</div>
-
-					<div class="popover-grid">
-						{#each moreNavItems as subItem}
-							<a
-								href={subItem.href}
-								class="more-sub-item"
-								class:active={page.url.pathname === subItem.href}
-								onclick={() => (showMoreMenu = false)}
-							>
-								<span class="sub-icon">{subItem.icon}</span>
-								<div class="sub-text">
-									<span class="sub-label">{subItem.label}</span>
-									<span class="sub-desc">{subItem.desc}</span>
-								</div>
-							</a>
-						{/each}
-					</div>
-				</div>
-			{/if}
+					<span class="nav-label">{item.label}</span>
+				</a>
+			{/each}
 		</div>
 	</div>
 </nav>
@@ -104,16 +54,28 @@
 		z-index: 50;
 		background: var(--nav-bg);
 		border-top: 2px solid var(--border-color);
-		padding: 0.35rem 0.5rem 0.5rem 0.5rem;
+		padding: 0.35rem 0.25rem 0.4rem 0.25rem;
 		box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.2);
 	}
 
 	.nav-container {
-		max-width: 600px;
+		width: 100%;
 		margin: 0 auto;
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
+	}
+
+	.nav-container::-webkit-scrollbar {
+		display: none;
+	}
+
+	.nav-scroll-wrapper {
 		display: flex;
 		align-items: center;
-		justify-content: space-around;
+		justify-content: space-between;
+		min-width: min-content;
+		padding: 0 0.25rem;
+		gap: 0.1rem;
 	}
 
 	.nav-item {
@@ -121,14 +83,14 @@
 		flex-direction: column;
 		align-items: center;
 		gap: 0.15rem;
-		padding: 0.25rem 0.4rem;
+		padding: 0.25rem 0.35rem;
 		color: var(--text-muted);
 		text-decoration: none;
-		font-size: 0.75rem;
+		font-size: 0.68rem;
 		font-weight: 800;
 		transition: all 0.15s ease;
-		flex: 1;
-		max-width: 80px;
+		flex-shrink: 0;
+		min-width: 62px;
 		text-align: center;
 		background: none;
 		border: none;
@@ -137,8 +99,8 @@
 	}
 
 	.icon-wrapper {
-		width: 42px;
-		height: 38px;
+		width: 36px;
+		height: 34px;
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -153,9 +115,10 @@
 		transform: translateY(-2px);
 	}
 
-	.nav-emoji {
-		font-size: 1.4rem;
-		line-height: 1;
+	.nav-emoji-img {
+		width: 24px;
+		height: 24px;
+		object-fit: contain;
 	}
 
 	.nav-item:hover {
@@ -169,103 +132,9 @@
 	.nav-label {
 		font-family: 'Outfit', sans-serif;
 		font-weight: 800;
-		font-size: 0.72rem;
-		letter-spacing: 0.04em;
-	}
-
-	.more-menu-wrapper {
-		position: relative;
-		display: flex;
-		flex: 1;
-		max-width: 80px;
-	}
-
-	.more-btn {
-		width: 100%;
-	}
-
-	.more-popover {
-		position: absolute;
-		bottom: calc(100% + 12px);
-		right: 0;
-		min-width: 270px;
-		z-index: 100;
-		display: flex;
-		flex-direction: column;
-		gap: 0.75rem;
-		animation: slideUp 0.2s ease;
-	}
-
-	.popover-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		font-size: 0.75rem;
-		font-weight: 800;
-		text-transform: uppercase;
-		color: var(--text-muted);
-		padding-bottom: 0.4rem;
-		border-bottom: 2px solid var(--border-color);
-	}
-
-	.close-pop-btn {
-		background: none;
-		border: none;
-		color: var(--text-muted);
-		font-size: 0.9rem;
-		cursor: pointer;
-		font-weight: 800;
-	}
-
-	.popover-grid {
-		display: flex;
-		flex-direction: column;
-		gap: 0.4rem;
-	}
-
-	.more-sub-item {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-		padding: 0.65rem 0.85rem;
-		border-radius: 14px;
-		text-decoration: none;
-		color: var(--text-color);
-		background: var(--card-bg-subtle);
-		border: 2px solid var(--border-color);
-		border-bottom-width: 3px;
-		transition: all 0.15s ease;
-	}
-
-	.more-sub-item:hover {
-		border-color: var(--accent-color);
-		transform: translateX(2px);
-	}
-
-	.more-sub-item.active {
-		background: var(--accent-light-bg);
-		border-color: var(--accent-color);
-		color: var(--accent-color);
-	}
-
-	.sub-icon {
-		font-size: 1.25rem;
-	}
-
-	.sub-text {
-		display: flex;
-		flex-direction: column;
-		line-height: 1.2;
-	}
-
-	.sub-label {
-		font-weight: 800;
-		font-size: 0.85rem;
-	}
-
-	.sub-desc {
-		font-size: 0.7rem;
-		color: var(--text-muted);
+		font-size: 0.65rem;
+		letter-spacing: 0.02em;
+		white-space: nowrap;
 	}
 
 	/* 🖥️ Desktop Sidebar Navigation (>= 1024px) */
@@ -280,7 +149,7 @@
 			padding: 1.5rem 1rem;
 			display: flex;
 			flex-direction: column;
-			gap: 2rem;
+			gap: 1.5rem;
 			box-shadow: none;
 		}
 
@@ -296,8 +165,10 @@
 			text-decoration: none;
 		}
 
-		.brand-icon {
-			font-size: 1.8rem;
+		.brand-emoji {
+			width: 32px;
+			height: 32px;
+			object-fit: contain;
 		}
 
 		.brand-title {
@@ -309,24 +180,28 @@
 		}
 
 		.nav-container {
+			overflow-x: visible;
+		}
+
+		.nav-scroll-wrapper {
 			flex-direction: column;
-			max-width: none;
+			gap: 0.4rem;
 			width: 100%;
-			gap: 0.5rem;
 			align-items: stretch;
+			padding: 0;
 		}
 
 		.nav-item {
 			flex-direction: row;
 			align-items: center;
-			gap: 1rem;
-			max-width: none;
+			gap: 0.85rem;
+			min-width: 0;
 			width: 100%;
-			padding: 0.75rem 1rem;
+			padding: 0.65rem 0.85rem;
 			border-radius: 16px;
 			border: 2px solid transparent;
 			text-align: left;
-			font-size: 0.85rem;
+			font-size: 0.82rem;
 		}
 
 		.nav-item.active {
@@ -335,33 +210,21 @@
 		}
 
 		.icon-wrapper {
-			width: 32px;
-			height: 32px;
+			width: 28px;
+			height: 28px;
 			background: none !important;
 			border: none !important;
 			transform: none !important;
 		}
 
-		.nav-emoji {
-			font-size: 1.3rem;
+		.nav-emoji-img {
+			width: 26px;
+			height: 26px;
 		}
 
-		.more-menu-wrapper {
-			max-width: none;
-			width: 100%;
+		.nav-label {
+			font-size: 0.8rem;
 		}
-
-		.more-popover {
-			bottom: auto;
-			top: 0;
-			left: calc(100% + 12px);
-			right: auto;
-		}
-	}
-
-	@keyframes slideUp {
-		from { opacity: 0; transform: translateY(6px); }
-		to { opacity: 1; transform: translateY(0); }
 	}
 </style>
 

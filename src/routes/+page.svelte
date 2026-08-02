@@ -44,14 +44,13 @@
 	);
 
 	const lessonNodes = [
-		{ id: 1, title: 'Inizia Ripasso', href: '/ripasso', icon: '⭐', state: 'active', offset: 0 },
-		{ id: 2, title: 'Modalità Foto', href: '/ripasso-foto', icon: '📷', state: 'unlocked', offset: -40 },
-		{ id: 3, title: 'Ripasso Inverso', href: '/ripasso-inverso', icon: '🔄', state: 'unlocked', offset: 30 },
-		{ id: 4, title: 'Cassa Premio', href: '/reels', icon: '📦', state: 'unlocked', offset: -35 },
-		{ id: 5, title: 'Quiz 5 Scelte', href: '/quiz', icon: '🎯', state: 'unlocked', offset: 0 },
-		{ id: 6, title: 'Scrittura Libera', href: '/scrittura', icon: '✍️', state: 'unlocked', offset: 35 },
-		{ id: 7, title: 'Reels Ferroviari', href: '/reels', icon: '🎬', state: 'unlocked', offset: -25 },
-		{ id: 8, title: 'Wiki Ferroviario', href: '/wiki', icon: '🏆', state: 'unlocked', offset: 0 }
+		{ id: 1, title: 'Inizia Flashcard', href: '/ripasso', icon: '/emoji/open_book_3d.png', state: 'active', offset: 0 },
+		{ id: 2, title: 'Modalità Foto', href: '/ripasso-foto', icon: '/emoji/camera_3d.png', state: 'unlocked', offset: -40 },
+		{ id: 3, title: 'Ripasso Inverso', href: '/ripasso-inverso', icon: '/emoji/counterclockwise_arrows_button_3d.png', state: 'unlocked', offset: 30 },
+		{ id: 4, title: 'Missioni', href: '/reels', icon: '/emoji/package_3d.png', state: 'unlocked', offset: -35 },
+		{ id: 5, title: 'Classifiche', href: '/quiz', icon: '/emoji/shield_3d.png', state: 'unlocked', offset: 0 },
+		{ id: 6, title: 'Scrittura Libera', href: '/scrittura', icon: '/emoji/writing_hand_3d_default.png', state: 'unlocked', offset: 35 },
+		{ id: 7, title: 'Wiki & Indice', href: '/wiki', icon: '/emoji/books_3d.png', state: 'unlocked', offset: 0 }
 	];
 
 	let totalXP = $derived(stats.quizCorrect * 15 + stats.cardsStudied * 5);
@@ -61,14 +60,15 @@
 <div class="duo-page-grid">
 	<!-- 📍 MAIN CENTRAL COLUMN (Path & Chapter Banner) -->
 	<div class="duo-main-column">
-		<!-- Green Section Header Banner (Screenshot) -->
+		<!-- Green Section Header Banner -->
 		<section class="duo-green-banner">
 			<div class="banner-text">
 				<span class="banner-chap">← SEZIONE 1, CAPITOLO 1</span>
 				<h1 class="banner-heading">Concetti e Acronimi Ferroviari RFI</h1>
 			</div>
 			<a href="/wiki" class="duo-btn duo-btn-guide">
-				📋 GUIDA
+				<img src="/emoji/clipboard_3d.png" alt="Guida" class="btn-emoji" />
+				GUIDA
 			</a>
 		</section>
 
@@ -91,14 +91,14 @@
 							class:active={i === 0}
 							title={node.title}
 						>
-							<span class="node-icon">{node.icon}</span>
+							<img src={node.icon} alt={node.title} class="node-emoji-img" />
 						</a>
 					</div>
 				{/each}
 
-				<!-- Duolingo Owl / Train Mascot Illustration on Path -->
+				<!-- Duolingo Owl Mascot Illustration on Path -->
 				<div class="duo-mascot-box">
-					<span class="mascot-emoji">🦉</span>
+					<img src="/emoji/owl_3d.png" alt="Mascotte" class="mascot-img" />
 				</div>
 			</div>
 		</section>
@@ -147,20 +147,20 @@
 	<aside class="duo-right-sidebar">
 		<!-- Top Stats Row (Flag, Streak, Gems, Hearts) -->
 		<div class="desktop-top-stats duo-card">
-			<div class="stat-item" title="Lingua Corso">
-				<span class="stat-emoji">🇮🇹</span>
+			<div class="stat-item" title="Corso">
+				<img src="/emoji/triangular_flag_3d.png" alt="Corso" class="widget-emoji-img" />
 			</div>
 			<div class="stat-item streak" title="Giorni di serie">
-				<span class="stat-emoji">🔥</span>
+				<img src="/emoji/fire_3d.png" alt="Serie" class="widget-emoji-img" />
 				<span class="stat-val">{stats.streakDays}</span>
 			</div>
 			<div class="stat-item gems" title="Gemme totali">
-				<span class="stat-emoji">💎</span>
+				<img src="/emoji/gem_stone_3d.png" alt="Gemme" class="widget-emoji-img" />
 				<span class="stat-val">{gems}</span>
 			</div>
-			<div class="stat-item hearts" title="Vite/Cuori">
-				<span class="stat-emoji">❤️</span>
-				<span class="stat-val">5</span>
+			<div class="stat-item hearts" title="Punti XP">
+				<img src="/emoji/high_voltage_3d.png" alt="XP" class="widget-emoji-img" />
+				<span class="stat-val">{totalXP}</span>
 			</div>
 		</div>
 
@@ -168,7 +168,9 @@
 		<div class="duo-widget duo-card">
 			<h3 class="widget-title">Sblocca le classifiche!</h3>
 			<div class="widget-row">
-				<div class="lock-icon-box">🔒</div>
+				<div class="lock-icon-box">
+					<img src="/emoji/locked_3d.png" alt="Lucchetto" class="widget-emoji-img" />
+				</div>
 				<p class="widget-text">
 					Completa altre 3 lezioni per partecipare alle classifiche settimanali.
 				</p>
@@ -179,10 +181,10 @@
 		<div class="duo-widget duo-card">
 			<div class="widget-header-row">
 				<h3 class="widget-title">Missioni giornaliere</h3>
-				<a href="/quiz" class="widget-link">VEDI TUTTE</a>
+				<a href="/reels" class="widget-link">VEDI TUTTE</a>
 			</div>
 			<div class="mission-item">
-				<span class="mission-icon">⚡</span>
+				<img src="/emoji/high_voltage_3d.png" alt="XP" class="widget-emoji-img" />
 				<div class="mission-info">
 					<span class="mission-desc">Guadagna 10 XP</span>
 					<div class="duo-progress-track">
@@ -190,7 +192,7 @@
 					</div>
 					<span class="mission-count">{Math.min(10, totalXP)} / 10</span>
 				</div>
-				<span class="mission-chest">📦</span>
+				<img src="/emoji/package_3d.png" alt="Premio" class="widget-emoji-img" />
 			</div>
 		</div>
 
@@ -202,7 +204,7 @@
 					INIZIA LEZIONE
 				</a>
 				<a href="/quiz" class="duo-btn duo-btn-blue flex-btn">
-					ESERCIZIO PACCO
+					CLASSIFICHE
 				</a>
 			</div>
 		</div>
@@ -270,6 +272,15 @@
 		font-size: 0.85rem;
 		padding: 0.65rem 1.1rem;
 		flex-shrink: 0;
+		display: inline-flex;
+		align-items: center;
+		gap: 0.4rem;
+	}
+
+	.btn-emoji {
+		width: 20px;
+		height: 20px;
+		object-fit: contain;
 	}
 
 	/* 📍 Serpeggiante Node Path */
@@ -353,17 +364,23 @@
 		border-bottom-width: 2px;
 	}
 
-	.node-icon {
-		font-size: 1.8rem;
-		line-height: 1;
+	.node-emoji-img {
+		width: 36px;
+		height: 36px;
+		object-fit: contain;
 	}
 
 	.duo-mascot-box {
 		position: absolute;
 		right: -40px;
 		top: 140px;
-		font-size: 4rem;
 		animation: floatMascot 3s ease-in-out infinite;
+	}
+
+	.mascot-img {
+		width: 72px;
+		height: 72px;
+		object-fit: contain;
 	}
 
 	/* Catalog Cards */
@@ -461,7 +478,7 @@
 	.stat-item {
 		display: flex;
 		align-items: center;
-		gap: 0.3rem;
+		gap: 0.4rem;
 		font-weight: 900;
 		font-size: 1rem;
 	}
@@ -470,8 +487,10 @@
 	.stat-item.gems { color: var(--accent-color); }
 	.stat-item.hearts { color: var(--pink-color); }
 
-	.stat-emoji {
-		font-size: 1.3rem;
+	.widget-emoji-img {
+		width: 26px;
+		height: 26px;
+		object-fit: contain;
 	}
 
 	.duo-widget {
@@ -502,7 +521,6 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		font-size: 1.3rem;
 		flex-shrink: 0;
 	}
 
@@ -537,10 +555,6 @@
 		border: 2px solid var(--border-color);
 	}
 
-	.mission-icon {
-		font-size: 1.4rem;
-	}
-
 	.mission-info {
 		flex: 1;
 		display: flex;
@@ -573,10 +587,6 @@
 		height: 100%;
 		background: var(--yellow-color);
 		border-radius: 9999px;
-	}
-
-	.mission-chest {
-		font-size: 1.4rem;
 	}
 
 	.profile-actions {

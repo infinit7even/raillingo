@@ -2,10 +2,8 @@
 	import { onMount } from 'svelte';
 	import { themeStore, THEME_OPTIONS, type ThemePreset } from '$lib/stores/themeStore';
 	import { statsStore, type StatsData } from '$lib/stores/statsStore';
-	import ThemeModal from '$lib/components/ThemeModal.svelte';
 
 	let currentTheme = $state<ThemePreset>('dark');
-	let isThemeModalOpen = $state(false);
 	let stats = $state<StatsData>({
 		cardsStudied: 0,
 		quizAnswered: 0,
@@ -35,30 +33,30 @@
 	<div class="header-container">
 		<!-- Brand Logo & Flag -->
 		<a href="/" class="brand">
-			<span class="flag-icon" title="Corso Italiano RFI">🇮🇹</span>
+			<img src="/emoji/triangular_flag_3d.png" alt="Bandiera" class="emoji-img flag-img" />
 			<div class="title-group">
 				<span class="app-title">RF</span>
 				<span class="app-subtitle">Rail Focus</span>
 			</div>
 		</a>
 
-		<!-- Duolingo Top Stats Pill Row -->
+		<!-- Duolingo Top Stats Pill Row with Fluent UI 3D Emojis -->
 		<div class="duo-top-stats">
 			<!-- Streak Flame -->
 			<div class="stat-pill streak" title="Giorni di slancio consecutivi">
-				<span class="pill-icon">🔥</span>
+				<img src="/emoji/fire_3d.png" alt="Serie" class="emoji-img pill-emoji" />
 				<span class="pill-value">{stats.streakDays}</span>
 			</div>
 
 			<!-- Gems / Studied Cards -->
 			<div class="stat-pill gems" title="Totale schede imparate">
-				<span class="pill-icon">💎</span>
+				<img src="/emoji/gem_stone_3d.png" alt="Gemme" class="emoji-img pill-emoji" />
 				<span class="pill-value">{stats.cardsStudied * 10 + 100}</span>
 			</div>
 
 			<!-- Energy / XP Hearts -->
 			<div class="stat-pill energy" title="Punti XP guadagnati">
-				<span class="pill-icon">⚡</span>
+				<img src="/emoji/high_voltage_3d.png" alt="XP" class="emoji-img pill-emoji" />
 				<span class="pill-value">{stats.quizCorrect * 15 + stats.cardsStudied * 5}</span>
 			</div>
 		</div>
@@ -68,28 +66,16 @@
 			<!-- Theme Selector Button -->
 			<button
 				class="duo-header-btn theme-btn"
-				onclick={() => (isThemeModalOpen = true)}
-				aria-label="Scegli tema"
-				title="Personalizza Tema"
+				onclick={() => themeStore.setTheme(currentTheme === 'dark' ? 'light' : 'dark')}
+				aria-label="Cambia tema"
+				title="Alterna Scuro/Chiaro"
 			>
 				<span class="theme-dot" style="background: {activeThemeObj.color}"></span>
-				<span class="theme-name-text">{activeThemeObj.name}</span>
+				<span class="theme-name-text">{currentTheme === 'dark' ? 'Scuro' : 'Chiaro'}</span>
 			</button>
-
-			<a href="/admin" class="duo-header-btn admin-link" aria-label="Pannello Amministratore" title="Admin">
-				<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-					<path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"></path>
-					<path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-				</svg>
-			</a>
 		</div>
 	</div>
 </header>
-
-<ThemeModal
-	isOpen={isThemeModalOpen}
-	onClose={() => (isThemeModalOpen = false)}
-/>
 
 <style>
 	.app-header {
@@ -119,13 +105,19 @@
 		color: var(--text-color);
 	}
 
-	.flag-icon {
-		font-size: 1.6rem;
-		line-height: 1;
-		padding: 0.2rem;
-		background: var(--card-bg-subtle);
-		border: 1px solid var(--border-color);
-		border-radius: 8px;
+	.emoji-img {
+		object-fit: contain;
+		display: inline-block;
+	}
+
+	.flag-img {
+		width: 28px;
+		height: 28px;
+	}
+
+	.pill-emoji {
+		width: 22px;
+		height: 22px;
 	}
 
 	.title-group {
@@ -180,11 +172,6 @@
 		color: var(--pink-color);
 	}
 
-	.pill-icon {
-		font-size: 1.1rem;
-		line-height: 1;
-	}
-
 	.pill-value {
 		font-family: 'Outfit', sans-serif;
 		font-weight: 900;
@@ -227,11 +214,6 @@
 		width: 10px;
 		height: 10px;
 		border-radius: 50%;
-	}
-
-	.icon {
-		width: 18px;
-		height: 18px;
 	}
 
 	@media (min-width: 1024px) {

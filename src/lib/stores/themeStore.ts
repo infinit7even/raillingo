@@ -1,12 +1,6 @@
 import { browser } from '$app/environment';
 
-export type ThemePreset =
-	| 'dark'
-	| 'light'
-	| 'purple'
-	| 'frecciarossa'
-	| 'emerald'
-	| 'amber';
+export type ThemePreset = 'dark' | 'light';
 
 export interface ThemeOption {
 	id: ThemePreset;
@@ -20,7 +14,7 @@ export interface ThemeOption {
 export const THEME_OPTIONS: ThemeOption[] = [
 	{
 		id: 'dark',
-		name: 'Duolingo Dark',
+		name: 'Tema Scuro',
 		desc: 'Notte blu teal iconico con bordi 3D',
 		color: '#1cb0f6',
 		bg: '#131f24',
@@ -28,43 +22,11 @@ export const THEME_OPTIONS: ThemeOption[] = [
 	},
 	{
 		id: 'light',
-		name: 'Duolingo Light',
+		name: 'Tema Chiaro',
 		desc: 'Chiaro pulito ad alto contrasto',
 		color: '#58cc02',
 		bg: '#ffffff',
 		cardBg: '#ffffff'
-	},
-	{
-		id: 'purple',
-		name: 'Super Duolingo',
-		desc: 'Viola galattico e ciano brillante',
-		color: '#ce82ff',
-		bg: '#11091e',
-		cardBg: '#1d1033'
-	},
-	{
-		id: 'frecciarossa',
-		name: 'Frecciarossa Speed',
-		desc: 'Rosso scuro sportivo con accento rosso',
-		color: '#ff4b4b',
-		bg: '#16080a',
-		cardBg: '#261114'
-	},
-	{
-		id: 'emerald',
-		name: 'Trazione Verde',
-		desc: 'Verde smeraldo e lime energizzante',
-		color: '#58cc02',
-		bg: '#051913',
-		cardBg: '#0d2d22'
-	},
-	{
-		id: 'amber',
-		name: 'Italo Gold',
-		desc: 'Toni ambra caldo e oro trofeo',
-		color: '#ff9600',
-		bg: '#14100a',
-		cardBg: '#241a10'
 	}
 ];
 
