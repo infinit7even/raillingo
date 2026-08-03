@@ -1,1 +1,19 @@
-[]
+[
+  {
+    "discordId": "691289686093725736",
+    "email": "691289686093725736@discord.user",
+    "username": "infinit7even",
+    "avatar": "https://cdn.discordapp.com/avatars/691289686093725736/095e39fb44e46f3686663df8561cd726.png",
+    "role": "admin",
+    "createdAt": "2026-08-03T08:41:23.021Z",
+    "lastLoginAt": "2026-08-03T08:41:56.294Z",
+    "stats": {
+      "cardsStudied": 0,
+      "quizAnswered": 0,
+      "quizCorrect": 0,
+      "streakDays": 1,
+      "lastStudiedDate": "2026-08-03",
+      "favorites": []
+    }
+  }
+]

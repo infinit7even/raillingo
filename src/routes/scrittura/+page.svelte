@@ -2,9 +2,11 @@
 	import { onMount } from 'svelte';
 	import { cardsStore } from '$lib/stores/cardsStore';
 	import FreeWriteExercise from '$lib/components/FreeWriteExercise.svelte';
+	import CategoryFilterBar from '$lib/components/CategoryFilterBar.svelte';
 	import type { Card, WritingSubMode } from '$lib/types/cards';
 
 	let cards = $state<Card[]>([]);
+	let selectedCategory = $state<string>('ALL');
 	let currentIndex = $state(0);
 	let selectedSubMode = $state<WritingSubMode>('title-to-desc');
 
@@ -13,8 +15,17 @@
 		return unsubscribe;
 	});
 
+	let activeCards = $derived.by<Card[]>(() => {
+		if (selectedCategory === 'ALL') return cards;
+		return cards.filter(
+			(c) =>
+				c.category === selectedCategory ||
+				(c.categories && c.categories.includes(selectedCategory))
+		);
+	});
+
 	function handleNext() {
-		if (currentIndex < cards.length - 1) {
+		if (currentIndex < activeCards.length - 1) {
 			currentIndex++;
 		} else {
 			currentIndex = 0;
@@ -23,6 +34,14 @@
 </script>
 
 <div class="scrittura-page-container">
+	<CategoryFilterBar
+		selectedCategory={selectedCategory}
+		onSelectCategory={(cat) => {
+			selectedCategory = cat;
+			currentIndex = 0;
+		}}
+	/>
+
 	<div class="duo-tab-bar">
 		<button
 			class="duo-tab-btn"
@@ -50,16 +69,16 @@
 		</button>
 	</div>
 
-	{#if cards.length > 0}
+	{#if activeCards.length > 0}
 		<FreeWriteExercise
-			card={cards[currentIndex]}
+			card={activeCards[currentIndex]}
 			subMode={selectedSubMode}
 			currentIndex={currentIndex}
-			totalCards={cards.length}
+			totalCards={activeCards.length}
 			onNext={handleNext}
 		/>
 	{:else}
-		<div class="duo-card empty-box">Caricamento esercizio...</div>
+		<div class="duo-card empty-box">Nessuna scheda trovata per la categoria selezionata.</div>
 	{/if}
 </div>
 
