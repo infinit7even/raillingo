@@ -42,30 +42,36 @@
 		}}
 	/>
 
-	<div class="duo-tab-bar">
+	<div class="duo-tab-bar" role="tablist">
 		<button
 			class="duo-tab-btn"
 			class:active={selectedSubMode === 'title-to-desc'}
 			onclick={() => { selectedSubMode = 'title-to-desc'; currentIndex = 0; }}
+			role="tab"
+			aria-selected={selectedSubMode === 'title-to-desc'}
 		>
-			<img src="/emoji/writing_hand_3d_default.png" alt="Scrittura" class="tab-emoji" />
-			ACRONIMO ➔ DESCRIZIONE
+			<img src="/emoji/writing_hand_3d_default.png" alt="" aria-hidden="true" class="tab-emoji" />
+			<span>ACRONIMO ➔ DESCRIZIONE</span>
 		</button>
 		<button
 			class="duo-tab-btn"
 			class:active={selectedSubMode === 'desc-to-title'}
 			onclick={() => { selectedSubMode = 'desc-to-title'; currentIndex = 0; }}
+			role="tab"
+			aria-selected={selectedSubMode === 'desc-to-title'}
 		>
-			<img src="/emoji/counterclockwise_arrows_button_3d.png" alt="Inverso" class="tab-emoji" />
-			DESCRIZIONE ➔ ACRONIMO
+			<img src="/emoji/counterclockwise_arrows_button_3d.png" alt="" aria-hidden="true" class="tab-emoji" />
+			<span>DESCRIZIONE ➔ ACRONIMO</span>
 		</button>
 		<button
 			class="duo-tab-btn"
 			class:active={selectedSubMode === 'photo-to-title'}
 			onclick={() => { selectedSubMode = 'photo-to-title'; currentIndex = 0; }}
+			role="tab"
+			aria-selected={selectedSubMode === 'photo-to-title'}
 		>
-			<img src="/emoji/camera_3d.png" alt="Foto" class="tab-emoji" />
-			FOTO ➔ SCRITTURA
+			<img src="/emoji/camera_3d.png" alt="" aria-hidden="true" class="tab-emoji" />
+			<span>FOTO ➔ SCRITTURA</span>
 		</button>
 	</div>
 

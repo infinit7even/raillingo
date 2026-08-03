@@ -69,30 +69,36 @@
 	/>
 
 	<!-- Sub-mode Selector Bar -->
-	<div class="duo-tab-bar">
+	<div class="duo-tab-bar" role="tablist">
 		<button
 			class="duo-tab-btn"
 			class:active={subMode === 'standard'}
 			onclick={() => { subMode = 'standard'; currentIndex = 0; }}
+			role="tab"
+			aria-selected={subMode === 'standard'}
 		>
-			<img src="/emoji/open_book_3d.png" alt="Standard" class="tab-emoji" />
-			FLASHCARD
+			<img src="/emoji/open_book_3d.png" alt="" aria-hidden="true" class="tab-emoji" />
+			<span>FLASHCARD</span>
 		</button>
 		<button
 			class="duo-tab-btn"
 			class:active={subMode === 'foto'}
 			onclick={() => { subMode = 'foto'; currentIndex = 0; }}
+			role="tab"
+			aria-selected={subMode === 'foto'}
 		>
-			<img src="/emoji/camera_3d.png" alt="Foto" class="tab-emoji" />
-			FOTO
+			<img src="/emoji/camera_3d.png" alt="" aria-hidden="true" class="tab-emoji" />
+			<span>RIPASSO FOTO</span>
 		</button>
 		<button
 			class="duo-tab-btn"
 			class:active={subMode === 'inverso'}
 			onclick={() => { subMode = 'inverso'; currentIndex = 0; }}
+			role="tab"
+			aria-selected={subMode === 'inverso'}
 		>
-			<img src="/emoji/counterclockwise_arrows_button_3d.png" alt="Inverso" class="tab-emoji" />
-			INVERSO
+			<img src="/emoji/counterclockwise_arrows_button_3d.png" alt="" aria-hidden="true" class="tab-emoji" />
+			<span>INVERSO</span>
 		</button>
 	</div>
 
