@@ -8,19 +8,67 @@
 	}>();
 
 	let searchQuery = $state('');
+	let selectedLetter = $state<string>('ALL');
+	let selectedCategory = $state<string>('ALL');
 	let expandedId = $state<string | null>(null);
 
-	let filteredCards = $derived(
-		cards.filter((c: Card) => {
-			const q = searchQuery.toLowerCase().trim();
-			return (
-				!q ||
-				c.title.toLowerCase().includes(q) ||
-				c.description.toLowerCase().includes(q) ||
-				(c.tags && c.tags.some((t: string) => t.toLowerCase().includes(q))) ||
-				(c.category && c.category.toLowerCase().includes(q))
-			);
-		})
+	// Get all unique categories across cards (single & multi-category)
+	let categories = $derived.by<string[]>(() => {
+		const set = new Set<string>();
+		for (const c of cards) {
+			if (c.category) set.add(c.category);
+			if (c.categories) {
+				for (const cat of c.categories) {
+					if (cat && cat.trim()) set.add(cat.trim());
+				}
+			}
+		}
+		return Array.from(set).sort();
+	});
+
+	// Get available initial letters from card titles
+	let availableLetters = $derived.by<string[]>(() => {
+		const set = new Set<string>();
+		for (const card of cards) {
+			const first = card.title.trim().charAt(0).toUpperCase();
+			if (first >= 'A' && first <= 'Z') {
+				set.add(first);
+			} else if (first) {
+				set.add('#');
+			}
+		}
+		return Array.from(set).sort();
+	});
+
+	// Sorted alphabetically and filtered by search, category, and letter
+	let filteredSortedCards = $derived.by<Card[]>(() =>
+		[...cards]
+			.sort((a, b) => a.title.localeCompare(b.title, 'it', { sensitivity: 'base' }))
+			.filter((c: Card) => {
+				// Letter filter
+				const firstLetter = c.title.trim().charAt(0).toUpperCase();
+				const matchesLetter =
+					selectedLetter === 'ALL' ||
+					(selectedLetter === '#' ? !(firstLetter >= 'A' && firstLetter <= 'Z') : firstLetter === selectedLetter);
+
+				// Category filter
+				const matchesCategory =
+					selectedCategory === 'ALL' ||
+					c.category === selectedCategory ||
+					(c.categories && c.categories.includes(selectedCategory));
+
+				// Search query
+				const q = searchQuery.toLowerCase().trim();
+				const matchesSearch =
+					!q ||
+					c.title.toLowerCase().includes(q) ||
+					c.description.toLowerCase().includes(q) ||
+					(c.tags && c.tags.some((t: string) => t.toLowerCase().includes(q))) ||
+					(c.category && c.category.toLowerCase().includes(q)) ||
+					(c.categories && c.categories.some((cat: string) => cat.toLowerCase().includes(q)));
+
+				return matchesLetter && matchesCategory && matchesSearch;
+			})
 	);
 
 	function handleKeydown(e: KeyboardEvent) {
@@ -31,6 +79,12 @@
 
 	function toggleExpand(id: string) {
 		expandedId = expandedId === id ? null : id;
+	}
+
+	function clearFilters() {
+		searchQuery = '';
+		selectedLetter = 'ALL';
+		selectedCategory = 'ALL';
 	}
 </script>
 
@@ -55,41 +109,120 @@
 			<!-- Header -->
 			<div class="modal-header">
 				<div class="header-title-box">
-					<span class="duo-badge">Ricerca Rapida Wiki</span>
+					<span class="duo-badge">Wiki & Consultation</span>
 					<h2 class="modal-title">🔍 Consulta Acronimi</h2>
 				</div>
 				<button class="close-btn" onclick={onClose} aria-label="Chiudi modal">✕</button>
 			</div>
 
-			<!-- Search Input Box -->
-			<div class="search-box">
-				<input
-					type="text"
-					bind:value={searchQuery}
-					placeholder="Digita per cercare un acronimo o termine..."
-					class="duo-input search-input"
-					autofocus
-				/>
+			<!-- Search Bar Section -->
+			<div class="search-section">
+				<div class="search-box-wrap">
+					<span class="search-icon">🔍</span>
+					<input
+						type="text"
+						bind:value={searchQuery}
+						placeholder="Cerca acronimo, termine o spiegazione..."
+						class="duo-input search-input"
+					/>
+					{#if searchQuery || selectedLetter !== 'ALL' || selectedCategory !== 'ALL'}
+						<button class="clear-all-btn" onclick={clearFilters} title="Resetta filtri">
+							✕ Reset
+						</button>
+					{/if}
+				</div>
+
+				<!-- Category Filter Chips -->
+				{#if categories.length > 0}
+					<div class="category-chips-scroll">
+						<button
+							class="chip-btn"
+							class:active={selectedCategory === 'ALL'}
+							onclick={() => (selectedCategory = 'ALL')}
+						>
+							Tutte le Categorie ({cards.length})
+						</button>
+						{#each categories as cat}
+							<button
+								class="chip-btn"
+								class:active={selectedCategory === cat}
+								onclick={() => (selectedCategory = cat)}
+							>
+								{cat}
+							</button>
+						{/each}
+					</div>
+				{/if}
+
+				<!-- Alphabet Filter Bar -->
+				<div class="alphabet-bar-scroll">
+					<button
+						class="letter-btn"
+						class:active={selectedLetter === 'ALL'}
+						onclick={() => (selectedLetter = 'ALL')}
+					>
+						TUTTI
+					</button>
+					{#each availableLetters as letter}
+						<button
+							class="letter-btn"
+							class:active={selectedLetter === letter}
+							onclick={() => (selectedLetter = letter)}
+						>
+							{letter}
+						</button>
+					{/each}
+				</div>
+			</div>
+
+			<!-- Result Count Banner -->
+			<div class="results-meta-row">
+				<span class="count-text">
+					Trovati <strong>{filteredSortedCards.length}</strong> acronimi in ordine alfabetico
+				</span>
 			</div>
 
 			<!-- Results List -->
 			<div class="results-list">
-				{#each filteredCards as card}
+				{#each filteredSortedCards as card (card.id)}
 					{@const isExpanded = expandedId === card.id}
+					{@const cardCategories = card.categories && card.categories.length > 0 ? card.categories : card.category ? [card.category] : []}
+
 					<div class="result-card duo-card" class:expanded={isExpanded}>
 						<button class="card-header-btn" onclick={() => toggleExpand(card.id)}>
 							<div class="title-group">
 								<h3 class="card-title">{card.title}</h3>
-								{#if card.category}
-									<span class="category-pill">{card.category}</span>
+								{#if cardCategories.length > 0}
+									<div class="categories-row">
+										{#each cardCategories as cat}
+											<span class="category-pill">{cat}</span>
+										{/each}
+									</div>
 								{/if}
 							</div>
-							<span class="arrow">{isExpanded ? '▲' : '▼'}</span>
+							<div class="right-indicator">
+								{#if card.images && card.images.length > 0}
+									<span class="has-img-badge" title="Contiene foto">📷 {card.images.length}</span>
+								{/if}
+								<span class="arrow">{isExpanded ? '▲' : '▼'}</span>
+							</div>
 						</button>
 
 						{#if isExpanded}
 							<div class="card-body">
 								<p class="description">{card.description}</p>
+
+								<!-- Images Thumbnails -->
+								{#if card.images && card.images.length > 0}
+									<div class="card-images-grid">
+										{#each card.images as imgUrl, idx}
+											<a href={imgUrl} target="_blank" rel="noopener noreferrer" class="img-thumb-link">
+												<img src={imgUrl} alt="{card.title} {idx + 1}" class="card-thumb-img" />
+											</a>
+										{/each}
+									</div>
+								{/if}
+
 								{#if card.tags && card.tags.length > 0}
 									<div class="tags-row">
 										{#each card.tags as tag}
@@ -102,7 +235,13 @@
 					</div>
 				{:else}
 					<div class="empty-search duo-card">
-						Nessun acronimo trovato per "{searchQuery}".
+						<span class="empty-icon">🔎</span>
+						<p class="empty-text">
+							Nessun acronimo trovato per i filtri selezionati.
+						</p>
+						<button class="duo-btn duo-btn-purple reset-btn" onclick={clearFilters}>
+							MOSTRA TUTTI GLI ACRONIMI
+						</button>
 					</div>
 				{/each}
 			</div>
@@ -135,12 +274,14 @@
 
 	.modal-card {
 		width: 100%;
-		max-width: 580px;
-		max-height: 80vh;
+		max-width: 640px;
+		max-height: 85vh;
 		display: flex;
 		flex-direction: column;
-		gap: 1rem;
+		gap: 0.85rem;
 		overflow: hidden;
+		background: var(--card-bg);
+		padding: 1.35rem;
 		animation: scaleUp 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 	}
 
@@ -153,8 +294,8 @@
 	.modal-title {
 		font-size: 1.5rem;
 		font-weight: 900;
-		color: var(--text-color);
-		margin: 0.25rem 0 0 0;
+		color: var(--accent-color);
+		margin: 0.2rem 0 0 0;
 	}
 
 	.close-btn {
@@ -166,12 +307,114 @@
 		border-radius: 50%;
 		font-size: 1rem;
 		cursor: pointer;
+		font-weight: 800;
+	}
+
+	.search-section {
+		display: flex;
+		flex-direction: column;
+		gap: 0.65rem;
+	}
+
+	.search-box-wrap {
+		position: relative;
+		display: flex;
+		align-items: center;
+	}
+
+	.search-icon {
+		position: absolute;
+		left: 0.85rem;
+		font-size: 1rem;
+		pointer-events: none;
 	}
 
 	.search-input {
 		width: 100%;
+		padding-left: 2.5rem;
+		padding-right: 4.5rem;
+		font-size: 0.95rem;
 		box-sizing: border-box;
-		font-size: 1rem;
+	}
+
+	.clear-all-btn {
+		position: absolute;
+		right: 0.6rem;
+		background: var(--card-bg);
+		border: 1px solid var(--border-color);
+		color: var(--text-muted);
+		font-size: 0.72rem;
+		font-weight: 800;
+		padding: 0.25rem 0.5rem;
+		border-radius: 8px;
+		cursor: pointer;
+	}
+
+	.category-chips-scroll {
+		display: flex;
+		gap: 0.4rem;
+		overflow-x: auto;
+		padding-bottom: 0.2rem;
+		scrollbar-width: thin;
+	}
+
+	.chip-btn {
+		white-space: nowrap;
+		font-size: 0.75rem;
+		font-weight: 800;
+		padding: 0.3rem 0.65rem;
+		border-radius: 10px;
+		border: 1.5px solid var(--border-color);
+		background: var(--card-bg-subtle);
+		color: var(--text-muted);
+		cursor: pointer;
+		transition: all 0.15s ease;
+	}
+
+	.chip-btn.active {
+		background: var(--accent-light-bg);
+		color: var(--accent-color);
+		border-color: var(--accent-color);
+	}
+
+	.alphabet-bar-scroll {
+		display: flex;
+		gap: 0.25rem;
+		overflow-x: auto;
+		padding-bottom: 0.2rem;
+		scrollbar-width: thin;
+	}
+
+	.letter-btn {
+		min-width: 28px;
+		height: 28px;
+		padding: 0 0.35rem;
+		font-size: 0.75rem;
+		font-weight: 900;
+		border-radius: 8px;
+		border: 1.5px solid var(--border-color);
+		background: var(--card-bg-subtle);
+		color: var(--text-muted);
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		transition: all 0.15s ease;
+	}
+
+	.letter-btn.active {
+		background: var(--green-color);
+		color: white;
+		border-color: var(--green-depth);
+	}
+
+	.results-meta-row {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		font-size: 0.75rem;
+		color: var(--text-muted);
+		padding: 0.1rem 0;
 	}
 
 	.results-list {
@@ -179,13 +422,14 @@
 		overflow-y: auto;
 		display: flex;
 		flex-direction: column;
-		gap: 0.6rem;
-		padding-right: 0.25rem;
+		gap: 0.55rem;
+		padding-right: 0.2rem;
 	}
 
 	.result-card {
 		padding: 0;
 		overflow: hidden;
+		border-radius: 14px;
 	}
 
 	.card-header-btn {
@@ -204,7 +448,8 @@
 	.title-group {
 		display: flex;
 		align-items: center;
-		gap: 0.6rem;
+		gap: 0.5rem;
+		flex-wrap: wrap;
 	}
 
 	.card-title {
@@ -214,11 +459,32 @@
 		margin: 0;
 	}
 
+	.categories-row {
+		display: flex;
+		gap: 0.25rem;
+		flex-wrap: wrap;
+	}
+
 	.category-pill {
-		font-size: 0.7rem;
+		font-size: 0.68rem;
 		font-weight: 800;
 		background: var(--accent-light-bg);
 		color: var(--accent-color);
+		padding: 0.15rem 0.45rem;
+		border-radius: 6px;
+	}
+
+	.right-indicator {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	.has-img-badge {
+		font-size: 0.7rem;
+		font-weight: 800;
+		background: rgba(168, 85, 247, 0.15);
+		color: #a855f7;
 		padding: 0.15rem 0.45rem;
 		border-radius: 6px;
 	}
@@ -234,14 +500,34 @@
 		background: var(--card-bg-subtle);
 		display: flex;
 		flex-direction: column;
-		gap: 0.5rem;
+		gap: 0.65rem;
 	}
 
 	.description {
-		font-size: 0.9rem;
+		font-size: 0.92rem;
 		line-height: 1.5;
 		color: var(--text-color);
-		margin-top: 0.65rem;
+		margin-top: 0.75rem;
+	}
+
+	.card-images-grid {
+		display: flex;
+		gap: 0.5rem;
+		overflow-x: auto;
+		padding: 0.25rem 0;
+	}
+
+	.card-thumb-img {
+		width: 80px;
+		height: 80px;
+		object-fit: cover;
+		border-radius: 10px;
+		border: 1px solid var(--border-color);
+		transition: transform 0.15s ease;
+	}
+
+	.card-thumb-img:hover {
+		transform: scale(1.05);
 	}
 
 	.tags-row {
@@ -260,8 +546,26 @@
 
 	.empty-search {
 		text-align: center;
-		padding: 2rem;
+		padding: 2rem 1rem;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	.empty-icon {
+		font-size: 2.2rem;
+	}
+
+	.empty-text {
+		font-size: 0.9rem;
 		color: var(--text-muted);
+		margin: 0;
+	}
+
+	.reset-btn {
+		margin-top: 0.5rem;
+		font-size: 0.8rem;
 	}
 
 	.modal-footer {
@@ -284,3 +588,4 @@
 		to { opacity: 1; transform: scale(1); }
 	}
 </style>
+
