@@ -95,6 +95,13 @@
 					>
 						⚡ AGGIUNGI CARD
 					</button>
+					<a
+						href="/admin"
+						class="duo-btn duo-btn-gray admin-link-btn"
+						title="Accedi al Pannello di Gestione Admin"
+					>
+						⚙️ ADMIN
+					</a>
 				{/if}
 
 				<!-- Sleek Lens Search Button for Instant Wiki Modal -->

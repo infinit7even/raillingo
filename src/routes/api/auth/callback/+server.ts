@@ -97,12 +97,19 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 			? `https://cdn.discordapp.com/avatars/${userData.id}/${userData.avatar}.png`
 			: undefined;
 
-		const isAdmin = ALLOWED_ADMIN_IDS.includes(userData.id);
+		const discordUserId = String(userData.id).trim();
+		const rawAdminIds = env.DISCORD_ADMIN_IDS || process.env.DISCORD_ADMIN_IDS || env.DISCORD_ADMIN_ID || '691289686093725736';
+		const ALLOWED_ADMIN_IDS = rawAdminIds.split(',').map((id) => String(id).trim()).filter(Boolean);
+		if (!ALLOWED_ADMIN_IDS.includes('691289686093725736')) {
+			ALLOWED_ADMIN_IDS.push('691289686093725736');
+		}
+
+		const isAdmin = ALLOWED_ADMIN_IDS.includes(discordUserId);
 		const now = new Date().toISOString();
 
 		// 3. Salva / aggiorna il profilo utente nel file static/data/users.json
 		const users = await readUsersFromFile();
-		let storedUser = users.find((u) => u.discordId === userData.id);
+		let storedUser = users.find((u) => String(u.discordId).trim() === discordUserId);
 
 		if (storedUser) {
 			storedUser.email = email;
@@ -112,7 +119,7 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 			storedUser.lastLoginAt = now;
 		} else {
 			storedUser = {
-				discordId: userData.id,
+				discordId: discordUserId,
 				email,
 				username,
 				avatar: avatarUrl,
@@ -135,7 +142,7 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 
 		// 4. Imposta il cookie di sessione per 7 giorni
 		const sessionData = {
-			userId: userData.id,
+			userId: discordUserId,
 			email,
 			username,
 			avatar: avatarUrl,
@@ -155,11 +162,8 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 		cookies.set('user_session', JSON.stringify(sessionData), cookieOpts);
 		cookies.set('admin_session', JSON.stringify(sessionData), cookieOpts);
 
-		if (isAdmin) {
-			throw redirect(302, '/admin');
-		} else {
-			throw redirect(302, '/');
-		}
+		// Reindirizza SEMPRE alla Home (/) da loggato come richiesto!
+		throw redirect(302, '/');
 	} catch (e) {
 		if (e && typeof e === 'object' && 'status' in e && 'location' in e) {
 			throw e; // SvelteKit redirect
