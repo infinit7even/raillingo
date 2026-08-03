@@ -2,16 +2,11 @@ import { json, type RequestHandler } from '@sveltejs/kit';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import type { Card } from '$lib/types/cards';
-import { getDbCards, pool } from '$lib/db';
 
 const CARDS_FILE_PATH = path.resolve('static/data/cards.json');
 
 async function readCardsFromFile(): Promise<Card[]> {
 	try {
-		const dbCards = await getDbCards();
-		if (dbCards && dbCards.length > 0) {
-			return dbCards;
-		}
 		const data = await fs.readFile(CARDS_FILE_PATH, 'utf-8');
 		return JSON.parse(data);
 	} catch (err) {
@@ -35,7 +30,12 @@ export const GET: RequestHandler = async () => {
 	return json(cards);
 };
 
-export const POST: RequestHandler = async ({ request }) => {
+export const POST: RequestHandler = async ({ request, cookies }) => {
+	const sessionCookie = cookies.get('admin_session');
+	if (!sessionCookie) {
+		return json({ error: 'Non autorizzato' }, { status: 401 });
+	}
+
 	const newCard: Card = await request.json();
 	if (!newCard.title || !newCard.description) {
 		return json({ error: 'Titolo e descrizione sono obbligatori' }, { status: 400 });
@@ -50,28 +50,15 @@ export const POST: RequestHandler = async ({ request }) => {
 	}
 
 	await writeCardsToFile(cards);
-
-	try {
-		await pool.query(
-			`INSERT INTO cards (id, title, description, category, tags, images, created_at, updated_at)
-			 VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
-			 ON CONFLICT (id) DO UPDATE SET
-				title = EXCLUDED.title,
-				description = EXCLUDED.description,
-				category = EXCLUDED.category,
-				tags = EXCLUDED.tags,
-				images = EXCLUDED.images,
-				updated_at = NOW();`,
-			[newCard.id, newCard.title, newCard.description, newCard.category || null, newCard.tags || [], newCard.images || []]
-		);
-	} catch (e) {
-		// Ignore DB error
-	}
-
 	return json(newCard, { status: 201 });
 };
 
-export const PUT: RequestHandler = async ({ request }) => {
+export const PUT: RequestHandler = async ({ request, cookies }) => {
+	const sessionCookie = cookies.get('admin_session');
+	if (!sessionCookie) {
+		return json({ error: 'Non autorizzato' }, { status: 401 });
+	}
+
 	const updatedCard: Card = await request.json();
 	if (!updatedCard.id) {
 		return json({ error: 'ID card mancante' }, { status: 400 });
@@ -93,7 +80,12 @@ export const PUT: RequestHandler = async ({ request }) => {
 	return json(cards[index]);
 };
 
-export const DELETE: RequestHandler = async ({ url }) => {
+export const DELETE: RequestHandler = async ({ url, cookies }) => {
+	const sessionCookie = cookies.get('admin_session');
+	if (!sessionCookie) {
+		return json({ error: 'Non autorizzato' }, { status: 401 });
+	}
+
 	const id = url.searchParams.get('id');
 	if (!id) {
 		return json({ error: 'ID non specificato' }, { status: 400 });
@@ -102,12 +94,6 @@ export const DELETE: RequestHandler = async ({ url }) => {
 	const cards = await readCardsFromFile();
 	const filtered = cards.filter((c) => c.id !== id);
 	await writeCardsToFile(filtered);
-
-	try {
-		await pool.query('DELETE FROM cards WHERE id = $1', [id]);
-	} catch (e) {
-		// Ignore DB error
-	}
 
 	return json({ success: true, id });
 };

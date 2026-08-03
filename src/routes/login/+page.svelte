@@ -7,16 +7,16 @@
 <div class="login-page-container">
 	<div class="login-card duo-card">
 		<div class="header-section">
-			<span class="duo-badge">Autenticazione Piattaforma</span>
-			<h1 class="login-title">Accesso Utenti Raillingo</h1>
+			<span class="duo-badge">Accesso Amministrazione</span>
+			<h1 class="login-title">Pannello Admin Raillingo</h1>
 			<p class="login-subtitle">
-				Accedi con il tuo account Discord per salvare i progressi, accumulare punti XP e mantenere attiva la tua serie quotidiana.
+				L'accesso tramite Discord è riservato esclusivamente all'amministratore per la gestione del percorso didattico e degli annunci della piattaforma.
 			</p>
 		</div>
 
 		{#if error}
 			<div class="error-banner duo-card">
-				⚠️ {error === 'unauthorized' ? 'Accesso non autorizzato.' : 'Errore durante l\'autenticazione. Riprova.'}
+				⚠️ {error === 'not_admin' ? 'Accesso negato: Solo l\'amministratore ha i permessi per accedere al pannello admin.' : error === 'admin_required' ? 'Accesso riservato all\'amministratore. Autenticati per continuare.' : 'Errore durante l\'autenticazione. Riprova.'}
 			</div>
 		{/if}
 

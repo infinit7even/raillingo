@@ -1,6 +1,5 @@
 import { redirect, type RequestHandler } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
-import { upsertDbUser } from '$lib/db';
 
 const CLIENT_ID = env.DISCORD_CLIENT_ID || process.env.DISCORD_CLIENT_ID || '1533519975476629564';
 const CLIENT_SECRET = env.DISCORD_CLIENT_SECRET || process.env.DISCORD_CLIENT_SECRET || 'BiwE65HiOYsZOjND8P5GlsqwsvUXbpEw';
@@ -40,7 +39,7 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 		const tokenData = await tokenRes.json();
 		const accessToken = tokenData.access_token;
 
-		// 2. Ottieni le informazioni utente da Discord (ID, email, username - NO foto)
+		// 2. Ottieni le informazioni utente da Discord (ID, email, username)
 		const userRes = await fetch('https://discord.com/api/users/@me', {
 			headers: { Authorization: `Bearer ${accessToken}` }
 		});
@@ -53,18 +52,21 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 		const email = userData.email || `${userData.id}@discord.user`;
 		const username = userData.username || userData.id;
 
-		// 3. Salva / aggiorna l'utente nel Database PostgreSQL ed ottieni il ruolo
-		const defaultRole = ALLOWED_ADMIN_IDS.includes(userData.id) ? 'admin' : 'user';
-		const role = await upsertDbUser(userData.id, email, username, defaultRole);
-		const isAdmin = role === 'admin' || ALLOWED_ADMIN_IDS.includes(userData.id);
+		// 3. Verifica se l'ID Discord appartiene all'amministratore
+		const isAdmin = ALLOWED_ADMIN_IDS.includes(userData.id);
 
-		// 4. Salva il cookie di sessione per 7 giorni (senza avatar)
+		if (!isAdmin) {
+			// Accesso riservato esclusivamente all'amministratore
+			throw redirect(302, '/login?error=not_admin');
+		}
+
+		// 4. Salva il cookie di sessione admin per 7 giorni
 		const sessionData = {
 			userId: userData.id,
 			email,
 			username,
-			role: isAdmin ? 'admin' : 'user',
-			isAdmin,
+			role: 'admin',
+			isAdmin: true,
 			loginAt: new Date().toISOString()
 		};
 
@@ -75,7 +77,7 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 			maxAge: 60 * 60 * 24 * 7 // 7 giorni
 		});
 
-		throw redirect(302, '/');
+		throw redirect(302, '/admin');
 	} catch (e) {
 		if (e && typeof e === 'object' && 'status' in e && 'location' in e) {
 			throw e; // SvelteKit redirect
