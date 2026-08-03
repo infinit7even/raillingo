@@ -7,8 +7,8 @@
 
 	// Local state
 	let cards = $state<Card[]>([]);
-	let user = $state(data.user);
-	let error = $state(data.error);
+	let user = $derived(data.user);
+	let error = $derived(data.error);
 
 	// Form state for creating / editing card
 	let editingCardId = $state<string | null>(null);

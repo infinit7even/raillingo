@@ -372,3 +372,40 @@ button, input, textarea, select {
 	background: var(--text-muted);
 }
 
+/* 📱 Safe Area & Mobile Utilities */
+:root {
+	--safe-area-bottom: env(safe-area-inset-bottom, 0px);
+	--safe-area-top: env(safe-area-inset-top, 0px);
+}
+
+/* Badge Accent Variant */
+.duo-badge-accent {
+	background-color: var(--accent-light-bg);
+	color: var(--accent-color);
+	border-color: var(--accent-color);
+}
+
+.duo-badge-green {
+	background-color: rgba(88, 204, 2, 0.15);
+	color: var(--green-color);
+	border-color: var(--green-color);
+}
+
+.duo-badge-purple {
+	background-color: rgba(206, 130, 255, 0.15);
+	color: var(--purple-color);
+	border-color: var(--purple-color);
+}
+
+.duo-badge-orange {
+	background-color: rgba(255, 150, 0, 0.15);
+	color: var(--orange-color);
+	border-color: var(--orange-color);
+}
+
+/* Touch feedback helper */
+.active-press:active {
+	transform: scale(0.97);
+}
+
+

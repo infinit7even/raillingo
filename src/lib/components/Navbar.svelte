@@ -75,7 +75,7 @@
 		z-index: 200;
 		background: var(--card-bg);
 		border-top: 2px solid var(--border-color);
-		padding: 0.4rem 0.25rem;
+		padding: 0.4rem 0.25rem calc(0.4rem + var(--safe-area-bottom, 0px)) 0.25rem;
 		box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.25);
 		backdrop-filter: blur(12px);
 	}

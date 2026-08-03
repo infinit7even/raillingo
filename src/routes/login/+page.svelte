@@ -1,7 +1,7 @@
 <script lang="ts">
 	let { data } = $props();
-	let user = $state(data.user);
-	let error = $state(data.error);
+	let user = $derived(data.user);
+	let error = $derived(data.error);
 </script>
 
 <div class="login-page-container">

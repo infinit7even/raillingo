@@ -56,6 +56,13 @@
 			statsStore.recordStudySession();
 		}
 	}
+	import ModeTabs from '$lib/components/ModeTabs.svelte';
+
+	const flashcardTabs = [
+		{ id: 'standard', label: 'FLASHCARD', emoji: '/emoji/open_book_3d.png' },
+		{ id: 'foto', label: 'RIPASSO FOTO', emoji: '/emoji/camera_3d.png' },
+		{ id: 'inverso', label: 'INVERSO', emoji: '/emoji/counterclockwise_arrows_button_3d.png' }
+	];
 </script>
 
 <div class="ripasso-page-container">
@@ -69,38 +76,14 @@
 	/>
 
 	<!-- Sub-mode Selector Bar -->
-	<div class="duo-tab-bar" role="tablist">
-		<button
-			class="duo-tab-btn"
-			class:active={subMode === 'standard'}
-			onclick={() => { subMode = 'standard'; currentIndex = 0; }}
-			role="tab"
-			aria-selected={subMode === 'standard'}
-		>
-			<img src="/emoji/open_book_3d.png" alt="" aria-hidden="true" class="tab-emoji" />
-			<span>FLASHCARD</span>
-		</button>
-		<button
-			class="duo-tab-btn"
-			class:active={subMode === 'foto'}
-			onclick={() => { subMode = 'foto'; currentIndex = 0; }}
-			role="tab"
-			aria-selected={subMode === 'foto'}
-		>
-			<img src="/emoji/camera_3d.png" alt="" aria-hidden="true" class="tab-emoji" />
-			<span>RIPASSO FOTO</span>
-		</button>
-		<button
-			class="duo-tab-btn"
-			class:active={subMode === 'inverso'}
-			onclick={() => { subMode = 'inverso'; currentIndex = 0; }}
-			role="tab"
-			aria-selected={subMode === 'inverso'}
-		>
-			<img src="/emoji/counterclockwise_arrows_button_3d.png" alt="" aria-hidden="true" class="tab-emoji" />
-			<span>INVERSO</span>
-		</button>
-	</div>
+	<ModeTabs
+		tabs={flashcardTabs}
+		activeTab={subMode}
+		onSelect={(id) => {
+			subMode = id as 'standard' | 'foto' | 'inverso';
+			currentIndex = 0;
+		}}
+	/>
 
 	{#if subMode === 'standard'}
 		{#if activeCards.length > 0}
@@ -187,45 +170,7 @@
 		gap: 1.25rem;
 	}
 
-	.duo-tab-bar {
-		display: flex;
-		gap: 0.35rem;
-		background: var(--card-bg-subtle);
-		padding: 0.4rem;
-		border-radius: 18px;
-		border: 2px solid var(--border-color);
-	}
 
-	.duo-tab-btn {
-		flex: 1;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		gap: 0.4rem;
-		padding: 0.65rem 0.5rem;
-		border-radius: 14px;
-		border: 2px solid transparent;
-		background: none;
-		color: var(--text-muted);
-		font-family: 'Outfit', sans-serif;
-		font-weight: 800;
-		font-size: 0.75rem;
-		cursor: pointer;
-		transition: all 0.2s ease;
-	}
-
-	.duo-tab-btn.active {
-		background: var(--card-bg);
-		color: var(--accent-color);
-		border-color: var(--accent-color);
-		box-shadow: 0 4px 12px var(--shadow-color);
-	}
-
-	.tab-emoji {
-		width: 18px;
-		height: 18px;
-		object-fit: contain;
-	}
 
 	.reverse-container {
 		display: flex;

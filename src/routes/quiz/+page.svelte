@@ -30,9 +30,18 @@
 			currentIndex = 0;
 		}
 	}
+	import PageHeader from '$lib/components/PageHeader.svelte';
 </script>
 
 <div class="quiz-page-container">
+	<PageHeader
+		title="Quiz a Scelta Multipla"
+		subtitle="Metti alla prova la tua memoria selezionando la risposta corretta tra 5 opzioni."
+		badge="Modalità Quiz"
+		icon="/emoji/star_3d.png"
+		variant="purple"
+	/>
+
 	<CategoryFilterBar
 		selectedCategory={selectedCategory}
 		onSelectCategory={(cat) => {

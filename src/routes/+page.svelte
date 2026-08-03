@@ -4,6 +4,7 @@
 	import { statsStore, type StatsData } from '$lib/stores/statsStore';
 	import WikiSearchModal from '$lib/components/WikiSearchModal.svelte';
 	import QuickAddCardModal from '$lib/components/QuickAddCardModal.svelte';
+	import CategoryBadge from '$lib/components/CategoryBadge.svelte';
 	import type { Card } from '$lib/types/cards';
 
 	let { data } = $props();
@@ -176,7 +177,7 @@
 						<div class="card-top">
 							<h3 class="card-term">{card.title}</h3>
 							{#if card.category}
-								<span class="duo-badge">{card.category}</span>
+								<CategoryBadge category={card.category} variant="accent" size="sm" />
 							{/if}
 						</div>
 						<p class="card-meaning">{card.description}</p>

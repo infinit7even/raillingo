@@ -31,6 +31,13 @@
 			currentIndex = 0;
 		}
 	}
+	import ModeTabs from '$lib/components/ModeTabs.svelte';
+
+	const writingTabs = [
+		{ id: 'title-to-desc', label: 'ACRONIMO ➔ DESCRIZIONE', emoji: '/emoji/writing_hand_3d_default.png' },
+		{ id: 'desc-to-title', label: 'DESCRIZIONE ➔ ACRONIMO', emoji: '/emoji/counterclockwise_arrows_button_3d.png' },
+		{ id: 'photo-to-title', label: 'FOTO ➔ SCRITTURA', emoji: '/emoji/camera_3d.png' }
+	];
 </script>
 
 <div class="scrittura-page-container">
@@ -42,38 +49,14 @@
 		}}
 	/>
 
-	<div class="duo-tab-bar" role="tablist">
-		<button
-			class="duo-tab-btn"
-			class:active={selectedSubMode === 'title-to-desc'}
-			onclick={() => { selectedSubMode = 'title-to-desc'; currentIndex = 0; }}
-			role="tab"
-			aria-selected={selectedSubMode === 'title-to-desc'}
-		>
-			<img src="/emoji/writing_hand_3d_default.png" alt="" aria-hidden="true" class="tab-emoji" />
-			<span>ACRONIMO ➔ DESCRIZIONE</span>
-		</button>
-		<button
-			class="duo-tab-btn"
-			class:active={selectedSubMode === 'desc-to-title'}
-			onclick={() => { selectedSubMode = 'desc-to-title'; currentIndex = 0; }}
-			role="tab"
-			aria-selected={selectedSubMode === 'desc-to-title'}
-		>
-			<img src="/emoji/counterclockwise_arrows_button_3d.png" alt="" aria-hidden="true" class="tab-emoji" />
-			<span>DESCRIZIONE ➔ ACRONIMO</span>
-		</button>
-		<button
-			class="duo-tab-btn"
-			class:active={selectedSubMode === 'photo-to-title'}
-			onclick={() => { selectedSubMode = 'photo-to-title'; currentIndex = 0; }}
-			role="tab"
-			aria-selected={selectedSubMode === 'photo-to-title'}
-		>
-			<img src="/emoji/camera_3d.png" alt="" aria-hidden="true" class="tab-emoji" />
-			<span>FOTO ➔ SCRITTURA</span>
-		</button>
-	</div>
+	<ModeTabs
+		tabs={writingTabs}
+		activeTab={selectedSubMode}
+		onSelect={(id) => {
+			selectedSubMode = id as WritingSubMode;
+			currentIndex = 0;
+		}}
+	/>
 
 	{#if activeCards.length > 0}
 		<FreeWriteExercise
@@ -95,46 +78,6 @@
 		display: flex;
 		flex-direction: column;
 		gap: 1.25rem;
-	}
-
-	.duo-tab-bar {
-		display: flex;
-		gap: 0.35rem;
-		background: var(--card-bg-subtle);
-		padding: 0.4rem;
-		border-radius: 18px;
-		border: 2px solid var(--border-color);
-	}
-
-	.duo-tab-btn {
-		flex: 1;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		gap: 0.4rem;
-		padding: 0.65rem 0.4rem;
-		border-radius: 14px;
-		border: 2px solid transparent;
-		background: none;
-		color: var(--text-muted);
-		font-family: 'Outfit', sans-serif;
-		font-weight: 800;
-		font-size: 0.72rem;
-		cursor: pointer;
-		transition: all 0.2s ease;
-	}
-
-	.duo-tab-btn.active {
-		background: var(--card-bg);
-		color: var(--accent-color);
-		border-color: var(--accent-color);
-		box-shadow: 0 4px 12px var(--shadow-color);
-	}
-
-	.tab-emoji {
-		width: 18px;
-		height: 18px;
-		object-fit: contain;
 	}
 
 	.empty-box {

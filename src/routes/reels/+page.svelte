@@ -450,9 +450,9 @@
 			top: 0;
 			left: 0;
 			right: 0;
-			bottom: 64px;
+			bottom: calc(64px + var(--safe-area-bottom, 0px));
 			width: 100vw;
-			height: calc(100dvh - 64px);
+			height: calc(100dvh - 64px - var(--safe-area-bottom, 0px));
 			z-index: 10;
 		}
 

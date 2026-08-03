@@ -155,7 +155,14 @@
 
 {#if isOpen}
 	<div class="modal-backdrop" onclick={onClose} onpaste={handlePaste} role="presentation">
-		<div class="modal-card duo-card" onclick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+		<div
+			class="modal-card duo-card"
+			onclick={(e) => e.stopPropagation()}
+			onkeydown={(e) => e.stopPropagation()}
+			role="dialog"
+			aria-modal="true"
+			tabindex="-1"
+		>
 			<div class="modal-header">
 				<h2 class="modal-title">⚡ Aggiungi Scheda Rapida</h2>
 				<button class="close-btn" onclick={onClose} aria-label="Chiudi">✕</button>
@@ -249,7 +256,7 @@
 					<span class="label-text">Immagini ({images.length})</span>
 					
 					<!-- File Upload & Paste Dropzone -->
-					<div class="paste-upload-box" onclick={() => fileInputRef?.click()}>
+					<button type="button" class="paste-upload-box" onclick={() => fileInputRef?.click()}>
 						<span class="upload-icon">📷</span>
 						<div class="upload-info">
 							<strong>{uploading ? 'Caricamento in corso...' : 'Carica Foto o Incolla (Ctrl+V)'}</strong>
@@ -262,7 +269,7 @@
 							onchange={handleFileSelect}
 							style="display: none;"
 						/>
-					</div>
+					</button>
 
 					<div class="img-input-row">
 						<input

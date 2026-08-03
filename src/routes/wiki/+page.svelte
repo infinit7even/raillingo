@@ -61,19 +61,22 @@
 	function toggleCardExpand(id: string) {
 		expandedCardId = expandedCardId === id ? null : id;
 	}
+	import CategoryFilterBar from '$lib/components/CategoryFilterBar.svelte';
+	import PageHeader from '$lib/components/PageHeader.svelte';
+	import CategoryBadge from '$lib/components/CategoryBadge.svelte';
 </script>
 
 <div class="wiki-container">
-	<!-- Wiki Header -->
-	<div class="wiki-header">
-		<div class="header-badge">Dizionario Ferroviario</div>
-		<h1 class="wiki-title">Wiki</h1>
-		<p class="wiki-subtitle">
-			Consultazione rapida di tutti gli acronimi in ordine alfabetico e ricerca globale nell'intero corso.
-		</p>
-	</div>
+	<!-- Page Header -->
+	<PageHeader
+		title="Wiki & Dizionario Ferroviario"
+		subtitle="Consultazione rapida di tutti gli acronimi in ordine alfabetico e ricerca globale."
+		badge="Dizionario RFI"
+		icon="/emoji/books_3d.png"
+		variant="blue"
+	/>
 
-	<!-- Global Search Bar -->
+	<!-- Global Search Bar & Category Filter -->
 	<div class="search-section">
 		<div class="search-box">
 			<span class="search-icon">🔍</span>
@@ -88,25 +91,11 @@
 			{/if}
 		</div>
 
-		<!-- Category Chips -->
-		<div class="category-chips">
-			<button
-				class="chip"
-				class:active={selectedCategory === 'ALL'}
-				onclick={() => (selectedCategory = 'ALL')}
-			>
-				Tutte le Categorie
-			</button>
-			{#each categories as cat}
-				<button
-					class="chip"
-					class:active={selectedCategory === cat}
-					onclick={() => (selectedCategory = cat)}
-				>
-					{cat}
-				</button>
-			{/each}
-		</div>
+		<!-- Category Filter Bar -->
+		<CategoryFilterBar
+			selectedCategory={selectedCategory}
+			onSelectCategory={(cat) => (selectedCategory = cat)}
+		/>
 
 		<!-- Alphabet Filter Bar -->
 		<div class="alphabet-bar">
@@ -197,38 +186,6 @@
 		margin: 0 auto;
 	}
 
-	.wiki-header {
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-	}
-
-	.header-badge {
-		align-self: flex-start;
-		font-size: 0.75rem;
-		font-weight: 800;
-		text-transform: uppercase;
-		background: var(--accent-light-bg);
-		color: var(--accent-color);
-		padding: 0.3rem 0.75rem;
-		border-radius: 9999px;
-		border: 1px solid var(--border-color);
-	}
-
-	.wiki-title {
-		font-size: 2.2rem;
-		font-weight: 900;
-		margin: 0;
-		color: var(--text-color);
-	}
-
-	.wiki-subtitle {
-		font-size: 0.95rem;
-		color: var(--text-muted);
-		line-height: 1.5;
-		margin: 0;
-	}
-
 	.search-section {
 		display: flex;
 		flex-direction: column;
@@ -276,32 +233,6 @@
 		color: var(--text-muted);
 		font-size: 1rem;
 		cursor: pointer;
-	}
-
-	.category-chips {
-		display: flex;
-		gap: 0.5rem;
-		overflow-x: auto;
-		padding-bottom: 0.25rem;
-	}
-
-	.chip {
-		white-space: nowrap;
-		padding: 0.45rem 0.85rem;
-		border-radius: 12px;
-		background: var(--card-bg-subtle);
-		border: 1px solid var(--border-color);
-		color: var(--text-muted);
-		font-size: 0.8rem;
-		font-weight: 700;
-		cursor: pointer;
-		transition: all 0.2s ease;
-	}
-
-	.chip.active {
-		background: var(--accent-light-bg);
-		color: var(--accent-color);
-		border-color: var(--accent-color);
 	}
 
 	.alphabet-bar {
