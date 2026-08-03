@@ -86,7 +86,7 @@
 			</div>
 
 			<div class="banner-actions">
-				{#if user && user.isAdmin}
+				{#if user && (user.isAdmin || user.role === 'admin')}
 					<!-- 1-Click Quick Add Card Button for Admin -->
 					<button
 						class="duo-btn duo-btn-purple quick-add-btn"
