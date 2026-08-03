@@ -1,6 +1,7 @@
 import { json, type RequestHandler } from '@sveltejs/kit';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { env } from '$env/dynamic/private';
 import type { Card } from '$lib/types/cards';
 
 const CARDS_FILE_PATH = path.resolve('static/data/cards.json');
@@ -25,15 +26,30 @@ async function writeCardsToFile(cards: Card[]): Promise<boolean> {
 	}
 }
 
+function isAuthorizedAdmin(cookies: any): boolean {
+	const cookieVal = cookies.get('user_session') || cookies.get('admin_session');
+	if (!cookieVal) return false;
+
+	try {
+		const session = JSON.parse(cookieVal);
+		if (session.isAdmin) return true;
+
+		const rawAdminIds = env.DISCORD_ADMIN_IDS || process.env.DISCORD_ADMIN_IDS || '691289686093725736';
+		const adminIds = rawAdminIds.split(',').map((id: string) => id.trim());
+		return adminIds.includes(session.userId);
+	} catch {
+		return false;
+	}
+}
+
 export const GET: RequestHandler = async () => {
 	const cards = await readCardsFromFile();
 	return json(cards);
 };
 
 export const POST: RequestHandler = async ({ request, cookies }) => {
-	const sessionCookie = cookies.get('admin_session');
-	if (!sessionCookie) {
-		return json({ error: 'Non autorizzato' }, { status: 401 });
+	if (!isAuthorizedAdmin(cookies)) {
+		return json({ error: 'Accesso negato: Soltanto gli amministratori specificati in DISCORD_ADMIN_IDS possono inserire nuove schede.' }, { status: 403 });
 	}
 
 	const newCard: Card = await request.json();
@@ -54,9 +70,8 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 };
 
 export const PUT: RequestHandler = async ({ request, cookies }) => {
-	const sessionCookie = cookies.get('admin_session');
-	if (!sessionCookie) {
-		return json({ error: 'Non autorizzato' }, { status: 401 });
+	if (!isAuthorizedAdmin(cookies)) {
+		return json({ error: 'Accesso negato: Soltanto gli amministratori specificati in DISCORD_ADMIN_IDS possono modificare le schede.' }, { status: 403 });
 	}
 
 	const updatedCard: Card = await request.json();
@@ -81,9 +96,8 @@ export const PUT: RequestHandler = async ({ request, cookies }) => {
 };
 
 export const DELETE: RequestHandler = async ({ url, cookies }) => {
-	const sessionCookie = cookies.get('admin_session');
-	if (!sessionCookie) {
-		return json({ error: 'Non autorizzato' }, { status: 401 });
+	if (!isAuthorizedAdmin(cookies)) {
+		return json({ error: 'Accesso negato: Soltanto gli amministratori specificati in DISCORD_ADMIN_IDS possono eliminare le schede.' }, { status: 403 });
 	}
 
 	const id = url.searchParams.get('id');
