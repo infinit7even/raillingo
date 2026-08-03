@@ -107,10 +107,17 @@
 		display: flex;
 		gap: 0.4rem;
 		overflow-x: auto;
-		scrollbar-width: thin;
-		padding: 0.1rem 0;
+		scrollbar-width: none;
+		-ms-overflow-style: none;
+		padding: 0.2rem 0;
 		width: 100%;
 		-webkit-overflow-scrolling: touch;
+	}
+
+	.chips-scroll-container::-webkit-scrollbar {
+		display: none;
+		width: 0;
+		height: 0;
 	}
 
 	.filter-chip {

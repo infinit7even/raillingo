@@ -100,10 +100,61 @@
 		images = [];
 		newImageUrl = '';
 	}
+	let fileInputRef = $state<HTMLInputElement | null>(null);
+	let uploading = $state(false);
+
+	async function uploadFile(file: File) {
+		uploading = true;
+		try {
+			const formData = new FormData();
+			formData.append('file', file);
+			const res = await fetch('/api/upload', {
+				method: 'POST',
+				body: formData
+			});
+			if (res.ok) {
+				const data = await res.json();
+				if (data.url) {
+					images = [...images, data.url];
+				}
+			} else {
+				alert('Errore durante il caricamento del file.');
+			}
+		} catch (err) {
+			console.error('Errore upload:', err);
+		} finally {
+			uploading = false;
+		}
+	}
+
+	function handleFileSelect(e: Event) {
+		const target = e.target as HTMLInputElement;
+		if (target.files && target.files.length > 0) {
+			for (let i = 0; i < target.files.length; i++) {
+				uploadFile(target.files[i]);
+			}
+			target.value = '';
+		}
+	}
+
+	function handlePaste(e: ClipboardEvent) {
+		const items = e.clipboardData?.items;
+		if (!items) return;
+		for (let i = 0; i < items.length; i++) {
+			const item = items[i];
+			if (item.type.indexOf('image') !== -1) {
+				e.preventDefault();
+				const blob = item.getAsFile();
+				if (blob) {
+					uploadFile(blob);
+				}
+			}
+		}
+	}
 </script>
 
 {#if isOpen}
-	<div class="modal-backdrop" onclick={onClose} role="presentation">
+	<div class="modal-backdrop" onclick={onClose} onpaste={handlePaste} role="presentation">
 		<div class="modal-card duo-card" onclick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
 			<div class="modal-header">
 				<h2 class="modal-title">⚡ Aggiungi Scheda Rapida</h2>
@@ -193,20 +244,38 @@
 					></textarea>
 				</div>
 
-				<!-- Image URL Section -->
+				<!-- Image Upload & Clipboard Paste Section -->
 				<div class="form-group">
 					<span class="label-text">Immagini ({images.length})</span>
+					
+					<!-- File Upload & Paste Dropzone -->
+					<div class="paste-upload-box" onclick={() => fileInputRef?.click()}>
+						<span class="upload-icon">📷</span>
+						<div class="upload-info">
+							<strong>{uploading ? 'Caricamento in corso...' : 'Carica Foto o Incolla (Ctrl+V)'}</strong>
+							<span>Clicca per scegliere un file dal dispositivo o incolla un'immagine dagli appunti</span>
+						</div>
+						<input
+							type="file"
+							accept="image/*"
+							bind:this={fileInputRef}
+							onchange={handleFileSelect}
+							style="display: none;"
+						/>
+					</div>
+
 					<div class="img-input-row">
 						<input
 							type="url"
 							bind:value={newImageUrl}
-							placeholder="URL immagine (https://...)"
+							placeholder="Oppure inserisci URL immagine (https://...)"
 							class="duo-input"
 						/>
 						<button type="button" class="duo-btn duo-btn-gray" onclick={addImageUrl}>
-							+ Aggiungi
+							+ URL
 						</button>
 					</div>
+
 					{#if images.length > 0}
 						<div class="image-preview-row">
 							{#each images as img, idx}
@@ -379,6 +448,45 @@
 		background: var(--green-color);
 		color: white;
 		border-color: var(--green-depth);
+	}
+
+	.paste-upload-box {
+		display: flex;
+		align-items: center;
+		gap: 0.85rem;
+		padding: 0.85rem 1rem;
+		border: 2px dashed var(--accent-color);
+		border-radius: 14px;
+		background: var(--card-bg-subtle);
+		cursor: pointer;
+		transition: all 0.2s ease;
+		margin-bottom: 0.5rem;
+	}
+
+	.paste-upload-box:hover {
+		background: var(--accent-light-bg);
+		border-color: var(--accent-color);
+	}
+
+	.upload-icon {
+		font-size: 1.6rem;
+	}
+
+	.upload-info {
+		display: flex;
+		flex-direction: column;
+		gap: 0.15rem;
+		text-align: left;
+	}
+
+	.upload-info strong {
+		font-size: 0.85rem;
+		color: var(--accent-color);
+	}
+
+	.upload-info span {
+		font-size: 0.72rem;
+		color: var(--text-muted);
 	}
 
 	.image-preview-row {

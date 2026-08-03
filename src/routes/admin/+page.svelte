@@ -82,19 +82,16 @@
 		images = images.filter((_, i) => i !== index);
 	}
 
-	async function handleFileUpload(e: Event) {
-		const input = e.target as HTMLInputElement;
-		if (!input.files || input.files.length === 0) return;
-
+	async function uploadBlob(blob: Blob) {
 		uploading = true;
-		const formData = new FormData();
-		formData.append('file', input.files[0]);
-
 		try {
+			const formData = new FormData();
+			formData.append('file', blob, `paste-${Date.now()}.png`);
 			const res = await fetch('/api/upload', {
 				method: 'POST',
 				body: formData
 			});
+
 			if (res.ok) {
 				const data = await res.json();
 				if (data.url) {
@@ -105,7 +102,28 @@
 			console.error("Errore durante l'upload:", err);
 		} finally {
 			uploading = false;
-			input.value = '';
+		}
+	}
+
+	async function handleFileUpload(e: Event) {
+		const input = e.target as HTMLInputElement;
+		if (!input.files || input.files.length === 0) return;
+		await uploadBlob(input.files[0]);
+		input.value = '';
+	}
+
+	function handlePaste(e: ClipboardEvent) {
+		const items = e.clipboardData?.items;
+		if (!items) return;
+		for (let i = 0; i < items.length; i++) {
+			const item = items[i];
+			if (item.type.indexOf('image') !== -1) {
+				e.preventDefault();
+				const blob = item.getAsFile();
+				if (blob) {
+					uploadBlob(blob);
+				}
+			}
 		}
 	}
 
@@ -195,7 +213,7 @@
 		</div>
 	{:else}
 		<!-- Admin Panel Dashboard -->
-		<div class="admin-panel">
+		<div class="admin-panel" onpaste={handlePaste}>
 			<!-- Header Admin Bar (NO photos as requested) -->
 			<div class="admin-top duo-card">
 				<div class="user-info">
