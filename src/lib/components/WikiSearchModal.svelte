@@ -12,7 +12,7 @@
 	let selectedCategory = $state<string>('ALL');
 	let expandedId = $state<string | null>(null);
 
-	// Get all unique categories across cards (single & multi-category)
+	// Get all unique categories across cards
 	let categories = $derived.by<string[]>(() => {
 		const set = new Set<string>();
 		for (const c of cards) {
@@ -45,19 +45,16 @@
 		[...cards]
 			.sort((a, b) => a.title.localeCompare(b.title, 'it', { sensitivity: 'base' }))
 			.filter((c: Card) => {
-				// Letter filter
 				const firstLetter = c.title.trim().charAt(0).toUpperCase();
 				const matchesLetter =
 					selectedLetter === 'ALL' ||
 					(selectedLetter === '#' ? !(firstLetter >= 'A' && firstLetter <= 'Z') : firstLetter === selectedLetter);
 
-				// Category filter
 				const matchesCategory =
 					selectedCategory === 'ALL' ||
 					c.category === selectedCategory ||
 					(c.categories && c.categories.includes(selectedCategory));
 
-				// Search query
 				const q = searchQuery.toLowerCase().trim();
 				const matchesSearch =
 					!q ||
@@ -109,21 +106,21 @@
 			<!-- Header -->
 			<div class="modal-header">
 				<div class="header-title-box">
-					<span class="duo-badge">Wiki & Consultation</span>
+					<span class="duo-badge">WIKI & CONSULTAZIONE</span>
 					<h2 class="modal-title">🔍 Consulta Acronimi</h2>
 				</div>
 				<button class="close-btn" onclick={onClose} aria-label="Chiudi modal">✕</button>
 			</div>
 
-			<!-- Search Bar Section -->
-			<div class="search-section">
+			<!-- Search & Filter Controls -->
+			<div class="search-controls">
 				<div class="search-box-wrap">
 					<span class="search-icon">🔍</span>
 					<input
 						type="text"
 						bind:value={searchQuery}
 						placeholder="Cerca acronimo, termine o spiegazione..."
-						class="duo-input search-input"
+						class="search-input"
 					/>
 					{#if searchQuery || selectedLetter !== 'ALL' || selectedCategory !== 'ALL'}
 						<button class="clear-all-btn" onclick={clearFilters} title="Resetta filtri">
@@ -132,15 +129,15 @@
 					{/if}
 				</div>
 
-				<!-- Category Filter Chips -->
+				<!-- Category Chips Scroll (Hidden Native Scrollbar) -->
 				{#if categories.length > 0}
-					<div class="category-chips-scroll">
+					<div class="chips-scroll-container">
 						<button
 							class="chip-btn"
 							class:active={selectedCategory === 'ALL'}
 							onclick={() => (selectedCategory = 'ALL')}
 						>
-							Tutte le Categorie ({cards.length})
+							Tutte ({cards.length})
 						</button>
 						{#each categories as cat}
 							<button
@@ -154,8 +151,8 @@
 					</div>
 				{/if}
 
-				<!-- Alphabet Filter Bar -->
-				<div class="alphabet-bar-scroll">
+				<!-- Alphabetical Filter Bar (Hidden Native Scrollbar) -->
+				<div class="alphabet-scroll-container">
 					<button
 						class="letter-btn"
 						class:active={selectedLetter === 'ALL'}
@@ -175,14 +172,14 @@
 				</div>
 			</div>
 
-			<!-- Result Count Banner -->
+			<!-- Results Meta Counter -->
 			<div class="results-meta-row">
 				<span class="count-text">
 					Trovati <strong>{filteredSortedCards.length}</strong> acronimi in ordine alfabetico
 				</span>
 			</div>
 
-			<!-- Results List -->
+			<!-- Results Cards List -->
 			<div class="results-list">
 				{#each filteredSortedCards as card (card.id)}
 					{@const isExpanded = expandedId === card.id}
@@ -212,7 +209,6 @@
 							<div class="card-body">
 								<p class="description">{card.description}</p>
 
-								<!-- Images Thumbnails -->
 								{#if card.images && card.images.length > 0}
 									<div class="card-images-grid">
 										{#each card.images as imgUrl, idx}
@@ -236,9 +232,7 @@
 				{:else}
 					<div class="empty-search duo-card">
 						<span class="empty-icon">🔎</span>
-						<p class="empty-text">
-							Nessun acronimo trovato per i filtri selezionati.
-						</p>
+						<p class="empty-text">Nessun acronimo trovato per i filtri selezionati.</p>
 						<button class="duo-btn duo-btn-purple reset-btn" onclick={clearFilters}>
 							MOSTRA TUTTI GLI ACRONIMI
 						</button>
@@ -246,6 +240,7 @@
 				{/each}
 			</div>
 
+			<!-- Footer -->
 			<div class="modal-footer">
 				<button class="duo-btn duo-btn-gray close-modal-btn" onclick={onClose}>
 					CHIUDI
@@ -263,8 +258,8 @@
 		right: 0;
 		bottom: 0;
 		z-index: 300;
-		background: rgba(0, 0, 0, 0.75);
-		backdrop-filter: blur(8px);
+		background: rgba(0, 0, 0, 0.8);
+		backdrop-filter: blur(10px);
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -274,14 +269,17 @@
 
 	.modal-card {
 		width: 100%;
-		max-width: 640px;
-		max-height: 85vh;
+		max-width: 650px;
+		max-height: 88vh;
 		display: flex;
 		flex-direction: column;
 		gap: 0.85rem;
 		overflow: hidden;
 		background: var(--card-bg);
+		border: 2px solid var(--border-color);
 		padding: 1.35rem;
+		border-radius: 24px;
+		box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
 		animation: scaleUp 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 	}
 
@@ -292,7 +290,7 @@
 	}
 
 	.modal-title {
-		font-size: 1.5rem;
+		font-size: 1.45rem;
 		font-weight: 900;
 		color: var(--accent-color);
 		margin: 0.2rem 0 0 0;
@@ -300,20 +298,27 @@
 
 	.close-btn {
 		background: var(--card-bg-subtle);
-		border: 1px solid var(--border-color);
+		border: 1.5px solid var(--border-color);
 		color: var(--text-muted);
-		width: 32px;
-		height: 32px;
+		width: 34px;
+		height: 34px;
 		border-radius: 50%;
-		font-size: 1rem;
+		font-size: 1.1rem;
 		cursor: pointer;
-		font-weight: 800;
+		font-weight: 900;
+		transition: all 0.15s ease;
 	}
 
-	.search-section {
+	.close-btn:hover {
+		color: var(--pink-color);
+		border-color: var(--pink-color);
+		transform: scale(1.08);
+	}
+
+	.search-controls {
 		display: flex;
 		flex-direction: column;
-		gap: 0.65rem;
+		gap: 0.6rem;
 	}
 
 	.search-box-wrap {
@@ -324,21 +329,22 @@
 
 	.search-icon {
 		position: absolute;
-		left: 0.85rem;
-		font-size: 1rem;
+		left: 0.9rem;
+		font-size: 1.05rem;
 		pointer-events: none;
 	}
 
 	.search-input {
 		width: 100%;
-		padding: 0.8rem 4.5rem 0.8rem 2.5rem;
-		font-size: 0.98rem;
+		padding: 0.85rem 4.5rem 0.85rem 2.6rem;
+		font-size: 0.95rem;
 		font-weight: 700;
 		box-sizing: border-box;
 		background: var(--card-bg-subtle);
 		border: 2px solid var(--border-color);
 		color: var(--text-color);
 		border-radius: 14px;
+		font-family: inherit;
 		transition: border-color 0.15s ease;
 	}
 
@@ -351,25 +357,26 @@
 		position: absolute;
 		right: 0.6rem;
 		background: var(--card-bg);
-		border: 1px solid var(--border-color);
+		border: 1.5px solid var(--border-color);
 		color: var(--text-muted);
 		font-size: 0.72rem;
 		font-weight: 800;
-		padding: 0.25rem 0.5rem;
+		padding: 0.25rem 0.55rem;
 		border-radius: 8px;
 		cursor: pointer;
 	}
 
-	.category-chips-scroll {
+	/* Hidden Scrollbar Category Chips */
+	.chips-scroll-container {
 		display: flex;
 		gap: 0.4rem;
 		overflow-x: auto;
-		padding: 0.2rem 0;
+		padding: 0.15rem 0;
 		scrollbar-width: none;
 		-ms-overflow-style: none;
 	}
 
-	.category-chips-scroll::-webkit-scrollbar {
+	.chips-scroll-container::-webkit-scrollbar {
 		display: none;
 		width: 0;
 		height: 0;
@@ -394,16 +401,17 @@
 		border-color: var(--accent-color);
 	}
 
-	.alphabet-bar-scroll {
+	/* Hidden Scrollbar Alphabet Bar */
+	.alphabet-scroll-container {
 		display: flex;
 		gap: 0.25rem;
 		overflow-x: auto;
-		padding: 0.2rem 0;
+		padding: 0.15rem 0;
 		scrollbar-width: none;
 		-ms-overflow-style: none;
 	}
 
-	.alphabet-bar-scroll::-webkit-scrollbar {
+	.alphabet-scroll-container::-webkit-scrollbar {
 		display: none;
 		width: 0;
 		height: 0;
@@ -472,30 +480,31 @@
 	.title-group {
 		display: flex;
 		align-items: center;
-		gap: 0.5rem;
+		gap: 0.65rem;
 		flex-wrap: wrap;
 	}
 
 	.card-title {
 		font-size: 1.15rem;
 		font-weight: 900;
-		color: var(--accent-color);
+		color: var(--text-color);
 		margin: 0;
 	}
 
 	.categories-row {
 		display: flex;
-		gap: 0.25rem;
+		gap: 0.3rem;
 		flex-wrap: wrap;
 	}
 
 	.category-pill {
 		font-size: 0.68rem;
 		font-weight: 800;
-		background: var(--accent-light-bg);
-		color: var(--accent-color);
 		padding: 0.15rem 0.45rem;
 		border-radius: 6px;
+		background: var(--accent-light-bg);
+		color: var(--accent-color);
+		border: 1px solid var(--accent-color);
 	}
 
 	.right-indicator {
@@ -505,12 +514,13 @@
 	}
 
 	.has-img-badge {
-		font-size: 0.7rem;
+		font-size: 0.72rem;
 		font-weight: 800;
-		background: rgba(168, 85, 247, 0.15);
-		color: #a855f7;
 		padding: 0.15rem 0.45rem;
 		border-radius: 6px;
+		background: var(--card-bg-subtle);
+		border: 1px solid var(--border-color);
+		color: var(--text-muted);
 	}
 
 	.arrow {
@@ -519,39 +529,34 @@
 	}
 
 	.card-body {
-		padding: 0 1rem 1rem 1rem;
-		border-top: 1px solid var(--border-color);
-		background: var(--card-bg-subtle);
+		padding: 0.9rem 1rem 1rem 1rem;
+		border-top: 1.5px dashed var(--border-color);
 		display: flex;
 		flex-direction: column;
-		gap: 0.65rem;
+		gap: 0.75rem;
+		background: var(--card-bg-subtle);
 	}
 
 	.description {
 		font-size: 0.92rem;
 		line-height: 1.5;
 		color: var(--text-color);
-		margin-top: 0.75rem;
+		margin: 0;
 	}
 
 	.card-images-grid {
 		display: flex;
 		gap: 0.5rem;
 		overflow-x: auto;
-		padding: 0.25rem 0;
+		padding-bottom: 0.3rem;
 	}
 
 	.card-thumb-img {
-		width: 80px;
-		height: 80px;
+		width: 75px;
+		height: 75px;
 		object-fit: cover;
 		border-radius: 10px;
-		border: 1px solid var(--border-color);
-		transition: transform 0.15s ease;
-	}
-
-	.card-thumb-img:hover {
-		transform: scale(1.05);
+		border: 1.5px solid var(--border-color);
 	}
 
 	.tags-row {
@@ -563,9 +568,6 @@
 	.tag-pill {
 		font-size: 0.7rem;
 		color: var(--text-muted);
-		background: var(--card-bg);
-		padding: 0.1rem 0.4rem;
-		border-radius: 4px;
 	}
 
 	.empty-search {
@@ -574,7 +576,7 @@
 		display: flex;
 		flex-direction: column;
 		align-items: center;
-		gap: 0.5rem;
+		gap: 0.75rem;
 	}
 
 	.empty-icon {
@@ -582,24 +584,19 @@
 	}
 
 	.empty-text {
-		font-size: 0.9rem;
 		color: var(--text-muted);
-		margin: 0;
-	}
-
-	.reset-btn {
-		margin-top: 0.5rem;
-		font-size: 0.8rem;
+		font-size: 0.9rem;
 	}
 
 	.modal-footer {
 		display: flex;
 		justify-content: flex-end;
+		padding-top: 0.5rem;
+		border-top: 2px solid var(--border-color);
 	}
 
 	.close-modal-btn {
 		width: 100%;
-		font-size: 0.9rem;
 	}
 
 	@keyframes fadeIn {
@@ -608,8 +605,7 @@
 	}
 
 	@keyframes scaleUp {
-		from { opacity: 0; transform: scale(0.95); }
-		to { opacity: 1; transform: scale(1); }
+		from { transform: scale(0.94); opacity: 0; }
+		to { transform: scale(1); opacity: 1; }
 	}
 </style>
-

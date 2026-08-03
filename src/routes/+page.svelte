@@ -87,21 +87,15 @@
 
 			<div class="banner-actions">
 				{#if user && (user.isAdmin || user.role === 'admin')}
-					<!-- 1-Click Quick Add Card Button for Admin -->
+					<!-- 1-Click Quick Add Card Button (+) -->
 					<button
 						class="duo-btn duo-btn-purple quick-add-btn"
 						onclick={() => (isQuickAddOpen = true)}
-						title="Aggiungi rapidamente una nuova scheda"
+						aria-label="Aggiungi scheda rapida"
+						title="Aggiungi scheda rapida"
 					>
-						⚡ AGGIUNGI CARD
+						➕
 					</button>
-					<a
-						href="/admin"
-						class="duo-btn duo-btn-gray admin-link-btn"
-						title="Accedi al Pannello di Gestione Admin"
-					>
-						⚙️ ADMIN
-					</a>
 				{/if}
 
 				<!-- Sleek Lens Search Button for Instant Wiki Modal -->
@@ -243,9 +237,9 @@
 				{user ? 'I tuoi dati e la tua serie sono sincronizzati.' : 'Accedi con Discord per non perdere mai la tua serie e le tue gemme.'}
 			</p>
 			<div class="profile-actions">
-				{#if user && user.isAdmin}
+				{#if user && (user.isAdmin || user.role === 'admin')}
 					<a href="/admin" class="duo-btn duo-btn-purple flex-btn">
-						⚙️ Pannello Admin
+						PANNELLO ADMIN
 					</a>
 				{/if}
 				{#if !user}
