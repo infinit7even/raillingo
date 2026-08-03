@@ -8,7 +8,7 @@
 	let { children } = $props();
 
 	// Route sequence for lateral swipe navigation
-	const routeOrder = ['/', '/ripasso', '/quiz', '/reels', '/scrittura', '/wiki'];
+	const routeOrder = ['/', '/flashcard', '/quiz', '/reels', '/scrittura', '/wiki'];
 
 	let touchStartX = 0;
 	let touchStartY = 0;

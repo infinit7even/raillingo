@@ -331,10 +331,20 @@
 
 	.search-input {
 		width: 100%;
-		padding-left: 2.5rem;
-		padding-right: 4.5rem;
-		font-size: 0.95rem;
+		padding: 0.8rem 4.5rem 0.8rem 2.5rem;
+		font-size: 0.98rem;
+		font-weight: 700;
 		box-sizing: border-box;
+		background: var(--card-bg-subtle);
+		border: 2px solid var(--border-color);
+		color: var(--text-color);
+		border-radius: 14px;
+		transition: border-color 0.15s ease;
+	}
+
+	.search-input:focus {
+		border-color: var(--accent-color);
+		outline: none;
 	}
 
 	.clear-all-btn {
@@ -354,15 +364,22 @@
 		display: flex;
 		gap: 0.4rem;
 		overflow-x: auto;
-		padding-bottom: 0.2rem;
-		scrollbar-width: thin;
+		padding: 0.2rem 0;
+		scrollbar-width: none;
+		-ms-overflow-style: none;
+	}
+
+	.category-chips-scroll::-webkit-scrollbar {
+		display: none;
+		width: 0;
+		height: 0;
 	}
 
 	.chip-btn {
 		white-space: nowrap;
 		font-size: 0.75rem;
 		font-weight: 800;
-		padding: 0.3rem 0.65rem;
+		padding: 0.35rem 0.7rem;
 		border-radius: 10px;
 		border: 1.5px solid var(--border-color);
 		background: var(--card-bg-subtle);
@@ -381,8 +398,15 @@
 		display: flex;
 		gap: 0.25rem;
 		overflow-x: auto;
-		padding-bottom: 0.2rem;
-		scrollbar-width: thin;
+		padding: 0.2rem 0;
+		scrollbar-width: none;
+		-ms-overflow-style: none;
+	}
+
+	.alphabet-bar-scroll::-webkit-scrollbar {
+		display: none;
+		width: 0;
+		height: 0;
 	}
 
 	.letter-btn {

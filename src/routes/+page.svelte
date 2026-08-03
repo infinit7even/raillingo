@@ -64,7 +64,7 @@
 	);
 
 	const lessonNodes = [
-		{ id: 1, title: 'Inizia Flashcard', href: '/ripasso', icon: '/emoji/open_book_3d.png', state: 'active', offset: 0 },
+		{ id: 1, title: 'Inizia Flashcard', href: '/flashcard', icon: '/emoji/open_book_3d.png', state: 'active', offset: 0 },
 		{ id: 2, title: 'Quiz a 5 Scelte', href: '/quiz', icon: '/emoji/star_3d.png', state: 'unlocked', offset: -40 },
 		{ id: 3, title: 'Reels Ferroviari', href: '/reels', icon: '/emoji/camera_3d.png', state: 'unlocked', offset: 35 },
 		{ id: 4, title: 'Scrittura Libera', href: '/scrittura', icon: '/emoji/writing_hand_3d_default.png', state: 'unlocked', offset: -35 },
