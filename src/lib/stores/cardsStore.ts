@@ -74,6 +74,11 @@ class CardsStore {
 		const set = new Set<string>();
 		for (const card of this.cards) {
 			if (card.category) set.add(card.category);
+			if (card.categories && Array.isArray(card.categories)) {
+				for (const cat of card.categories) {
+					if (cat && cat.trim()) set.add(cat.trim());
+				}
+			}
 		}
 		return Array.from(set).sort();
 	}

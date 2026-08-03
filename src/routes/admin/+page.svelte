@@ -65,7 +65,8 @@
 		editingCardId = card.id;
 		title = card.title;
 		description = card.description;
-		category = card.category || '';
+		const cats = card.categories && card.categories.length > 0 ? card.categories : card.category ? [card.category] : [];
+		category = cats.join(', ');
 		images = card.images ? [...card.images] : [];
 		window.scrollTo({ top: 0, behavior: 'smooth' });
 	}
@@ -112,6 +113,11 @@
 		e.preventDefault();
 		if (!title.trim() || !description.trim()) return;
 
+		const parsedCategories = category
+			.split(',')
+			.map((c) => c.trim())
+			.filter(Boolean);
+
 		if (editingCardId) {
 			const existing = cards.find((c) => c.id === editingCardId);
 			if (existing) {
@@ -119,7 +125,8 @@
 					...existing,
 					title: title.trim(),
 					description: description.trim(),
-					category: category.trim() || undefined,
+					category: parsedCategories[0] || undefined,
+					categories: parsedCategories.length > 0 ? parsedCategories : undefined,
 					images: images.length > 0 ? images : undefined
 				});
 			}
@@ -127,7 +134,8 @@
 			await cardsStore.addCard({
 				title: title.trim(),
 				description: description.trim(),
-				category: category.trim() || undefined,
+				category: parsedCategories[0] || undefined,
+				categories: parsedCategories.length > 0 ? parsedCategories : undefined,
 				images: images.length > 0 ? images : undefined
 			});
 		}

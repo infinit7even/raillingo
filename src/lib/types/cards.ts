@@ -2,7 +2,8 @@ export interface Card {
 	id: string;
 	title: string;          // Acronimo o termine (es. "RFI", "SCMT")
 	description: string;    // Definizione e spiegazione d'uso
-	category?: string;     // Categoria (es. "Normativa", "Segnalamento", "Trazione", "Infrastruttura")
+	category?: string;     // Categoria singola (retrocompatibilità)
+	categories?: string[];  // Categorie multiple
 	tags?: string[];        // Etichette secondarie
 	images?: string[];      // Lista URL o percorsi immagini
 	createdAt: string;

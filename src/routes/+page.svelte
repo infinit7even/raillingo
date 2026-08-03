@@ -3,12 +3,14 @@
 	import { cardsStore } from '$lib/stores/cardsStore';
 	import { statsStore, type StatsData } from '$lib/stores/statsStore';
 	import WikiSearchModal from '$lib/components/WikiSearchModal.svelte';
+	import QuickAddCardModal from '$lib/components/QuickAddCardModal.svelte';
 	import type { Card } from '$lib/types/cards';
 
 	let { data } = $props();
 
 	let cards = $state<Card[]>([]);
 	let isWikiModalOpen = $state(false);
+	let isQuickAddOpen = $state(false);
 	let announcement = $state('');
 	let user = $derived(data.user);
 
@@ -47,7 +49,10 @@
 
 	let filteredCards = $derived(
 		cards.filter((c) => {
-			const matchesCategory = selectedCategory === 'all' || c.category === selectedCategory;
+			const matchesCategory =
+				selectedCategory === 'all' ||
+				c.category === selectedCategory ||
+				(c.categories && c.categories.includes(selectedCategory));
 			const q = searchQuery.toLowerCase().trim();
 			const matchesSearch =
 				!q ||
@@ -66,7 +71,6 @@
 		{ id: 5, title: 'Wiki & Indice', href: '/wiki', icon: '/emoji/books_3d.png', state: 'unlocked', offset: 0 }
 	];
 
-	// XP for interactions, Gems for correct quiz answers
 	let totalXP = $derived(stats.quizCorrect * 15 + stats.cardsStudied * 5);
 	let gems = $derived(stats.quizCorrect * 10 + 100);
 </script>
@@ -80,15 +84,29 @@
 				<span class="banner-chap">CORSO FERROVIARIO RFI</span>
 				<h1 class="banner-heading">Acronimi e Termini Tecnici</h1>
 			</div>
-			<!-- Sleek Lens Search Button for Instant Wiki Modal -->
-			<button
-				class="duo-btn duo-btn-guide lens-btn"
-				onclick={() => (isWikiModalOpen = true)}
-				aria-label="Ricerca Rapida Wiki"
-				title="Ricerca Rapida Wiki"
-			>
-				🔍
-			</button>
+
+			<div class="banner-actions">
+				{#if user && user.isAdmin}
+					<!-- 1-Click Quick Add Card Button for Admin -->
+					<button
+						class="duo-btn duo-btn-purple quick-add-btn"
+						onclick={() => (isQuickAddOpen = true)}
+						title="Aggiungi rapidamente una nuova scheda"
+					>
+						⚡ AGGIUNGI CARD
+					</button>
+				{/if}
+
+				<!-- Sleek Lens Search Button for Instant Wiki Modal -->
+				<button
+					class="duo-btn duo-btn-guide lens-btn"
+					onclick={() => (isWikiModalOpen = true)}
+					aria-label="Ricerca Rapida Wiki"
+					title="Ricerca Rapida Wiki"
+				>
+					🔍
+				</button>
+			</div>
 		</section>
 
 		{#if announcement && announcement.trim()}
@@ -247,6 +265,13 @@
 	isOpen={isWikiModalOpen}
 	cards={cards}
 	onClose={() => (isWikiModalOpen = false)}
+/>
+
+<!-- Quick 1-Click Add Card Modal for Admin -->
+<QuickAddCardModal
+	isOpen={isQuickAddOpen}
+	cards={cards}
+	onClose={() => (isQuickAddOpen = false)}
 />
 
 <style>
