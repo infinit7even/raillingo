@@ -23,3 +23,8 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 # Playwright
 test-results
+
+# Large assets / temp zips
+windows fluentui-emoji*
+docker-compose.yml
+
