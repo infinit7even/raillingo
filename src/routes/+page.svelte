@@ -191,24 +191,6 @@
 
 	<!-- 📊 RIGHT SIDEBAR COLUMN (Desktop Widgets) -->
 	<aside class="duo-right-sidebar">
-		<!-- Top Stats Row (Serie, Gemme, XP) -->
-		<div class="desktop-top-stats duo-card">
-			<div class="stat-item streak" title="Giorni di serie">
-				<img src="/emoji/fire_3d.png" alt="Serie" class="widget-emoji-img" />
-				<span class="stat-lbl">Serie</span>
-				<span class="stat-val">{stats.streakDays}</span>
-			</div>
-			<div class="stat-item gems" title="Gemme da quiz corretti">
-				<img src="/emoji/gem_stone_3d.png" alt="Gemme" class="widget-emoji-img" />
-				<span class="stat-lbl">Gemme</span>
-				<span class="stat-val">{gems}</span>
-			</div>
-			<div class="stat-item hearts" title="Punti XP da interazioni">
-				<img src="/emoji/high_voltage_3d.png" alt="XP" class="widget-emoji-img" />
-				<span class="stat-lbl">XP</span>
-				<span class="stat-val">{totalXP}</span>
-			</div>
-		</div>
 
 		<!-- Widget Missioni Giornaliere (Links ONLY to /missioni when clicking VEDI TUTTE) -->
 		<div class="duo-widget duo-card">
@@ -564,30 +546,7 @@
 		}
 	}
 
-	.desktop-top-stats {
-		display: flex;
-		align-items: center;
-		justify-content: space-around;
-		padding: 0.75rem 0.85rem;
-	}
 
-	.stat-item {
-		display: flex;
-		align-items: center;
-		gap: 0.3rem;
-		font-weight: 900;
-		font-size: 0.9rem;
-	}
-
-	.stat-item.streak { color: var(--orange-color); }
-	.stat-item.gems { color: var(--accent-color); }
-	.stat-item.hearts { color: var(--pink-color); }
-
-	.stat-lbl {
-		font-size: 0.68rem;
-		text-transform: uppercase;
-		opacity: 0.8;
-	}
 
 	.widget-emoji-img {
 		width: 24px;
