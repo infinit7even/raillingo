@@ -154,9 +154,10 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 
 		const cookieOpts = {
 			path: '/',
-			httpOnly: true,
+			httpOnly: false,
+			secure: false,
 			sameSite: 'lax' as const,
-			maxAge: 60 * 60 * 24 * 7 // 7 giorni
+			maxAge: 60 * 60 * 24 * 30 // 30 giorni
 		};
 
 		cookies.set('user_session', JSON.stringify(sessionData), cookieOpts);
