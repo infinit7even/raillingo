@@ -1,5 +1,12 @@
 [
   {
+    "title": "SCMT",
+    "description": "Sistema controllo marcia treno, si occupa della circolazione dei treni",
+    "id": "card-1785746275834-xv6ho",
+    "createdAt": "2026-08-03T08:37:55.834Z",
+    "updatedAt": "2026-08-03T08:37:55.834Z"
+  },
+  {
     "title": "m42",
     "description": "treni effettivi",
     "id": "card-1785744765701-g9s6r",

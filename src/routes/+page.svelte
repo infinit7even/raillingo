@@ -191,6 +191,24 @@
 
 	<!-- 📊 RIGHT SIDEBAR COLUMN (Desktop Widgets) -->
 	<aside class="duo-right-sidebar">
+		<!-- Top Stats Row (Serie, Gemme, XP) -->
+		<div class="desktop-top-stats duo-card">
+			<div class="stat-item streak" title="Giorni di serie">
+				<img src="/emoji/fire_3d.png" alt="" aria-hidden="true" class="widget-emoji-img" />
+				<span class="stat-lbl">Serie</span>
+				<span class="stat-val">{stats.streakDays}</span>
+			</div>
+			<div class="stat-item gems" title="Gemme da quiz corretti">
+				<img src="/emoji/gem_stone_3d.png" alt="" aria-hidden="true" class="widget-emoji-img" />
+				<span class="stat-lbl">Gemme</span>
+				<span class="stat-val">{gems}</span>
+			</div>
+			<div class="stat-item hearts" title="Punti XP da interazioni">
+				<img src="/emoji/high_voltage_3d.png" alt="" aria-hidden="true" class="widget-emoji-img" />
+				<span class="stat-lbl">XP</span>
+				<span class="stat-val">{totalXP}</span>
+			</div>
+		</div>
 
 		<!-- Widget Missioni Giornaliere (Links ONLY to /missioni when clicking VEDI TUTTE) -->
 		<div class="duo-widget duo-card">
@@ -211,23 +229,27 @@
 			</div>
 		</div>
 
-		<!-- Widget Login / Profilo (Shows "Pannello Admin" ONLY IF user is logged in AND is admin) -->
+		<!-- Widget Login / Profilo e Salva Progressi -->
 		<div class="duo-widget duo-card profile-widget">
-			<h3 class="widget-title">{user ? `Ciao, ${user.username}` : 'Piattaforma Raillingo'}</h3>
+			<h3 class="widget-title">{user ? `Profilo (${user.username})` : 'Salva i tuoi Progressi'}</h3>
+			<p class="widget-desc-text">
+				{user ? 'I tuoi dati e la tua serie sono sincronizzati.' : 'Accedi con Discord per non perdere mai la tua serie e le tue gemme.'}
+			</p>
 			<div class="profile-actions">
 				{#if user && user.isAdmin}
 					<a href="/admin" class="duo-btn duo-btn-purple flex-btn">
 						⚙️ Pannello Admin
 					</a>
 				{/if}
+				{#if !user}
+					<a href="/login" class="duo-btn duo-btn-blue flex-btn login-save-btn">
+						🔑 ACCEDI E SALVA PROGRESSI
+					</a>
+				{/if}
 				<a href="/ripasso" class="duo-btn duo-btn-green flex-btn">
 					INIZIA LEZIONE
 				</a>
-				{#if !user}
-					<a href="/login" class="duo-btn duo-btn-blue flex-btn">
-						ACCEDI / LOGIN
-					</a>
-				{:else}
+				{#if user}
 					<a href="/api/auth/logout" class="duo-btn duo-btn-gray flex-btn">
 						DISCONNETTI
 					</a>
@@ -544,6 +566,39 @@
 			position: sticky;
 			top: 1.5rem;
 		}
+	}
+
+	.desktop-top-stats {
+		display: flex;
+		align-items: center;
+		justify-content: space-around;
+		padding: 0.75rem 0.85rem;
+	}
+
+	.stat-item {
+		display: flex;
+		align-items: center;
+		gap: 0.35rem;
+		font-weight: 900;
+		font-size: 0.9rem;
+	}
+
+	.stat-item.streak { color: var(--orange-color); }
+	.stat-item.gems { color: var(--accent-color); }
+	.stat-item.hearts { color: var(--pink-color); }
+
+	.stat-lbl {
+		font-size: 0.7rem;
+		font-weight: 800;
+		text-transform: uppercase;
+		opacity: 0.8;
+	}
+
+	.widget-desc-text {
+		font-size: 0.8rem;
+		color: var(--text-muted);
+		margin: 0.25rem 0 0.5rem 0;
+		line-height: 1.4;
 	}
 
 

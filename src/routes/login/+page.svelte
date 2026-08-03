@@ -7,16 +7,16 @@
 <div class="login-page-container">
 	<div class="login-card duo-card">
 		<div class="header-section">
-			<span class="duo-badge">Accesso Amministrazione</span>
-			<h1 class="login-title">Pannello Admin Raillingo</h1>
+			<span class="duo-badge">Salvataggio Progressi</span>
+			<h1 class="login-title">Accedi a Raillingo</h1>
 			<p class="login-subtitle">
-				L'accesso tramite Discord è riservato esclusivamente all'amministratore per la gestione del percorso didattico e degli annunci della piattaforma.
+				Accedi con Discord per salvare la tua serie quotidiana 🔥, mantenere i tuoi punti XP, le tue gemme 💎 ed accedere alle funzionalità di amministrazione se sei un admin.
 			</p>
 		</div>
 
 		{#if error}
 			<div class="error-banner duo-card">
-				⚠️ {error === 'not_admin' ? 'Accesso negato: Solo l\'amministratore ha i permessi per accedere al pannello admin.' : error === 'admin_required' ? 'Accesso riservato all\'amministratore. Autenticati per continuare.' : 'Errore durante l\'autenticazione. Riprova.'}
+				⚠️ {error === 'admin_required' ? 'Accesso riservato all\'amministratore per la pagina richiesta.' : 'Errore durante l\'autenticazione. Riprova.'}
 			</div>
 		{/if}
 
@@ -30,7 +30,7 @@
 					{/if}
 					<div class="user-meta">
 						<span class="username">{user.username}</span>
-						<span class="status-online">● Sessione Attiva</span>
+						<span class="status-online">● Sessione Attiva ({user.isAdmin ? '⭐ Admin' : '👤 Utente'})</span>
 					</div>
 				</div>
 
@@ -38,9 +38,11 @@
 					<a href="/" class="duo-btn duo-btn-green action-link">
 						VAI AL PERCORSO DIDATTICO
 					</a>
-					<a href="/admin" class="duo-btn duo-btn-purple action-link">
-						⚙️ PANNELLO GESTIONE ADMIN
-					</a>
+					{#if user.isAdmin}
+						<a href="/admin" class="duo-btn duo-btn-purple action-link">
+							⚙️ PANNELLO GESTIONE ADMIN
+						</a>
+					{/if}
 					<a href="/api/auth/logout" class="duo-btn duo-btn-gray action-link">
 						DISCONNETTI
 					</a>

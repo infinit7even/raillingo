@@ -1,11 +1,53 @@
 import { redirect, type RequestHandler } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
+import fs from 'node:fs/promises';
+import path from 'node:path';
 
 const CLIENT_ID = env.DISCORD_CLIENT_ID || process.env.DISCORD_CLIENT_ID || '1533519975476629564';
 const CLIENT_SECRET = env.DISCORD_CLIENT_SECRET || process.env.DISCORD_CLIENT_SECRET || 'BiwE65HiOYsZOjND8P5GlsqwsvUXbpEw';
 
 const rawAdminIds = env.DISCORD_ADMIN_IDS || process.env.DISCORD_ADMIN_IDS || env.DISCORD_ADMIN_ID || '691289686093725736';
 const ALLOWED_ADMIN_IDS = rawAdminIds.split(',').map((id) => id.trim());
+
+const USERS_FILE_PATH = path.resolve('static/data/users.json');
+
+interface StoredUser {
+	discordId: string;
+	email: string;
+	username: string;
+	avatar?: string;
+	role: 'admin' | 'user';
+	createdAt: string;
+	lastLoginAt: string;
+	stats?: {
+		cardsStudied: number;
+		quizAnswered: number;
+		quizCorrect: number;
+		streakDays: number;
+		lastStudiedDate: string;
+		favorites: string[];
+	};
+}
+
+async function readUsersFromFile(): Promise<StoredUser[]> {
+	try {
+		const data = await fs.readFile(USERS_FILE_PATH, 'utf-8');
+		return JSON.parse(data);
+	} catch {
+		return [];
+	}
+}
+
+async function writeUsersToFile(users: StoredUser[]): Promise<boolean> {
+	try {
+		const dir = path.dirname(USERS_FILE_PATH);
+		await fs.mkdir(dir, { recursive: true });
+		await fs.writeFile(USERS_FILE_PATH, JSON.stringify(users, null, 2), 'utf-8');
+		return true;
+	} catch {
+		return false;
+	}
+}
 
 export const GET: RequestHandler = async ({ url, cookies }) => {
 	const code = url.searchParams.get('code');
@@ -39,7 +81,7 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 		const tokenData = await tokenRes.json();
 		const accessToken = tokenData.access_token;
 
-		// 2. Ottieni le informazioni utente da Discord (ID, email, username)
+		// 2. Ottieni le informazioni utente da Discord (ID, email, username, avatar)
 		const userRes = await fetch('https://discord.com/api/users/@me', {
 			headers: { Authorization: `Bearer ${accessToken}` }
 		});
@@ -51,33 +93,73 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 		const userData = await userRes.json();
 		const email = userData.email || `${userData.id}@discord.user`;
 		const username = userData.username || userData.id;
+		const avatarUrl = userData.avatar
+			? `https://cdn.discordapp.com/avatars/${userData.id}/${userData.avatar}.png`
+			: undefined;
 
-		// 3. Verifica se l'ID Discord appartiene all'amministratore
 		const isAdmin = ALLOWED_ADMIN_IDS.includes(userData.id);
+		const now = new Date().toISOString();
 
-		if (!isAdmin) {
-			// Accesso riservato esclusivamente all'amministratore
-			throw redirect(302, '/login?error=not_admin');
+		// 3. Salva / aggiorna il profilo utente nel file static/data/users.json
+		const users = await readUsersFromFile();
+		let storedUser = users.find((u) => u.discordId === userData.id);
+
+		if (storedUser) {
+			storedUser.email = email;
+			storedUser.username = username;
+			if (avatarUrl) storedUser.avatar = avatarUrl;
+			storedUser.role = isAdmin ? 'admin' : storedUser.role || 'user';
+			storedUser.lastLoginAt = now;
+		} else {
+			storedUser = {
+				discordId: userData.id,
+				email,
+				username,
+				avatar: avatarUrl,
+				role: isAdmin ? 'admin' : 'user',
+				createdAt: now,
+				lastLoginAt: now,
+				stats: {
+					cardsStudied: 0,
+					quizAnswered: 0,
+					quizCorrect: 0,
+					streakDays: 1,
+					lastStudiedDate: now.split('T')[0],
+					favorites: []
+				}
+			};
+			users.push(storedUser);
 		}
 
-		// 4. Salva il cookie di sessione admin per 7 giorni
+		await writeUsersToFile(users);
+
+		// 4. Imposta il cookie di sessione per 7 giorni
 		const sessionData = {
 			userId: userData.id,
 			email,
 			username,
-			role: 'admin',
-			isAdmin: true,
-			loginAt: new Date().toISOString()
+			avatar: avatarUrl,
+			role: storedUser.role,
+			isAdmin,
+			stats: storedUser.stats,
+			loginAt: now
 		};
 
-		cookies.set('admin_session', JSON.stringify(sessionData), {
+		const cookieOpts = {
 			path: '/',
 			httpOnly: true,
-			sameSite: 'lax',
+			sameSite: 'lax' as const,
 			maxAge: 60 * 60 * 24 * 7 // 7 giorni
-		});
+		};
 
-		throw redirect(302, '/admin');
+		cookies.set('user_session', JSON.stringify(sessionData), cookieOpts);
+		cookies.set('admin_session', JSON.stringify(sessionData), cookieOpts);
+
+		if (isAdmin) {
+			throw redirect(302, '/admin');
+		} else {
+			throw redirect(302, '/');
+		}
 	} catch (e) {
 		if (e && typeof e === 'object' && 'status' in e && 'location' in e) {
 			throw e; // SvelteKit redirect
