@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { tick } from 'svelte';
 	import type { Card, WritingSubMode } from '$lib/types/cards';
 	import { statsStore } from '$lib/stores/statsStore';
 
@@ -12,19 +13,58 @@
 
 	let userInput = $state('');
 	let submitted = $state(false);
+	let inputEl = $state<HTMLInputElement | HTMLTextAreaElement | null>(null);
 
 	$effect(() => {
 		const _cardId = card.id;
 		const _subMode = subMode;
 		userInput = '';
 		submitted = false;
+		tick().then(() => {
+			if (inputEl) inputEl.focus();
+		});
+	});
+
+	function calculateSimilarity(str1: string, str2: string): number {
+		const clean1 = str1.toLowerCase().replace(/[^a-z0-9]/g, '');
+		const clean2 = str2.toLowerCase().replace(/[^a-z0-9]/g, '');
+		if (!clean1 || !clean2) return 0;
+		if (clean1 === clean2) return 100;
+		if (clean1.includes(clean2) || clean2.includes(clean1)) return 85;
+
+		const words1 = new Set(clean1.split(' '));
+		const words2 = new Set(clean2.split(' '));
+		let matches = 0;
+		for (const w of words1) {
+			if (words2.has(w)) matches++;
+		}
+		const ratio = (matches * 2) / (words1.size + words2.size);
+		return Math.round(ratio * 100);
+	}
+
+	let similarityScore = $derived.by<number>(() => {
+		if (!submitted || !userInput.trim()) return 0;
+		const target = subMode === 'title-to-desc' ? card.description : card.title;
+		return calculateSimilarity(userInput, target);
 	});
 
 	function handleSubmit(e?: Event) {
 		if (e) e.preventDefault();
-		if (!submitted) {
+		if (!submitted && userInput.trim()) {
 			submitted = true;
 			statsStore.recordStudySession();
+		}
+	}
+
+	function handleKeyDown(e: KeyboardEvent) {
+		if (e.key === 'Enter' && !e.shiftKey) {
+			if (!submitted) {
+				e.preventDefault();
+				handleSubmit();
+			} else {
+				e.preventDefault();
+				onNext();
+			}
 		}
 	}
 </script>
@@ -48,48 +88,56 @@
 		<div class="duo-progress-fill" style="width: {((currentIndex + 1) / totalCards) * 100}%"></div>
 	</div>
 
-	<!-- Prompt Box -->
+	<!-- Prompt Card -->
 	<div class="prompt-card duo-card">
 		{#if subMode === 'title-to-desc'}
 			<span class="label">Acronimo / Titolo:</span>
 			<h2 class="title">{card.title}</h2>
-			<p class="instruction">✍️ Scrivi a mano cosa significa o a cosa serve questo termine:</p>
+			<p class="instruction">✍️ Scrivi cosa significa o a cosa serve questo acronimo:</p>
 		{:else if subMode === 'desc-to-title'}
 			<span class="label">Descrizione / Funzione:</span>
 			<p class="desc-text">{card.description}</p>
-			<p class="instruction">✍️ Scrivi l'acronimo o titolo corrispondente:</p>
+			<p class="instruction">✍️ Digita l'acronimo o titolo corrispondente:</p>
 		{:else if subMode === 'photo-to-title'}
 			<span class="label">Foto Impianto / Mezzo:</span>
 			{#if card.images && card.images.length > 0}
 				<img src={card.images[0]} alt="Foto per esercizio" class="prompt-img" />
 			{/if}
-			<p class="instruction">✍️ Scrivi a mano cos'è questo elemento ferroviario:</p>
+			<p class="instruction">✍️ Digita cos'è questo elemento ferroviario:</p>
 		{/if}
 	</div>
 
-	<!-- Form / Input Area -->
+	<!-- Form / Writing Input Area -->
 	<form class="write-form" onsubmit={handleSubmit}>
 		{#if subMode === 'title-to-desc'}
 			<textarea
+				bind:this={inputEl}
 				bind:value={userInput}
-				placeholder="Scrivi qui la descrizione..."
+				placeholder="Digita qui la spiegazione..."
 				rows="4"
 				class="duo-input input-textarea"
 				disabled={submitted}
+				onkeydown={handleKeyDown}
+				autocomplete="off"
+				spellcheck="false"
 			></textarea>
 		{:else}
 			<input
 				type="text"
+				bind:this={inputEl}
 				bind:value={userInput}
-				placeholder="Scrivi qui la risposta..."
+				placeholder="Digita qui l'acronimo esatto..."
 				class="duo-input input-field"
 				disabled={submitted}
+				onkeydown={handleKeyDown}
+				autocomplete="off"
+				spellcheck="false"
 			/>
 		{/if}
 
 		{#if !submitted}
 			<button type="submit" class="duo-btn duo-btn-blue submit-btn" disabled={!userInput.trim()}>
-				INVIA RISPOSTA & VERIFICA
+				⚡ VERIFICA RISPOSTA (Invio ↵)
 			</button>
 		{/if}
 	</form>
@@ -97,9 +145,15 @@
 	<!-- Reveal / Self-Verification Box -->
 	{#if submitted}
 		<div class="comparison-card duo-card">
-			<div class="result-header">
-				🎯 Risposta Esatta del Database:
+			<div class="score-banner" class:score-high={similarityScore >= 70} class:score-med={similarityScore >= 40 && similarityScore < 70}>
+				<span class="score-icon">{similarityScore >= 70 ? '🎯' : similarityScore >= 40 ? '👍' : '💡'}</span>
+				<div class="score-info">
+					<strong>Comprensione: {similarityScore}%</strong>
+					<span>{similarityScore >= 70 ? 'Ottima memorizzazione!' : 'Confronta la tua risposta con il testo del database.'}</span>
+				</div>
 			</div>
+
+			<div class="result-header">🎯 Risposta Ufficiale:</div>
 
 			{#if subMode === 'title-to-desc'}
 				<div class="exact-answer duo-card">{card.description}</div>
@@ -108,13 +162,13 @@
 				<div class="exact-sub">{card.description}</div>
 			{/if}
 
-			<div class="user-recap">
-				<strong>La tua risposta:</strong>
-				<p class="user-text">{userInput || '(Nessun testo inserito)'}</p>
+			<div class="user-recap duo-card">
+				<span class="recap-label">La tua digitazione:</span>
+				<p class="user-text">{userInput || '(Nessun testo digitato)'}</p>
 			</div>
 
 			<button class="duo-btn duo-btn-green next-btn" onclick={onNext}>
-				PROSSIMA SCHEDA →
+				PROSSIMA SCHEDA → (Premi Invio ↵)
 			</button>
 		</div>
 	{/if}
@@ -127,7 +181,7 @@
 		margin: 0 auto;
 		display: flex;
 		flex-direction: column;
-		gap: 1.25rem;
+		gap: 1.15rem;
 	}
 
 	.header {
@@ -137,8 +191,7 @@
 	}
 
 	.counter-text {
-		font-family: 'Outfit', sans-serif;
-		font-size: 0.9rem;
+		font-size: 0.88rem;
 		font-weight: 800;
 		color: var(--text-muted);
 	}
@@ -161,6 +214,8 @@
 
 	.prompt-card {
 		background: var(--card-bg);
+		border-radius: 20px;
+		padding: 1.25rem;
 	}
 
 	.label {
@@ -173,9 +228,9 @@
 	}
 
 	.title {
-		font-size: 2.2rem;
+		font-size: 2.3rem;
 		font-weight: 900;
-		margin: 0 0 0.75rem 0;
+		margin: 0 0 0.6rem 0;
 		color: var(--text-color);
 	}
 
@@ -183,7 +238,7 @@
 		font-size: 1.05rem;
 		line-height: 1.6;
 		color: var(--text-color);
-		margin: 0 0 0.75rem 0;
+		margin: 0 0 0.65rem 0;
 	}
 
 	.prompt-img {
@@ -196,7 +251,8 @@
 	}
 
 	.instruction {
-		font-size: 0.9rem;
+		font-size: 0.88rem;
+		font-weight: 700;
 		color: var(--text-muted);
 		margin: 0;
 	}
@@ -210,18 +266,65 @@
 	.input-field, .input-textarea {
 		width: 100%;
 		box-sizing: border-box;
+		font-size: 1.05rem;
+		padding: 0.9rem 1.1rem;
+		border-radius: 16px;
+		border: 2px solid var(--border-color);
+		background: var(--card-bg);
+		color: var(--text-color);
+		transition: border-color 0.2s ease, box-shadow 0.2s ease;
+	}
+
+	.input-field:focus, .input-textarea:focus {
+		border-color: var(--accent-color);
+		box-shadow: 0 0 0 4px var(--accent-light-bg);
+		outline: none;
 	}
 
 	.submit-btn {
 		width: 100%;
 		font-size: 1rem;
+		padding: 0.9rem;
 	}
 
 	.comparison-card {
 		display: flex;
 		flex-direction: column;
 		gap: 1rem;
+		padding: 1.25rem;
+		background: var(--card-bg);
+		border-radius: 20px;
 		animation: fadeIn 0.3s ease;
+	}
+
+	.score-banner {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		padding: 0.85rem 1rem;
+		border-radius: 14px;
+		background: rgba(168, 85, 247, 0.15);
+		border: 1.5px solid var(--accent-color);
+		color: var(--text-color);
+	}
+
+	.score-banner.score-high {
+		background: rgba(34, 197, 94, 0.15);
+		border-color: var(--green-color);
+	}
+
+	.score-icon {
+		font-size: 1.5rem;
+	}
+
+	.score-info strong {
+		display: block;
+		font-size: 0.95rem;
+	}
+
+	.score-info span {
+		font-size: 0.8rem;
+		color: var(--text-muted);
 	}
 
 	.result-header {
@@ -235,7 +338,9 @@
 		font-size: 1.05rem;
 		line-height: 1.6;
 		color: var(--text-color);
+		background: var(--card-bg-subtle);
 		border-left: 4px solid var(--accent-color);
+		border-radius: 12px;
 	}
 
 	.exact-answer.title-highlight {
@@ -245,24 +350,35 @@
 	}
 
 	.exact-sub {
-		font-size: 0.9rem;
+		font-size: 0.88rem;
 		color: var(--text-muted);
+		line-height: 1.45;
 	}
 
 	.user-recap {
-		font-size: 0.85rem;
+		padding: 0.85rem;
+		background: var(--card-bg-subtle);
+		border-radius: 12px;
+	}
+
+	.recap-label {
+		font-size: 0.75rem;
+		font-weight: 800;
 		color: var(--text-muted);
+		text-transform: uppercase;
 	}
 
 	.user-text {
 		color: var(--text-color);
-		font-style: italic;
-		margin: 0.25rem 0 0 0;
+		font-weight: 700;
+		font-size: 0.95rem;
+		margin: 0.2rem 0 0 0;
 	}
 
 	.next-btn {
 		width: 100%;
 		font-size: 1rem;
+		padding: 0.9rem;
 	}
 
 	@keyframes fadeIn {

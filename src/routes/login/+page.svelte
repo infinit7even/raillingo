@@ -6,49 +6,108 @@
 
 <div class="login-page-container">
 	<div class="login-card duo-card">
+		<!-- Header -->
 		<div class="header-section">
-			<span class="duo-badge">Salvataggio Progressi</span>
+			<span class="duo-badge">Salvataggio & Profilo Utente</span>
 			<h1 class="login-title">Accedi a Raillingo</h1>
 			<p class="login-subtitle">
-				Accedi con Discord per salvare la tua serie quotidiana 🔥, mantenere i tuoi punti XP, le tue gemme 💎 ed accedere alle funzionalità di amministrazione se sei un admin.
+				Sincronizza i tuoi progressi, mantieni la tua serie quotidiana 🔥 e sblocca l'accesso alle funzionalità avanzate.
 			</p>
 		</div>
 
-		{#if error}
+		<!-- Error / Information Messages -->
+		{#if error === 'admin_required'}
+			<div class="info-banner duo-card">
+				<span class="info-icon">ℹ️</span>
+				<div class="info-text">
+					<strong>Accesso alla Gestione Riservato</strong>
+					<p>La pagina richiesta richiede i permessi di Amministratore (configurati in <code>.env</code> in <code>DISCORD_ADMIN_IDS</code>). Effettua il login con il tuo account autorizzato.</p>
+				</div>
+			</div>
+		{:else if error}
 			<div class="error-banner duo-card">
-				⚠️ {error === 'admin_required' ? 'Accesso riservato all\'amministratore per la pagina richiesta.' : 'Errore durante l\'autenticazione. Riprova.'}
+				⚠️ Errore durante l'autenticazione ({error}). Riprova o verifica la connessione.
 			</div>
 		{/if}
 
+		<!-- Logged In User State -->
 		{#if user}
-			<div class="logged-in-box duo-card">
-				<div class="user-row">
+			<div class="user-profile-box duo-card">
+				<div class="user-header">
 					{#if user.avatar}
-						<img src={user.avatar} alt={user.username} class="user-avatar" />
+						<img src={user.avatar} alt={user.username} class="user-avatar-img" />
 					{:else}
-						<div class="avatar-fallback">👤</div>
+						<div class="avatar-circle-fallback">👤</div>
 					{/if}
-					<div class="user-meta">
-						<span class="username">{user.username}</span>
-						<span class="status-online">● Sessione Attiva ({user.isAdmin ? '⭐ Admin' : '👤 Utente'})</span>
+					<div class="user-info">
+						<h2 class="user-name">{user.username}</h2>
+						<div class="role-badge" class:admin-role={user.isAdmin}>
+							{user.isAdmin ? '⭐ Amministratore Autorizzato' : '👤 Utente Registrato'}
+						</div>
 					</div>
 				</div>
 
-				<div class="action-buttons">
-					<a href="/" class="duo-btn duo-btn-green action-link">
-						VAI AL PERCORSO DIDATTICO
+				<!-- Stats Overview Box -->
+				<div class="user-stats-row duo-card">
+					<div class="stat-col">
+						<span class="stat-num">🔥 {user.stats?.streakDays || 1}</span>
+						<span class="stat-label">Serie Giorni</span>
+					</div>
+					<div class="stat-col">
+						<span class="stat-num">💎 {user.stats?.quizCorrect ? user.stats.quizCorrect * 10 : 100}</span>
+						<span class="stat-label">Gemme</span>
+					</div>
+					<div class="stat-col">
+						<span class="stat-num">⚡ {user.stats?.cardsStudied ? user.stats.cardsStudied * 15 : 120}</span>
+						<span class="stat-label">Punti XP</span>
+					</div>
+				</div>
+
+				<!-- Quick Action Navigation -->
+				<div class="action-buttons-list">
+					<a href="/" class="duo-btn duo-btn-green action-btn">
+						▶️ VAI AL PERCORSO DIDATTICO
 					</a>
+
 					{#if user.isAdmin}
-						<a href="/admin" class="duo-btn duo-btn-purple action-link">
+						<a href="/admin" class="duo-btn duo-btn-purple action-btn">
 							⚙️ PANNELLO GESTIONE ADMIN
 						</a>
 					{/if}
-					<a href="/api/auth/logout" class="duo-btn duo-btn-gray action-link">
-						DISCONNETTI
+
+					<a href="/api/auth/logout" class="duo-btn duo-btn-gray action-btn">
+						🚪 DISCONNETTI ACCOUNT
 					</a>
 				</div>
 			</div>
 		{:else}
+			<!-- Logged Out Login Card -->
+			<div class="login-features-list">
+				<div class="feature-item">
+					<span class="feature-icon">🔥</span>
+					<div class="feature-desc">
+						<strong>Salva la tua Serie Quotidiana</strong>
+						<p>Non perdere i tuoi giorni di ripasso consecutivi.</p>
+					</div>
+				</div>
+
+				<div class="feature-item">
+					<span class="feature-icon">💎</span>
+					<div class="feature-desc">
+						<strong>Guadagna Gemme ed XP</strong>
+						<p>Accumula punti completando quiz e sessioni di scrittura.</p>
+					</div>
+				</div>
+
+				<div class="feature-item">
+					<span class="feature-icon">⭐</span>
+					<div class="feature-desc">
+						<strong>Permessi Admin Integrati</strong>
+						<p>Gli account inseriti in <code>DISCORD_ADMIN_IDS</code> abilitano l'inserimento card con 1 click.</p>
+					</div>
+				</div>
+			</div>
+
 			<div class="login-action-box">
 				<a href="/api/auth/login" class="discord-login-btn">
 					<svg class="discord-icon" viewBox="0 0 24 24" fill="currentColor">
@@ -63,10 +122,11 @@
 
 <style>
 	.login-page-container {
-		max-width: 520px;
-		margin: 2.5rem auto;
+		max-width: 540px;
+		margin: 2rem auto;
 		display: flex;
 		justify-content: center;
+		padding: 0 1rem;
 	}
 
 	.login-card {
@@ -75,43 +135,208 @@
 		flex-direction: column;
 		gap: 1.5rem;
 		padding: 2.25rem;
-		text-align: center;
+		background: var(--card-bg);
+		border-radius: 24px;
 	}
 
 	.header-section {
 		display: flex;
 		flex-direction: column;
-		gap: 0.5rem;
+		gap: 0.4rem;
 		align-items: center;
+		text-align: center;
 	}
 
 	.login-title {
-		font-size: 1.85rem;
+		font-size: 1.9rem;
 		font-weight: 900;
-		color: var(--text-color);
+		color: var(--accent-color);
 		margin: 0.25rem 0 0 0;
 	}
 
 	.login-subtitle {
-		font-size: 0.9rem;
-		line-height: 1.5;
+		font-size: 0.92rem;
+		line-height: 1.55;
 		color: var(--text-muted);
 		margin: 0;
+	}
+
+	.info-banner {
+		display: flex;
+		align-items: flex-start;
+		gap: 0.75rem;
+		background: var(--accent-light-bg);
+		border-color: var(--accent-color);
+		padding: 1rem;
+		text-align: left;
+		border-radius: 16px;
+	}
+
+	.info-icon {
+		font-size: 1.3rem;
+	}
+
+	.info-text strong {
+		color: var(--accent-color);
+		display: block;
+		font-size: 0.95rem;
+		margin-bottom: 0.2rem;
+	}
+
+	.info-text p {
+		margin: 0;
+		font-size: 0.82rem;
+		color: var(--text-color);
+		line-height: 1.45;
 	}
 
 	.error-banner {
 		background: rgba(239, 68, 68, 0.15);
 		border-color: #ef4444;
 		color: #f87171;
-		padding: 0.85rem;
-		font-size: 0.85rem;
+		padding: 0.9rem;
+		font-size: 0.88rem;
 		font-weight: 800;
+		border-radius: 14px;
+		text-align: center;
+	}
+
+	.user-profile-box {
+		display: flex;
+		flex-direction: column;
+		gap: 1.25rem;
+		padding: 1.25rem;
+		background: var(--card-bg-subtle);
+		border-radius: 20px;
+	}
+
+	.user-header {
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+	}
+
+	.user-avatar-img, .avatar-circle-fallback {
+		width: 56px;
+		height: 56px;
+		border-radius: 50%;
+		object-fit: cover;
+		border: 2px solid var(--accent-color);
+	}
+
+	.avatar-circle-fallback {
+		background: var(--accent-light-bg);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 1.6rem;
+	}
+
+	.user-info {
+		display: flex;
+		flex-direction: column;
+		gap: 0.2rem;
+	}
+
+	.user-name {
+		font-size: 1.25rem;
+		font-weight: 900;
+		color: var(--text-color);
+		margin: 0;
+	}
+
+	.role-badge {
+		font-size: 0.75rem;
+		font-weight: 800;
+		color: var(--text-muted);
+	}
+
+	.role-badge.admin-role {
+		color: var(--purple-color);
+	}
+
+	.user-stats-row {
+		display: flex;
+		justify-content: space-around;
+		padding: 0.85rem;
+		background: var(--card-bg);
+		border-radius: 14px;
+		border: 1px solid var(--border-color);
+	}
+
+	.stat-col {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.15rem;
+	}
+
+	.stat-num {
+		font-size: 1.05rem;
+		font-weight: 900;
+		color: var(--text-color);
+	}
+
+	.stat-label {
+		font-size: 0.7rem;
+		font-weight: 800;
+		color: var(--text-muted);
+		text-transform: uppercase;
+	}
+
+	.action-buttons-list {
+		display: flex;
+		flex-direction: column;
+		gap: 0.65rem;
+	}
+
+	.action-btn {
+		width: 100%;
+		font-size: 0.9rem;
+		text-decoration: none;
+		text-align: center;
+		justify-content: center;
+	}
+
+	.login-features-list {
+		display: flex;
+		flex-direction: column;
+		gap: 0.85rem;
+		padding: 0.5rem 0;
+	}
+
+	.feature-item {
+		display: flex;
+		align-items: flex-start;
+		gap: 0.85rem;
+		text-align: left;
+		padding: 0.75rem;
+		background: var(--card-bg-subtle);
+		border-radius: 14px;
+		border: 1px solid var(--border-color);
+	}
+
+	.feature-icon {
+		font-size: 1.4rem;
+	}
+
+	.feature-desc strong {
+		display: block;
+		font-size: 0.9rem;
+		color: var(--text-color);
+		margin-bottom: 0.15rem;
+	}
+
+	.feature-desc p {
+		margin: 0;
+		font-size: 0.8rem;
+		color: var(--text-muted);
 	}
 
 	.login-action-box {
 		display: flex;
 		justify-content: center;
-		padding: 1rem 0;
+		padding-top: 0.5rem;
 	}
 
 	.discord-login-btn {
@@ -120,7 +345,7 @@
 		justify-content: center;
 		gap: 0.75rem;
 		width: 100%;
-		padding: 1rem;
+		padding: 1.1rem;
 		border-radius: 16px;
 		background: #5865f2;
 		color: white;
@@ -128,7 +353,11 @@
 		font-size: 1.05rem;
 		text-decoration: none;
 		box-shadow: 0 6px 20px rgba(88, 101, 242, 0.4);
-		transition: transform 0.15s ease;
+		transition: transform 0.15s ease, box-shadow 0.15s ease;
+	}
+
+	.discord-login-btn:hover {
+		box-shadow: 0 8px 24px rgba(88, 101, 242, 0.5);
 	}
 
 	.discord-login-btn:active {
@@ -138,64 +367,5 @@
 	.discord-icon {
 		width: 26px;
 		height: 26px;
-	}
-
-	.logged-in-box {
-		display: flex;
-		flex-direction: column;
-		gap: 1.25rem;
-		padding: 1.25rem;
-	}
-
-	.user-row {
-		display: flex;
-		align-items: center;
-		gap: 0.85rem;
-		text-align: left;
-	}
-
-	.user-avatar, .avatar-fallback {
-		width: 48px;
-		height: 48px;
-		border-radius: 50%;
-		object-fit: cover;
-	}
-
-	.avatar-fallback {
-		background: var(--accent-light-bg);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		font-size: 1.4rem;
-	}
-
-	.user-meta {
-		display: flex;
-		flex-direction: column;
-	}
-
-	.username {
-		font-size: 1.1rem;
-		font-weight: 900;
-		color: var(--text-color);
-	}
-
-	.status-online {
-		font-size: 0.75rem;
-		font-weight: 800;
-		color: var(--green-color);
-	}
-
-	.action-buttons {
-		display: flex;
-		flex-direction: column;
-		gap: 0.65rem;
-	}
-
-	.action-link {
-		width: 100%;
-		font-size: 0.9rem;
-		text-decoration: none;
-		text-align: center;
 	}
 </style>
