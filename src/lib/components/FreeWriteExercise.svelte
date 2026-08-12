@@ -21,7 +21,11 @@
 		userInput = '';
 		submitted = false;
 		tick().then(() => {
-			if (inputEl) inputEl.focus();
+			// Esegui il focus solo su desktop con tastiera fisica per evitare l'apertura automatica della tastiera su mobile
+			const isTouchDevice = typeof window !== 'undefined' && (window.matchMedia('(pointer: coarse)').matches || window.innerWidth < 768);
+			if (inputEl && !isTouchDevice) {
+				inputEl.focus();
+			}
 		});
 	});
 
