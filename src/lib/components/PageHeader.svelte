@@ -54,6 +54,7 @@
 		transition: transform 0.2s ease;
 		box-sizing: border-box;
 		width: 100%;
+		margin-top: 0.5rem;
 		margin-bottom: 1rem;
 	}
 
@@ -137,7 +138,9 @@
 
 	@media (max-width: 640px) {
 		.page-header-banner {
-			padding: 1rem 1.15rem;
+			padding: 0.85rem 1rem;
+			margin-top: 0.5rem;
+			margin-bottom: 0.75rem;
 			border-radius: 18px;
 			flex-direction: column;
 			align-items: flex-start;

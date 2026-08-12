@@ -108,7 +108,7 @@
 		width: 100%;
 		max-width: 1350px;
 		margin: 0 auto;
-		padding: 1rem 1rem 6rem 1rem;
+		padding: 0.85rem 0.85rem 6rem 0.85rem;
 		box-sizing: border-box;
 	}
 
