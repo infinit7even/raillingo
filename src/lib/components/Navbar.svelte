@@ -12,11 +12,12 @@
 
 	const navItems = [
 		{ href: '/', label: 'HOME', emoji: '/emoji/house_3d.png' },
-		{ href: '/flashcard', label: 'FLASHCARD', emoji: '/emoji/open_book_3d.png' },
+		{ href: '/flashcard', label: 'RIPASSO', emoji: '/emoji/open_book_3d.png' },
 		{ href: '/quiz', label: 'QUIZ', emoji: '/emoji/star_3d.png' },
 		{ href: '/reels', label: 'REELS', emoji: '/emoji/camera_3d.png' },
 		{ href: '/scrittura', label: 'SCRITTURA', emoji: '/emoji/writing_hand_3d_default.png' },
-		{ href: '/wiki', label: 'WIKI', emoji: '/emoji/books_3d.png' }
+		{ href: '/wiki', label: 'WIKI', emoji: '/emoji/books_3d.png' },
+		{ href: '/admin', label: 'ADMIN', emoji: '/emoji/locked_3d.png' }
 	];
 </script>
 
@@ -75,17 +76,18 @@
 		z-index: 200;
 		background: var(--card-bg);
 		border-top: 2px solid var(--border-color);
-		padding: 0.4rem 0.25rem calc(0.4rem + var(--safe-area-bottom, 0px)) 0.25rem;
+		padding: 0.35rem 0.2rem calc(0.35rem + var(--safe-area-bottom, 0px)) 0.2rem;
 		box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.25);
-		backdrop-filter: blur(12px);
+		backdrop-filter: blur(14px);
 	}
 
 	.nav-container {
 		width: 100%;
-		max-width: 600px;
+		max-width: 680px;
 		margin: 0 auto;
 		overflow-x: auto;
 		-webkit-overflow-scrolling: touch;
+		scrollbar-width: none;
 	}
 
 	.nav-container::-webkit-scrollbar {
@@ -95,26 +97,26 @@
 	.nav-scroll-wrapper {
 		display: flex;
 		align-items: center;
-		justify-content: space-around;
+		justify-content: flex-start;
 		width: 100%;
-		padding: 0 0.2rem;
-		gap: 0.1rem;
+		padding: 0 0.25rem;
+		gap: 0.25rem;
 	}
 
 	.nav-item {
 		display: flex;
 		flex-direction: column;
 		align-items: center;
-		gap: 0.18rem;
-		padding: 0.25rem 0.3rem;
+		gap: 0.15rem;
+		padding: 0.25rem 0.2rem;
 		color: var(--text-muted);
 		text-decoration: none;
-		font-size: 0.65rem;
+		font-size: 0.62rem;
 		font-weight: 800;
 		transition: all 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
-		flex: 1;
-		min-width: 52px;
-		max-width: 72px;
+		flex: 1 0 auto;
+		min-width: 58px;
+		max-width: 80px;
 		text-align: center;
 		background: none;
 		border: none;
@@ -123,12 +125,12 @@
 	}
 
 	.icon-wrapper {
-		width: 38px;
-		height: 36px;
+		width: 36px;
+		height: 34px;
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		border-radius: 14px;
+		border-radius: 12px;
 		border: 2px solid transparent;
 		transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 	}
@@ -136,13 +138,13 @@
 	.icon-wrapper.active-outline {
 		border-color: var(--accent-color);
 		background-color: var(--accent-light-bg);
-		transform: translateY(-3px) scale(1.06);
+		transform: translateY(-2px) scale(1.05);
 		box-shadow: 0 4px 12px rgba(88, 204, 2, 0.25);
 	}
 
 	.nav-emoji-img {
-		width: 26px;
-		height: 26px;
+		width: 24px;
+		height: 24px;
 		object-fit: contain;
 	}
 
@@ -157,8 +159,8 @@
 	.nav-label {
 		font-family: 'Outfit', sans-serif;
 		font-weight: 800;
-		font-size: 0.65rem;
-		letter-spacing: 0.02em;
+		font-size: 0.62rem;
+		letter-spacing: 0.01em;
 		white-space: nowrap;
 	}
 

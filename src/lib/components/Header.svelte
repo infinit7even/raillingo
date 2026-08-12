@@ -1,14 +1,23 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { themeStore, type ThemePreset } from '$lib/stores/themeStore';
+	import { cardsStore } from '$lib/stores/cardsStore';
+	import QuickAddCardModal from '$lib/components/QuickAddCardModal.svelte';
+	import WikiSearchModal from '$lib/components/WikiSearchModal.svelte';
+	import type { Card } from '$lib/types/cards';
 
 	let currentTheme = $state<ThemePreset>('dark');
+	let cards = $state<Card[]>([]);
+	let isQuickAddOpen = $state(false);
+	let isWikiSearchOpen = $state(false);
 
 	onMount(() => {
-		const unTheme = themeStore.subscribe((t) => {
-			currentTheme = t;
-		});
-		return unTheme;
+		const unTheme = themeStore.subscribe((t) => (currentTheme = t));
+		const unCards = cardsStore.subscribe((c) => (cards = c));
+		return () => {
+			unTheme();
+			unCards();
+		};
 	});
 </script>
 
@@ -25,8 +34,30 @@
 			</div>
 		</a>
 
-		<!-- Action Buttons -->
+		<!-- Action Buttons (Mobile Accessible) -->
 		<div class="actions">
+			<!-- Quick Search Button -->
+			<button
+				class="duo-header-btn search-btn"
+				onclick={() => (isWikiSearchOpen = true)}
+				aria-label="Cerca acronimi"
+				title="Ricerca Rapida Wiki"
+			>
+				<span class="btn-icon">🔍</span>
+				<span class="btn-text">Wiki</span>
+			</button>
+
+			<!-- Quick Add Card Button -->
+			<button
+				class="duo-header-btn add-btn"
+				onclick={() => (isQuickAddOpen = true)}
+				aria-label="Aggiungi Scheda"
+				title="Aggiungi Scheda Rapida"
+			>
+				<span class="btn-icon">⚡</span>
+				<span class="btn-text">+ Scheda</span>
+			</button>
+
 			<!-- Theme Selector Button -->
 			<button
 				class="duo-header-btn theme-btn"
@@ -40,6 +71,19 @@
 		</div>
 	</div>
 </header>
+
+<!-- Global Modals triggered from Header -->
+<QuickAddCardModal
+	isOpen={isQuickAddOpen}
+	onClose={() => (isQuickAddOpen = false)}
+	{cards}
+/>
+
+<WikiSearchModal
+	isOpen={isWikiSearchOpen}
+	onClose={() => (isWikiSearchOpen = false)}
+	{cards}
+/>
 
 <style>
 	.app-header {
@@ -81,27 +125,49 @@
 		height: 28px;
 	}
 
+	.title-group {
+		display: flex;
+		flex-direction: column;
+	}
+
+	.app-title {
+		font-size: 1.2rem;
+		font-weight: 900;
+		color: var(--green-color);
+		letter-spacing: -0.03em;
+		line-height: 1;
+	}
+
+	.app-subtitle {
+		font-size: 0.68rem;
+		font-weight: 800;
+		color: var(--accent-color);
+		text-transform: uppercase;
+		letter-spacing: 0.08em;
+	}
+
 	.actions {
 		display: flex;
 		align-items: center;
-		gap: 0.4rem;
+		gap: 0.35rem;
 	}
 
 	.duo-header-btn {
 		display: inline-flex;
 		align-items: center;
-		gap: 0.35rem;
-		padding: 0.4rem 0.65rem;
-		border-radius: 14px;
+		gap: 0.3rem;
+		padding: 0.4rem 0.6rem;
+		border-radius: 12px;
 		background-color: var(--card-bg-subtle);
 		border: 2px solid var(--border-color);
 		border-bottom: 3px solid var(--border-depth-color);
 		color: var(--text-color);
-		font-size: 0.82rem;
+		font-size: 0.78rem;
 		font-weight: 800;
 		cursor: pointer;
 		text-decoration: none;
 		transition: all 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+		white-space: nowrap;
 	}
 
 	.duo-header-btn:active {
@@ -109,8 +175,19 @@
 		border-bottom-width: 1.5px;
 	}
 
-	.theme-icon-symbol {
-		font-size: 1rem;
+	.add-btn {
+		background: var(--accent-light-bg);
+		border-color: var(--accent-color);
+		color: var(--accent-color);
+	}
+
+	.search-btn {
+		background: var(--card-bg-subtle);
+		border-color: var(--border-color);
+	}
+
+	.btn-icon, .theme-icon-symbol {
+		font-size: 0.95rem;
 		line-height: 1;
 	}
 
@@ -136,7 +213,7 @@
 		}
 		.duo-header-btn {
 			padding: 0.35rem 0.45rem;
-			border-radius: 10px;
+			font-size: 0.75rem;
 		}
 	}
 </style>
