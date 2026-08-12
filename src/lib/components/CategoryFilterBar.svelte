@@ -153,13 +153,18 @@
 		box-shadow: 0 2px 8px rgba(168, 85, 247, 0.15);
 	}
 
-	.chip-count {
-		font-size: 0.7rem;
-		font-weight: 900;
-		padding: 0.1rem 0.4rem;
-		border-radius: 8px;
-		background: var(--card-bg);
-		color: inherit;
-		border: 1px solid var(--border-color);
+	@media (max-width: 580px) {
+		.filter-title {
+			display: none;
+		}
+		.category-filter-bar {
+			padding: 0.4rem 0.5rem;
+			margin-bottom: 0.75rem;
+			gap: 0.4rem;
+		}
+		.filter-chip {
+			font-size: 0.75rem;
+			padding: 0.3rem 0.6rem;
+		}
 	}
 </style>

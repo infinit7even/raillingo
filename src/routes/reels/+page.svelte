@@ -163,20 +163,21 @@
 <style>
 	.reels-page-wrapper {
 		width: 100%;
-		height: calc(100vh - 80px);
+		height: calc(100vh - 140px);
 		display: flex;
 		flex-direction: column;
 		align-items: center;
 		position: relative;
 		overflow: hidden;
 		box-sizing: border-box;
+		gap: 0.5rem;
 	}
 
 	.reels-header-overlay {
 		width: 100%;
 		max-width: 520px;
 		z-index: 50;
-		padding: 0.25rem 0.5rem 0 0.5rem;
+		padding: 0 0.25rem;
 		box-sizing: border-box;
 	}
 
