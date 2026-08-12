@@ -403,6 +403,33 @@ button, input, textarea, select {
 	border-color: var(--orange-color);
 }
 
+/* ✏️ Duolingo 3D Tactile Input & Textarea */
+.duo-input {
+	width: 100%;
+	padding: 0.85rem 1rem;
+	border-radius: 14px;
+	background-color: var(--card-bg-subtle);
+	border: 2px solid var(--border-color);
+	color: var(--text-color);
+	font-family: inherit;
+	font-size: 0.95rem;
+	font-weight: 700;
+	transition: border-color 0.2s ease, box-shadow 0.2s ease;
+	box-sizing: border-box;
+}
+
+.duo-input:focus {
+	outline: none;
+	border-color: var(--accent-color);
+	box-shadow: 0 0 0 3px var(--accent-light-bg);
+}
+
+.duo-input::placeholder {
+	color: var(--text-muted);
+	font-weight: 600;
+	opacity: 0.75;
+}
+
 /* Touch feedback helper */
 .active-press:active {
 	transform: scale(0.97);
