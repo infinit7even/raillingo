@@ -12,7 +12,6 @@
 	let cards = $state<Card[]>([]);
 	let isWikiModalOpen = $state(false);
 	let isQuickAddOpen = $state(false);
-	let announcement = $state('');
 	let user = $derived(data.user);
 
 	let stats = $state<StatsData>({
@@ -32,13 +31,6 @@
 			cards = c;
 		});
 		const unstats = statsStore.subscribe((s) => (stats = s));
-
-		fetch('/api/announcements')
-			.then((res) => res.json())
-			.then((d) => {
-				if (d.announcement) announcement = d.announcement;
-			})
-			.catch(() => {});
 
 		return () => {
 			uncards();
@@ -120,14 +112,6 @@
 				</button>
 			</div>
 		</section>
-
-		{#if announcement && announcement.trim()}
-			<!-- Platform Announcement Box (Rendered ONLY if admin posted an announcement) -->
-			<div class="announcement-banner-box duo-card">
-				<span class="announcement-badge">📢 ANNUNCIO PIATTAFORMA</span>
-				<p class="announcement-content-text">{announcement}</p>
-			</div>
-		{/if}
 
 		<!-- Winding 3D Lesson Path with Owl Mascot & Section Names -->
 		<section class="duo-path-section">
@@ -340,30 +324,6 @@
 			font-size: 0.78rem;
 			padding: 0.4rem 0.6rem;
 		}
-	}
-
-	.announcement-banner-box {
-		margin-top: 1rem;
-		background: linear-gradient(135deg, rgba(168, 85, 247, 0.15), rgba(59, 130, 246, 0.15));
-		border: 2px solid #a855f7;
-		display: flex;
-		flex-direction: column;
-		gap: 0.4rem;
-	}
-
-	.announcement-badge {
-		font-size: 0.72rem;
-		font-weight: 900;
-		color: #a855f7;
-		letter-spacing: 0.06em;
-	}
-
-	.announcement-content-text {
-		font-size: 0.95rem;
-		font-weight: 700;
-		line-height: 1.45;
-		color: var(--text-color);
-		margin: 0;
 	}
 
 	.banner-text {

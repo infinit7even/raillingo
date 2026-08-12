@@ -3,14 +3,6 @@
 
 export async function initDb() {}
 
-export async function getDbAnnouncement() {
-	return '';
-}
-
-export async function setDbAnnouncement(_content: string) {
-	return true;
-}
-
 export async function upsertDbUser(discordId: string, email: string, username = '', defaultRole = 'user') {
 	return discordId === '691289686093725736' ? 'admin' : 'user';
 }
