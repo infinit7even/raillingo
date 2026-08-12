@@ -49,11 +49,11 @@
 	);
 
 	const lessonNodes = [
-		{ id: 1, title: 'Inizia Flashcard', href: '/flashcard', icon: '/emoji/open_book_3d.png', state: 'active', offset: 0 },
-		{ id: 2, title: 'Quiz a 5 Scelte', href: '/quiz', icon: '/emoji/star_3d.png', state: 'unlocked', offset: -40 },
-		{ id: 3, title: 'Reels Ferroviari', href: '/reels', icon: '/emoji/camera_3d.png', state: 'unlocked', offset: 35 },
-		{ id: 4, title: 'Scrittura Libera', href: '/scrittura', icon: '/emoji/writing_hand_3d_default.png', state: 'unlocked', offset: -35 },
-		{ id: 5, title: 'Wiki & Indice', href: '/wiki', icon: '/emoji/books_3d.png', state: 'unlocked', offset: 0 }
+		{ id: 1, title: 'FLASHCARD', href: '/flashcard', icon: '/emoji/open_book_3d.png', state: 'active', offset: 0 },
+		{ id: 2, title: 'QUIZ', href: '/quiz', icon: '/emoji/star_3d.png', state: 'unlocked', offset: -40 },
+		{ id: 3, title: 'REELS', href: '/reels', icon: '/emoji/camera_3d.png', state: 'unlocked', offset: 35 },
+		{ id: 4, title: 'SCRITTURA', href: '/scrittura', icon: '/emoji/writing_hand_3d_default.png', state: 'unlocked', offset: -35 },
+		{ id: 5, title: 'WIKI', href: '/wiki', icon: '/emoji/books_3d.png', state: 'unlocked', offset: 0 }
 	];
 
 	let totalXP = $derived(stats.quizCorrect * 15 + stats.cardsStudied * 5);
@@ -61,63 +61,13 @@
 </script>
 
 <div class="duo-page-grid">
-	<!-- 📍 MAIN CENTRAL COLUMN (Path & Chapter Banner) -->
+	<!-- 📍 MAIN CENTRAL COLUMN (Path) -->
 	<div class="duo-main-column">
-		<!-- Green Section Header Banner -->
-		<section class="duo-green-banner">
-			<div class="banner-text">
-				<span class="banner-chap">CORSO FERROVIARIO RFI</span>
-				<h1 class="banner-heading">Acronimi e Termini Tecnici</h1>
-			</div>
-
-			<div class="banner-actions">
-				<!-- Link / Button to Admin Panel -->
-				<a
-					href="/admin"
-					class="duo-btn duo-btn-purple admin-home-btn"
-					aria-label="Pannello Amministratore"
-					title="Pannello Amministratore"
-				>
-					🔐 Admin
-				</a>
-
-				{#if user && (user.isAdmin || user.role === 'admin')}
-					<!-- 1-Click Quick Add Card Button (+) -->
-					<button
-						class="duo-btn duo-btn-green quick-add-btn"
-						onclick={() => (isQuickAddOpen = true)}
-						aria-label="Aggiungi scheda rapida"
-						title="Aggiungi scheda rapida"
-					>
-						➕
-					</button>
-				{/if}
-
-				<!-- Sleek Lens Search Button for Instant Wiki Modal -->
-				<button
-					class="duo-btn duo-btn-guide lens-btn"
-					onclick={() => (isWikiModalOpen = true)}
-					aria-label="Ricerca Rapida Wiki"
-					title="Ricerca Rapida Wiki"
-				>
-					🔍
-				</button>
-			</div>
-		</section>
-
 		<!-- Winding 3D Lesson Path with Owl Mascot & Section Names -->
 		<section class="duo-path-section">
 			<div class="nodes-container">
 				{#each lessonNodes as node, i}
 					<div class="node-wrapper" style="transform: translateX({node.offset}px)">
-						{#if i === 0}
-							<!-- "INIZIA" Bubble Tooltip above active node -->
-							<div class="start-tooltip">
-								<span>INIZIA</span>
-								<div class="tooltip-arrow"></div>
-							</div>
-						{/if}
-
 						<a
 							href={node.href}
 							class="path-node-btn"
@@ -233,6 +183,15 @@
 						DISCONNETTI
 					</a>
 				{/if}
+				{#if user && (user.isAdmin || user.role === 'admin')}
+					<button
+						type="button"
+						class="duo-btn duo-btn-green flex-btn quick-add-sidebar-btn"
+						onclick={() => (isQuickAddOpen = true)}
+					>
+						⚡ AGGIUNGI SCHEDA RAPIDA
+					</button>
+				{/if}
 			</div>
 		</div>
 
@@ -273,93 +232,6 @@
 		}
 	}
 
-	/* Banner di Capitolo Verde (#58cc02) */
-	.duo-green-banner {
-		background-color: var(--green-color);
-		border: 2px solid var(--green-depth);
-		border-bottom: 5px solid var(--green-depth);
-		border-radius: 22px;
-		padding: 1.5rem 1.75rem;
-		color: #ffffff;
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		gap: 1rem;
-		box-shadow: 0 6px 20px rgba(88, 204, 2, 0.2);
-	}
-
-	@media (max-width: 640px) {
-		.duo-green-banner {
-			padding: 0.75rem 1rem;
-			border-radius: 16px;
-			border-bottom-width: 3px;
-		}
-
-		.banner-chap {
-			font-size: 0.68rem;
-		}
-
-		.banner-heading {
-			font-size: 1.2rem;
-		}
-
-		.admin-home-btn {
-			font-size: 0.78rem;
-			padding: 0.4rem 0.6rem;
-		}
-	}
-
-	.banner-text {
-		display: flex;
-		flex-direction: column;
-		gap: 0.35rem;
-	}
-
-	.banner-chap {
-		font-size: 0.78rem;
-		font-weight: 900;
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
-		opacity: 0.95;
-	}
-
-	.banner-heading {
-		font-size: 1.75rem;
-		font-weight: 900;
-		color: #ffffff;
-		margin: 0;
-		line-height: 1.15;
-	}
-
-	.banner-actions {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-	}
-
-	.admin-home-btn {
-		text-decoration: none;
-		font-size: 0.85rem;
-		padding: 0.5rem 0.85rem;
-		font-weight: 800;
-		white-space: nowrap;
-	}
-
-	.duo-btn-guide {
-		background-color: rgba(255, 255, 255, 0.22) !important;
-		color: #ffffff !important;
-		border-color: rgba(255, 255, 255, 0.3) !important;
-		border-bottom-color: rgba(255, 255, 255, 0.5) !important;
-		font-size: 1.1rem;
-		padding: 0.5rem 0.85rem;
-		flex-shrink: 0;
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		border-radius: 14px;
-		cursor: pointer;
-	}
-
 	/* 📍 Serpeggiante Node Path */
 	.duo-path-section {
 		padding: 3rem 0;
@@ -392,39 +264,10 @@
 		font-size: 0.75rem;
 		color: var(--text-color);
 		background: var(--card-bg-subtle);
-		padding: 0.2rem 0.5rem;
+		padding: 0.2rem 0.55rem;
 		border-radius: 8px;
 		border: 1px solid var(--border-color);
 		white-space: nowrap;
-	}
-
-	/* Tooltip Bubble "INIZIA" */
-	.start-tooltip {
-		position: absolute;
-		bottom: calc(100% + 10px);
-		background-color: var(--card-bg-subtle);
-		border: 2px solid var(--border-color);
-		color: var(--green-color);
-		font-family: 'Outfit', sans-serif;
-		font-weight: 900;
-		font-size: 0.8rem;
-		letter-spacing: 0.08em;
-		padding: 0.4rem 0.9rem;
-		border-radius: 12px;
-		box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-		animation: bounce 1.8s infinite;
-	}
-
-	.tooltip-arrow {
-		position: absolute;
-		bottom: -6px;
-		left: 50%;
-		transform: translateX(-50%) rotate(45deg);
-		width: 8px;
-		height: 8px;
-		background: var(--card-bg-subtle);
-		border-right: 2px solid var(--border-color);
-		border-bottom: 2px solid var(--border-color);
 	}
 
 	.path-node-btn {
@@ -710,15 +553,6 @@
 	}
 
 	@media (max-width: 640px) {
-		.duo-green-banner {
-			padding: 1rem 1.15rem;
-			border-radius: 18px;
-		}
-
-		.banner-heading {
-			font-size: 1.35rem;
-		}
-
 		.duo-path-section {
 			padding: 2rem 0;
 		}
