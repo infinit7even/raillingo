@@ -276,7 +276,7 @@
 	.duo-page-grid {
 		display: flex;
 		flex-direction: column;
-		gap: 2rem;
+		gap: 0.85rem;
 	}
 
 	@media (min-width: 1024px) {
@@ -700,10 +700,9 @@
 		.duo-right-sidebar {
 			display: flex;
 			flex-direction: column;
-			gap: 1.25rem;
+			gap: 0.85rem;
 			width: 100%;
-			max-width: 480px;
-			margin: 0 auto;
+			margin: 0;
 		}
 	}
 
