@@ -172,12 +172,12 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 
 		cookies.set('admin_session', JSON.stringify(sessionData), cookieOpts);
 
-		throw redirect(302, '/admin');
+		throw redirect(302, '/');
 	} catch (e) {
 		if (e && typeof e === 'object' && 'status' in e && 'location' in e) {
 			throw e; // SvelteKit redirect
 		}
 		console.error('Errore durante auth Discord:', e);
-		throw redirect(302, '/admin?error=auth_error');
+		throw redirect(302, '/?error=auth_error');
 	}
 };

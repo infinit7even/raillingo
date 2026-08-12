@@ -1,9 +1,10 @@
 import { redirect, type RequestHandler } from '@sveltejs/kit';
 
-export const GET: RequestHandler = async ({ cookies }) => {
+export const GET: RequestHandler = async ({ cookies, url, request }) => {
 	cookies.delete('admin_session', { path: '/' });
 	cookies.delete('user_session', { path: '/' }); // legacy cleanup
-	throw redirect(302, '/admin');
+	const redirectTo = url.searchParams.get('redirect') || request.headers.get('referer') || '/';
+	throw redirect(302, redirectTo);
 };
 
 export const POST: RequestHandler = async ({ cookies }) => {
