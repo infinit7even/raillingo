@@ -453,11 +453,18 @@
 
 	.mobile-top-stats {
 		display: flex;
+		margin-bottom: 1rem;
+	}
+
+	.desktop-top-stats {
+		display: flex;
+		margin-bottom: 0;
 	}
 
 	@media (min-width: 1024px) {
 		.mobile-top-stats {
-			display: none;
+			display: none !important;
+			margin: 0 !important;
 		}
 	}
 
@@ -467,7 +474,6 @@
 		justify-content: space-around;
 		padding: 0.75rem 1rem;
 		text-decoration: none;
-		margin-bottom: 1rem;
 		transition: transform 0.15s ease;
 	}
 
