@@ -231,7 +231,7 @@
 				{#if canInstall}
 					<button
 						type="button"
-						class="duo-btn duo-btn-green flex-btn install-app-btn"
+						class="duo-btn duo-btn-red flex-btn install-app-btn"
 						onclick={handleInstallApp}
 					>
 						📲 INSTALLA L'APP

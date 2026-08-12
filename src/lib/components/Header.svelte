@@ -261,9 +261,9 @@
 	}
 
 	.install-header-btn {
-		background: rgba(88, 204, 2, 0.15);
-		border-color: var(--green-color);
-		color: var(--green-color);
+		background: rgba(255, 75, 75, 0.15);
+		border-color: #ff4b4b;
+		color: #ff4b4b;
 	}
 
 	.btn-icon,
