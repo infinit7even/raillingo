@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { cardsStore } from '$lib/stores/cardsStore';
 	import { statsStore, type StatsData } from '$lib/stores/statsStore';
+	import { tts } from '$lib/utils/tts';
 	import WikiSearchModal from '$lib/components/WikiSearchModal.svelte';
 	import QuickAddCardModal from '$lib/components/QuickAddCardModal.svelte';
 	import type { Card } from '$lib/types/cards';
@@ -9,6 +10,7 @@
 	let { data } = $props();
 
 	let cards = $state<Card[]>([]);
+	let wordOfTheDay = $state<Card | null>(null);
 	let isWikiModalOpen = $state(false);
 	let isQuickAddOpen = $state(false);
 	let user = $derived(data.user);
@@ -22,11 +24,18 @@
 		favorites: []
 	});
 
-	let searchQuery = $state('');
+	function pickRandomWord(cardList: Card[]) {
+		if (cardList.length === 0) return;
+		const randomIndex = Math.floor(Math.random() * cardList.length);
+		wordOfTheDay = cardList[randomIndex];
+	}
 
 	onMount(() => {
 		const uncards = cardsStore.subscribe((c) => {
 			cards = c;
+			if (c.length > 0 && !wordOfTheDay) {
+				pickRandomWord(c);
+			}
 		});
 		const unstats = statsStore.subscribe((s) => (stats = s));
 
@@ -36,17 +45,13 @@
 		};
 	});
 
-	let filteredCards = $derived(
-		cards.filter((c) => {
-			const q = searchQuery.toLowerCase().trim();
-			const matchesSearch =
-				!q ||
-				c.title.toLowerCase().includes(q) ||
-				c.description.toLowerCase().includes(q) ||
-				(c.tags && c.tags.some((t) => t.toLowerCase().includes(q)));
-			return matchesSearch;
-		})
-	);
+	function speakWord() {
+		if (!wordOfTheDay) return;
+		const text = wordOfTheDay.fullName
+			? `${wordOfTheDay.title}, ${wordOfTheDay.fullName}. ${wordOfTheDay.description}`
+			: `${wordOfTheDay.title}. ${wordOfTheDay.description}`;
+		tts.speak(text);
+	}
 
 	const lessonNodes = [
 		{ id: 1, title: 'FLASHCARD', href: '/flashcard', icon: '/emoji/open_book_3d.png', state: 'active', offset: 0 },
@@ -61,8 +66,47 @@
 </script>
 
 <div class="duo-page-grid">
-	<!-- 📍 MAIN CENTRAL COLUMN (Path) -->
+	<!-- 📍 MAIN CENTRAL COLUMN (Parola del Giorno & Path) -->
 	<div class="duo-main-column">
+		<!-- 💡 Parola del Giorno Card (Cima alla Home) -->
+		{#if wordOfTheDay}
+			<section class="word-of-day-section">
+				<div class="duo-card word-of-day-card">
+					<div class="wod-header">
+						<div class="wod-badge">
+							<span class="wod-icon">💡</span>
+							<span class="wod-badge-text">PAROLA DEL GIORNO</span>
+						</div>
+						<div class="wod-header-actions">
+							<button class="wod-action-btn" onclick={speakWord} title="Ascolta pronuncia audio">
+								🔊 Audio
+							</button>
+							<button class="wod-action-btn" onclick={() => pickRandomWord(cards)} title="Scopri un'altra parola">
+								🎲 Altra Parola
+							</button>
+						</div>
+					</div>
+
+					<div class="wod-content">
+						<div class="wod-title-row">
+							<h2 class="wod-title">{wordOfTheDay.title}</h2>
+							{#if wordOfTheDay.fullName}
+								<span class="wod-fullname">{wordOfTheDay.fullName}</span>
+							{/if}
+						</div>
+
+						<p class="wod-desc">{wordOfTheDay.description}</p>
+
+						{#if wordOfTheDay.images && wordOfTheDay.images.length > 0}
+							<div class="wod-img-container">
+								<img src={wordOfTheDay.images[0]} alt={wordOfTheDay.title} class="wod-img" />
+							</div>
+						{/if}
+					</div>
+				</div>
+			</section>
+		{/if}
+
 		<!-- Winding 3D Lesson Path with Owl Mascot & Section Names -->
 		<section class="duo-path-section">
 			<div class="nodes-container">
@@ -84,36 +128,6 @@
 				<div class="duo-mascot-box">
 					<img src="/emoji/owl_3d.png" alt="Mascotte Gufo" class="mascot-img" />
 				</div>
-			</div>
-		</section>
-
-		<!-- Catalog / Search Section below Path -->
-		<section class="catalog-section">
-			<div class="catalog-header-row">
-				<h2 class="section-heading">📚 Consultazione Acronimi ({filteredCards.length})</h2>
-				<div class="search-controls">
-					<input
-						type="text"
-						bind:value={searchQuery}
-						placeholder="Cerca acronimo..."
-						class="duo-input search-input"
-					/>
-				</div>
-			</div>
-
-			<div class="cards-grid">
-				{#each filteredCards as card}
-					<div class="duo-card catalog-card">
-						<div class="card-top">
-							<h3 class="card-term">{card.title}</h3>
-						</div>
-						<p class="card-meaning">{card.description}</p>
-					</div>
-				{:else}
-					<div class="duo-card empty-state">
-						Nessun acronimo trovato.
-					</div>
-				{/each}
 			</div>
 		</section>
 	</div>
@@ -316,74 +330,126 @@
 		object-fit: contain;
 	}
 
-	/* Catalog Cards */
-	.catalog-section {
-		display: flex;
-		flex-direction: column;
-		gap: 1.25rem;
-		margin-top: 1rem;
+	/* 💡 Parola del Giorno Card (Style Duolingo 3D) */
+	.word-of-day-section {
+		width: 100%;
+		margin-bottom: 1rem;
 	}
 
-	.catalog-header-row {
+	.word-of-day-card {
+		background: linear-gradient(135deg, var(--card-bg), var(--card-bg-subtle));
+		border: 2px solid var(--accent-color);
+		border-bottom: 5px solid var(--accent-depth);
+		border-radius: 24px;
+		padding: 1.25rem 1.5rem;
 		display: flex;
 		flex-direction: column;
 		gap: 1rem;
+		box-shadow: 0 8px 25px rgba(28, 176, 246, 0.15);
 	}
 
-	@media (min-width: 640px) {
-		.catalog-header-row {
-			flex-direction: row;
-			justify-content: space-between;
-			align-items: center;
-		}
-	}
-
-	.search-controls {
-		display: flex;
-		gap: 0.6rem;
-	}
-
-	.duo-input {
-		padding: 0.65rem 0.9rem;
-		border-radius: 14px;
-		background: var(--card-bg);
-		border: 2px solid var(--border-color);
-		border-bottom-width: 3px;
-		color: var(--text-color);
-		font-size: 0.85rem;
-		font-weight: 700;
-	}
-
-	.cards-grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-		gap: 1rem;
-	}
-
-	.catalog-card {
-		display: flex;
-		flex-direction: column;
-		gap: 0.6rem;
-	}
-
-	.card-top {
+	.wod-header {
 		display: flex;
 		justify-content: space-between;
-		align-items: flex-start;
+		align-items: center;
+		flex-wrap: wrap;
+		gap: 0.6rem;
+		border-bottom: 1.5px solid var(--border-color);
+		padding-bottom: 0.75rem;
 	}
 
-	.card-term {
-		font-size: 1.2rem;
+	.wod-badge {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+		background: var(--accent-light-bg);
+		padding: 0.3rem 0.75rem;
+		border-radius: 999px;
+		border: 1px solid var(--accent-color);
+	}
+
+	.wod-icon {
+		font-size: 1rem;
+	}
+
+	.wod-badge-text {
+		font-size: 0.75rem;
+		font-weight: 900;
+		color: var(--accent-color);
+		letter-spacing: 0.08em;
+	}
+
+	.wod-header-actions {
+		display: flex;
+		gap: 0.4rem;
+	}
+
+	.wod-action-btn {
+		font-size: 0.78rem;
+		font-weight: 800;
+		padding: 0.35rem 0.7rem;
+		border-radius: 12px;
+		background: var(--card-bg-subtle);
+		border: 1.5px solid var(--border-color);
+		color: var(--text-color);
+		cursor: pointer;
+		transition: all 0.15s ease;
+	}
+
+	.wod-action-btn:hover {
+		background: var(--hover-bg);
+		border-color: var(--accent-color);
+	}
+
+	.wod-content {
+		display: flex;
+		flex-direction: column;
+		gap: 0.6rem;
+	}
+
+	.wod-title-row {
+		display: flex;
+		align-items: baseline;
+		flex-wrap: wrap;
+		gap: 0.6rem;
+	}
+
+	.wod-title {
+		font-size: 1.8rem;
 		font-weight: 900;
 		color: var(--accent-color);
 		margin: 0;
+		letter-spacing: 0.02em;
 	}
 
-	.card-meaning {
-		font-size: 0.85rem;
-		line-height: 1.5;
-		color: var(--text-muted);
+	.wod-fullname {
+		font-size: 0.95rem;
+		font-weight: 800;
+		color: var(--text-color);
+		opacity: 0.9;
+	}
+
+	.wod-desc {
+		font-size: 0.95rem;
+		line-height: 1.55;
+		color: var(--text-color);
+		opacity: 0.92;
 		margin: 0;
+	}
+
+	.wod-img-container {
+		margin-top: 0.4rem;
+		max-height: 200px;
+		border-radius: 14px;
+		overflow: hidden;
+		border: 2px solid var(--border-color);
+	}
+
+	.wod-img {
+		width: 100%;
+		height: 100%;
+		max-height: 200px;
+		object-fit: cover;
 	}
 
 	/* 📊 RIGHT SIDEBAR (Desktop Only >= 1024px) */
