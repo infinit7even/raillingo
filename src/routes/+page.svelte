@@ -188,10 +188,20 @@
 			</div>
 		</div>
 
-		{#if user && (user.isAdmin || user.role === 'admin')}
-			<div class="duo-widget duo-card admin-widget">
-				<h3 class="widget-title">Pannello Gestione</h3>
-				<div class="profile-actions">
+		<div class="duo-widget duo-card admin-widget">
+			<h3 class="widget-title">Risorse e Link</h3>
+			<div class="profile-actions">
+				<a href="https://epod.rfi.it" target="_blank" rel="noopener noreferrer" class="duo-btn duo-btn-blue flex-btn">
+					📚 DISPENSA RFI
+				</a>
+				<a href="https://ko-fi.com/infinit7even" target="_blank" rel="noopener noreferrer" class="duo-btn kofi-btn flex-btn">
+					<svg class="kofi-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+						<path d="M23.881 8.948c-.018-.61-.806-3.805-4.708-3.805h-1.026V4.86c0-.528-.429-.956-.957-.956H2.986c-.528 0-.957.428-.957.956v10.596c0 2.97 2.417 5.388 5.388 5.388h7.037c2.971 0 5.388-2.418 5.388-5.388v-.57h1.026c2.408 0 4.103-1.285 4.881-3.649.336-1.02.261-1.921.139-2.327zM20.916 11.41c-.481 1.458-1.572 2.13-3.155 2.13h-1.026V8.143h1.026c2.406 0 3.056 1.764 3.155 3.267z"/>
+					</svg>
+					DONA CON KO-FI
+				</a>
+
+				{#if user && (user.isAdmin || user.role === 'admin')}
 					<a href="/admin" class="duo-btn duo-btn-purple flex-btn">
 						🔐 PANNELLO ADMIN
 					</a>
@@ -202,9 +212,9 @@
 					>
 						⚡ AGGIUNGI SCHEDA RAPIDA
 					</button>
-				</div>
+				{/if}
 			</div>
-		{/if}
+		</div>
 
 		<!-- Footer Link to Privacy Policy -->
 		<div class="sidebar-privacy-footer">
@@ -602,6 +612,21 @@
 		font-size: 0.85rem;
 		text-align: center;
 		text-decoration: none;
+	}
+
+	.kofi-btn {
+		background-color: #ff5e5b;
+		color: #ffffff;
+		border-color: #d9423f;
+	}
+
+	.kofi-btn:hover:not(:disabled) {
+		background-color: #ff7370;
+	}
+
+	.kofi-icon {
+		width: 18px;
+		height: 18px;
 	}
 
 	.sidebar-privacy-footer {
