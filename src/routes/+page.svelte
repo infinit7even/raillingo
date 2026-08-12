@@ -218,7 +218,7 @@
 					📚 DISPENSA RFI
 				</a>
 				<a href="https://ko-fi.com/infinit7even" target="_blank" rel="noopener noreferrer" class="duo-btn kofi-btn flex-btn">
-					<img src="/emoji/yellow_heart_3d.png" alt="Cuore Giallo" class="btn-emoji-img" />
+					<img src="/emoji/sparkles_3d.png" alt="Splendore" class="btn-emoji-img" />
 					SOSTIENI IL SITO
 				</a>
 
