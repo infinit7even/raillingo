@@ -134,11 +134,11 @@
 
 	@media (min-width: 1024px) {
 		.layout-wrapper {
-			padding-left: 255px;
+			padding-left: 240px;
 		}
 
 		.main-content {
-			padding: 1.25rem 2rem 2.5rem 2rem;
+			padding: 1.5rem 2rem 2.5rem 2rem;
 		}
 	}
 </style>
