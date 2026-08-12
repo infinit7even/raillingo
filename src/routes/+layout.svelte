@@ -17,7 +17,17 @@
 	});
 
 	// Route sequence for lateral swipe navigation
-	const routeOrder = ['/', '/flashcard', '/quiz', '/reels', '/scrittura', '/missioni', '/wiki'];
+	const routeOrder = ['/', '/flashcard', '/quiz', '/reels', '/scrittura', '/wiki'];
+	const swipeRoutes = [
+		{ href: '/', label: 'Home' },
+		{ href: '/flashcard', label: 'Flashcard' },
+		{ href: '/quiz', label: 'Quiz' },
+		{ href: '/reels', label: 'Reels' },
+		{ href: '/scrittura', label: 'Scrittura' },
+		{ href: '/wiki', label: 'Wiki' }
+	];
+
+	let activeSwipeIndex = $derived(routeOrder.indexOf(page.url.pathname));
 
 	let touchStartX = 0;
 	let touchStartY = 0;
@@ -118,6 +128,21 @@
 		{/key}
 	</main>
 
+	<!-- 📍 Indicatore di Navigazione Swipe per Mobile -->
+	{#if activeSwipeIndex !== -1}
+		<nav class="mobile-swipe-indicator" aria-label="Pagine dello swipe">
+			{#each swipeRoutes as route, idx}
+				<a
+					href={route.href}
+					class="swipe-dot"
+					class:active={idx === activeSwipeIndex}
+					aria-label="Vai alla pagina {route.label}"
+					title={route.label}
+				></a>
+			{/each}
+		</nav>
+	{/if}
+
 	<Navbar {user} />
 </div>
 
@@ -133,13 +158,55 @@
 		width: 100%;
 		max-width: 1200px;
 		margin: 0 auto;
-		padding: 0.85rem 0.85rem 1.85rem 0.85rem;
+		padding: 0.85rem 0.85rem 2.8rem 0.85rem;
 		box-sizing: border-box;
 		contain: layout style;
 	}
 
 	.page-transition-wrapper {
 		width: 100%;
+	}
+
+	/* 📍 Floating Mobile Swipe Pagination Indicator */
+	.mobile-swipe-indicator {
+		position: fixed;
+		bottom: calc(0.65rem + var(--safe-area-bottom, 0px));
+		left: 50%;
+		transform: translateX(-50%);
+		z-index: 140;
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+		padding: 0.35rem 0.65rem;
+		background: var(--card-bg);
+		border: 1.5px solid var(--border-color);
+		border-radius: 9999px;
+		box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+		backdrop-filter: blur(12px);
+		-webkit-backdrop-filter: blur(12px);
+		transition: background-color 0.3s ease, border-color 0.3s ease;
+	}
+
+	.swipe-dot {
+		width: 7px;
+		height: 7px;
+		border-radius: 9999px;
+		background-color: var(--text-muted);
+		opacity: 0.4;
+		transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+		display: block;
+		text-decoration: none;
+	}
+
+	.swipe-dot:hover {
+		opacity: 0.75;
+	}
+
+	.swipe-dot.active {
+		width: 22px;
+		background-color: var(--accent-color);
+		opacity: 1;
+		box-shadow: 0 2px 8px rgba(28, 176, 246, 0.4);
 	}
 
 	@media (min-width: 1024px) {
@@ -149,6 +216,10 @@
 
 		.main-content {
 			padding: 1.5rem 2rem 2.5rem 2rem;
+		}
+
+		.mobile-swipe-indicator {
+			display: none !important;
 		}
 	}
 </style>
