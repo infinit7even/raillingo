@@ -4,6 +4,8 @@
 	import Navbar from '$lib/components/Navbar.svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
+	import { fade } from 'svelte/transition';
+	import { onNavigate } from '$app/navigation';
 
 	let { children } = $props();
 
@@ -90,7 +92,15 @@
 	<Header />
 	
 	<main class="main-content">
-		{@render children()}
+		{#key page.url.pathname}
+			<div
+				in:fade={{ duration: 120, delay: 40 }}
+				out:fade={{ duration: 80 }}
+				class="page-transition-wrapper"
+			>
+				{@render children()}
+			</div>
+		{/key}
 	</main>
 
 	<Navbar />
@@ -110,6 +120,11 @@
 		margin: 0 auto;
 		padding: 0.85rem 0.85rem 6rem 0.85rem;
 		box-sizing: border-box;
+		contain: layout style;
+	}
+
+	.page-transition-wrapper {
+		width: 100%;
 	}
 
 	@media (min-width: 1024px) {

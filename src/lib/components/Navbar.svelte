@@ -39,6 +39,8 @@
 					href={item.href}
 					class="nav-item"
 					class:active={isActive}
+					data-sveltekit-preload-data="tap"
+					data-sveltekit-preload-code="eager"
 				>
 					<div class="icon-wrapper" class:active-outline={isActive}>
 						<img src={item.emoji} alt={item.label} class="nav-emoji-img" />
@@ -121,6 +123,7 @@
 		border: none;
 		cursor: pointer;
 		user-select: none;
+		-webkit-tap-highlight-color: transparent;
 	}
 
 	.icon-wrapper {
