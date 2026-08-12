@@ -48,8 +48,8 @@
 	import ModeTabs from '$lib/components/ModeTabs.svelte';
 
 	const flashcardTabs = [
-		{ id: 'standard', label: 'TESTO', emoji: '/emoji/open_book_3d.png' },
-		{ id: 'foto', label: 'RIPASSO FOTO', emoji: '/emoji/camera_3d.png' },
+		{ id: 'standard', label: 'TESTUALE', emoji: '/emoji/open_book_3d.png' },
+		{ id: 'foto', label: 'VISIVO', emoji: '/emoji/camera_3d.png' },
 		{ id: 'inverso', label: 'INVERSO', emoji: '/emoji/counterclockwise_arrows_button_3d.png' }
 	];
 </script>

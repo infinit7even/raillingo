@@ -55,10 +55,10 @@
 </script>
 
 <div class="duo-page-grid">
-	<!-- 📍 MAIN CENTRAL COLUMN (Stats Bar, Parola del Giorno & Path) -->
+	<!-- 📍 MAIN CENTRAL COLUMN (Stats Bar Mobile, Parola del Giorno & Path) -->
 	<div class="duo-main-column">
-		<!-- 📊 Top Stats Bar (Serie, Gemme, XP - Visibile su Mobile & Desktop) -->
-		<a href="/missioni" class="top-stats-row duo-card" title="Clicca per aprire le Missioni ed i Dettagli">
+		<!-- 📊 Top Stats Bar (Mobile Only) -->
+		<a href="/missioni" class="top-stats-row duo-card mobile-top-stats" title="Clicca per aprire le Missioni ed i Dettagli">
 			<div class="stat-item streak">
 				<img src="/emoji/fire_3d.png" alt="Serie" class="widget-emoji-img" />
 				<div class="stat-text-group">
@@ -145,6 +145,30 @@
 
 	<!-- 📊 RIGHT SIDEBAR COLUMN (Desktop & Mobile Widgets) -->
 	<aside class="duo-right-sidebar">
+		<!-- Top Stats Row (Desktop Only) -->
+		<a href="/missioni" class="top-stats-row duo-card desktop-top-stats" title="Clicca per aprire le Missioni ed i Dettagli">
+			<div class="stat-item streak">
+				<img src="/emoji/fire_3d.png" alt="Serie" class="widget-emoji-img" />
+				<div class="stat-text-group">
+					<span class="stat-lbl">Serie</span>
+					<span class="stat-val">{stats.streakDays}</span>
+				</div>
+			</div>
+			<div class="stat-item gems">
+				<img src="/emoji/gem_stone_3d.png" alt="Gemme" class="widget-emoji-img" />
+				<div class="stat-text-group">
+					<span class="stat-lbl">Gemme</span>
+					<span class="stat-val">{gems}</span>
+				</div>
+			</div>
+			<div class="stat-item hearts">
+				<img src="/emoji/high_voltage_3d.png" alt="XP" class="widget-emoji-img" />
+				<div class="stat-text-group">
+					<span class="stat-lbl">XP</span>
+					<span class="stat-val">{totalXP}</span>
+				</div>
+			</div>
+		</a>
 		<!-- Widget Missioni Giornaliere -->
 		<div class="duo-widget duo-card">
 			<div class="widget-header-row">
@@ -424,6 +448,16 @@
 			gap: 1.25rem;
 			position: sticky;
 			top: 1.5rem;
+		}
+	}
+
+	.mobile-top-stats {
+		display: flex;
+	}
+
+	@media (min-width: 1024px) {
+		.mobile-top-stats {
+			display: none;
 		}
 	}
 
