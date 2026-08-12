@@ -3,6 +3,8 @@
 	import { cardsStore } from '$lib/stores/cardsStore';
 	import type { Card } from '$lib/types/cards';
 
+	import CardForm from '$lib/components/CardForm.svelte';
+
 	let { data } = $props();
 
 	// Local state
@@ -11,18 +13,21 @@
 	let error = $derived(data.error);
 
 	// Form state for creating / editing card
-	let editingCardId = $state<string | null>(null);
-	let title = $state('');
-	let fullName = $state('');
-	let description = $state('');
-	let category = $state('');
-	let images = $state<string[]>([]);
-	let newImageUrl = $state('');
-	let uploading = $state(false);
-
+	let editingCard = $state<Card | null>(null);
 	let searchQuery = $state('');
 
-	let existingCategories = $derived([...new Set(cards.map((c) => c.category).filter((cat): cat is string => Boolean(cat)))].sort());
+	let existingCategories = $derived.by<string[]>(() => {
+		const set = new Set<string>();
+		for (const c of cards) {
+			if (c.category) set.add(c.category);
+			if (c.categories) {
+				for (const cat of c.categories) {
+					if (cat && cat.trim()) set.add(cat.trim());
+				}
+			}
+		}
+		return Array.from(set).sort();
+	});
 
 	onMount(() => {
 		const unsubscribe = cardsStore.subscribe((c) => (cards = c));
@@ -30,115 +35,23 @@
 	});
 
 	function resetForm() {
-		editingCardId = null;
-		title = '';
-		fullName = '';
-		description = '';
-		category = '';
-		images = [];
-		newImageUrl = '';
+		editingCard = null;
 	}
 
 	function startEdit(card: Card) {
-		editingCardId = card.id;
-		title = card.title;
-		fullName = card.fullName || '';
-		description = card.description;
-		const cats = card.categories && card.categories.length > 0 ? card.categories : card.category ? [card.category] : [];
-		category = cats.join(', ');
-		images = card.images ? [...card.images] : [];
+		editingCard = card;
 		window.scrollTo({ top: 0, behavior: 'smooth' });
 	}
 
-	function addImageUrl() {
-		if (newImageUrl.trim()) {
-			images = [...images, newImageUrl.trim()];
-			newImageUrl = '';
-		}
-	}
-
-	function removeImage(index: number) {
-		images = images.filter((_, i) => i !== index);
-	}
-
-	async function uploadBlob(blob: Blob) {
-		uploading = true;
-		try {
-			const formData = new FormData();
-			formData.append('file', blob, `paste-${Date.now()}.png`);
-			const res = await fetch('/api/upload', {
-				method: 'POST',
-				body: formData
+	async function handleSaveCard(data: Omit<Card, 'id' | 'createdAt' | 'updatedAt'>) {
+		if (editingCard) {
+			await cardsStore.updateCard({
+				...editingCard,
+				...data
 			});
-
-			if (res.ok) {
-				const data = await res.json();
-				if (data.url) {
-					images = [...images, data.url];
-				}
-			}
-		} catch (err) {
-			console.error("Errore durante l'upload:", err);
-		} finally {
-			uploading = false;
-		}
-	}
-
-	async function handleFileUpload(e: Event) {
-		const input = e.target as HTMLInputElement;
-		if (!input.files || input.files.length === 0) return;
-		await uploadBlob(input.files[0]);
-		input.value = '';
-	}
-
-	function handlePaste(e: ClipboardEvent) {
-		const items = e.clipboardData?.items;
-		if (!items) return;
-		for (let i = 0; i < items.length; i++) {
-			const item = items[i];
-			if (item.type.indexOf('image') !== -1) {
-				e.preventDefault();
-				const blob = item.getAsFile();
-				if (blob) {
-					uploadBlob(blob);
-				}
-			}
-		}
-	}
-
-	async function handleSaveCard(e: Event) {
-		e.preventDefault();
-		if (!title.trim() || !description.trim()) return;
-
-		const parsedCategories = category
-			.split(',')
-			.map((c) => c.trim())
-			.filter(Boolean);
-
-		if (editingCardId) {
-			const existing = cards.find((c) => c.id === editingCardId);
-			if (existing) {
-				await cardsStore.updateCard({
-					...existing,
-					title: title.trim(),
-					fullName: fullName.trim() || undefined,
-					description: description.trim(),
-					category: parsedCategories[0] || undefined,
-					categories: parsedCategories.length > 0 ? parsedCategories : undefined,
-					images: images.length > 0 ? images : undefined
-				});
-			}
 		} else {
-			await cardsStore.addCard({
-				title: title.trim(),
-				fullName: fullName.trim() || undefined,
-				description: description.trim(),
-				category: parsedCategories[0] || undefined,
-				categories: parsedCategories.length > 0 ? parsedCategories : undefined,
-				images: images.length > 0 ? images : undefined
-			});
+			await cardsStore.addCard(data);
 		}
-
 		resetForm();
 	}
 
@@ -195,7 +108,7 @@
 		</div>
 	{:else}
 		<!-- Admin Panel Dashboard -->
-		<div class="admin-panel" onpaste={handlePaste}>
+		<div class="admin-panel">
 			<!-- Header Admin Bar (NO photos as requested) -->
 			<div class="admin-top duo-card">
 				<div class="user-info">
@@ -216,116 +129,19 @@
 			</div>
 
 			<!-- Card Editor Form -->
-			<form class="editor-card duo-card" onsubmit={handleSaveCard}>
+			<div class="editor-card duo-card">
 				<h2 class="form-title">
-					{editingCardId ? '✏️ Modifica Scheda' : '➕ Aggiungi Nuova Card Informativa'}
+					{editingCard ? '✏️ Modifica Scheda' : '➕ Aggiungi Nuova Card Informativa'}
 				</h2>
 
-				<div class="form-grid">
-					<div class="form-group">
-						<label for="card-title">Acronimo / Sigla *</label>
-						<input
-							id="card-title"
-							type="text"
-							bind:value={title}
-							placeholder="Es: IF, SCMT, ETCS..."
-							required
-							class="duo-input form-input"
-						/>
-					</div>
-
-					<div class="form-group">
-						<label for="card-fullname">Significato Esteso / Acronimo Completo</label>
-						<input
-							id="card-fullname"
-							type="text"
-							bind:value={fullName}
-							placeholder="Es: Impresa Ferroviaria, Fascicolo Linea..."
-							class="duo-input form-input"
-						/>
-					</div>
-
-					<div class="form-group full-width">
-						<label for="card-cat">Categoria ({existingCategories.length} esistenti)</label>
-						<input
-							id="card-cat"
-							list="categories-list"
-							type="text"
-							bind:value={category}
-							placeholder="Cerca o inserisci categoria..."
-							class="duo-input form-input"
-						/>
-						<datalist id="categories-list">
-							{#each existingCategories as cat}
-								<option value={cat}></option>
-							{/each}
-						</datalist>
-					</div>
-				</div>
-
-				<div class="form-group">
-					<label for="card-desc">A cosa serve / Descrizione *</label>
-					<textarea
-						id="card-desc"
-						bind:value={description}
-						placeholder="Scrivi esattamente a cosa serve o la spiegazione dettagliata..."
-						rows="4"
-						required
-						class="duo-input form-textarea"
-					></textarea>
-				</div>
-
-				<!-- Images Section -->
-				<div class="form-group">
-					<span class="group-title-label">Immagini per la card ({images.length})</span>
-					
-					<div class="image-uploader">
-						<div class="url-input-row">
-							<input
-								type="url"
-								bind:value={newImageUrl}
-								placeholder="Inserisci URL immagine (https://...)"
-								class="duo-input form-input"
-							/>
-							<button type="button" class="duo-btn duo-btn-gray add-img-btn" onclick={addImageUrl}>
-								+ Aggiungi URL
-							</button>
-						</div>
-
-						<div class="file-input-row">
-							<label class="duo-btn duo-btn-gray file-upload-label">
-								📁 {uploading ? 'Caricamento...' : 'Carica da dispositivo'}
-								<input type="file" accept="image/*" onchange={handleFileUpload} disabled={uploading} hidden />
-							</label>
-						</div>
-					</div>
-
-					{#if images.length > 0}
-						<div class="images-preview-grid">
-							{#each images as imgUrl, index}
-								<div class="preview-box">
-									<img src={imgUrl} alt="Preview {index}" class="preview-thumb" />
-									<button type="button" class="remove-img-btn" onclick={() => removeImage(index)}>
-										✕
-									</button>
-								</div>
-							{/each}
-						</div>
-					{/if}
-				</div>
-
-				<!-- Form Actions -->
-				<div class="form-actions">
-					{#if editingCardId}
-						<button type="button" class="duo-btn duo-btn-gray cancel-btn" onclick={resetForm}>
-							Annulla
-						</button>
-					{/if}
-					<button type="submit" class="duo-btn duo-btn-green save-btn">
-						{editingCardId ? 'Salva Modifiche' : '➕ AGGIUNGI SCHEDA'}
-					</button>
-				</div>
-			</form>
+				<CardForm
+					initialCard={editingCard}
+					existingCategories={existingCategories}
+					onSave={handleSaveCard}
+					onCancel={editingCard ? resetForm : undefined}
+					submitLabel={editingCard ? 'Salva Modifiche' : '➕ AGGIUNGI SCHEDA'}
+				/>
+			</div>
 
 			<!-- Existing Cards List -->
 			<div class="list-section">
@@ -527,148 +343,7 @@
 	.form-title {
 		font-size: 1.4rem;
 		font-weight: 800;
-		margin: 0;
-	}
-
-	.form-grid {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: 1rem;
-	}
-
-	@media (max-width: 600px) {
-		.form-grid {
-			grid-template-columns: 1fr;
-		}
-	}
-
-	.form-group {
-		display: flex;
-		flex-direction: column;
-		gap: 0.4rem;
-	}
-
-	.form-group label, .group-title-label {
-		font-size: 0.85rem;
-		font-weight: 700;
-		color: var(--text-color);
-	}
-
-	.form-input, .form-textarea {
-		padding: 0.85rem;
-		border-radius: 12px;
-		background: var(--card-bg-subtle);
-		border: 1px solid var(--border-color);
-		color: var(--text-color);
-		font-size: 0.95rem;
-	}
-
-	.form-input:focus, .form-textarea:focus {
-		outline: none;
-		border-color: var(--accent-color);
-	}
-
-	.image-uploader {
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-	}
-
-	.url-input-row {
-		display: flex;
-		gap: 0.5rem;
-	}
-
-	.url-input-row .form-input {
-		flex: 1;
-	}
-
-	.add-img-btn {
-		padding: 0.85rem 1rem;
-		border-radius: 12px;
-		background: var(--card-bg-subtle);
-		border: 1px solid var(--border-color);
-		color: var(--accent-color);
-		font-weight: 700;
-		cursor: pointer;
-		white-space: nowrap;
-	}
-
-	.file-upload-label {
-		display: inline-block;
-		padding: 0.6rem 1rem;
-		border-radius: 10px;
-		background: var(--card-bg-subtle);
-		border: 1px dashed var(--border-color);
-		color: var(--text-muted);
-		font-size: 0.85rem;
-		font-weight: 600;
-		cursor: pointer;
-		text-align: center;
-	}
-
-	.images-preview-grid {
-		display: flex;
-		gap: 0.75rem;
-		flex-wrap: wrap;
-		margin-top: 0.5rem;
-	}
-
-	.preview-box {
-		position: relative;
-		width: 80px;
-		height: 80px;
-		border-radius: 10px;
-		overflow: hidden;
-		border: 1px solid var(--border-color);
-	}
-
-	.preview-thumb {
-		width: 100%;
-		height: 100%;
-		object-fit: cover;
-	}
-
-	.remove-img-btn {
-		position: absolute;
-		top: 4px;
-		right: 4px;
-		background: rgba(0, 0, 0, 0.7);
-		color: white;
-		border: none;
-		border-radius: 50%;
-		width: 22px;
-		height: 22px;
-		font-size: 0.75rem;
-		cursor: pointer;
-	}
-
-	.form-actions {
-		display: flex;
-		gap: 0.75rem;
-		justify-content: flex-end;
-		margin-top: 0.5rem;
-	}
-
-	.cancel-btn {
-		padding: 0.85rem 1.25rem;
-		border-radius: 14px;
-		background: var(--card-bg-subtle);
-		border: 1px solid var(--border-color);
-		color: var(--text-color);
-		font-weight: 700;
-		cursor: pointer;
-	}
-
-	.save-btn {
-		padding: 0.85rem 1.5rem;
-		border-radius: 14px;
-		background: linear-gradient(135deg, var(--accent-color), #0284c7);
-		color: white;
-		border: none;
-		font-weight: 800;
-		font-size: 1rem;
-		cursor: pointer;
+		margin: 0 0 1rem 0;
 	}
 
 	/* List Section */
