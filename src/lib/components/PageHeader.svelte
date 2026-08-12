@@ -44,57 +44,57 @@
 
 <style>
 	.page-header-banner {
-		border-radius: 22px;
-		padding: 1.35rem 1.6rem;
+		border-radius: 16px;
+		padding: 0.75rem 1.15rem;
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		gap: 1.2rem;
-		box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+		gap: 0.85rem;
+		box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
 		transition: transform 0.2s ease;
 		box-sizing: border-box;
 		width: 100%;
-		margin-top: 0.5rem;
-		margin-bottom: 1rem;
+		margin-top: 0;
+		margin-bottom: 0.75rem;
 	}
 
 	.duo-banner-green {
 		background-color: var(--green-color);
 		border: 2px solid var(--green-depth);
-		border-bottom: 5px solid var(--green-depth);
+		border-bottom: 4px solid var(--green-depth);
 		color: #ffffff;
 	}
 
 	.duo-banner-blue {
 		background-color: var(--accent-color);
 		border: 2px solid var(--accent-depth);
-		border-bottom: 5px solid var(--accent-depth);
+		border-bottom: 4px solid var(--accent-depth);
 		color: #ffffff;
 	}
 
 	.duo-banner-purple {
 		background-color: var(--purple-color);
 		border: 2px solid var(--purple-depth);
-		border-bottom: 5px solid var(--purple-depth);
+		border-bottom: 4px solid var(--purple-depth);
 		color: #ffffff;
 	}
 
 	.duo-banner-orange {
 		background-color: var(--orange-color);
 		border: 2px solid var(--orange-depth);
-		border-bottom: 5px solid var(--orange-depth);
+		border-bottom: 4px solid var(--orange-depth);
 		color: #ffffff;
 	}
 
 	.header-content-group {
 		display: flex;
 		align-items: center;
-		gap: 1.1rem;
+		gap: 0.75rem;
 	}
 
 	.header-icon-img {
-		width: 52px;
-		height: 52px;
+		width: 36px;
+		height: 36px;
 		object-fit: contain;
 		flex-shrink: 0;
 	}
@@ -102,11 +102,11 @@
 	.header-text-box {
 		display: flex;
 		flex-direction: column;
-		gap: 0.25rem;
+		gap: 0.15rem;
 	}
 
 	.header-badge-tag {
-		font-size: 0.75rem;
+		font-size: 0.68rem;
 		font-weight: 900;
 		letter-spacing: 0.08em;
 		text-transform: uppercase;
@@ -114,25 +114,25 @@
 	}
 
 	.header-title-heading {
-		font-size: 1.65rem;
+		font-size: 1.25rem;
 		font-weight: 900;
 		color: inherit;
 		margin: 0;
-		line-height: 1.15;
+		line-height: 1.1;
 	}
 
 	.header-subtitle-text {
-		font-size: 0.88rem;
+		font-size: 0.8rem;
 		font-weight: 600;
 		opacity: 0.92;
 		margin: 0;
-		line-height: 1.35;
+		line-height: 1.25;
 	}
 
 	.header-actions-slot {
 		display: flex;
 		align-items: center;
-		gap: 0.6rem;
+		gap: 0.5rem;
 		flex-shrink: 0;
 	}
 
