@@ -4,6 +4,7 @@
 	import { cardsStore } from '$lib/stores/cardsStore';
 	import { pwaStore } from '$lib/stores/pwaStore';
 	import QuickAddCardModal from '$lib/components/QuickAddCardModal.svelte';
+	import InstallAppModal from '$lib/components/InstallAppModal.svelte';
 	import type { Card } from '$lib/types/cards';
 	import { onMount } from 'svelte';
 
@@ -12,13 +13,16 @@
 	let currentTheme = $state<ThemePreset>('dark');
 	let cards = $state<Card[]>([]);
 	let isQuickAddOpen = $state(false);
+	let isInstallModalOpen = $state(false);
 	let canInstall = $state(false);
+	let isStandalone = $state(false);
 
 	onMount(() => {
 		const unTheme = themeStore.subscribe((t) => (currentTheme = t));
 		const unCards = cardsStore.subscribe((c) => (cards = c));
 		const unPwa = pwaStore.subscribe(() => {
 			canInstall = pwaStore.canInstall;
+			isStandalone = pwaStore.isStandalone;
 		});
 
 		return () => {
@@ -29,7 +33,14 @@
 	});
 
 	async function handleInstallApp() {
-		await pwaStore.promptInstall();
+		if (canInstall) {
+			const success = await pwaStore.promptInstall();
+			if (!success) {
+				isInstallModalOpen = true;
+			}
+		} else {
+			isInstallModalOpen = true;
+		}
 	}
 
 	const navItems = [
@@ -87,12 +98,23 @@
 		</div>
 	</div>
 
-	<!-- Desktop Sidebar Actions (Theme + Quick Add Admin Section) -->
+	<!-- Desktop Sidebar Actions (Install App + Theme + Quick Add Admin Section) -->
 	<div class="sidebar-desktop-actions">
+		{#if !isStandalone}
+			<button
+				type="button"
+				class="duo-btn duo-btn-green desktop-install-btn"
+				onclick={handleInstallApp}
+				title="Scarica / Installa App"
+			>
+				📲 SCARICA APP
+			</button>
+		{/if}
+
 		{#if user && (user.isAdmin || user.role === 'admin')}
 			<button
 				type="button"
-				class="duo-btn duo-btn-green desktop-quick-add-btn"
+				class="duo-btn duo-btn-purple desktop-quick-add-btn"
 				onclick={() => (isQuickAddOpen = true)}
 				title="Aggiungi Scheda Rapida"
 			>
@@ -114,6 +136,11 @@
 	isOpen={isQuickAddOpen}
 	onClose={() => (isQuickAddOpen = false)}
 	{cards}
+/>
+
+<InstallAppModal
+	isOpen={isInstallModalOpen}
+	onClose={() => (isInstallModalOpen = false)}
 />
 
 <style>
@@ -282,6 +309,7 @@
 			border-top: 2px solid var(--border-color);
 		}
 
+		.desktop-install-btn,
 		.desktop-quick-add-btn {
 			width: 100%;
 			font-size: 0.8rem;
