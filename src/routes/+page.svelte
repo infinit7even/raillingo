@@ -671,6 +671,16 @@
 		text-decoration: none;
 	}
 
+	.install-app-btn {
+		background-color: #ff5e5b;
+		color: #ffffff;
+		border-color: #d9423f;
+	}
+
+	.install-app-btn:hover:not(:disabled) {
+		background-color: #ff7370;
+	}
+
 	.btn-emoji-img {
 		width: 20px;
 		height: 20px;

@@ -72,18 +72,6 @@
 
 		<!-- Action Buttons (Mobile Optimized) -->
 		<div class="actions">
-			{#if canInstall}
-				<button
-					class="duo-header-btn install-header-btn"
-					onclick={handleInstallApp}
-					aria-label="Installa App"
-					title="Installa l'App"
-				>
-					<span class="btn-icon">📲</span>
-					<span class="btn-text">INSTALLA</span>
-				</button>
-			{/if}
-
 			<!-- Theme Selector Button -->
 			<button
 				class="duo-header-btn theme-btn"
@@ -260,13 +248,6 @@
 		border-bottom-width: 1.5px;
 	}
 
-	.install-header-btn {
-		background: rgba(255, 75, 75, 0.15);
-		border-color: #ff4b4b;
-		color: #ff4b4b;
-	}
-
-	.btn-icon,
 	.theme-icon-symbol {
 		font-size: 1rem;
 		line-height: 1;
