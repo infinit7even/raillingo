@@ -1,21 +1,18 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { cardsStore } from '$lib/stores/cardsStore';
+	import PageHeader from '$lib/components/PageHeader.svelte';
 	import type { Card } from '$lib/types/cards';
 
 	let cards = $state<Card[]>([]);
 	let searchQuery = $state('');
 	let selectedLetter = $state<string>('ALL');
-	let selectedCategory = $state<string>('ALL');
 	let expandedCardId = $state<string | null>(null);
 
 	onMount(() => {
 		const unsubscribe = cardsStore.subscribe((c) => (cards = c));
 		return unsubscribe;
 	});
-
-	// Get sorted categories
-	let categories = $derived(cardsStore.categories);
 
 	// Get available letters from titles
 	let availableLetters = $derived(() => {
@@ -42,9 +39,6 @@
 					selectedLetter === 'ALL' ||
 					(selectedLetter === '#' ? !(firstLetter >= 'A' && firstLetter <= 'Z') : firstLetter === selectedLetter);
 
-				// Category filter
-				const matchesCategory = selectedCategory === 'ALL' || c.category === selectedCategory;
-
 				// Search query
 				const q = searchQuery.toLowerCase().trim();
 				const matchesSearch =
@@ -52,19 +46,15 @@
 					c.title.toLowerCase().includes(q) ||
 					(c.fullName && c.fullName.toLowerCase().includes(q)) ||
 					c.description.toLowerCase().includes(q) ||
-					(c.tags && c.tags.some((t) => t.toLowerCase().includes(q))) ||
-					(c.category && c.category.toLowerCase().includes(q));
+					(c.tags && c.tags.some((t) => t.toLowerCase().includes(q)));
 
-				return matchesLetter && matchesCategory && matchesSearch;
+				return matchesLetter && matchesSearch;
 			})
 	);
 
 	function toggleCardExpand(id: string) {
 		expandedCardId = expandedCardId === id ? null : id;
 	}
-	import CategoryFilterBar from '$lib/components/CategoryFilterBar.svelte';
-	import PageHeader from '$lib/components/PageHeader.svelte';
-	import CategoryBadge from '$lib/components/CategoryBadge.svelte';
 </script>
 
 <div class="wiki-container">
@@ -91,12 +81,6 @@
 				<button class="clear-btn" onclick={() => (searchQuery = '')}>✕</button>
 			{/if}
 		</div>
-
-		<!-- Category Filter Bar -->
-		<CategoryFilterBar
-			selectedCategory={selectedCategory}
-			onSelectCategory={(cat) => (selectedCategory = cat)}
-		/>
 
 		<!-- Alphabet Filter Bar -->
 		<div class="alphabet-bar">
@@ -135,9 +119,6 @@
 							<h3 class="card-title">{card.title}</h3>
 							{#if card.fullName}
 								<span class="fullname-pill">{card.fullName}</span>
-							{/if}
-							{#if card.category}
-								<span class="cat-badge">{card.category}</span>
 							{/if}
 						</div>
 
@@ -323,15 +304,6 @@
 		background: rgba(34, 197, 94, 0.15);
 		color: var(--green-color);
 		border: 1px solid var(--green-color);
-	}
-
-	.cat-badge {
-		font-size: 0.7rem;
-		font-weight: 700;
-		padding: 0.15rem 0.5rem;
-		border-radius: 6px;
-		background: var(--card-bg-subtle);
-		color: var(--accent-color);
 	}
 
 	.meta-row {

@@ -1,16 +1,13 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import type { Card } from '$lib/types/cards';
 
 	let {
 		initialCard = null,
-		existingCategories = [],
 		onSave,
 		onCancel = undefined,
 		submitLabel = 'Salva Scheda'
 	} = $props<{
 		initialCard?: Card | null;
-		existingCategories?: string[];
 		onSave: (data: Omit<Card, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void> | void;
 		onCancel?: () => void;
 		submitLabel?: string;
@@ -19,8 +16,6 @@
 	let title = $state('');
 	let fullName = $state('');
 	let description = $state('');
-	let categoryInput = $state('');
-	let selectedCategories = $state<string[]>([]);
 	let images = $state<string[]>([]);
 	let newImageUrl = $state('');
 	let uploading = $state(false);
@@ -31,46 +26,15 @@
 			title = initialCard.title || '';
 			fullName = initialCard.fullName || '';
 			description = initialCard.description || '';
-			const cats = initialCard.categories && initialCard.categories.length > 0 
-				? initialCard.categories 
-				: initialCard.category ? [initialCard.category] : [];
-			selectedCategories = [...cats];
-			categoryInput = '';
 			images = initialCard.images ? [...initialCard.images] : [];
 		} else {
 			title = '';
 			fullName = '';
 			description = '';
-			selectedCategories = [];
-			categoryInput = '';
 			images = [];
 		}
 		newImageUrl = '';
 	});
-
-	function toggleCategory(cat: string) {
-		if (selectedCategories.includes(cat)) {
-			selectedCategories = selectedCategories.filter((c) => c !== cat);
-		} else {
-			selectedCategories = [...selectedCategories, cat];
-		}
-	}
-
-	function addCategoryFromInput() {
-		const raw = categoryInput.trim();
-		if (!raw) return;
-		const parts = raw.split(',').map((s) => s.trim()).filter(Boolean);
-		for (const p of parts) {
-			if (!selectedCategories.includes(p)) {
-				selectedCategories = [...selectedCategories, p];
-			}
-		}
-		categoryInput = '';
-	}
-
-	function removeCategory(cat: string) {
-		selectedCategories = selectedCategories.filter((c) => c !== cat);
-	}
 
 	function addImageUrl() {
 		if (newImageUrl.trim()) {
@@ -132,18 +96,12 @@
 		e.preventDefault();
 		if (!title.trim() || !description.trim()) return;
 
-		if (categoryInput.trim()) {
-			addCategoryFromInput();
-		}
-
 		saving = true;
 		try {
 			await onSave({
 				title: title.trim(),
 				fullName: fullName.trim() || undefined,
 				description: description.trim(),
-				category: selectedCategories.length > 0 ? selectedCategories[0] : undefined,
-				categories: selectedCategories.length > 0 ? selectedCategories : undefined,
 				images: images.length > 0 ? images : undefined
 			});
 		} catch (err) {
@@ -181,57 +139,6 @@
 			/>
 		</div>
 
-		<!-- Categorie -->
-		<div class="form-group full-width">
-			<label for="card-category-input">Categorie (Seleziona esistenti o digita e premi Invio / Virgola)</label>
-			
-			{#if existingCategories && existingCategories.length > 0}
-				<div class="existing-chips-pool">
-					{#each existingCategories as cat}
-						{@const isSel = selectedCategories.includes(cat)}
-						<button
-							type="button"
-							class="cat-chip-btn"
-							class:selected={isSel}
-							onclick={() => toggleCategory(cat)}
-						>
-							{isSel ? '✓ ' : '+ '}{cat}
-						</button>
-					{/each}
-				</div>
-			{/if}
-
-			<div class="cat-input-row">
-				<input
-					id="card-category-input"
-					type="text"
-					bind:value={categoryInput}
-					placeholder="Aggiungi nuova categoria (es: Segnalamento, Trazione)..."
-					class="duo-input"
-					onkeydown={(e) => {
-						if (e.key === 'Enter' || e.key === ',') {
-							e.preventDefault();
-							addCategoryFromInput();
-						}
-					}}
-				/>
-				<button type="button" class="duo-btn duo-btn-gray add-cat-btn" onclick={addCategoryFromInput}>
-					Aggiungi
-				</button>
-			</div>
-
-			{#if selectedCategories.length > 0}
-				<div class="selected-tags-box">
-					<span class="selected-label">Selezionate:</span>
-					{#each selectedCategories as cat}
-						<span class="tag-badge">
-							{cat}
-							<button type="button" class="remove-tag-btn" onclick={() => removeCategory(cat)}>✕</button>
-						</span>
-					{/each}
-				</div>
-			{/if}
-		</div>
 
 		<!-- Descrizione / Spiegazione -->
 		<div class="form-group full-width">
@@ -344,79 +251,6 @@
 		font-weight: 800;
 		color: var(--text-color);
 		letter-spacing: 0.02em;
-	}
-
-	.existing-chips-pool {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.35rem;
-		margin-bottom: 0.4rem;
-	}
-
-	.cat-chip-btn {
-		font-size: 0.72rem;
-		font-weight: 800;
-		padding: 0.25rem 0.55rem;
-		border-radius: 10px;
-		background: var(--card-bg-subtle);
-		border: 1.5px solid var(--border-color);
-		color: var(--text-muted);
-		cursor: pointer;
-		transition: all 0.15s ease;
-	}
-
-	.cat-chip-btn.selected {
-		background: var(--accent-light-bg);
-		border-color: var(--accent-color);
-		color: var(--accent-color);
-	}
-
-	.cat-input-row {
-		display: flex;
-		gap: 0.4rem;
-	}
-
-	.add-cat-btn {
-		white-space: nowrap;
-		font-size: 0.78rem;
-	}
-
-	.selected-tags-box {
-		display: flex;
-		align-items: center;
-		flex-wrap: wrap;
-		gap: 0.4rem;
-		margin-top: 0.4rem;
-	}
-
-	.selected-label {
-		font-size: 0.75rem;
-		font-weight: 800;
-		color: var(--text-muted);
-	}
-
-	.tag-badge {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.3rem;
-		font-size: 0.75rem;
-		font-weight: 800;
-		padding: 0.2rem 0.55rem;
-		border-radius: 8px;
-		background: var(--accent-light-bg);
-		color: var(--accent-color);
-		border: 1px solid var(--accent-color);
-	}
-
-	.remove-tag-btn {
-		background: none;
-		border: none;
-		color: inherit;
-		cursor: pointer;
-		font-size: 0.8rem;
-		font-weight: 900;
-		padding: 0;
-		line-height: 1;
 	}
 
 	.form-textarea {

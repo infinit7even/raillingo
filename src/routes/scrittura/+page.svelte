@@ -2,11 +2,11 @@
 	import { onMount } from 'svelte';
 	import { cardsStore } from '$lib/stores/cardsStore';
 	import FreeWriteExercise from '$lib/components/FreeWriteExercise.svelte';
-	import CategoryFilterBar from '$lib/components/CategoryFilterBar.svelte';
+	import PageHeader from '$lib/components/PageHeader.svelte';
+	import ModeTabs from '$lib/components/ModeTabs.svelte';
 	import type { Card, WritingSubMode } from '$lib/types/cards';
 
 	let cards = $state<Card[]>([]);
-	let selectedCategory = $state<string>('ALL');
 	let currentIndex = $state(0);
 	let selectedSubMode = $state<WritingSubMode>('title-to-desc');
 
@@ -15,24 +15,13 @@
 		return unsubscribe;
 	});
 
-	let activeCards = $derived.by<Card[]>(() => {
-		if (selectedCategory === 'ALL') return cards;
-		return cards.filter(
-			(c) =>
-				c.category === selectedCategory ||
-				(c.categories && c.categories.includes(selectedCategory))
-		);
-	});
-
 	function handleNext() {
-		if (currentIndex < activeCards.length - 1) {
+		if (currentIndex < cards.length - 1) {
 			currentIndex++;
 		} else {
 			currentIndex = 0;
 		}
 	}
-	import PageHeader from '$lib/components/PageHeader.svelte';
-	import ModeTabs from '$lib/components/ModeTabs.svelte';
 
 	const writingTabs = [
 		{ id: 'title-to-desc', label: 'ACRONIMO ➔ DESCRIZIONE', emoji: '/emoji/writing_hand_3d_default.png' },
@@ -51,14 +40,6 @@
 		variant="blue"
 	/>
 
-	<CategoryFilterBar
-		selectedCategory={selectedCategory}
-		onSelectCategory={(cat) => {
-			selectedCategory = cat;
-			currentIndex = 0;
-		}}
-	/>
-
 	<ModeTabs
 		tabs={writingTabs}
 		activeTab={selectedSubMode}
@@ -68,12 +49,12 @@
 		}}
 	/>
 
-	{#if activeCards.length > 0}
+	{#if cards.length > 0}
 		<FreeWriteExercise
-			card={activeCards[currentIndex]}
+			card={cards[currentIndex]}
 			subMode={selectedSubMode}
 			currentIndex={currentIndex}
-			totalCards={activeCards.length}
+			totalCards={cards.length}
 			onNext={handleNext}
 		/>
 	{:else}

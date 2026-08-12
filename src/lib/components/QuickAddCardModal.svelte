@@ -3,24 +3,11 @@
 	import CardForm from '$lib/components/CardForm.svelte';
 	import type { Card } from '$lib/types/cards';
 
-	let { isOpen, onClose, cards } = $props<{
+	let { isOpen, onClose } = $props<{
 		isOpen: boolean;
 		onClose: () => void;
-		cards: Card[];
+		cards?: Card[];
 	}>();
-
-	let existingCategories = $derived.by<string[]>(() => {
-		const set = new Set<string>();
-		for (const c of cards) {
-			if (c.category) set.add(c.category);
-			if (c.categories) {
-				for (const cat of c.categories) {
-					if (cat && cat.trim()) set.add(cat.trim());
-				}
-			}
-		}
-		return Array.from(set).sort();
-	});
 
 	async function handleSaveCard(data: Omit<Card, 'id' | 'createdAt' | 'updatedAt'>) {
 		await cardsStore.addCard(data);
@@ -43,7 +30,6 @@
 			<!-- Universal Form Component -->
 			<div class="modal-body">
 				<CardForm
-					existingCategories={existingCategories}
 					onSave={handleSaveCard}
 					onCancel={onClose}
 					submitLabel="⚡ AGGIUNGI ORA SCHEDA"

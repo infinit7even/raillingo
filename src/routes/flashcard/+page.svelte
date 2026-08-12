@@ -6,10 +6,7 @@
 	import { statsStore } from '$lib/stores/statsStore';
 	import type { Card } from '$lib/types/cards';
 
-	import CategoryFilterBar from '$lib/components/CategoryFilterBar.svelte';
-
 	let cards = $state<Card[]>([]);
-	let selectedCategory = $state<string>('ALL');
 	let subMode = $state<'standard' | 'foto' | 'inverso'>('standard');
 	let currentIndex = $state(0);
 	let revealed = $state(false);
@@ -24,17 +21,8 @@
 		revealed = false;
 	});
 
-	let filteredCards = $derived.by<Card[]>(() => {
-		if (selectedCategory === 'ALL') return cards;
-		return cards.filter(
-			(c) =>
-				c.category === selectedCategory ||
-				(c.categories && c.categories.includes(selectedCategory))
-		);
-	});
-
-	let photoCards = $derived(filteredCards.filter((c) => c.images && c.images.length > 0));
-	let activeCards = $derived(subMode === 'foto' ? photoCards : filteredCards);
+	let photoCards = $derived(cards.filter((c) => c.images && c.images.length > 0));
+	let activeCards = $derived(subMode === 'foto' ? photoCards : cards);
 
 	function handleNext() {
 		if (currentIndex < activeCards.length - 1) {
@@ -74,15 +62,6 @@
 		badge="Modalità Ripasso"
 		icon="/emoji/open_book_3d.png"
 		variant="green"
-	/>
-
-	<!-- Category Filter Bar -->
-	<CategoryFilterBar
-		selectedCategory={selectedCategory}
-		onSelectCategory={(cat) => {
-			selectedCategory = cat;
-			currentIndex = 0;
-		}}
 	/>
 
 	<!-- Sub-mode Selector Bar -->

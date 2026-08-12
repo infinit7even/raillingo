@@ -4,27 +4,15 @@
 	import { statsStore } from '$lib/stores/statsStore';
 	import { tts } from '$lib/utils/tts';
 	import PageHeader from '$lib/components/PageHeader.svelte';
-	import CategoryFilterBar from '$lib/components/CategoryFilterBar.svelte';
 	import type { Card } from '$lib/types/cards';
 
 	let cards = $state<Card[]>([]);
-	let selectedCategory = $state<string>('ALL');
 	let flippedMap = $state<Record<string, boolean>>({});
 	let imageIndexMap = $state<Record<string, number>>({});
 
 	onMount(() => {
 		const unsubscribe = cardsStore.subscribe((c) => (cards = c));
 		return unsubscribe;
-	});
-
-	// Filter cards dynamically by selected category
-	let filteredCards = $derived.by<Card[]>(() => {
-		if (selectedCategory === 'ALL') return cards;
-		return cards.filter(
-			(c) =>
-				c.category === selectedCategory ||
-				(c.categories && c.categories.includes(selectedCategory))
-		);
 	});
 
 	function toggleFlip(cardId: string) {
@@ -61,30 +49,19 @@
 		variant="orange"
 	/>
 
-	<!-- Category Filter Bar -->
-	<CategoryFilterBar
-		selectedCategory={selectedCategory}
-		onSelectCategory={(cat) => (selectedCategory = cat)}
-	/>
-
 	<!-- Reels Snap Feed -->
-	{#if filteredCards.length > 0}
+	{#if cards.length > 0}
 		<div class="reels-viewport duo-card">
 			<div class="reels-scroll-feed">
-				{#each filteredCards as card (card.id)}
+				{#each cards as card (card.id)}
 					{@const isFlipped = flippedMap[card.id] || false}
 					{@const imgIdx = imageIndexMap[card.id] || 0}
 					{@const hasImages = card.images && card.images.length > 0}
-					{@const cardCategories = card.categories && card.categories.length > 0 ? card.categories : card.category ? [card.category] : []}
 
 					<div class="reel-card-slide">
 						<!-- Top Action Bar -->
 						<div class="reel-header-bar">
-							<div class="category-tags-group">
-								{#each cardCategories as cat}
-									<span class="cat-pill">{cat}</span>
-								{/each}
-							</div>
+							<div></div>
 							<button class="audio-tts-btn" onclick={(e) => speakAudio(e, card)} title="Ascolta audio">
 								🔊 Audio
 							</button>
@@ -161,11 +138,8 @@
 	{:else}
 		<div class="duo-card empty-reels-box">
 			<span class="empty-emoji">📭</span>
-			<h3>Nessun Reel per questa categoria</h3>
-			<p>Seleziona un'altra categoria oppure mostra tutte le schede.</p>
-			<button class="duo-btn duo-btn-purple" onclick={() => (selectedCategory = 'ALL')}>
-				Mostra Tutti i Reels
-			</button>
+			<h3>Nessun Reel disponibile</h3>
+			<p>Aggiungi nuove schede dal pannello admin per visualizzarle qui.</p>
 		</div>
 	{/if}
 </div>
@@ -223,23 +197,6 @@
 		justify-content: space-between;
 		z-index: 10;
 		gap: 0.5rem;
-	}
-
-	.category-tags-group {
-		display: flex;
-		gap: 0.35rem;
-		flex-wrap: wrap;
-	}
-
-	.cat-pill {
-		font-size: 0.68rem;
-		font-weight: 900;
-		padding: 0.25rem 0.6rem;
-		border-radius: 8px;
-		background: var(--accent-light-bg);
-		color: var(--accent-color);
-		border: 1px solid var(--accent-color);
-		text-transform: uppercase;
 	}
 
 	.audio-tts-btn {

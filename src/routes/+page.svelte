@@ -4,7 +4,6 @@
 	import { statsStore, type StatsData } from '$lib/stores/statsStore';
 	import WikiSearchModal from '$lib/components/WikiSearchModal.svelte';
 	import QuickAddCardModal from '$lib/components/QuickAddCardModal.svelte';
-	import CategoryBadge from '$lib/components/CategoryBadge.svelte';
 	import type { Card } from '$lib/types/cards';
 
 	let { data } = $props();
@@ -24,7 +23,6 @@
 	});
 
 	let searchQuery = $state('');
-	let selectedCategory = $state<string>('all');
 
 	onMount(() => {
 		const uncards = cardsStore.subscribe((c) => {
@@ -38,21 +36,15 @@
 		};
 	});
 
-	let categories = $derived(cardsStore.categories);
-
 	let filteredCards = $derived(
 		cards.filter((c) => {
-			const matchesCategory =
-				selectedCategory === 'all' ||
-				c.category === selectedCategory ||
-				(c.categories && c.categories.includes(selectedCategory));
 			const q = searchQuery.toLowerCase().trim();
 			const matchesSearch =
 				!q ||
 				c.title.toLowerCase().includes(q) ||
 				c.description.toLowerCase().includes(q) ||
 				(c.tags && c.tags.some((t) => t.toLowerCase().includes(q)));
-			return matchesCategory && matchesSearch;
+			return matchesSearch;
 		})
 	);
 
@@ -156,12 +148,6 @@
 						placeholder="Cerca acronimo..."
 						class="duo-input search-input"
 					/>
-					<select bind:value={selectedCategory} class="duo-input category-select">
-						<option value="all">Tutte le Categorie</option>
-						{#each categories as cat}
-							<option value={cat}>{cat}</option>
-						{/each}
-					</select>
 				</div>
 			</div>
 
@@ -170,9 +156,6 @@
 					<div class="duo-card catalog-card">
 						<div class="card-top">
 							<h3 class="card-term">{card.title}</h3>
-							{#if card.category}
-								<CategoryBadge category={card.category} variant="accent" size="sm" />
-							{/if}
 						</div>
 						<p class="card-meaning">{card.description}</p>
 					</div>

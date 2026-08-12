@@ -9,22 +9,7 @@
 
 	let searchQuery = $state('');
 	let selectedLetter = $state<string>('ALL');
-	let selectedCategory = $state<string>('ALL');
 	let expandedId = $state<string | null>(null);
-
-	// Get all unique categories across cards
-	let categories = $derived.by<string[]>(() => {
-		const set = new Set<string>();
-		for (const c of cards) {
-			if (c.category) set.add(c.category);
-			if (c.categories) {
-				for (const cat of c.categories) {
-					if (cat && cat.trim()) set.add(cat.trim());
-				}
-			}
-		}
-		return Array.from(set).sort();
-	});
 
 	// Get available initial letters from card titles
 	let availableLetters = $derived.by<string[]>(() => {
@@ -40,7 +25,7 @@
 		return Array.from(set).sort();
 	});
 
-	// Sorted alphabetically and filtered by search, category, and letter
+	// Sorted alphabetically and filtered by search and letter
 	let filteredSortedCards = $derived.by<Card[]>(() =>
 		[...cards]
 			.sort((a, b) => a.title.localeCompare(b.title, 'it', { sensitivity: 'base' }))
@@ -50,22 +35,15 @@
 					selectedLetter === 'ALL' ||
 					(selectedLetter === '#' ? !(firstLetter >= 'A' && firstLetter <= 'Z') : firstLetter === selectedLetter);
 
-				const matchesCategory =
-					selectedCategory === 'ALL' ||
-					c.category === selectedCategory ||
-					(c.categories && c.categories.includes(selectedCategory));
-
 				const q = searchQuery.toLowerCase().trim();
 				const matchesSearch =
 					!q ||
 					c.title.toLowerCase().includes(q) ||
 					(c.fullName && c.fullName.toLowerCase().includes(q)) ||
 					c.description.toLowerCase().includes(q) ||
-					(c.tags && c.tags.some((t: string) => t.toLowerCase().includes(q))) ||
-					(c.category && c.category.toLowerCase().includes(q)) ||
-					(c.categories && c.categories.some((cat: string) => cat.toLowerCase().includes(q)));
+					(c.tags && c.tags.some((t: string) => t.toLowerCase().includes(q)));
 
-				return matchesLetter && matchesCategory && matchesSearch;
+				return matchesLetter && matchesSearch;
 			})
 	);
 
@@ -82,7 +60,6 @@
 	function clearFilters() {
 		searchQuery = '';
 		selectedLetter = 'ALL';
-		selectedCategory = 'ALL';
 	}
 </script>
 
@@ -150,27 +127,7 @@
 				{/each}
 			</div>
 
-			<!-- Categories Filter Bar -->
-			{#if categories.length > 0}
-				<div class="categories-bar">
-					<button
-						class="category-btn"
-						class:active={selectedCategory === 'ALL'}
-						onclick={() => (selectedCategory = 'ALL')}
-					>
-						Tutte le categorie
-					</button>
-					{#each categories as cat}
-						<button
-							class="category-btn"
-							class:active={selectedCategory === cat}
-							onclick={() => (selectedCategory = cat)}
-						>
-							{cat}
-						</button>
-					{/each}
-				</div>
-			{/if}
+
 
 			<!-- Results Meta Counter -->
 			<div class="results-meta-row">
@@ -183,7 +140,6 @@
 			<div class="results-list">
 				{#each filteredSortedCards as card (card.id)}
 					{@const isExpanded = expandedId === card.id}
-					{@const cardCategories = card.categories && card.categories.length > 0 ? card.categories : card.category ? [card.category] : []}
 
 					<div class="result-card duo-card" class:expanded={isExpanded}>
 						<button class="card-header-btn" onclick={() => toggleExpand(card.id)}>
@@ -191,13 +147,6 @@
 								<h3 class="card-title">{card.title}</h3>
 								{#if card.fullName}
 									<span class="fullname-pill">{card.fullName}</span>
-								{/if}
-								{#if cardCategories.length > 0}
-									<div class="categories-row">
-										{#each cardCategories as cat}
-											<span class="category-pill">{cat}</span>
-										{/each}
-									</div>
 								{/if}
 							</div>
 							<div class="right-indicator">
@@ -445,22 +394,6 @@
 		background: rgba(34, 197, 94, 0.15);
 		color: var(--green-color);
 		border: 1px solid var(--green-color);
-	}
-
-	.categories-row {
-		display: flex;
-		gap: 0.3rem;
-		flex-wrap: wrap;
-	}
-
-	.category-pill {
-		font-size: 0.68rem;
-		font-weight: 800;
-		padding: 0.15rem 0.45rem;
-		border-radius: 6px;
-		background: var(--accent-light-bg);
-		color: var(--accent-color);
-		border: 1px solid var(--accent-color);
 	}
 
 	.right-indicator {

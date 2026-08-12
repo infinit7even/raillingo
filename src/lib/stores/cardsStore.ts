@@ -70,18 +70,6 @@ class CardsStore {
 		return this.cards.filter((c) => c.images && c.images.length > 0);
 	}
 
-	public get categories(): string[] {
-		const set = new Set<string>();
-		for (const card of this.cards) {
-			if (card.category) set.add(card.category);
-			if (card.categories && Array.isArray(card.categories)) {
-				for (const cat of card.categories) {
-					if (cat && cat.trim()) set.add(cat.trim());
-				}
-			}
-		}
-		return Array.from(set).sort();
-	}
 
 	public async addCard(newCard: Omit<Card, 'id' | 'createdAt' | 'updatedAt'>): Promise<Card | null> {
 		const now = new Date().toISOString();

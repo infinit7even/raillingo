@@ -16,19 +16,6 @@
 	let editingCard = $state<Card | null>(null);
 	let searchQuery = $state('');
 
-	let existingCategories = $derived.by<string[]>(() => {
-		const set = new Set<string>();
-		for (const c of cards) {
-			if (c.category) set.add(c.category);
-			if (c.categories) {
-				for (const cat of c.categories) {
-					if (cat && cat.trim()) set.add(cat.trim());
-				}
-			}
-		}
-		return Array.from(set).sort();
-	});
-
 	onMount(() => {
 		const unsubscribe = cardsStore.subscribe((c) => (cards = c));
 		return unsubscribe;
@@ -136,7 +123,6 @@
 
 				<CardForm
 					initialCard={editingCard}
-					existingCategories={existingCategories}
 					onSave={handleSaveCard}
 					onCancel={editingCard ? resetForm : undefined}
 					submitLabel={editingCard ? 'Salva Modifiche' : '➕ AGGIUNGI SCHEDA'}
@@ -163,9 +149,6 @@
 									<h3 class="card-item-title">{card.title}</h3>
 									{#if card.fullName}
 										<span class="fullname-badge">{card.fullName}</span>
-									{/if}
-									{#if card.category}
-										<span class="cat-pill">{card.category}</span>
 									{/if}
 									{#if card.images && card.images.length > 0}
 										<span class="img-count-pill">📷 {card.images.length}</span>
@@ -427,7 +410,7 @@
 		border: 1px solid var(--accent-color);
 	}
 
-	.cat-pill, .img-count-pill {
+	.img-count-pill {
 		font-size: 0.7rem;
 		font-weight: 700;
 		padding: 0.15rem 0.5rem;

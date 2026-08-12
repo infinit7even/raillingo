@@ -2,11 +2,10 @@
 	import { onMount } from 'svelte';
 	import { cardsStore } from '$lib/stores/cardsStore';
 	import MultipleChoiceQuiz from '$lib/components/MultipleChoiceQuiz.svelte';
-	import CategoryFilterBar from '$lib/components/CategoryFilterBar.svelte';
+	import PageHeader from '$lib/components/PageHeader.svelte';
 	import type { Card } from '$lib/types/cards';
 
 	let cards = $state<Card[]>([]);
-	let selectedCategory = $state<string>('ALL');
 	let currentIndex = $state(0);
 
 	onMount(() => {
@@ -14,23 +13,13 @@
 		return unsubscribe;
 	});
 
-	let activeCards = $derived.by<Card[]>(() => {
-		if (selectedCategory === 'ALL') return cards;
-		return cards.filter(
-			(c) =>
-				c.category === selectedCategory ||
-				(c.categories && c.categories.includes(selectedCategory))
-		);
-	});
-
 	function handleNext() {
-		if (currentIndex < activeCards.length - 1) {
+		if (currentIndex < cards.length - 1) {
 			currentIndex++;
 		} else {
 			currentIndex = 0;
 		}
 	}
-	import PageHeader from '$lib/components/PageHeader.svelte';
 </script>
 
 <div class="quiz-page-container">
@@ -42,28 +31,20 @@
 		variant="purple"
 	/>
 
-	<CategoryFilterBar
-		selectedCategory={selectedCategory}
-		onSelectCategory={(cat) => {
-			selectedCategory = cat;
-			currentIndex = 0;
-		}}
-	/>
-
-	{#if activeCards.length >= 5}
+	{#if cards.length >= 5}
 		<MultipleChoiceQuiz
-			targetCard={activeCards[currentIndex]}
+			targetCard={cards[currentIndex]}
 			allCards={cards}
 			currentIndex={currentIndex}
-			totalCards={activeCards.length}
+			totalCards={cards.length}
 			onNext={handleNext}
 		/>
-	{:else if activeCards.length > 0}
+	{:else if cards.length > 0}
 		<div class="duo-card empty-box">
-			Servono almeno 5 schede nella categoria selezionata per generare le opzioni del quiz. Attualmente ve ne sono {activeCards.length}.
+			Servono almeno 5 schede per generare le opzioni del quiz. Attualmente ve ne sono {cards.length}.
 		</div>
 	{:else}
-		<div class="duo-card empty-box">Nessuna scheda trovata per questa categoria.</div>
+		<div class="duo-card empty-box">Nessuna scheda trovata.</div>
 	{/if}
 </div>
 
