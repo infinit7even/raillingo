@@ -36,6 +36,27 @@
 		navStore.close();
 	}
 
+	let drawerTouchStartX = 0;
+	let drawerTouchStartY = 0;
+
+	function handleDrawerTouchStart(e: TouchEvent) {
+		drawerTouchStartX = e.touches[0].clientX;
+		drawerTouchStartY = e.touches[0].clientY;
+	}
+
+	function handleDrawerTouchEnd(e: TouchEvent) {
+		if (!drawerTouchStartX) return;
+		const diffX = e.changedTouches[0].clientX - drawerTouchStartX;
+		const diffY = e.changedTouches[0].clientY - drawerTouchStartY;
+
+		// Swipe verso sinistra per chiudere la tendina
+		if (diffX < -30 && Math.abs(diffX) > Math.abs(diffY)) {
+			navStore.close();
+		}
+		drawerTouchStartX = 0;
+		drawerTouchStartY = 0;
+	}
+
 	const navItems = [
 		{ href: '/', label: 'HOME', emoji: '/emoji/house_3d.png' },
 		{ href: '/flashcard', label: 'FLASHCARD', emoji: '/emoji/open_book_3d.png' },
@@ -52,12 +73,19 @@
 	class:open={isNavOpen}
 	onclick={() => navStore.close()}
 	onkeydown={(e) => (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') && navStore.close()}
+	ontouchstart={handleDrawerTouchStart}
+	ontouchend={handleDrawerTouchEnd}
 	role="button"
 	tabindex="0"
 	aria-label="Chiudi menu navigazione"
 ></div>
 
-<nav class="duo-navigation" class:open={isNavOpen}>
+<nav
+	class="duo-navigation"
+	class:open={isNavOpen}
+	ontouchstart={handleDrawerTouchStart}
+	ontouchend={handleDrawerTouchEnd}
+>
 	<!-- Header Brand e Pulsante Chiudi -->
 	<div class="sidebar-brand">
 		<a href="/" class="brand-link" onclick={handleNavClick}>

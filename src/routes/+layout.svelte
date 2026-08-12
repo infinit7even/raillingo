@@ -25,13 +25,11 @@
 
 	function handleTouchStart(e: TouchEvent) {
 		const target = e.target as HTMLElement;
-		// Don't swipe if typing in input/textarea, inside modals, drawer or scroll boxes
+		// Don't swipe if typing in input/textarea, inside modals or scroll boxes
 		if (
 			target.tagName === 'INPUT' ||
 			target.tagName === 'TEXTAREA' ||
 			target.closest('.modal-backdrop') ||
-			target.closest('.drawer-backdrop') ||
-			target.closest('.duo-navigation') ||
 			target.closest('.nav-scroll-wrapper')
 		) {
 			return;
@@ -51,20 +49,28 @@
 		const diffX = touchEndX - touchStartX;
 		const diffY = touchEndY - touchStartY;
 
-		// Fast swipe gesture (duration < 250ms) or distance > 45px with horizontal dominance
-		const isFastSwipe = touchDuration < 250 && Math.abs(diffX) > 30;
-		const isDistanceSwipe = Math.abs(diffX) > 45;
+		const isHorizontalSwipe = Math.abs(diffX) > Math.abs(diffY) * 1.5;
+		const isFastSwipe = touchDuration < 300 && Math.abs(diffX) > 25;
+		const isDistanceSwipe = Math.abs(diffX) > 40;
 
-		if ((isFastSwipe || isDistanceSwipe) && Math.abs(diffX) > Math.abs(diffY) * 1.6) {
+		if ((isFastSwipe || isDistanceSwipe) && isHorizontalSwipe) {
+			// Swipe da bordo sinistro (primi 50px) verso destra -> Apri Tendina
+			if (diffX > 0 && touchStartX <= 50) {
+				navStore.open();
+				touchStartX = 0;
+				touchStartY = 0;
+				return;
+			}
+
 			const currentPath = page.url.pathname;
 			const currentIndex = routeOrder.indexOf(currentPath);
 
 			if (currentIndex !== -1) {
 				if (diffX < 0 && currentIndex < routeOrder.length - 1) {
-					// Swipe left -> Next route
+					// Swipe verso sinistra -> Pagina successiva
 					goto(routeOrder[currentIndex + 1]);
-				} else if (diffX > 0 && currentIndex > 0) {
-					// Swipe right -> Previous route
+				} else if (diffX > 0 && currentIndex > 0 && touchStartX > 50) {
+					// Swipe verso destra (fuori dal bordo sinistro) -> Pagina precedente
 					goto(routeOrder[currentIndex - 1]);
 				}
 			}
