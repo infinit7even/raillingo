@@ -19,15 +19,28 @@ class PwaStore {
 		if (browser) {
 			this.checkStandalone();
 
+			if ((window as any).deferredPwaPrompt) {
+				this.deferredPrompt = (window as any).deferredPwaPrompt;
+			}
+
 			window.addEventListener('beforeinstallprompt', (e: Event) => {
 				e.preventDefault();
+				(window as any).deferredPwaPrompt = e;
 				this.deferredPrompt = e as BeforeInstallPromptEvent;
 				this.notify();
+			});
+
+			window.addEventListener('pwa-prompt-ready', () => {
+				if ((window as any).deferredPwaPrompt) {
+					this.deferredPrompt = (window as any).deferredPwaPrompt;
+					this.notify();
+				}
 			});
 
 			window.addEventListener('appinstalled', () => {
 				this.installed = true;
 				this.deferredPrompt = null;
+				(window as any).deferredPwaPrompt = null;
 				this.notify();
 			});
 		}
@@ -46,11 +59,11 @@ class PwaStore {
 	}
 
 	public get canInstall(): boolean {
-		return !this.standalone && !this.installed && this.deferredPrompt !== null;
+		return !this.standalone && !this.installed && (this.deferredPrompt !== null || (browser && (window as any).deferredPwaPrompt !== null));
 	}
 
 	public get hasDeferredPrompt(): boolean {
-		return this.deferredPrompt !== null;
+		return this.deferredPrompt !== null || (browser && (window as any).deferredPwaPrompt !== null);
 	}
 
 	public subscribe(run: () => void): () => void {
@@ -62,29 +75,21 @@ class PwaStore {
 	}
 
 	public async promptInstall(): Promise<boolean> {
-		if (this.deferredPrompt) {
-			try {
-				await this.deferredPrompt.prompt();
-				const choice = await this.deferredPrompt.userChoice;
-				if (choice.outcome === 'accepted') {
-					this.installed = true;
-					this.deferredPrompt = null;
-					this.notify();
-					return true;
-				}
-			} catch (err) {
-				console.error('Errore durante prompt installazione PWA:', err);
-			}
-			return false;
-		}
+		const prompt = this.deferredPrompt || (browser ? (window as any).deferredPwaPrompt : null);
+		if (!prompt) return false;
 
-		if (browser) {
-			const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
-			if (isIOS) {
-				alert('Per installare Raillingo su iOS:\n1. Tocca l\'icona Condividi (in basso su Safari)\n2. Seleziona "Aggiungi alla schermata Home" 📲');
-				return false;
+		try {
+			await prompt.prompt();
+			const choice = await prompt.userChoice;
+			if (choice.outcome === 'accepted') {
+				this.installed = true;
+				this.deferredPrompt = null;
+				if (browser) (window as any).deferredPwaPrompt = null;
+				this.notify();
+				return true;
 			}
-			alert('Per installare l\'app, premi sul menu del tuo browser (⋮ o tre pallini) e seleziona "Installa app" oppure "Aggiungi a Schermata Home".');
+		} catch (err) {
+			console.error('Errore durante prompt installazione PWA:', err);
 		}
 		return false;
 	}
