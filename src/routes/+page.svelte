@@ -321,6 +321,27 @@
 		box-shadow: 0 6px 20px rgba(88, 204, 2, 0.2);
 	}
 
+	@media (max-width: 640px) {
+		.duo-green-banner {
+			padding: 0.75rem 1rem;
+			border-radius: 16px;
+			border-bottom-width: 3px;
+		}
+
+		.banner-chap {
+			font-size: 0.68rem;
+		}
+
+		.banner-heading {
+			font-size: 1.2rem;
+		}
+
+		.admin-home-btn {
+			font-size: 0.78rem;
+			padding: 0.4rem 0.6rem;
+		}
+	}
+
 	.announcement-banner-box {
 		margin-top: 1rem;
 		background: linear-gradient(135deg, rgba(168, 85, 247, 0.15), rgba(59, 130, 246, 0.15));

@@ -138,26 +138,42 @@
 
 	@media (max-width: 640px) {
 		.page-header-banner {
-			padding: 0.85rem 1rem;
-			margin-top: 0.5rem;
-			margin-bottom: 0.75rem;
-			border-radius: 18px;
-			flex-direction: column;
-			align-items: flex-start;
+			padding: 0.45rem 0.75rem;
+			margin-top: 0.25rem;
+			margin-bottom: 0.5rem;
+			border-radius: 14px;
+			border-bottom-width: 3px;
+			flex-direction: row;
+			align-items: center;
+			justify-content: space-between;
+			gap: 0.5rem;
+		}
+
+		.header-content-group {
+			gap: 0.5rem;
+			align-items: center;
 		}
 
 		.header-icon-img {
-			width: 42px;
-			height: 42px;
+			width: 28px;
+			height: 28px;
+		}
+
+		.header-badge-tag {
+			display: none;
 		}
 
 		.header-title-heading {
-			font-size: 1.35rem;
+			font-size: 1rem;
+			line-height: 1.1;
+		}
+
+		.header-subtitle-text {
+			display: none;
 		}
 
 		.header-actions-slot {
-			width: 100%;
-			justify-content: flex-end;
+			width: auto;
 		}
 	}
 </style>
