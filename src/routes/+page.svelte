@@ -100,6 +100,25 @@
 			</div>
 		</a>
 
+		<!-- 🎯 Widget Missioni Giornaliere (Subito Sotto le Gemme su Mobile) -->
+		<div class="duo-widget duo-card mobile-missions-widget">
+			<div class="widget-header-row">
+				<h3 class="widget-title">Missioni giornaliere</h3>
+				<a href="/missioni" class="widget-link">VEDI TUTTE &gt;</a>
+			</div>
+			<div class="mission-item">
+				<img src="/emoji/high_voltage_3d.png" alt="XP" class="widget-emoji-img" />
+				<div class="mission-info">
+					<span class="mission-desc">Guadagna 10 XP</span>
+					<div class="duo-progress-track">
+						<div class="duo-progress-fill" style="width: {Math.min(100, totalXP * 10)}%"></div>
+					</div>
+					<span class="mission-count">{Math.min(10, totalXP)} / 10</span>
+				</div>
+				<img src="/emoji/package_3d.png" alt="Premio" class="widget-emoji-img" />
+			</div>
+		</div>
+
 		<!-- 💡 Parola del Giorno Card (Cima alla Home) -->
 		{#if wordOfTheDay}
 			<section class="word-of-day-section">
@@ -187,8 +206,8 @@
 				</div>
 			</div>
 		</a>
-		<!-- Widget Missioni Giornaliere -->
-		<div class="duo-widget duo-card">
+		<!-- Widget Missioni Giornaliere (Desktop Only) -->
+		<div class="duo-widget duo-card desktop-missions-widget">
 			<div class="widget-header-row">
 				<h3 class="widget-title">Missioni giornaliere</h3>
 				<a href="/missioni" class="widget-link">VEDI TUTTE &gt;</a>
@@ -495,13 +514,15 @@
 	}
 
 	@media (max-width: 1023px) {
-		.desktop-top-stats {
+		.desktop-top-stats,
+		.desktop-missions-widget {
 			display: none !important;
 		}
 	}
 
 	@media (min-width: 1024px) {
-		.mobile-top-stats {
+		.mobile-top-stats,
+		.mobile-missions-widget {
 			display: none !important;
 			margin: 0 !important;
 		}
