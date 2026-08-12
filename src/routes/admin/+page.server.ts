@@ -17,7 +17,7 @@ export const load: PageServerLoad = async ({ cookies, url }) => {
 	const isAdminUser = user && (user.isAdmin || user.role === 'admin' || String(user.userId).trim() === '691289686093725736');
 
 	if (!isAdminUser) {
-		throw redirect(302, '/login?error=admin_required');
+		throw redirect(302, '/api/auth/login?error=admin_required');
 	}
 
 	const error = url.searchParams.get('error');
