@@ -371,7 +371,7 @@
 	/* 💡 Parola del Giorno Card (Style Duolingo 3D) */
 	.word-of-day-section {
 		width: 100%;
-		margin-bottom: 1rem;
+		margin-bottom: 0;
 	}
 
 	.word-of-day-card {
