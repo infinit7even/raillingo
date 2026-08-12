@@ -9,8 +9,11 @@
 
 	let { data } = $props();
 
-	let cards = $state<Card[]>([]);
-	let wordOfTheDay = $state<Card | null>(null);
+	const initialList = data.initialCards || [];
+	let cards = $state<Card[]>(initialList);
+	let wordOfTheDay = $state<Card | null>(
+		initialList.length > 0 ? initialList[Math.floor(Math.random() * initialList.length)] : null
+	);
 	let isQuickAddOpen = $state(false);
 	let isStandalone = $state(false);
 	let canInstall = $state(false);
@@ -33,9 +36,11 @@
 
 	onMount(() => {
 		const uncards = cardsStore.subscribe((c) => {
-			cards = c;
-			if (c.length > 0 && !wordOfTheDay) {
-				pickRandomWord(c);
+			if (c.length > 0) {
+				cards = c;
+				if (!wordOfTheDay) {
+					pickRandomWord(c);
+				}
 			}
 		});
 		const unstats = statsStore.subscribe((s) => (stats = s));

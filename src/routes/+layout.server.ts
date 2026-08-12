@@ -48,5 +48,13 @@ export const load: LayoutServerLoad = async ({ cookies }) => {
 		}
 	}
 
-	return { user };
+	let initialCards: any[] = [];
+	try {
+		const cardsRaw = await fs.readFile(path.resolve('data/cards.json'), 'utf-8');
+		initialCards = JSON.parse(cardsRaw);
+	} catch {
+		initialCards = [];
+	}
+
+	return { user, initialCards };
 };
