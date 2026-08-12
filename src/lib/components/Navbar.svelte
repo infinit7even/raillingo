@@ -63,7 +63,6 @@
 		{ href: '/quiz', label: 'QUIZ', emoji: '/emoji/star_3d.png' },
 		{ href: '/reels', label: 'REELS', emoji: '/emoji/camera_3d.png' },
 		{ href: '/scrittura', label: 'SCRITTURA', emoji: '/emoji/writing_hand_3d_default.png' },
-		{ href: '/missioni', label: 'MISSIONI', emoji: '/emoji/package_3d.png' },
 		{ href: '/wiki', label: 'WIKI', emoji: '/emoji/books_3d.png' }
 	];
 </script>
@@ -123,62 +122,11 @@
 					<span class="nav-label">{item.label}</span>
 				</a>
 			{/each}
-
-			{#if user && (user.isAdmin || user.role === 'admin')}
-				<button
-					type="button"
-					class="nav-item mobile-add-nav-item"
-					onclick={() => {
-						isQuickAddOpen = true;
-						navStore.close();
-					}}
-					title="Aggiungi Scheda Rapida"
-				>
-					<div class="icon-wrapper add-icon-wrapper">
-						<span class="add-lightning">⚡</span>
-					</div>
-					<span class="nav-label">+ SCHEDA</span>
-				</button>
-			{/if}
 		</div>
 	</div>
 
-	<!-- Actions Bottom Drawer (Theme, Resources & Quick Add Admin Section) -->
+	<!-- Actions Bottom Drawer (Theme + Quick Add Admin Section) -->
 	<div class="sidebar-actions">
-		<!-- Sezione Risorse e Link utili -->
-		<div class="drawer-resources-block">
-			<span class="resources-heading">RISORSE E LINK</span>
-			<div class="resources-links-grid">
-				<a
-					href="https://epod.rfi.it"
-					target="_blank"
-					rel="noopener noreferrer"
-					class="res-link-item"
-					onclick={handleNavClick}
-				>
-					📚 Dispensa RFI ↗
-				</a>
-				<a
-					href="https://ko-fi.com/infinit7even"
-					target="_blank"
-					rel="noopener noreferrer"
-					class="res-link-item kofi-res"
-					onclick={handleNavClick}
-				>
-					<img src="/emoji/sparkles_3d.png" alt="Sostieni" class="res-emoji-icon" />
-					Sostieni il sito ↗
-				</a>
-				<a href="/privacy" class="res-link-item" onclick={handleNavClick}>
-					🔒 Privacy Policy
-				</a>
-				{#if user && (user.isAdmin || user.role === 'admin')}
-					<a href="/admin" class="res-link-item admin-res" onclick={handleNavClick}>
-						🔐 Pannello Admin
-					</a>
-				{/if}
-			</div>
-		</div>
-
 		{#if user && (user.isAdmin || user.role === 'admin')}
 			<button
 				type="button"
@@ -403,20 +351,6 @@
 		white-space: nowrap;
 	}
 
-	.mobile-add-nav-item {
-		color: var(--green-color);
-	}
-
-	.add-lightning {
-		font-size: 1.1rem;
-		line-height: 1;
-	}
-
-	.add-icon-wrapper {
-		background: rgba(88, 204, 2, 0.15);
-		border-radius: 10px;
-	}
-
 	.sidebar-actions {
 		display: flex;
 		flex-direction: column;
@@ -424,66 +358,6 @@
 		width: 100%;
 		padding-top: 0.65rem;
 		border-top: 2px solid var(--border-color);
-	}
-
-	.drawer-resources-block {
-		display: flex;
-		flex-direction: column;
-		gap: 0.4rem;
-		margin-bottom: 0.25rem;
-	}
-
-	.resources-heading {
-		font-family: 'Outfit', sans-serif;
-		font-size: 0.65rem;
-		font-weight: 900;
-		color: var(--accent-color);
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
-	}
-
-	.resources-links-grid {
-		display: flex;
-		flex-direction: column;
-		gap: 0.35rem;
-	}
-
-	.res-link-item {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.4rem;
-		padding: 0.45rem 0.65rem;
-		border-radius: 12px;
-		background: var(--card-bg-subtle);
-		border: 1.5px solid var(--border-color);
-		color: var(--text-color);
-		font-size: 0.78rem;
-		font-weight: 800;
-		text-decoration: none;
-		transition: all 0.15s ease;
-	}
-
-	.res-link-item:hover {
-		background: var(--hover-bg);
-		border-color: var(--accent-color);
-	}
-
-	.kofi-res {
-		background: rgba(255, 94, 91, 0.12);
-		border-color: rgba(255, 94, 91, 0.4);
-		color: #ff5e5b;
-	}
-
-	.admin-res {
-		background: rgba(147, 51, 234, 0.12);
-		border-color: rgba(147, 51, 234, 0.4);
-		color: #a855f7;
-	}
-
-	.res-emoji-icon {
-		width: 16px;
-		height: 16px;
-		object-fit: contain;
 	}
 
 	.desktop-quick-add-btn {
@@ -511,10 +385,6 @@
 		}
 
 		.close-drawer-btn {
-			display: none !important;
-		}
-
-		.mobile-add-nav-item {
 			display: none !important;
 		}
 

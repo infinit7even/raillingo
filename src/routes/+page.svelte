@@ -503,9 +503,19 @@
 		}
 	}
 
+	.duo-main-column {
+		display: flex;
+		flex-direction: column;
+		gap: 0.85rem;
+	}
+
 	.mobile-top-stats {
 		display: flex;
-		margin-bottom: 0.5rem;
+		margin: 0;
+	}
+
+	.mobile-missions-widget {
+		margin: 0;
 	}
 
 	.desktop-top-stats {
