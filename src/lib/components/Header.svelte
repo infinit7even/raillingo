@@ -55,16 +55,6 @@
 					<span class="btn-icon">📲</span>
 					<span class="btn-text">INSTALLA</span>
 				</button>
-			{:else}
-				<a
-					href="/flashcard"
-					class="duo-header-btn ripasso-header-btn"
-					aria-label="Ripasso"
-					title="Ripasso"
-				>
-					<span class="btn-icon">📖</span>
-					<span class="btn-text">RIPASSO</span>
-				</a>
 			{/if}
 
 			<!-- Theme Selector Button -->
@@ -197,7 +187,7 @@
 		border-bottom-width: 1.5px;
 	}
 
-	.install-header-btn, .ripasso-header-btn {
+	.install-header-btn {
 		background: rgba(88, 204, 2, 0.15);
 		border-color: var(--green-color);
 		color: var(--green-color);

@@ -239,13 +239,6 @@
 					<a href="/admin" class="duo-btn duo-btn-purple flex-btn">
 						🔐 PANNELLO ADMIN
 					</a>
-					<button
-						type="button"
-						class="duo-btn duo-btn-green flex-btn quick-add-sidebar-btn"
-						onclick={() => (isQuickAddOpen = true)}
-					>
-						⚡ AGGIUNGI SCHEDA RAPIDA
-					</button>
 				{/if}
 			</div>
 		</div>
