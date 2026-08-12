@@ -48,15 +48,24 @@
 			imageIndexMap[card.id] = (curr + 1) % card.images.length;
 		}
 	}
+	import PageHeader from '$lib/components/PageHeader.svelte';
 </script>
 
 <div class="reels-page-wrapper">
-	<div class="reels-header-overlay">
-		<CategoryFilterBar
-			selectedCategory={selectedCategory}
-			onSelectCategory={(cat) => (selectedCategory = cat)}
-		/>
-	</div>
+	<!-- Page Header standard -->
+	<PageHeader
+		title="Reels Ferroviari"
+		subtitle="Scorri le schede e le immagini in un feed verticale e dinamico."
+		badge="Modalità Reels"
+		icon="/emoji/camera_3d.png"
+		variant="orange"
+	/>
+
+	<!-- Category Filter Bar standard -->
+	<CategoryFilterBar
+		selectedCategory={selectedCategory}
+		onSelectCategory={(cat) => (selectedCategory = cat)}
+	/>
 
 	<div class="reels-feed-container">
 		{#if filteredCards.length > 0}
@@ -163,28 +172,17 @@
 <style>
 	.reels-page-wrapper {
 		width: 100%;
-		height: calc(100vh - 140px);
+		max-width: 600px;
+		margin: 0 auto;
 		display: flex;
 		flex-direction: column;
-		align-items: center;
-		position: relative;
-		overflow: hidden;
-		box-sizing: border-box;
-		gap: 0.5rem;
-	}
-
-	.reels-header-overlay {
-		width: 100%;
-		max-width: 520px;
-		z-index: 50;
-		padding: 0 0.25rem;
-		box-sizing: border-box;
+		gap: 1rem;
 	}
 
 	.reels-feed-container {
 		width: 100%;
-		max-width: 520px;
-		flex: 1;
+		height: 580px;
+		max-height: 70vh;
 		overflow-y: scroll;
 		scroll-snap-type: y mandatory;
 		border-radius: 24px;
@@ -192,7 +190,7 @@
 		border: 2px solid var(--border-color);
 		box-shadow: 0 12px 35px rgba(0, 0, 0, 0.25);
 		position: relative;
-		scrollbar-width: none; /* Hide scrollbar for smooth feel */
+		scrollbar-width: none;
 	}
 
 	.reels-feed-container::-webkit-scrollbar {

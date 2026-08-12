@@ -31,6 +31,7 @@
 			currentIndex = 0;
 		}
 	}
+	import PageHeader from '$lib/components/PageHeader.svelte';
 	import ModeTabs from '$lib/components/ModeTabs.svelte';
 
 	const writingTabs = [
@@ -41,6 +42,15 @@
 </script>
 
 <div class="scrittura-page-container">
+	<!-- Page Header standard -->
+	<PageHeader
+		title="Esercizio di Scrittura Libera"
+		subtitle="Digita l'acronimo, il significato esteso o la spiegazione per fissare la memorizzazione motoria."
+		badge="Modalità Scrittura"
+		icon="/emoji/writing_hand_3d_default.png"
+		variant="blue"
+	/>
+
 	<CategoryFilterBar
 		selectedCategory={selectedCategory}
 		onSelectCategory={(cat) => {

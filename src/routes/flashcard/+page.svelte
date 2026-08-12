@@ -56,6 +56,7 @@
 			statsStore.recordStudySession();
 		}
 	}
+	import PageHeader from '$lib/components/PageHeader.svelte';
 	import ModeTabs from '$lib/components/ModeTabs.svelte';
 
 	const flashcardTabs = [
@@ -66,6 +67,15 @@
 </script>
 
 <div class="ripasso-page-container">
+	<!-- Page Header standard -->
+	<PageHeader
+		title="Ripasso e Flashcard 3D"
+		subtitle="Gira le carte 3D, ascolta la pronuncia audio e allenati con la memoria visiva delle foto."
+		badge="Modalità Ripasso"
+		icon="/emoji/open_book_3d.png"
+		variant="green"
+	/>
+
 	<!-- Category Filter Bar -->
 	<CategoryFilterBar
 		selectedCategory={selectedCategory}
