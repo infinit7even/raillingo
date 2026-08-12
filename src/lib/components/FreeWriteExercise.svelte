@@ -44,8 +44,16 @@
 
 	let similarityScore = $derived.by<number>(() => {
 		if (!submitted || !userInput.trim()) return 0;
-		const target = subMode === 'title-to-desc' ? card.description : card.title;
-		return calculateSimilarity(userInput, target);
+		if (subMode === 'title-to-desc') {
+			const scoreDesc = calculateSimilarity(userInput, card.description);
+			const scoreFull = card.fullName ? calculateSimilarity(userInput, card.fullName) : 0;
+			return Math.max(scoreDesc, scoreFull);
+		} else if (subMode === 'title-to-fullname') {
+			return calculateSimilarity(userInput, card.fullName || card.description);
+		} else if (subMode === 'fullname-to-title') {
+			return calculateSimilarity(userInput, card.title);
+		}
+		return calculateSimilarity(userInput, card.title);
 	});
 
 	function handleSubmit(e?: Event) {
@@ -76,6 +84,10 @@
 				Scrivi Descrizione
 			{:else if subMode === 'desc-to-title'}
 				Scrivi Acronimo
+			{:else if subMode === 'title-to-fullname'}
+				Scrivi Significato Esteso
+			{:else if subMode === 'fullname-to-title'}
+				Scrivi Acronimo da Nome Completo
 			{:else}
 				Scrivi da Foto
 			{/if}
@@ -92,8 +104,21 @@
 	<div class="prompt-card duo-card">
 		{#if subMode === 'title-to-desc'}
 			<span class="label">Acronimo / Titolo:</span>
+			<h2 class="title">
+				{card.title}
+				{#if card.fullName}
+					<span class="sub-title">({card.fullName})</span>
+				{/if}
+			</h2>
+			<p class="instruction">✍️ Scrivi la spiegazione o a cosa serve questo acronimo:</p>
+		{:else if subMode === 'title-to-fullname'}
+			<span class="label">Acronimo:</span>
 			<h2 class="title">{card.title}</h2>
-			<p class="instruction">✍️ Scrivi cosa significa o a cosa serve questo acronimo:</p>
+			<p class="instruction">✍️ Digita il significato esteso dell'acronimo (es. "Impresa Ferroviaria"):</p>
+		{:else if subMode === 'fullname-to-title'}
+			<span class="label">Significato Esteso:</span>
+			<h2 class="title">{card.fullName || card.description}</h2>
+			<p class="instruction">✍️ Digita l'acronimo o sigla breve corrispondente:</p>
 		{:else if subMode === 'desc-to-title'}
 			<span class="label">Descrizione / Funzione:</span>
 			<p class="desc-text">{card.description}</p>
@@ -126,7 +151,7 @@
 				type="text"
 				bind:this={inputEl}
 				bind:value={userInput}
-				placeholder="Digita qui l'acronimo esatto..."
+				placeholder={subMode === 'title-to-fullname' ? "Digita il significato esteso completo..." : "Digita qui l'acronimo esatto..."}
 				class="duo-input input-field"
 				disabled={submitted}
 				onkeydown={handleKeyDown}
@@ -156,9 +181,17 @@
 			<div class="result-header">🎯 Risposta Ufficiale:</div>
 
 			{#if subMode === 'title-to-desc'}
+				{#if card.fullName}
+					<div class="fullname-badge">{card.fullName}</div>
+				{/if}
 				<div class="exact-answer duo-card">{card.description}</div>
 			{:else}
-				<div class="exact-answer duo-card title-highlight">{card.title}</div>
+				<div class="exact-answer duo-card title-highlight">
+					{card.title}
+					{#if card.fullName}
+						<div class="exact-fullname">- {card.fullName}</div>
+					{/if}
+				</div>
 				<div class="exact-sub">{card.description}</div>
 			{/if}
 

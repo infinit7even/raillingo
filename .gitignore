@@ -28,3 +28,6 @@ test-results
 windows fluentui-emoji*
 docker-compose.yml
 
+static/data/*
+static/uploads/*
+static/data/cards.json

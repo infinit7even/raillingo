@@ -9,6 +9,7 @@
 	}>();
 
 	let title = $state('');
+	let fullName = $state('');
 	let description = $state('');
 	let categoryInput = $state('');
 	let selectedCategories = $state<string[]>([]);
@@ -77,6 +78,7 @@
 		try {
 			await cardsStore.addCard({
 				title: title.trim(),
+				fullName: fullName.trim() || undefined,
 				description: description.trim(),
 				category: selectedCategories.length > 0 ? selectedCategories[0] : undefined,
 				categories: selectedCategories.length > 0 ? selectedCategories : undefined,
@@ -94,6 +96,7 @@
 
 	function resetForm() {
 		title = '';
+		fullName = '';
 		description = '';
 		categoryInput = '';
 		selectedCategories = [];
@@ -170,13 +173,24 @@
 
 			<form onsubmit={handleSubmit} class="modal-form">
 				<div class="form-group">
-					<label for="quick-title">Acronimo / Titolo *</label>
+					<label for="quick-title">Acronimo / Sigla *</label>
 					<input
 						id="quick-title"
 						type="text"
 						bind:value={title}
-						placeholder="Es: RFI, SCMT, ETCS..."
+						placeholder="Es: IF, SCMT, ETCS..."
 						required
+						class="duo-input"
+					/>
+				</div>
+
+				<div class="form-group">
+					<label for="quick-fullname">Significato Esteso / Acronimo Completo</label>
+					<input
+						id="quick-fullname"
+						type="text"
+						bind:value={fullName}
+						placeholder="Es: Impresa Ferroviaria, Fascicolo Linea..."
 						class="duo-input"
 					/>
 				</div>

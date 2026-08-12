@@ -86,8 +86,11 @@
 		<!-- Step 1: Title Revealed -->
 		{#if step >= 1}
 			<div class="reveal-section duo-card title-reveal">
-				<span class="section-label">Titolo / Acronimo:</span>
+				<span class="section-label">Acronimo / Titolo:</span>
 				<h2 class="card-title">{card.title}</h2>
+				{#if card.fullName}
+					<div class="fullname-text">{card.fullName}</div>
+				{/if}
 				{#if step === 1}
 					<p class="hint-text">Ora tocca di nuovo per vedere a cosa serve.</p>
 				{/if}
@@ -243,6 +246,14 @@
 		font-weight: 900;
 		color: var(--text-color);
 		margin: 0;
+	}
+
+	.fullname-text {
+		font-size: 1.1rem;
+		font-weight: 800;
+		color: var(--green-color);
+		margin-top: 0.2rem;
+		margin-bottom: 0.4rem;
 	}
 
 	.card-desc {

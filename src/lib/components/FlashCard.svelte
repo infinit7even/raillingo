@@ -39,9 +39,10 @@
 
 	function speakAudio(e: MouseEvent) {
 		e.stopPropagation();
+		const fullText = card.fullName ? `${card.title}, ${card.fullName}` : card.title;
 		const textToRead = flipped
-			? `${card.title}. ${card.description}`
-			: `${card.title}`;
+			? `${fullText}. ${card.description}`
+			: fullText;
 		tts.speak(textToRead);
 		isSpeaking = true;
 	}
@@ -129,6 +130,9 @@
 				<div class="face-content">
 					<div class="back-header">
 						<h3 class="card-title-small">{card.title}</h3>
+						{#if card.fullName}
+							<div class="fullname-banner">{card.fullName}</div>
+						{/if}
 						{#if card.tags && card.tags.length > 0}
 							<div class="tags">
 								{#each card.tags as tag}
@@ -315,6 +319,17 @@
 		font-weight: 900;
 		color: var(--accent-color);
 		margin: 0;
+	}
+
+	.fullname-banner {
+		font-size: 1.15rem;
+		font-weight: 800;
+		color: var(--green-color);
+		background: rgba(34, 197, 94, 0.12);
+		padding: 0.35rem 0.85rem;
+		border-radius: 12px;
+		border: 1.5px solid var(--green-color);
+		margin-top: 0.25rem;
 	}
 
 	.instruction {

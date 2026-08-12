@@ -59,6 +59,7 @@
 				const matchesSearch =
 					!q ||
 					c.title.toLowerCase().includes(q) ||
+					(c.fullName && c.fullName.toLowerCase().includes(q)) ||
 					c.description.toLowerCase().includes(q) ||
 					(c.tags && c.tags.some((t: string) => t.toLowerCase().includes(q))) ||
 					(c.category && c.category.toLowerCase().includes(q)) ||
@@ -103,74 +104,73 @@
 			aria-modal="true"
 			tabindex="-1"
 		>
-			<!-- Header -->
+			<!-- Modal Header -->
 			<div class="modal-header">
-				<div class="header-title-box">
-					<span class="duo-badge">WIKI & CONSULTAZIONE</span>
-					<h2 class="modal-title">🔍 Consulta Acronimi</h2>
+				<div class="modal-title-group">
+					<span class="modal-icon">📚</span>
+					<div>
+						<h2 class="modal-title">Wiki & Dizionario Ferroviario</h2>
+						<p class="modal-subtitle">Indice alfabetico e ricerca rapida in tempo reale</p>
+					</div>
 				</div>
-				<button class="close-btn" onclick={onClose} aria-label="Chiudi modal">✕</button>
+				<button class="close-btn" onclick={onClose} aria-label="Chiudi">✕</button>
 			</div>
 
-			<!-- Search & Filter Controls -->
-			<div class="search-controls">
-				<div class="search-box-wrap">
-					<span class="search-icon">🔍</span>
-					<input
-						type="text"
-						bind:value={searchQuery}
-						placeholder="Cerca acronimo, termine o spiegazione..."
-						class="search-input"
-					/>
-					{#if searchQuery || selectedLetter !== 'ALL' || selectedCategory !== 'ALL'}
-						<button class="clear-all-btn" onclick={clearFilters} title="Resetta filtri">
-							✕ Reset
-						</button>
-					{/if}
-				</div>
-
-				<!-- Category Chips Scroll (Hidden Native Scrollbar) -->
-				{#if categories.length > 0}
-					<div class="chips-scroll-container">
-						<button
-							class="chip-btn"
-							class:active={selectedCategory === 'ALL'}
-							onclick={() => (selectedCategory = 'ALL')}
-						>
-							Tutte ({cards.length})
-						</button>
-						{#each categories as cat}
-							<button
-								class="chip-btn"
-								class:active={selectedCategory === cat}
-								onclick={() => (selectedCategory = cat)}
-							>
-								{cat}
-							</button>
-						{/each}
-					</div>
+			<!-- Search Input Box -->
+			<div class="search-box">
+				<span class="search-icon">🔍</span>
+				<input
+					type="text"
+					bind:value={searchQuery}
+					placeholder="Cerca per acronimo, significato o parola chiave..."
+					class="duo-input search-input"
+				/>
+				{#if searchQuery}
+					<button class="clear-input-btn" onclick={() => (searchQuery = '')}>✕</button>
 				{/if}
+			</div>
 
-				<!-- Alphabetical Filter Bar (Hidden Native Scrollbar) -->
-				<div class="alphabet-scroll-container">
+			<!-- Alphabetical Filter Bar -->
+			<div class="alphabet-bar">
+				<button
+					class="letter-btn"
+					class:active={selectedLetter === 'ALL'}
+					onclick={() => (selectedLetter = 'ALL')}
+				>
+					TUTTI
+				</button>
+				{#each availableLetters as letter}
 					<button
 						class="letter-btn"
-						class:active={selectedLetter === 'ALL'}
-						onclick={() => (selectedLetter = 'ALL')}
+						class:active={selectedLetter === letter}
+						onclick={() => (selectedLetter = letter)}
 					>
-						TUTTI
+						{letter}
 					</button>
-					{#each availableLetters as letter}
+				{/each}
+			</div>
+
+			<!-- Categories Filter Bar -->
+			{#if categories.length > 0}
+				<div class="categories-bar">
+					<button
+						class="category-btn"
+						class:active={selectedCategory === 'ALL'}
+						onclick={() => (selectedCategory = 'ALL')}
+					>
+						Tutte le categorie
+					</button>
+					{#each categories as cat}
 						<button
-							class="letter-btn"
-							class:active={selectedLetter === letter}
-							onclick={() => (selectedLetter = letter)}
+							class="category-btn"
+							class:active={selectedCategory === cat}
+							onclick={() => (selectedCategory = cat)}
 						>
-							{letter}
+							{cat}
 						</button>
 					{/each}
 				</div>
-			</div>
+			{/if}
 
 			<!-- Results Meta Counter -->
 			<div class="results-meta-row">
@@ -189,6 +189,9 @@
 						<button class="card-header-btn" onclick={() => toggleExpand(card.id)}>
 							<div class="title-group">
 								<h3 class="card-title">{card.title}</h3>
+								{#if card.fullName}
+									<span class="fullname-pill">{card.fullName}</span>
+								{/if}
 								{#if cardCategories.length > 0}
 									<div class="categories-row">
 										{#each cardCategories as cat}
@@ -315,13 +318,7 @@
 		transform: scale(1.08);
 	}
 
-	.search-controls {
-		display: flex;
-		flex-direction: column;
-		gap: 0.6rem;
-	}
-
-	.search-box-wrap {
+	.search-box {
 		position: relative;
 		display: flex;
 		align-items: center;
@@ -353,7 +350,7 @@
 		outline: none;
 	}
 
-	.clear-all-btn {
+	.clear-input-btn {
 		position: absolute;
 		right: 0.6rem;
 		background: var(--card-bg);
@@ -364,57 +361,6 @@
 		padding: 0.25rem 0.55rem;
 		border-radius: 8px;
 		cursor: pointer;
-	}
-
-	/* Hidden Scrollbar Category Chips */
-	.chips-scroll-container {
-		display: flex;
-		gap: 0.4rem;
-		overflow-x: auto;
-		padding: 0.15rem 0;
-		scrollbar-width: none;
-		-ms-overflow-style: none;
-	}
-
-	.chips-scroll-container::-webkit-scrollbar {
-		display: none;
-		width: 0;
-		height: 0;
-	}
-
-	.chip-btn {
-		white-space: nowrap;
-		font-size: 0.75rem;
-		font-weight: 800;
-		padding: 0.35rem 0.7rem;
-		border-radius: 10px;
-		border: 1.5px solid var(--border-color);
-		background: var(--card-bg-subtle);
-		color: var(--text-muted);
-		cursor: pointer;
-		transition: all 0.15s ease;
-	}
-
-	.chip-btn.active {
-		background: var(--accent-light-bg);
-		color: var(--accent-color);
-		border-color: var(--accent-color);
-	}
-
-	/* Hidden Scrollbar Alphabet Bar */
-	.alphabet-scroll-container {
-		display: flex;
-		gap: 0.25rem;
-		overflow-x: auto;
-		padding: 0.15rem 0;
-		scrollbar-width: none;
-		-ms-overflow-style: none;
-	}
-
-	.alphabet-scroll-container::-webkit-scrollbar {
-		display: none;
-		width: 0;
-		height: 0;
 	}
 
 	.letter-btn {
@@ -489,6 +435,16 @@
 		font-weight: 900;
 		color: var(--text-color);
 		margin: 0;
+	}
+
+	.fullname-pill {
+		font-size: 0.75rem;
+		font-weight: 800;
+		padding: 0.15rem 0.5rem;
+		border-radius: 6px;
+		background: rgba(34, 197, 94, 0.15);
+		color: var(--green-color);
+		border: 1px solid var(--green-color);
 	}
 
 	.categories-row {

@@ -50,6 +50,7 @@
 				const matchesSearch =
 					!q ||
 					c.title.toLowerCase().includes(q) ||
+					(c.fullName && c.fullName.toLowerCase().includes(q)) ||
 					c.description.toLowerCase().includes(q) ||
 					(c.tags && c.tags.some((t) => t.toLowerCase().includes(q))) ||
 					(c.category && c.category.toLowerCase().includes(q));
@@ -132,6 +133,9 @@
 					<button class="compact-card-header" onclick={() => toggleCardExpand(card.id)}>
 						<div class="title-row">
 							<h3 class="card-title">{card.title}</h3>
+							{#if card.fullName}
+								<span class="fullname-pill">{card.fullName}</span>
+							{/if}
 							{#if card.category}
 								<span class="cat-badge">{card.category}</span>
 							{/if}
@@ -309,6 +313,16 @@
 		font-weight: 900;
 		color: var(--text-color);
 		margin: 0;
+	}
+
+	.fullname-pill {
+		font-size: 0.8rem;
+		font-weight: 800;
+		padding: 0.15rem 0.55rem;
+		border-radius: 6px;
+		background: rgba(34, 197, 94, 0.15);
+		color: var(--green-color);
+		border: 1px solid var(--green-color);
 	}
 
 	.cat-badge {

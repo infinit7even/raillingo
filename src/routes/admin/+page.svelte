@@ -13,6 +13,7 @@
 	// Form state for creating / editing card
 	let editingCardId = $state<string | null>(null);
 	let title = $state('');
+	let fullName = $state('');
 	let description = $state('');
 	let category = $state('');
 	let images = $state<string[]>([]);
@@ -55,6 +56,7 @@
 	function resetForm() {
 		editingCardId = null;
 		title = '';
+		fullName = '';
 		description = '';
 		category = '';
 		images = [];
@@ -64,6 +66,7 @@
 	function startEdit(card: Card) {
 		editingCardId = card.id;
 		title = card.title;
+		fullName = card.fullName || '';
 		description = card.description;
 		const cats = card.categories && card.categories.length > 0 ? card.categories : card.category ? [card.category] : [];
 		category = cats.join(', ');
@@ -142,6 +145,7 @@
 				await cardsStore.updateCard({
 					...existing,
 					title: title.trim(),
+					fullName: fullName.trim() || undefined,
 					description: description.trim(),
 					category: parsedCategories[0] || undefined,
 					categories: parsedCategories.length > 0 ? parsedCategories : undefined,
@@ -151,6 +155,7 @@
 		} else {
 			await cardsStore.addCard({
 				title: title.trim(),
+				fullName: fullName.trim() || undefined,
 				description: description.trim(),
 				category: parsedCategories[0] || undefined,
 				categories: parsedCategories.length > 0 ? parsedCategories : undefined,
@@ -182,6 +187,7 @@
 			(c) =>
 				!searchQuery ||
 				c.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+				(c.fullName && c.fullName.toLowerCase().includes(searchQuery.toLowerCase())) ||
 				c.description.toLowerCase().includes(searchQuery.toLowerCase())
 		)
 	);
@@ -268,18 +274,29 @@
 
 				<div class="form-grid">
 					<div class="form-group">
-						<label for="card-title">Acronimo / Titolo *</label>
+						<label for="card-title">Acronimo / Sigla *</label>
 						<input
 							id="card-title"
 							type="text"
 							bind:value={title}
-							placeholder="Es: RFI, SCMT, ETCS..."
+							placeholder="Es: IF, SCMT, ETCS..."
 							required
 							class="duo-input form-input"
 						/>
 					</div>
 
 					<div class="form-group">
+						<label for="card-fullname">Significato Esteso / Acronimo Completo</label>
+						<input
+							id="card-fullname"
+							type="text"
+							bind:value={fullName}
+							placeholder="Es: Impresa Ferroviaria, Fascicolo Linea..."
+							class="duo-input form-input"
+						/>
+					</div>
+
+					<div class="form-group full-width">
 						<label for="card-cat">Categoria ({existingCategories.length} esistenti)</label>
 						<input
 							id="card-cat"
@@ -379,6 +396,9 @@
 							<div class="card-main-info">
 								<div class="item-title-row">
 									<h3 class="card-item-title">{card.title}</h3>
+									{#if card.fullName}
+										<span class="fullname-badge">{card.fullName}</span>
+									{/if}
 									{#if card.category}
 										<span class="cat-pill">{card.category}</span>
 									{/if}
@@ -771,6 +791,16 @@
 		font-weight: 800;
 		color: var(--accent-color);
 		margin: 0;
+	}
+
+	.fullname-badge {
+		font-size: 0.8rem;
+		font-weight: 800;
+		color: var(--accent-color);
+		background: var(--accent-light-bg);
+		padding: 0.2rem 0.6rem;
+		border-radius: 8px;
+		border: 1px solid var(--accent-color);
 	}
 
 	.cat-pill, .img-count-pill {

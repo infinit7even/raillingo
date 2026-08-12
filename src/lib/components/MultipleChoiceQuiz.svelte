@@ -16,10 +16,14 @@
 		isCorrect: boolean;
 	}
 
+	type QuizMode = 'meaning' | 'acronym' | 'description';
+
 	let options = $state<QuizOption[]>([]);
 	let selectedOptionId = $state<string | null>(null);
 	let wrongAttempts = $state<Set<string>>(new Set());
 	let isSolved = $state(false);
+	let quizMode = $state<QuizMode>('description');
+	let questionTitle = $state('');
 
 	$effect(() => {
 		generateOptions();
@@ -29,22 +33,68 @@
 	});
 
 	function generateOptions() {
-		const correct: QuizOption = {
-			id: targetCard.id,
-			text: targetCard.description,
-			isCorrect: true
-		};
+		// Decide quiz mode based on whether targetCard has fullName
+		const availableModes: QuizMode[] = ['description'];
+		if (targetCard.fullName) {
+			availableModes.push('meaning', 'acronym');
+		}
+
+		// Pick random mode or alternate
+		const mode = availableModes[Math.floor(Math.random() * availableModes.length)];
+		quizMode = mode;
 
 		const otherCards = allCards.filter((c: Card) => c.id !== targetCard.id);
 		const shuffledOthers = [...otherCards].sort(() => 0.5 - Math.random());
-		const distractors: QuizOption[] = shuffledOthers.slice(0, 4).map((c: Card) => ({
-			id: c.id,
-			text: c.description,
-			isCorrect: false
-		}));
 
-		const combined = [correct, ...distractors].sort(() => 0.5 - Math.random());
-		options = combined;
+		if (mode === 'meaning') {
+			questionTitle = `Cosa significa l'acronimo "${targetCard.title}"?`;
+			const correct: QuizOption = {
+				id: targetCard.id,
+				text: targetCard.fullName!,
+				isCorrect: true
+			};
+			const distractors: QuizOption[] = shuffledOthers
+				.slice(0, 4)
+				.map((c: Card) => ({
+					id: c.id,
+					text: c.fullName || c.description,
+					isCorrect: false
+				}));
+			options = [correct, ...distractors].sort(() => 0.5 - Math.random());
+		} else if (mode === 'acronym') {
+			questionTitle = `Qual è l'acronimo di "${targetCard.fullName || targetCard.title}"?`;
+			const correct: QuizOption = {
+				id: targetCard.id,
+				text: targetCard.title,
+				isCorrect: true
+			};
+			const distractors: QuizOption[] = shuffledOthers
+				.slice(0, 4)
+				.map((c: Card) => ({
+					id: c.id,
+					text: c.title,
+					isCorrect: false
+				}));
+			options = [correct, ...distractors].sort(() => 0.5 - Math.random());
+		} else {
+			// Mode description
+			const termLabel = targetCard.fullName ? `${targetCard.title} (${targetCard.fullName})` : targetCard.title;
+			questionTitle = `Che cos'è "${termLabel}"?`;
+
+			const correct: QuizOption = {
+				id: targetCard.id,
+				text: targetCard.description,
+				isCorrect: true
+			};
+			const distractors: QuizOption[] = shuffledOthers
+				.slice(0, 4)
+				.map((c: Card) => ({
+					id: c.id,
+					text: c.description,
+					isCorrect: false
+				}));
+			options = [correct, ...distractors].sort(() => 0.5 - Math.random());
+		}
 	}
 
 	function handleOptionClick(opt: QuizOption) {
@@ -76,7 +126,7 @@
 	<!-- Question Box -->
 	<div class="question-card duo-card">
 		<span class="question-label">Domanda:</span>
-		<h2 class="question-title">Che cos'è <span>"{targetCard.title}"</span>?</h2>
+		<h2 class="question-title">{questionTitle}</h2>
 	</div>
 
 	<!-- 5 Choice Options with 3D Duolingo Buttons -->
@@ -177,10 +227,6 @@
 		font-weight: 900;
 		margin: 0;
 		color: var(--text-color);
-	}
-
-	.question-title span {
-		color: var(--accent-color);
 	}
 
 	.options-list {

@@ -36,7 +36,8 @@
 	function speakAudio(e: MouseEvent, card: Card) {
 		e.stopPropagation();
 		const isFlipped = flippedMap[card.id];
-		const text = isFlipped ? `${card.title}. ${card.description}` : card.title;
+		const fullText = card.fullName ? `${card.title}, ${card.fullName}` : card.title;
+		const text = isFlipped ? `${fullText}. ${card.description}` : fullText;
 		tts.speak(text);
 	}
 
@@ -97,6 +98,9 @@
 
 								<div class="front-content">
 									<h1 class="card-title">{card.title}</h1>
+									{#if card.fullName}
+										<div class="reel-fullname">{card.fullName}</div>
+									{/if}
 									
 									<div class="tap-flip-hint">
 										<span>👇 Tocca per scoprire la descrizione</span>
@@ -109,7 +113,11 @@
 								<div class="back-content">
 									<div class="back-header">
 										<h2 class="card-title-small">{card.title}</h2>
-										<span class="back-badge">Significato</span>
+										{#if card.fullName}
+											<span class="back-badge">{card.fullName}</span>
+										{:else}
+											<span class="back-badge">Significato</span>
+										{/if}
 									</div>
 
 									<div class="description-box">
@@ -324,6 +332,14 @@
 		margin: 0;
 		line-height: 1.1;
 		text-shadow: 0 4px 16px rgba(0, 0, 0, 0.8);
+	}
+
+	.reel-fullname {
+		font-size: 1.3rem;
+		font-weight: 800;
+		color: #4ade80;
+		margin-top: -0.25rem;
+		text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
 	}
 
 	.tap-flip-hint {

@@ -1,171 +1,246 @@
 [
   {
-    "title": "wefewewf",
-    "description": "fwefew",
-    "images": [
-      "/uploads/img-1785747305775-jds98.jpg"
-    ],
-    "id": "card-1785747307521-bqqi4",
-    "createdAt": "2026-08-03T08:55:07.521Z",
-    "updatedAt": "2026-08-03T08:55:07.521Z"
+    "title": "SKT",
+    "fullName": "Scheda Treno",
+    "description": "Scheda treno allegata ai documenti di scorta",
+    "id": "card-1786559883265-18tcx",
+    "createdAt": "2026-08-12T18:38:03.265Z",
+    "updatedAt": "2026-08-12T18:38:03.265Z"
   },
   {
-    "title": "SCMT",
-    "description": "Sistema controllo marcia treno, si occupa della circolazione dei treni",
-    "id": "card-1785746275834-xv6ho",
-    "createdAt": "2026-08-03T08:37:55.834Z",
-    "updatedAt": "2026-08-03T08:37:55.834Z"
+    "title": "FL",
+    "fullName": "Fascicolo Linea",
+    "description": "Fascicolo contenente i dettagli tecnici e normativi della linea ferroviaria",
+    "category": "acronimo",
+    "categories": [
+      "acronimo"
+    ],
+    "id": "card-1786559876149-ov3d1",
+    "createdAt": "2026-08-12T18:37:56.149Z",
+    "updatedAt": "2026-08-12T18:37:56.149Z"
   },
   {
-    "title": "m42",
-    "description": "treni effettivi",
-    "id": "card-1785744765701-g9s6r",
-    "createdAt": "2026-08-03T08:12:45.701Z",
-    "updatedAt": "2026-08-03T08:12:45.701Z"
+    "title": "FO",
+    "fullName": "Fascicolo Orario",
+    "description": "Documento contenente la marcia e gli orari ufficiali dei treni",
+    "id": "card-1786559864685-mhbxm",
+    "createdAt": "2026-08-12T18:37:44.685Z",
+    "updatedAt": "2026-08-12T18:37:44.685Z"
   },
   {
-    "title": "M53",
-    "description": "Prospetto treni ordinari",
-    "id": "card-1785744481756-duu8j",
-    "createdAt": "2026-08-03T08:08:01.756Z",
-    "updatedAt": "2026-08-03T08:08:40.305Z",
-    "category": "circolazione"
+    "title": "SGS",
+    "fullName": "Sistemi di Gestione della Sicurezza",
+    "description": "Sistemi e procedure organizzative per la gestione della sicurezza dell'esercizio ferroviario",
+    "category": "acronimo",
+    "categories": [
+      "acronimo"
+    ],
+    "id": "card-1786559784091-6s3p2",
+    "createdAt": "2026-08-12T18:36:24.091Z",
+    "updatedAt": "2026-08-12T18:36:24.091Z"
   },
   {
-    "title": "Test",
-    "description": "Erge per godere",
-    "category": "Categoriosa",
-    "tags": [
-      "Ciao",
-      "ciao"
+    "title": "GI",
+    "fullName": "Gestore dell'Infrastruttura",
+    "description": "Soggetto responsabile della realizzazione, gestione e manutenzione dell'infrastruttura ferroviaria",
+    "category": "acronimo",
+    "categories": [
+      "acronimo"
     ],
-    "images": [
-      "/uploads/img-1785692507652-mp4bg.webp"
-    ],
-    "id": "card-1785692547577-pa1ub",
-    "createdAt": "2026-08-02T17:42:27.566Z",
-    "updatedAt": "2026-08-02T17:42:27.566Z"
+    "id": "card-1786559734036-ha99d",
+    "createdAt": "2026-08-12T18:35:34.036Z",
+    "updatedAt": "2026-08-12T18:35:34.036Z"
   },
   {
-    "id": "rfi-001",
-    "title": "RFI",
-    "description": "Rete Ferroviaria Italiana - Società del Gruppo Ferrovie dello Stato Italiane responsabile della gestione dell'infrastruttura ferroviaria nazionale, compresi binari, stazioni, impianti di segnalamento e sicurezza.",
-    "category": "Infrastruttura",
-    "tags": [
-      "Gestore",
-      "Infrastruttura",
-      "FS"
+    "title": "ANSFISA",
+    "fullName": "Agenzia Nazionale per la Sicurezza delle Ferrovie e delle Infrastrutture Stradali e Autostradali",
+    "description": "L'Agenzia Nazionale per la Sicurezza delle Ferrovie e delle Infrastrutture Stradali e Autostradali",
+    "category": "acronimo",
+    "categories": [
+      "acronimo"
     ],
-    "images": [
-      "https://images.unsplash.com/photo-1541427468627-a89a96e5ca1d?auto=format&fit=crop&w=800&q=80"
-    ],
-    "createdAt": "2026-08-02T10:00:00Z",
-    "updatedAt": "2026-08-02T10:00:00Z"
+    "id": "card-1786559709783-lmh88",
+    "createdAt": "2026-08-12T18:35:09.783Z",
+    "updatedAt": "2026-08-12T18:35:09.783Z"
   },
   {
-    "id": "scmt-002",
-    "title": "SCMT",
-    "description": "Sistema di Controllo Marcia Treno - Sistema di sicurezza della ferrovia italiana che supervisiona la velocità del treno in funzione del segnalamento e del rispetto del blocco, azionando la frenatura d'emergenza in caso di superamento dei limiti permessi.",
-    "category": "Segnalamento",
-    "tags": [
-      "Sicurezza",
-      "Bordo",
-      "Sotto-sistema"
+    "title": "CdS",
+    "fullName": "Certificato di Sicurezza Unico",
+    "description": "Permette all'Impresa Ferroviaria di operare in uno o più Stati membri dell'Unione Europea",
+    "category": "acronimo",
+    "categories": [
+      "acronimo"
     ],
-    "images": [
-      "https://images.unsplash.com/photo-1474487548417-781cb71495f3?auto=format&fit=crop&w=800&q=80"
-    ],
-    "createdAt": "2026-08-02T10:00:00Z",
-    "updatedAt": "2026-08-02T10:00:00Z"
+    "id": "card-1786559628398-wn7ql",
+    "createdAt": "2026-08-12T18:33:48.398Z",
+    "updatedAt": "2026-08-12T18:33:48.398Z"
   },
   {
-    "id": "etcs-003",
-    "title": "ETCS",
-    "description": "European Train Control System - Sistema europeo di controllo della marcia dei treni che fa parte dell'ERTMS. Garantisce l'interoperabilità transfrontaliera fornendo informazioni e protezione continua in cabina di guida.",
-    "category": "Segnalamento",
-    "tags": [
-      "ERTMS",
-      "Interoperabilità",
-      "Europa"
+    "title": "ERA",
+    "fullName": "European Union Agency for Railways",
+    "description": "Per poter esercitare la propria attività l’Impresa Ferroviaria deve richiedere ed ottenere dall’Agenzia Ferroviaria Europea il Certificato di Sicurezza",
+    "category": "acronimo",
+    "categories": [
+      "acronimo"
     ],
-    "images": [
-      "https://images.unsplash.com/photo-1515165562839-9784018e00bf?auto=format&fit=crop&w=800&q=80"
-    ],
-    "createdAt": "2026-08-02T10:00:00Z",
-    "updatedAt": "2026-08-02T10:00:00Z"
+    "id": "card-1786559611725-evntx",
+    "createdAt": "2026-08-12T18:33:31.725Z",
+    "updatedAt": "2026-08-12T18:33:54.262Z"
   },
   {
-    "id": "dco-004",
-    "title": "DCO",
-    "description": "Dirigente Centrale Operativo - La figura professionale dell'esercizio ferroviario che regola la circolazione dei treni su una determinata linea o nodo mediante apparati di comando a distanza (CTC/SCC).",
-    "category": "Esercizio",
-    "tags": [
-      "Regolazione",
-      "Movimento",
-      "Personale"
+    "title": "ADS",
+    "fullName": "Autorizzazione di Sicurezza",
+    "description": "Per poter gestire un'infrastruttura ferroviaria il GI deve ottenere dall'ANSFISA l'Autorizzazione di Sicurezza",
+    "category": "acronimo",
+    "categories": [
+      "acronimo"
     ],
-    "images": [],
-    "createdAt": "2026-08-02T10:00:00Z",
-    "updatedAt": "2026-08-02T10:00:00Z"
+    "id": "card-1786559601706-0ha5r",
+    "createdAt": "2026-08-12T18:33:21.706Z",
+    "updatedAt": "2026-08-12T18:34:07.258Z"
   },
   {
-    "id": "is-005",
-    "title": "IS",
-    "description": "Impianti di Segnalamento (o Istruttore di Segnalamento) - Insieme di apparati elettrici, elettronici o meccanici (es. Posti di Blocco, Deviatoi, Segnali a luci) che regolano il distanziamento in sicurezza dei treni.",
-    "category": "Segnalamento",
-    "tags": [
-      "Impianti",
-      "Apparati",
-      "Sicurezza"
+    "title": "A.R.T.",
+    "fullName": "Autorità di Regolazione dei Trasporti",
+    "description": "Autorità di Regolazione dei Trasporti indipendente",
+    "category": "acronimo",
+    "categories": [
+      "acronimo"
     ],
-    "images": [
-      "https://images.unsplash.com/photo-1596838132731-3301c3fd4317?auto=format&fit=crop&w=800&q=80"
-    ],
-    "createdAt": "2026-08-02T10:00:00Z",
-    "updatedAt": "2026-08-02T10:00:00Z"
+    "id": "card-1786559581377-dvi1z",
+    "createdAt": "2026-08-12T18:33:01.377Z",
+    "updatedAt": "2026-08-12T18:33:01.377Z"
   },
   {
-    "id": "pl-006",
-    "title": "PL",
-    "description": "Passaggio a Livello - Intersezione a raso tra una linea ferroviaria e una strada o percorso pedonale, protetto con barriere, semibarriere o segnalazione ottico-acustica.",
-    "category": "Infrastruttura",
-    "tags": [
-      "Incrocio",
-      "Barriere",
-      "Sicurezza"
+    "title": "M.I.T.",
+    "fullName": "Ministero delle Infrastrutture e dei Trasporti",
+    "description": "Ministero delle Infrastrutture e dei Trasporti italiano",
+    "category": "acronimo",
+    "categories": [
+      "acronimo"
     ],
-    "images": [
-      "https://images.unsplash.com/photo-1563720223185-11003d516935?auto=format&fit=crop&w=800&q=80"
-    ],
-    "createdAt": "2026-08-02T10:00:00Z",
-    "updatedAt": "2026-08-02T10:00:00Z"
+    "id": "card-1786559557451-9pqhe",
+    "createdAt": "2026-08-12T18:32:37.451Z",
+    "updatedAt": "2026-08-12T18:32:37.451Z"
   },
   {
-    "id": "ssc-007",
-    "title": "SSC",
-    "description": "Sistema Supporto Condotta - Sistema di protezione della marcia dei treni diffuso sulle linee secondarie o a scarso traffico della rete ferroviaria italiana, complementare al SCMT.",
-    "category": "Segnalamento",
-    "tags": [
-      "Sicurezza",
-      "Linee Secondarie",
-      "Bordo"
+    "title": "Compito ANSFISA",
+    "fullName": "Competenze e Compiti ANSFISA",
+    "description": "Individuazione dei Soggetti con compiti di sicurezza \n- Compiti dei gestori dell’infrastruttura e delle imprese ferroviarie \n-Norme tecniche e Standard di sicurezza \n-Certificato di sicurezza e Autorizzazione di sicurezza \n-Autorizzazione di messa in servizio di sottosistemi strutturali, applicazioni generiche e veicoli",
+    "category": "definizioni",
+    "categories": [
+      "definizioni"
     ],
-    "images": [],
-    "createdAt": "2026-08-02T10:00:00Z",
-    "updatedAt": "2026-08-02T10:00:00Z"
+    "id": "card-1786559497829-j3a5w",
+    "createdAt": "2026-08-12T18:31:37.829Z",
+    "updatedAt": "2026-08-12T18:31:59.811Z"
   },
   {
-    "id": "ctc-008",
-    "title": "CTC",
-    "description": "Controllo Traffico Centralizzato - Apparato che consente al DCO di telecomandare i posti di servizio e gestire la circolazione di una linea da un unico centro operativo.",
-    "category": "Esercizio",
-    "tags": [
-      "Telecomando",
-      "Posto Centrale",
-      "Automazione"
+    "title": "IF",
+    "fullName": "Impresa Ferroviaria",
+    "description": "Organizzazione societaria con riferimento al settore tecnico e commerciale del trasporto ferroviario",
+    "category": "acronimo",
+    "categories": [
+      "acronimo"
     ],
-    "images": [],
-    "createdAt": "2026-08-02T10:00:00Z",
-    "updatedAt": "2026-08-02T10:00:00Z"
+    "id": "card-1786559408884-lwsu5",
+    "createdAt": "2026-08-12T18:30:08.884Z",
+    "updatedAt": "2026-08-12T18:34:37.394Z"
+  },
+  {
+    "title": "MI",
+    "fullName": "Manutenzione dell’Infrastruttura",
+    "description": "Operazioni tecniche per il mantenimento dell'efficienza e sicurezza delle linee",
+    "category": "acronimo",
+    "categories": [
+      "acronimo"
+    ],
+    "id": "card-1786559234656-2x7ys",
+    "createdAt": "2026-08-12T18:27:14.656Z",
+    "updatedAt": "2026-08-12T18:27:14.656Z"
+  },
+  {
+    "title": "MV",
+    "fullName": "Manutenzione dei Veicoli",
+    "description": "Manutenzione periodica e correttiva del materiale rotabile",
+    "category": "acronimo",
+    "categories": [
+      "acronimo"
+    ],
+    "id": "card-1786559209206-5ya82",
+    "createdAt": "2026-08-12T18:26:49.206Z",
+    "updatedAt": "2026-08-12T18:26:49.206Z"
+  },
+  {
+    "title": "GC",
+    "fullName": "Gestione della Circolazione",
+    "description": "Coordinamento e controllo dei movimenti dei treni sulla rete ferroviaria",
+    "category": "acronimo",
+    "categories": [
+      "acronimo"
+    ],
+    "id": "card-1786559199835-z9kz3",
+    "createdAt": "2026-08-12T18:26:39.835Z",
+    "updatedAt": "2026-08-12T18:26:39.835Z"
+  },
+  {
+    "title": "AdT",
+    "fullName": "Accompagnamento dei Treni",
+    "description": "Servizio di bordo per la sicurezza dei passeggeri e della circolazione",
+    "category": "acronimo",
+    "categories": [
+      "acronimo"
+    ],
+    "id": "card-1786559193823-dswbf",
+    "createdAt": "2026-08-12T18:26:33.823Z",
+    "updatedAt": "2026-08-12T18:26:33.823Z"
+  },
+  {
+    "title": "PdT",
+    "fullName": "Preparazione dei Treni",
+    "description": "Operazioni preliminari alla partenza del convoglio ferroviario",
+    "category": "acronimo",
+    "categories": [
+      "acronimo"
+    ],
+    "id": "card-1786559184668-5rndo",
+    "createdAt": "2026-08-12T18:26:24.668Z",
+    "updatedAt": "2026-08-12T18:26:24.668Z"
+  },
+  {
+    "title": "C",
+    "fullName": "Condotta dei Treni",
+    "description": "Guida e manovra dei mezzi di trazione ferroviaria",
+    "category": "acronimo",
+    "categories": [
+      "acronimo"
+    ],
+    "id": "card-1786559144539-6na3p",
+    "createdAt": "2026-08-12T18:25:44.539Z",
+    "updatedAt": "2026-08-12T18:25:44.539Z"
+  },
+  {
+    "title": "DEV",
+    "fullName": "Deviatore",
+    "description": "Agente che, a sussidio o alle dipendenze del Regolatore della Circolazione, svolge le operazioni di manovra degli apparati di sicurezza e segnalamento",
+    "id": "card-1786559090493-5gsbh",
+    "createdAt": "2026-08-12T18:24:50.493Z",
+    "updatedAt": "2026-08-12T18:25:45.990Z",
+    "category": "figura",
+    "categories": [
+      "figura"
+    ]
+  },
+  {
+    "title": "RdC",
+    "fullName": "Regolatore della Circolazione",
+    "description": "Agente che svolge le operazioni necessarie a garantire la gestione della circolazione ferroviaria e l'autorizzazione al movimento convogli",
+    "category": "figura",
+    "categories": [
+      "figura"
+    ],
+    "id": "card-1786558997237-2g6m4",
+    "createdAt": "2026-08-12T18:23:17.237Z",
+    "updatedAt": "2026-08-12T18:24:55.615Z"
   }
 ]
