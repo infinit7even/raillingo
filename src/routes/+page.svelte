@@ -221,6 +221,10 @@
 					>
 						📲 INSTALLA L'APP
 					</button>
+				{:else}
+					<a href="/flashcard" class="duo-btn duo-btn-green flex-btn">
+						📖 RIPASSO
+					</a>
 				{/if}
 
 				<a href="https://epod.rfi.it" target="_blank" rel="noopener noreferrer" class="duo-btn duo-btn-blue flex-btn">
