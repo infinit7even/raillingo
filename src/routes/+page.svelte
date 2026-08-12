@@ -204,7 +204,7 @@
 		<div class="duo-widget duo-card admin-widget">
 			<h3 class="widget-title">Risorse e Link</h3>
 			<div class="profile-actions">
-				{#if !isStandalone}
+				{#if canInstall}
 					<button
 						type="button"
 						class="duo-btn duo-btn-green flex-btn install-app-btn"
