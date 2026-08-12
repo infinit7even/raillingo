@@ -255,21 +255,22 @@
 
 		.duo-navigation {
 			position: fixed;
-			top: 0;
-			bottom: 0;
-			left: 0;
+			top: 0.65rem;
+			bottom: 0.65rem;
+			left: 0.65rem;
 			right: auto;
-			width: 240px;
-			border: none;
-			border-radius: 0;
-			border-right: 2px solid var(--border-color);
-			padding: 1.75rem 1.25rem 2rem 1.25rem;
+			width: 230px;
+			border: 2px solid var(--border-color);
+			border-bottom: 4px solid var(--border-depth-color);
+			border-radius: 24px;
+			padding: 1.25rem 1rem;
 			display: flex;
 			flex-direction: column;
 			justify-content: space-between;
-			gap: 1.5rem;
-			box-shadow: none;
-			backdrop-filter: none;
+			gap: 1.25rem;
+			box-shadow: 0 10px 30px var(--shadow-color);
+			backdrop-filter: blur(16px);
+			-webkit-backdrop-filter: blur(16px);
 		}
 
 		.sidebar-desktop-actions {
