@@ -525,7 +525,8 @@
 
 	@media (max-width: 1023px) {
 		.desktop-top-stats,
-		.desktop-missions-widget {
+		.desktop-missions-widget,
+		.duo-path-section {
 			display: none !important;
 		}
 	}
