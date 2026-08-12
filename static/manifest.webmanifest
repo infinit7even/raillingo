@@ -1,18 +1,31 @@
 {
-  "name": "Raillingo",
+  "name": "Raillingo - Memorizzazione Ferroviaria",
   "short_name": "Raillingo",
-  "description": "Applicazione Raillingo per la memorizzazione di acronimi e terminologia del corso ferroviario",
+  "description": "App per l'apprendimento e la memorizzazione di acronimi, segnali e terminologia del settore ferroviario RFI.",
+  "id": "/",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#0f172a",
-  "theme_color": "#0f172a",
+  "display_override": ["standalone", "minimal-ui"],
+  "background_color": "#131f24",
+  "theme_color": "#131f24",
   "orientation": "any",
+  "lang": "it",
+  "dir": "ltr",
+  "categories": ["education", "utilities"],
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "/android-icon-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/android-icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
       "src": "/android-icon-144x144.png",
@@ -33,6 +46,29 @@
       "src": "/favicon-32x32.png",
       "sizes": "32x32",
       "type": "image/png"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Flashcard Ripasso",
+      "short_name": "Flashcard",
+      "description": "Ripassa subito le schede con acronimi ferroviari",
+      "url": "/flashcard",
+      "icons": [{ "src": "/android-icon-96x96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Quiz a Scelta Multipla",
+      "short_name": "Quiz",
+      "description": "Mettiti alla prova con le domande sui segnali",
+      "url": "/quiz",
+      "icons": [{ "src": "/android-icon-96x96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Reels Foto",
+      "short_name": "Reels",
+      "description": "Ripassa visivamente con le immagini dei segnali",
+      "url": "/reels",
+      "icons": [{ "src": "/android-icon-96x96.png", "sizes": "96x96" }]
     }
   ]
 }

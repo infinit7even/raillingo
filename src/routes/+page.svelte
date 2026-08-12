@@ -5,11 +5,15 @@
 	import QuickAddCardModal from '$lib/components/QuickAddCardModal.svelte';
 	import type { Card } from '$lib/types/cards';
 
+	import { pwaStore } from '$lib/stores/pwaStore';
+
 	let { data } = $props();
 
 	let cards = $state<Card[]>([]);
 	let wordOfTheDay = $state<Card | null>(null);
 	let isQuickAddOpen = $state(false);
+	let isStandalone = $state(false);
+	let canInstall = $state(false);
 	let user = $derived(data.user);
 
 	let stats = $state<StatsData>({
@@ -35,12 +39,21 @@
 			}
 		});
 		const unstats = statsStore.subscribe((s) => (stats = s));
+		const unpwa = pwaStore.subscribe(() => {
+			isStandalone = pwaStore.isStandalone;
+			canInstall = pwaStore.canInstall;
+		});
 
 		return () => {
 			uncards();
 			unstats();
+			unpwa();
 		};
 	});
+
+	async function handleInstallApp() {
+		await pwaStore.promptInstall();
+	}
 
 	const lessonNodes = [
 		{ id: 1, title: 'FLASHCARD', href: '/flashcard', icon: '/emoji/open_book_3d.png', state: 'active', offset: 0 },
@@ -191,6 +204,16 @@
 		<div class="duo-widget duo-card admin-widget">
 			<h3 class="widget-title">Risorse e Link</h3>
 			<div class="profile-actions">
+				{#if !isStandalone}
+					<button
+						type="button"
+						class="duo-btn duo-btn-green flex-btn install-app-btn"
+						onclick={handleInstallApp}
+					>
+						📲 INSTALLA L'APP
+					</button>
+				{/if}
+
 				<a href="https://epod.rfi.it" target="_blank" rel="noopener noreferrer" class="duo-btn duo-btn-blue flex-btn">
 					📚 DISPENSA RFI
 				</a>
