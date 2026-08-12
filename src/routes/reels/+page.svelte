@@ -3,6 +3,7 @@
 	import { cardsStore } from '$lib/stores/cardsStore';
 	import { statsStore } from '$lib/stores/statsStore';
 	import { tts } from '$lib/utils/tts';
+	import PageHeader from '$lib/components/PageHeader.svelte';
 	import CategoryFilterBar from '$lib/components/CategoryFilterBar.svelte';
 	import type { Card } from '$lib/types/cards';
 
@@ -16,7 +17,7 @@
 		return unsubscribe;
 	});
 
-	// Dynamic category filtering & continuous shuffle order
+	// Filter cards dynamically by selected category
 	let filteredCards = $derived.by<Card[]>(() => {
 		if (selectedCategory === 'ALL') return cards;
 		return cards.filter(
@@ -48,463 +49,414 @@
 			imageIndexMap[card.id] = (curr + 1) % card.images.length;
 		}
 	}
-	import PageHeader from '$lib/components/PageHeader.svelte';
 </script>
 
-<div class="reels-page-wrapper">
-	<!-- Page Header standard -->
+<div class="reels-clean-container">
+	<!-- Standard Page Header -->
 	<PageHeader
 		title="Reels Ferroviari"
-		subtitle="Scorri le schede e le immagini in un feed verticale e dinamico."
+		subtitle="Scorri le schede visive ed ascolta le definizioni in un feed dinamico."
 		badge="Modalità Reels"
 		icon="/emoji/camera_3d.png"
 		variant="orange"
 	/>
 
-	<!-- Category Filter Bar standard -->
+	<!-- Category Filter Bar -->
 	<CategoryFilterBar
 		selectedCategory={selectedCategory}
 		onSelectCategory={(cat) => (selectedCategory = cat)}
 	/>
 
-	<div class="reels-feed-container">
-		{#if filteredCards.length > 0}
-			{#each filteredCards as card (card.id)}
-				{@const isFlipped = flippedMap[card.id] || false}
-				{@const imgIdx = imageIndexMap[card.id] || 0}
-				{@const hasImages = card.images && card.images.length > 0}
-				{@const cardCategories = card.categories && card.categories.length > 0 ? card.categories : card.category ? [card.category] : []}
+	<!-- Reels Snap Feed -->
+	{#if filteredCards.length > 0}
+		<div class="reels-viewport duo-card">
+			<div class="reels-scroll-feed">
+				{#each filteredCards as card (card.id)}
+					{@const isFlipped = flippedMap[card.id] || false}
+					{@const imgIdx = imageIndexMap[card.id] || 0}
+					{@const hasImages = card.images && card.images.length > 0}
+					{@const cardCategories = card.categories && card.categories.length > 0 ? card.categories : card.category ? [card.category] : []}
 
-				<div class="reel-slide">
-					<!-- Top Action Bar (Audio + Category Badges) -->
-					<div class="reel-top-bar">
-						<div class="top-categories">
-							{#each cardCategories as cat}
-								<span class="category-tag">{cat}</span>
-							{/each}
+					<div class="reel-card-slide">
+						<!-- Top Action Bar -->
+						<div class="reel-header-bar">
+							<div class="category-tags-group">
+								{#each cardCategories as cat}
+									<span class="cat-pill">{cat}</span>
+								{/each}
+							</div>
+							<button class="audio-tts-btn" onclick={(e) => speakAudio(e, card)} title="Ascolta audio">
+								🔊 Audio
+							</button>
 						</div>
-						<button class="audio-btn" onclick={(e) => speakAudio(e, card)} title="Ascolta pronuncia">
-							🔊 Audio
-						</button>
-					</div>
 
-					<!-- 3D Flipping Reel Card -->
-					<div
-						class="scene"
-						onclick={() => toggleFlip(card.id)}
-						role="button"
-						tabindex="0"
-						onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && toggleFlip(card.id)}
-					>
-						<div class="card" class:is-flipped={isFlipped}>
-							<!-- FRONT (Title & Image) -->
-							<div class="card-face front">
-								<div class="face-overlay"></div>
-
-								{#if hasImages}
-									<img src={card.images![imgIdx]} alt={card.title} class="bg-card-img" />
-								{/if}
-
-								<div class="front-content">
-									<h1 class="card-title">{card.title}</h1>
-									{#if card.fullName}
-										<div class="reel-fullname">{card.fullName}</div>
+						<!-- 3D Flip Card Container -->
+						<div
+							class="flip-scene"
+							onclick={() => toggleFlip(card.id)}
+							role="button"
+							tabindex="0"
+							onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && toggleFlip(card.id)}
+						>
+							<div class="flip-card-inner" class:is-flipped={isFlipped}>
+								<!-- FRONT FACE -->
+								<div class="face front-face">
+									{#if hasImages}
+										<img src={card.images![imgIdx]} alt={card.title} class="front-bg-img" />
+										<div class="front-img-overlay"></div>
 									{/if}
-									
-									<div class="tap-flip-hint">
-										<span>👇 Tocca per scoprire la descrizione</span>
+
+									<div class="front-body">
+										<h2 class="reel-title">{card.title}</h2>
+										{#if card.fullName}
+											<p class="reel-fullname-sub">{card.fullName}</p>
+										{/if}
+
+										<div class="tap-hint-pill">
+											<span>👇 Tocca per scoprire la descrizione</span>
+										</div>
 									</div>
 								</div>
-							</div>
 
-							<!-- BACK (Description + Photos) -->
-							<div class="card-face back">
-								<div class="back-content">
-									<div class="back-header">
-										<h2 class="card-title-small">{card.title}</h2>
-										{#if card.fullName}
-											<span class="back-badge">{card.fullName}</span>
-										{:else}
-											<span class="back-badge">Significato</span>
-										{/if}
-									</div>
-
-									<div class="description-box">
-										<p>{card.description}</p>
-									</div>
-
-									{#if hasImages}
-										<div class="gallery-section">
-											<img src={card.images![imgIdx]} alt={card.title} class="back-img" />
-											{#if card.images!.length > 1}
-												<button class="next-img-btn" onclick={(e) => nextImage(e, card)}>
-													Foto successiva ({imgIdx + 1}/{card.images!.length})
-												</button>
+								<!-- BACK FACE -->
+								<div class="face back-face">
+									<div class="back-body">
+										<div class="back-top">
+											<h3 class="back-title">{card.title}</h3>
+											{#if card.fullName}
+												<span class="back-fullname-badge">{card.fullName}</span>
 											{/if}
 										</div>
-									{/if}
 
-									<div class="tap-flip-hint back-hint">
-										<span>Tocca per girare la scheda</span>
+										<div class="back-desc-container">
+											<p class="back-desc-text">{card.description}</p>
+										</div>
+
+										{#if hasImages}
+											<div class="back-media-box">
+												<img src={card.images![imgIdx]} alt={card.title} class="back-preview-img" />
+												{#if card.images!.length > 1}
+													<button class="next-photo-btn" onclick={(e) => nextImage(e, card)}>
+														Foto successiva ({imgIdx + 1}/{card.images!.length})
+													</button>
+												{/if}
+											</div>
+										{/if}
+
+										<div class="tap-hint-pill back-hint">
+											<span>Tocca per rigirare la scheda</span>
+										</div>
 									</div>
 								</div>
 							</div>
 						</div>
-					</div>
 
-					<div class="reel-scroll-hint">
-						<span class="swipe-text">Scorri in verticale ⬇️</span>
+						<div class="scroll-down-notice">
+							<span>Scorri in verticale ⬇️</span>
+						</div>
 					</div>
-				</div>
-			{/each}
-		{:else}
-			<div class="empty-reels duo-card">
-				<span class="empty-icon">📭</span>
-				<p>Nessun Reel disponibile per la categoria selezionata.</p>
-				<button class="duo-btn duo-btn-purple" onclick={() => (selectedCategory = 'ALL')}>
-					Mostra Tutti i Reels
-				</button>
+				{/each}
 			</div>
-		{/if}
-	</div>
+		</div>
+	{:else}
+		<div class="duo-card empty-reels-box">
+			<span class="empty-emoji">📭</span>
+			<h3>Nessun Reel per questa categoria</h3>
+			<p>Seleziona un'altra categoria oppure mostra tutte le schede.</p>
+			<button class="duo-btn duo-btn-purple" onclick={() => (selectedCategory = 'ALL')}>
+				Mostra Tutti i Reels
+			</button>
+		</div>
+	{/if}
 </div>
 
 <style>
-	.reels-page-wrapper {
-		width: 100%;
+	.reels-clean-container {
 		max-width: 600px;
 		margin: 0 auto;
 		display: flex;
 		flex-direction: column;
 		gap: 0.75rem;
+		width: 100%;
+		box-sizing: border-box;
 	}
 
-	.reels-feed-container {
-		width: 100%;
-		height: 560px;
-		max-height: 70vh;
-		overflow-y: scroll;
-		scroll-snap-type: y mandatory;
-		border-radius: 24px;
+	.reels-viewport {
+		padding: 0;
+		overflow: hidden;
+		border-radius: 20px;
+		box-shadow: 0 8px 30px rgba(0, 0, 0, 0.18);
 		background: var(--card-bg);
 		border: 2px solid var(--border-color);
-		box-shadow: 0 12px 35px rgba(0, 0, 0, 0.25);
-		position: relative;
+	}
+
+	.reels-scroll-feed {
+		width: 100%;
+		height: 490px;
+		max-height: calc(100vh - 300px);
+		min-height: 350px;
+		overflow-y: scroll;
+		scroll-snap-type: y mandatory;
 		scrollbar-width: none;
 	}
 
-	@media (max-width: 768px) {
-		.reels-page-wrapper {
-			gap: 0.4rem;
-		}
-
-		.reels-feed-container {
-			height: calc(100vh - 275px);
-			min-height: 360px;
-			max-height: 500px;
-			border-radius: 18px;
-		}
-
-		.reel-slide {
-			padding: 0.75rem !important;
-		}
-	}
-
-	.reels-feed-container::-webkit-scrollbar {
+	.reels-scroll-feed::-webkit-scrollbar {
 		display: none;
 	}
 
-	.reel-slide {
+	.reel-card-slide {
 		width: 100%;
 		height: 100%;
 		scroll-snap-align: start;
 		scroll-snap-stop: always;
-		position: relative;
 		display: flex;
 		flex-direction: column;
 		justify-content: space-between;
-		padding: 1.1rem;
+		padding: 0.85rem;
 		box-sizing: border-box;
-		overflow: hidden;
+		position: relative;
 	}
 
-	.reel-top-bar {
+	.reel-header-bar {
 		display: flex;
-		justify-content: space-between;
 		align-items: center;
-		z-index: 20;
+		justify-content: space-between;
+		z-index: 10;
 		gap: 0.5rem;
 	}
 
-	.top-categories {
+	.category-tags-group {
 		display: flex;
 		gap: 0.35rem;
 		flex-wrap: wrap;
 	}
 
-	.category-tag {
-		font-size: 0.72rem;
-		font-weight: 800;
-		text-transform: uppercase;
-		color: var(--accent-color);
-		background: var(--accent-light-bg);
-		border: 1px solid var(--accent-color);
-		padding: 0.2rem 0.6rem;
+	.cat-pill {
+		font-size: 0.68rem;
+		font-weight: 900;
+		padding: 0.25rem 0.6rem;
 		border-radius: 8px;
-	}
-
-	.audio-btn {
-		padding: 0.35rem 0.75rem;
-		border-radius: 12px;
-		background: var(--card-bg-subtle);
-		border: 1.5px solid var(--border-color);
-		color: var(--text-color);
-		font-size: 0.78rem;
-		font-weight: 800;
-		cursor: pointer;
-		backdrop-filter: blur(8px);
-	}
-
-	.scene {
-		width: 100%;
-		height: calc(100% - 80px);
-		perspective: 1400px;
-		cursor: pointer;
-		margin: auto 0;
-	}
-
-	.card {
-		width: 100%;
-		height: 100%;
-		position: relative;
-		transition: transform 0.65s cubic-bezier(0.34, 1.56, 0.64, 1);
-		transform-style: preserve-3d;
-	}
-
-	.card:active {
-		transform: scale(0.98);
-	}
-
-	.card.is-flipped {
-		transform: rotateY(180deg);
-	}
-
-	.card-face {
-		position: absolute;
-		width: 100%;
-		height: 100%;
-		backface-visibility: hidden;
-		-webkit-backface-visibility: hidden;
-		border-radius: 20px;
-		border: 2px solid var(--border-color);
-		box-shadow: 0 14px 30px rgba(0, 0, 0, 0.3);
-		overflow: hidden;
-		box-sizing: border-box;
-	}
-
-	.card-face.front {
-		background: var(--card-bg);
-		display: flex;
-		flex-direction: column;
-		justify-content: flex-end;
-		padding: 1.75rem;
-	}
-
-	.bg-card-img {
-		position: absolute;
-		top: 0;
-		left: 0;
-		right: 0;
-		bottom: 0;
-		width: 100%;
-		height: 100%;
-		object-fit: cover;
-		z-index: 0;
-		filter: brightness(0.55);
-	}
-
-	.face-overlay {
-		position: absolute;
-		top: 0;
-		left: 0;
-		right: 0;
-		bottom: 0;
-		z-index: 1;
-		background: linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.85) 100%);
-	}
-
-	.front-content {
-		position: relative;
-		z-index: 2;
-		display: flex;
-		flex-direction: column;
-		gap: 0.85rem;
-	}
-
-	.card-title {
-		font-size: 3rem;
-		font-weight: 900;
-		color: white;
-		margin: 0;
-		line-height: 1.1;
-		text-shadow: 0 4px 16px rgba(0, 0, 0, 0.8);
-	}
-
-	.reel-fullname {
-		font-size: 1.3rem;
-		font-weight: 800;
-		color: #4ade80;
-		margin-top: -0.25rem;
-		text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
-	}
-
-	.tap-flip-hint {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		font-size: 0.82rem;
-		font-weight: 700;
-		color: rgba(255, 255, 255, 0.85);
-	}
-
-	.card-face.back {
-		transform: rotateY(180deg);
-		background: var(--card-bg);
-		padding: 1.5rem;
-		overflow-y: auto;
-		display: flex;
-		flex-direction: column;
-	}
-
-	.back-content {
-		display: flex;
-		flex-direction: column;
-		gap: 1rem;
-		height: 100%;
-		justify-content: space-between;
-	}
-
-	.back-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-	}
-
-	.card-title-small {
-		font-size: 1.85rem;
-		font-weight: 900;
+		background: var(--accent-light-bg);
 		color: var(--accent-color);
-		margin: 0;
-	}
-
-	.back-badge {
-		font-size: 0.72rem;
-		font-weight: 800;
+		border: 1px solid var(--accent-color);
 		text-transform: uppercase;
-		color: var(--text-muted);
-		background: var(--card-bg-subtle);
-		padding: 0.2rem 0.5rem;
-		border-radius: 6px;
-		border: 1px solid var(--border-color);
 	}
 
-	.description-box {
+	.audio-tts-btn {
 		background: var(--card-bg-subtle);
 		border: 1.5px solid var(--border-color);
-		border-radius: 16px;
-		padding: 1.1rem;
-		font-size: 1.02rem;
-		line-height: 1.55;
-		color: var(--text-color);
-	}
-
-	.gallery-section {
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-		align-items: center;
-	}
-
-	.back-img {
-		width: 100%;
-		max-height: 160px;
-		object-fit: cover;
-		border-radius: 12px;
-		border: 1px solid var(--border-color);
-	}
-
-	.next-img-btn {
+		border-radius: 10px;
+		padding: 0.3rem 0.65rem;
 		font-size: 0.75rem;
 		font-weight: 800;
-		padding: 0.35rem 0.75rem;
-		border-radius: 8px;
-		background: var(--accent-light-bg);
-		color: var(--accent-color);
-		border: 1px solid var(--accent-color);
+		color: var(--text-color);
 		cursor: pointer;
+		transition: transform 0.15s ease;
 	}
 
-	.back-hint {
+	.audio-tts-btn:active {
+		transform: scale(0.95);
+	}
+
+	/* 3D FLIP CARD */
+	.flip-scene {
+		flex: 1;
+		width: 100%;
+		perspective: 1000px;
+		cursor: pointer;
+		margin: 0.5rem 0;
+	}
+
+	.flip-card-inner {
+		width: 100%;
+		height: 100%;
+		position: relative;
+		transform-style: preserve-3d;
+		transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+		border-radius: 16px;
+	}
+
+	.flip-card-inner.is-flipped {
+		transform: rotateY(180deg);
+	}
+
+	.face {
+		position: absolute;
+		inset: 0;
+		backface-visibility: hidden;
+		border-radius: 16px;
+		padding: 1.25rem;
+		box-sizing: border-box;
+		display: flex;
+		flex-direction: column;
 		justify-content: center;
-		color: var(--text-muted);
+		align-items: center;
+		overflow: hidden;
 	}
 
-	.reel-scroll-hint {
-		z-index: 20;
+	/* FRONT FACE */
+	.front-face {
+		background: linear-gradient(135deg, var(--card-bg-subtle), var(--card-bg));
+		border: 2px solid var(--border-color);
 		text-align: center;
 	}
 
-	.swipe-text {
-		font-size: 0.72rem;
-		font-weight: 800;
-		color: var(--text-muted);
-		animation: bounce 2s infinite;
+	.front-bg-img {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		z-index: 1;
 	}
 
-	.empty-reels {
+	.front-img-overlay {
+		position: absolute;
+		inset: 0;
+		background: linear-gradient(to top, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.4) 50%, rgba(0, 0, 0, 0.3) 100%);
+		z-index: 2;
+	}
+
+	.front-body {
+		position: relative;
+		z-index: 3;
 		display: flex;
 		flex-direction: column;
 		align-items: center;
-		justify-content: center;
-		gap: 0.85rem;
+		gap: 0.5rem;
+	}
+
+	.reel-title {
+		font-size: 2.2rem;
+		font-weight: 900;
+		color: var(--text-color);
+		margin: 0;
+		letter-spacing: -0.02em;
+		text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+	}
+
+	.front-bg-img ~ .front-body .reel-title {
+		color: #ffffff;
+	}
+
+	.reel-fullname-sub {
+		font-size: 1rem;
+		font-weight: 800;
+		color: var(--accent-color);
+		margin: 0;
+		text-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+	}
+
+	.front-bg-img ~ .front-body .reel-fullname-sub {
+		color: #58cc02;
+	}
+
+	.tap-hint-pill {
+		margin-top: 0.75rem;
+		padding: 0.35rem 0.85rem;
+		border-radius: 20px;
+		background: rgba(0, 0, 0, 0.45);
+		backdrop-filter: blur(6px);
+		border: 1px solid rgba(255, 255, 255, 0.2);
+		color: #ffffff;
+		font-size: 0.72rem;
+		font-weight: 800;
+	}
+
+	/* BACK FACE */
+	.back-face {
+		background: var(--card-bg-subtle);
+		border: 2px solid var(--accent-color);
+		transform: rotateY(180deg);
+		align-items: stretch;
+		justify-content: space-between;
+	}
+
+	.back-body {
 		height: 100%;
+		display: flex;
+		flex-direction: column;
+		justify-content: space-between;
+		gap: 0.5rem;
+	}
+
+	.back-top {
+		display: flex;
+		flex-direction: column;
+		gap: 0.2rem;
+	}
+
+	.back-title {
+		font-size: 1.4rem;
+		font-weight: 900;
+		color: var(--text-color);
+		margin: 0;
+	}
+
+	.back-fullname-badge {
+		font-size: 0.8rem;
+		font-weight: 800;
+		color: var(--accent-color);
+	}
+
+	.back-desc-container {
+		flex: 1;
+		overflow-y: auto;
+		padding: 0.4rem 0;
+	}
+
+	.back-desc-text {
+		font-size: 0.92rem;
+		line-height: 1.45;
+		color: var(--text-color);
+		margin: 0;
+		font-weight: 600;
+	}
+
+	.back-media-box {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.35rem;
+	}
+
+	.back-preview-img {
+		max-height: 110px;
+		width: 100%;
+		object-fit: cover;
+		border-radius: 10px;
+		border: 1.5px solid var(--border-color);
+	}
+
+	.next-photo-btn {
+		background: var(--card-bg);
+		border: 1px solid var(--border-color);
+		color: var(--text-color);
+		font-size: 0.7rem;
+		font-weight: 800;
+		padding: 0.25rem 0.6rem;
+		border-radius: 8px;
+		cursor: pointer;
+	}
+
+	.scroll-down-notice {
 		text-align: center;
-		padding: 2rem;
+		font-size: 0.7rem;
+		font-weight: 800;
+		color: var(--text-muted);
+		opacity: 0.8;
 	}
 
-	.empty-icon {
-		font-size: 3rem;
+	.empty-reels-box {
+		text-align: center;
+		padding: 2.5rem 1.5rem;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.6rem;
 	}
 
-	@media (max-width: 768px) {
-		.reels-page-wrapper {
-			position: fixed;
-			top: 0;
-			left: 0;
-			right: 0;
-			bottom: calc(64px + var(--safe-area-bottom, 0px));
-			width: 100vw;
-			height: calc(100dvh - 64px - var(--safe-area-bottom, 0px));
-			z-index: 10;
-		}
-
-		.reels-feed-container {
-			max-width: 100vw;
-			width: 100vw;
-			height: 100%;
-			border-radius: 0;
-			border: none;
-			box-shadow: none;
-		}
-
-		.reel-slide {
-			padding: 58px 1rem 1rem 1rem;
-		}
-	}
-
-	@keyframes bounce {
-		0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
-		40% { transform: translateY(-5px); }
-		60% { transform: translateY(-2px); }
+	.empty-emoji {
+		font-size: 2.5rem;
 	}
 </style>
