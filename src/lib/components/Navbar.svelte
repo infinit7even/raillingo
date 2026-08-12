@@ -1,14 +1,36 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { themeStore, type ThemePreset } from '$lib/stores/themeStore';
+	import { cardsStore } from '$lib/stores/cardsStore';
+	import { pwaStore } from '$lib/stores/pwaStore';
+	import QuickAddCardModal from '$lib/components/QuickAddCardModal.svelte';
+	import type { Card } from '$lib/types/cards';
 	import { onMount } from 'svelte';
 
+	let { user } = $props<{ user?: any }>();
+
 	let currentTheme = $state<ThemePreset>('dark');
+	let cards = $state<Card[]>([]);
+	let isQuickAddOpen = $state(false);
+	let canInstall = $state(false);
 
 	onMount(() => {
 		const unTheme = themeStore.subscribe((t) => (currentTheme = t));
-		return unTheme;
+		const unCards = cardsStore.subscribe((c) => (cards = c));
+		const unPwa = pwaStore.subscribe(() => {
+			canInstall = pwaStore.canInstall;
+		});
+
+		return () => {
+			unTheme();
+			unCards();
+			unPwa();
+		};
 	});
+
+	async function handleInstallApp() {
+		await pwaStore.promptInstall();
+	}
 
 	const navItems = [
 		{ href: '/', label: 'HOME', emoji: '/emoji/house_3d.png' },
@@ -48,11 +70,36 @@
 					<span class="nav-label">{item.label}</span>
 				</a>
 			{/each}
+
+			{#if user && (user.isAdmin || user.role === 'admin')}
+				<button
+					type="button"
+					class="nav-item mobile-add-nav-item"
+					onclick={() => (isQuickAddOpen = true)}
+					title="Aggiungi Scheda Rapida"
+				>
+					<div class="icon-wrapper add-icon-wrapper">
+						<span class="add-lightning">⚡</span>
+					</div>
+					<span class="nav-label">+ SCHEDA</span>
+				</button>
+			{/if}
 		</div>
 	</div>
 
-	<!-- Desktop Sidebar Theme Toggle Button -->
-	<div class="sidebar-desktop-theme">
+	<!-- Desktop Sidebar Actions (Theme + Quick Add Admin Section) -->
+	<div class="sidebar-desktop-actions">
+		{#if user && (user.isAdmin || user.role === 'admin')}
+			<button
+				type="button"
+				class="duo-btn duo-btn-green desktop-quick-add-btn"
+				onclick={() => (isQuickAddOpen = true)}
+				title="Aggiungi Scheda Rapida"
+			>
+				⚡ AGGIUNGI SCHEDA
+			</button>
+		{/if}
+
 		<button
 			class="duo-btn duo-btn-gray desktop-theme-btn"
 			onclick={() => themeStore.setTheme(currentTheme === 'dark' ? 'light' : 'dark')}
@@ -63,8 +110,14 @@
 	</div>
 </nav>
 
+<QuickAddCardModal
+	isOpen={isQuickAddOpen}
+	onClose={() => (isQuickAddOpen = false)}
+	{cards}
+/>
+
 <style>
-	.sidebar-brand, .sidebar-desktop-theme {
+	.sidebar-brand, .sidebar-desktop-actions {
 		display: none;
 	}
 
@@ -176,8 +229,30 @@
 		white-space: nowrap;
 	}
 
+	.mobile-add-nav-item {
+		color: var(--green-color);
+	}
+
+	.add-lightning {
+		font-size: 1.1rem;
+		line-height: 1;
+	}
+
+	.add-icon-wrapper {
+		background: rgba(88, 204, 2, 0.15);
+		border-radius: 12px;
+	}
+
+	.sidebar-desktop-actions {
+		display: none;
+	}
+
 	/* 🖥️ Desktop Sidebar Navigation (>= 1024px) */
 	@media (min-width: 1024px) {
+		.mobile-add-nav-item {
+			display: none !important;
+		}
+
 		.duo-navigation {
 			top: 0;
 			bottom: 0;
@@ -194,12 +269,22 @@
 			backdrop-filter: none;
 		}
 
-		.sidebar-desktop-theme {
-			display: block;
+		.sidebar-desktop-actions {
+			display: flex;
+			flex-direction: column;
+			gap: 0.75rem;
 			width: 100%;
 			margin-top: auto;
 			padding-top: 1rem;
 			border-top: 2px solid var(--border-color);
+		}
+
+		.desktop-quick-add-btn {
+			width: 100%;
+			font-size: 0.85rem;
+			padding: 0.75rem;
+			text-align: center;
+			justify-content: center;
 		}
 
 		.desktop-theme-btn {
