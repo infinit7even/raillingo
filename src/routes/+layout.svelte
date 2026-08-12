@@ -121,7 +121,7 @@
 	.main-content {
 		flex: 1;
 		width: 100%;
-		max-width: 1350px;
+		max-width: 1200px;
 		margin: 0 auto;
 		padding: 0.85rem 0.85rem 4.5rem 0.85rem;
 		box-sizing: border-box;
@@ -134,11 +134,11 @@
 
 	@media (min-width: 1024px) {
 		.layout-wrapper {
-			padding-left: 250px;
+			padding-left: 245px;
 		}
 
 		.main-content {
-			padding: 1.25rem 2rem 2.5rem 2rem;
+			padding: 1.5rem 2rem 2.5rem 2rem;
 		}
 	}
 </style>

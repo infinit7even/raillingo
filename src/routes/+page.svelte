@@ -267,8 +267,8 @@
 	@media (min-width: 1024px) {
 		.duo-page-grid {
 			display: grid;
-			grid-template-columns: 1fr 340px;
-			gap: 2.5rem;
+			grid-template-columns: 1fr 320px;
+			gap: 2rem;
 			align-items: start;
 		}
 	}
