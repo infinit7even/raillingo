@@ -16,8 +16,7 @@
 		{ href: '/quiz', label: 'QUIZ', emoji: '/emoji/star_3d.png' },
 		{ href: '/reels', label: 'REELS', emoji: '/emoji/camera_3d.png' },
 		{ href: '/scrittura', label: 'SCRITTURA', emoji: '/emoji/writing_hand_3d_default.png' },
-		{ href: '/wiki', label: 'WIKI', emoji: '/emoji/books_3d.png' },
-		{ href: '/admin', label: 'ADMIN', emoji: '/emoji/locked_3d.png' }
+		{ href: '/wiki', label: 'WIKI', emoji: '/emoji/books_3d.png' }
 	];
 </script>
 

@@ -87,10 +87,20 @@
 			</div>
 
 			<div class="banner-actions">
+				<!-- Link / Button to Admin Panel -->
+				<a
+					href="/admin"
+					class="duo-btn duo-btn-purple admin-home-btn"
+					aria-label="Pannello Amministratore"
+					title="Pannello Amministratore"
+				>
+					🔐 Admin
+				</a>
+
 				{#if user && (user.isAdmin || user.role === 'admin')}
 					<!-- 1-Click Quick Add Card Button (+) -->
 					<button
-						class="duo-btn duo-btn-purple quick-add-btn"
+						class="duo-btn duo-btn-green quick-add-btn"
 						onclick={() => (isQuickAddOpen = true)}
 						aria-label="Aggiungi scheda rapida"
 						title="Aggiungi scheda rapida"
@@ -355,6 +365,20 @@
 		color: #ffffff;
 		margin: 0;
 		line-height: 1.15;
+	}
+
+	.banner-actions {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	.admin-home-btn {
+		text-decoration: none;
+		font-size: 0.85rem;
+		padding: 0.5rem 0.85rem;
+		font-weight: 800;
+		white-space: nowrap;
 	}
 
 	.duo-btn-guide {

@@ -136,6 +136,23 @@
 		color: var(--green-color);
 		letter-spacing: -0.03em;
 		line-height: 1;
+		display: inline-flex;
+		align-items: center;
+	}
+
+	.ll-track-box {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		position: relative;
+	}
+
+	.brand-track-img-sm {
+		width: 0.72em;
+		height: 0.72em;
+		object-fit: contain;
+		margin: 0 -0.04em;
+		vertical-align: middle;
 	}
 
 	.app-subtitle {
