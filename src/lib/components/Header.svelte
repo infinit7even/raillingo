@@ -38,8 +38,8 @@
 			<button
 				class="duo-header-btn add-btn"
 				onclick={() => (isQuickAddOpen = true)}
-				aria-label="Aggiungi Scheda Rapida"
-				title="Aggiungi Scheda Rapida"
+				aria-label="Aggiungi Scheda"
+				title="Aggiungi Scheda"
 			>
 				<span class="btn-icon">⚡</span>
 				<span class="btn-text">+ SCHEDA</span>

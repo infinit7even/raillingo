@@ -22,7 +22,7 @@
 			<div class="modal-header">
 				<div class="modal-title-group">
 					<span class="modal-icon">⚡</span>
-					<h2>Aggiunta Scheda Rapida</h2>
+					<h2>Aggiunta Scheda</h2>
 				</div>
 				<button class="close-btn" onclick={onClose} aria-label="Chiudi modal">✕</button>
 			</div>

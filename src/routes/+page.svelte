@@ -55,8 +55,33 @@
 </script>
 
 <div class="duo-page-grid">
-	<!-- 📍 MAIN CENTRAL COLUMN (Parola del Giorno & Path) -->
+	<!-- 📍 MAIN CENTRAL COLUMN (Stats Bar, Parola del Giorno & Path) -->
 	<div class="duo-main-column">
+		<!-- 📊 Top Stats Bar (Serie, Gemme, XP - Visibile su Mobile & Desktop) -->
+		<a href="/missioni" class="top-stats-row duo-card" title="Clicca per aprire le Missioni ed i Dettagli">
+			<div class="stat-item streak">
+				<img src="/emoji/fire_3d.png" alt="Serie" class="widget-emoji-img" />
+				<div class="stat-text-group">
+					<span class="stat-lbl">Serie</span>
+					<span class="stat-val">{stats.streakDays}</span>
+				</div>
+			</div>
+			<div class="stat-item gems">
+				<img src="/emoji/gem_stone_3d.png" alt="Gemme" class="widget-emoji-img" />
+				<div class="stat-text-group">
+					<span class="stat-lbl">Gemme</span>
+					<span class="stat-val">{gems}</span>
+				</div>
+			</div>
+			<div class="stat-item hearts">
+				<img src="/emoji/high_voltage_3d.png" alt="XP" class="widget-emoji-img" />
+				<div class="stat-text-group">
+					<span class="stat-lbl">XP</span>
+					<span class="stat-val">{totalXP}</span>
+				</div>
+			</div>
+		</a>
+
 		<!-- 💡 Parola del Giorno Card (Cima alla Home) -->
 		{#if wordOfTheDay}
 			<section class="word-of-day-section">
@@ -118,28 +143,9 @@
 		</section>
 	</div>
 
-	<!-- 📊 RIGHT SIDEBAR COLUMN (Desktop Widgets) -->
+	<!-- 📊 RIGHT SIDEBAR COLUMN (Desktop & Mobile Widgets) -->
 	<aside class="duo-right-sidebar">
-		<!-- Top Stats Row (Serie, Gemme, XP) -->
-		<div class="desktop-top-stats duo-card">
-			<div class="stat-item streak" title="Giorni di serie">
-				<img src="/emoji/fire_3d.png" alt="" aria-hidden="true" class="widget-emoji-img" />
-				<span class="stat-lbl">Serie</span>
-				<span class="stat-val">{stats.streakDays}</span>
-			</div>
-			<div class="stat-item gems" title="Gemme da quiz corretti">
-				<img src="/emoji/gem_stone_3d.png" alt="" aria-hidden="true" class="widget-emoji-img" />
-				<span class="stat-lbl">Gemme</span>
-				<span class="stat-val">{gems}</span>
-			</div>
-			<div class="stat-item hearts" title="Punti XP da interazioni">
-				<img src="/emoji/high_voltage_3d.png" alt="" aria-hidden="true" class="widget-emoji-img" />
-				<span class="stat-lbl">XP</span>
-				<span class="stat-val">{totalXP}</span>
-			</div>
-		</div>
-
-		<!-- Widget Missioni Giornaliere (Links ONLY to /missioni when clicking VEDI TUTTE) -->
+		<!-- Widget Missioni Giornaliere -->
 		<div class="duo-widget duo-card">
 			<div class="widget-header-row">
 				<h3 class="widget-title">Missioni giornaliere</h3>
@@ -158,32 +164,13 @@
 			</div>
 		</div>
 
-		<!-- Widget Login / Profilo e Salva Progressi -->
-		<div class="duo-widget duo-card profile-widget">
-			<h3 class="widget-title">{user ? `Profilo (${user.username})` : 'Salva i tuoi Progressi'}</h3>
-			<p class="widget-desc-text">
-				{user ? 'I tuoi dati e la tua serie sono sincronizzati.' : 'Accedi con Discord per non perdere mai la tua serie e le tue gemme.'}
-			</p>
-			<div class="profile-actions">
-				{#if user && (user.isAdmin || user.role === 'admin')}
+		{#if user && (user.isAdmin || user.role === 'admin')}
+			<div class="duo-widget duo-card admin-widget">
+				<h3 class="widget-title">Pannello Gestione</h3>
+				<div class="profile-actions">
 					<a href="/admin" class="duo-btn duo-btn-purple flex-btn">
-						PANNELLO ADMIN
+						🔐 PANNELLO ADMIN
 					</a>
-				{/if}
-				{#if !user}
-					<a href="/login" class="duo-btn duo-btn-blue flex-btn login-save-btn">
-						🔑 ACCEDI E SALVA PROGRESSI
-					</a>
-				{/if}
-				<a href="/ripasso" class="duo-btn duo-btn-green flex-btn">
-					INIZIA LEZIONE
-				</a>
-				{#if user}
-					<a href="/api/auth/logout" class="duo-btn duo-btn-gray flex-btn">
-						DISCONNETTI
-					</a>
-				{/if}
-				{#if user && (user.isAdmin || user.role === 'admin')}
 					<button
 						type="button"
 						class="duo-btn duo-btn-green flex-btn quick-add-sidebar-btn"
@@ -191,9 +178,9 @@
 					>
 						⚡ AGGIUNGI SCHEDA RAPIDA
 					</button>
-				{/if}
+				</div>
 			</div>
-		</div>
+		{/if}
 
 		<!-- Footer Link to Privacy Policy -->
 		<div class="sidebar-privacy-footer">
@@ -440,19 +427,33 @@
 		}
 	}
 
-	.desktop-top-stats {
+	.top-stats-row {
 		display: flex;
 		align-items: center;
 		justify-content: space-around;
-		padding: 0.75rem 0.85rem;
+		padding: 0.75rem 1rem;
+		text-decoration: none;
+		margin-bottom: 1rem;
+		transition: transform 0.15s ease;
+	}
+
+	.top-stats-row:hover {
+		transform: translateY(-2px);
+		border-color: var(--accent-color);
 	}
 
 	.stat-item {
 		display: flex;
 		align-items: center;
-		gap: 0.35rem;
+		gap: 0.5rem;
 		font-weight: 900;
-		font-size: 0.9rem;
+		font-size: 0.95rem;
+	}
+
+	.stat-text-group {
+		display: flex;
+		flex-direction: column;
+		line-height: 1;
 	}
 
 	.stat-item.streak { color: var(--orange-color); }
@@ -460,17 +461,15 @@
 	.stat-item.hearts { color: var(--pink-color); }
 
 	.stat-lbl {
-		font-size: 0.7rem;
+		font-size: 0.65rem;
 		font-weight: 800;
 		text-transform: uppercase;
 		opacity: 0.8;
 	}
 
-	.widget-desc-text {
-		font-size: 0.8rem;
-		color: var(--text-muted);
-		margin: 0.25rem 0 0.5rem 0;
-		line-height: 1.4;
+	.stat-val {
+		font-size: 1.05rem;
+		font-weight: 900;
 	}
 
 

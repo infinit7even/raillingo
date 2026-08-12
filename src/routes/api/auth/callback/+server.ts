@@ -163,13 +163,18 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 		cookies.set('user_session', JSON.stringify(sessionData), cookieOpts);
 		cookies.set('admin_session', JSON.stringify(sessionData), cookieOpts);
 
-		// Reindirizza SEMPRE alla Home (/) da loggato come richiesto!
-		throw redirect(302, '/');
+		if (!isAdmin) {
+			console.warn(`Utente Discord non autorizzato come admin: ${discordUserId} (${username})`);
+			throw redirect(302, '/admin?error=unauthorized');
+		}
+
+		// Reindirizza al pannello Admin (/admin) da loggato come richiesto!
+		throw redirect(302, '/admin');
 	} catch (e) {
 		if (e && typeof e === 'object' && 'status' in e && 'location' in e) {
 			throw e; // SvelteKit redirect
 		}
 		console.error('Errore durante auth Discord:', e);
-		throw redirect(302, '/login?error=auth_error');
+		throw redirect(302, '/admin?error=auth_error');
 	}
 };

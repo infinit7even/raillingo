@@ -58,6 +58,9 @@
 		}
 	]);
 
+	let { data } = $props<{ data?: { user?: { username: string; email?: string } | null } }>();
+	let user = $derived(data?.user || null);
+
 	function claimReward(missionId: string) {
 		claimedMissions[missionId] = true;
 	}
@@ -71,6 +74,25 @@
 			<h1 class="missions-heading">Missioni Giornaliere</h1>
 			<p class="missions-desc">Completa le missioni quotidiane per sbloccare gemme ed XP!</p>
 		</div>
+	</div>
+
+	<!-- Box opzionale Sincronizzazione / Salvataggio Progressi DB -->
+	<div class="sync-progress-box duo-card">
+		{#if user}
+			<div class="sync-info-row">
+				<span class="sync-status-text">✅ Progressi sincronizzati per <strong>{user.username}</strong></span>
+				<a href="/api/auth/logout" class="duo-btn duo-btn-gray sync-btn">
+					DISCONNETTI
+				</a>
+			</div>
+		{:else}
+			<div class="sync-info-row">
+				<span class="sync-desc-text">Vuoi salvare la tua serie e le tue gemme sul database online?</span>
+				<a href="/login" class="duo-btn duo-btn-blue sync-btn">
+					🔑 ACCEDI E SALVA PROGRESSI
+				</a>
+			</div>
+		{/if}
 	</div>
 
 	<div class="missions-list">
@@ -257,6 +279,32 @@
 		font-size: 0.75rem;
 		font-weight: 800;
 		color: var(--text-muted);
+	}
+
+	.sync-progress-box {
+		padding: 1rem;
+		background: var(--card-bg-subtle);
+		border-radius: 16px;
+	}
+
+	.sync-info-row {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		flex-wrap: wrap;
+		gap: 0.75rem;
+	}
+
+	.sync-desc-text, .sync-status-text {
+		font-size: 0.85rem;
+		font-weight: 700;
+		color: var(--text-color);
+	}
+
+	.sync-btn {
+		font-size: 0.8rem;
+		padding: 0.45rem 0.85rem;
+		white-space: nowrap;
 	}
 
 	.reels-cta-box {
