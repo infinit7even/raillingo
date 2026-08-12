@@ -2,21 +2,32 @@
 	import { onMount } from 'svelte';
 	import { themeStore, type ThemePreset } from '$lib/stores/themeStore';
 	import { cardsStore } from '$lib/stores/cardsStore';
+	import { pwaStore } from '$lib/stores/pwaStore';
 	import QuickAddCardModal from '$lib/components/QuickAddCardModal.svelte';
 	import type { Card } from '$lib/types/cards';
 
 	let currentTheme = $state<ThemePreset>('dark');
 	let cards = $state<Card[]>([]);
 	let isQuickAddOpen = $state(false);
+	let canInstall = $state(false);
 
 	onMount(() => {
 		const unTheme = themeStore.subscribe((t) => (currentTheme = t));
 		const unCards = cardsStore.subscribe((c) => (cards = c));
+		const unPwa = pwaStore.subscribe(() => {
+			canInstall = pwaStore.canInstall;
+		});
+
 		return () => {
 			unTheme();
 			unCards();
+			unPwa();
 		};
 	});
+
+	async function handleInstallApp() {
+		await pwaStore.promptInstall();
+	}
 </script>
 
 <header class="app-header">
@@ -34,16 +45,27 @@
 
 		<!-- Action Buttons (Mobile Optimized) -->
 		<div class="actions">
-			<!-- Quick Add Card Button -->
-			<button
-				class="duo-header-btn add-btn"
-				onclick={() => (isQuickAddOpen = true)}
-				aria-label="Aggiungi Scheda"
-				title="Aggiungi Scheda"
-			>
-				<span class="btn-icon">⚡</span>
-				<span class="btn-text">+ SCHEDA</span>
-			</button>
+			{#if canInstall}
+				<button
+					class="duo-header-btn install-header-btn"
+					onclick={handleInstallApp}
+					aria-label="Installa App"
+					title="Installa l'App"
+				>
+					<span class="btn-icon">📲</span>
+					<span class="btn-text">INSTALLA</span>
+				</button>
+			{:else}
+				<a
+					href="/flashcard"
+					class="duo-header-btn ripasso-header-btn"
+					aria-label="Ripasso"
+					title="Ripasso"
+				>
+					<span class="btn-icon">📖</span>
+					<span class="btn-text">RIPASSO</span>
+				</a>
+			{/if}
 
 			<!-- Theme Selector Button -->
 			<button
@@ -175,10 +197,10 @@
 		border-bottom-width: 1.5px;
 	}
 
-	.add-btn {
-		background: var(--accent-light-bg);
-		border-color: var(--accent-color);
-		color: var(--accent-color);
+	.install-header-btn, .ripasso-header-btn {
+		background: rgba(88, 204, 2, 0.15);
+		border-color: var(--green-color);
+		color: var(--green-color);
 	}
 
 	.btn-icon, .theme-icon-symbol {

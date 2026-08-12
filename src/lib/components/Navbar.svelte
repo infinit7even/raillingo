@@ -58,7 +58,6 @@
 			onclick={() => themeStore.setTheme(currentTheme === 'dark' ? 'light' : 'dark')}
 			title="Alterna Scuro/Chiaro"
 		>
-			<span class="theme-dot" style="background: {currentTheme === 'dark' ? '#1cb0f6' : '#ffc800'}"></span>
 			<span>TEMA: {currentTheme === 'dark' ? 'SCURO 🌙' : 'CHIARO ☀️'}</span>
 		</button>
 	</div>
@@ -202,11 +201,7 @@
 			gap: 0.5rem;
 		}
 
-		.theme-dot {
-			width: 10px;
-			height: 10px;
-			border-radius: 50%;
-		}
+
 
 		.sidebar-brand {
 			display: block;
