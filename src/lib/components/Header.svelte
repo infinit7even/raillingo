@@ -2,69 +2,54 @@
 	import { onMount } from 'svelte';
 	import { themeStore, type ThemePreset } from '$lib/stores/themeStore';
 	import { cardsStore } from '$lib/stores/cardsStore';
-	import { statsStore, type StatsData } from '$lib/stores/statsStore';
 	import { pwaStore } from '$lib/stores/pwaStore';
-	import { toggleDrawer } from '$lib/stores/drawerStore';
+	import { navStore } from '$lib/stores/navStore';
 	import QuickAddCardModal from '$lib/components/QuickAddCardModal.svelte';
-	import InstallAppModal from '$lib/components/InstallAppModal.svelte';
 	import type { Card } from '$lib/types/cards';
 
 	let currentTheme = $state<ThemePreset>('dark');
 	let cards = $state<Card[]>([]);
 	let isQuickAddOpen = $state(false);
-	let isInstallModalOpen = $state(false);
 	let canInstall = $state(false);
-	let isStandalone = $state(false);
-
-	let stats = $state<StatsData>({
-		cardsStudied: 0,
-		quizAnswered: 0,
-		quizCorrect: 0,
-		streakDays: 1,
-		lastStudiedDate: '',
-		favorites: []
-	});
+	let isNavOpen = $state(false);
 
 	onMount(() => {
 		const unTheme = themeStore.subscribe((t) => (currentTheme = t));
 		const unCards = cardsStore.subscribe((c) => (cards = c));
-		const unStats = statsStore.subscribe((s) => (stats = s));
 		const unPwa = pwaStore.subscribe(() => {
 			canInstall = pwaStore.canInstall;
-			isStandalone = pwaStore.isStandalone;
 		});
+		const unNav = navStore.subscribe((o) => (isNavOpen = o));
 
 		return () => {
 			unTheme();
 			unCards();
-			unStats();
 			unPwa();
+			unNav();
 		};
 	});
 
 	async function handleInstallApp() {
-		if (canInstall) {
-			const success = await pwaStore.promptInstall();
-			if (!success) {
-				isInstallModalOpen = true;
-			}
-		} else {
-			isInstallModalOpen = true;
-		}
+		await pwaStore.promptInstall();
 	}
 </script>
 
 <header class="app-header">
 	<div class="header-container">
 		<div class="brand-group">
-			<!-- Hamburger Menu Button (Mobile Drawer) -->
+			<!-- Hamburger Menu Toggle Button (Mobile) -->
 			<button
-				class="duo-header-btn drawer-menu-btn"
-				onclick={toggleDrawer}
-				aria-label="Apri menu laterale"
-				title="Menu nav"
+				type="button"
+				class="duo-header-btn menu-toggle-btn"
+				onclick={() => navStore.toggle()}
+				aria-label="Menu navigazione"
+				title="Apri menu navigazione"
 			>
-				<span class="hamburger-icon">☰</span>
+				<div class="hamburger-icon" class:open={isNavOpen}>
+					<span></span>
+					<span></span>
+					<span></span>
+				</div>
 			</button>
 
 			<!-- Brand Logo & Flag -->
@@ -87,16 +72,15 @@
 
 		<!-- Action Buttons (Mobile Optimized) -->
 		<div class="actions">
-			<!-- PWA Install / Download Button -->
-			{#if !isStandalone}
+			{#if canInstall}
 				<button
 					class="duo-header-btn install-header-btn"
 					onclick={handleInstallApp}
-					aria-label="Scarica App"
-					title="Scarica e Installa l'App"
+					aria-label="Installa App"
+					title="Installa l'App"
 				>
 					<span class="btn-icon">📲</span>
-					<span class="btn-text">SCARICA</span>
+					<span class="btn-text">INSTALLA</span>
 				</button>
 			{/if}
 
@@ -117,22 +101,19 @@
 <!-- Quick 1-Click Add Card Modal -->
 <QuickAddCardModal isOpen={isQuickAddOpen} onClose={() => (isQuickAddOpen = false)} {cards} />
 
-<!-- Install App Instructions & Prompt Modal -->
-<InstallAppModal isOpen={isInstallModalOpen} onClose={() => (isInstallModalOpen = false)} />
-
 <style>
 	.app-header {
 		position: sticky;
-		top: 0.5rem;
+		top: 0.65rem;
 		z-index: 150;
-		width: calc(100% - 1rem);
+		width: calc(100% - 1.25rem);
 		max-width: 1200px;
-		margin: 0.35rem auto 0 auto;
+		margin: 0.5rem auto 0 auto;
 		background-color: var(--card-bg);
 		border: 2px solid var(--border-color);
 		border-bottom: 4px solid var(--border-depth-color);
-		border-radius: 20px;
-		box-shadow: 0 4px 16px var(--shadow-color);
+		border-radius: 24px;
+		box-shadow: none;
 		backdrop-filter: blur(16px);
 		-webkit-backdrop-filter: blur(16px);
 		transition:
@@ -142,11 +123,11 @@
 	}
 
 	.header-container {
-		padding: 0.45rem 0.75rem;
+		padding: 0.5rem 0.85rem;
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		gap: 0.4rem;
+		gap: 0.5rem;
 	}
 
 	.brand-group {
@@ -155,22 +136,45 @@
 		gap: 0.5rem;
 	}
 
-	.drawer-menu-btn {
-		padding: 0.35rem 0.55rem;
-		background: var(--card-bg-subtle);
-		border-color: var(--border-color);
+	.menu-toggle-btn {
+		padding: 0.45rem 0.55rem;
 	}
 
 	.hamburger-icon {
-		font-size: 1.1rem;
-		line-height: 1;
-		font-weight: 900;
+		width: 18px;
+		height: 14px;
+		display: flex;
+		flex-direction: column;
+		justify-content: space-between;
+	}
+
+	.hamburger-icon span {
+		display: block;
+		height: 2.2px;
+		width: 100%;
+		background-color: var(--text-color);
+		border-radius: 2px;
+		transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+		transform-origin: center;
+	}
+
+	.hamburger-icon.open span:nth-child(1) {
+		transform: translateY(6px) rotate(45deg);
+	}
+
+	.hamburger-icon.open span:nth-child(2) {
+		opacity: 0;
+		transform: scaleX(0);
+	}
+
+	.hamburger-icon.open span:nth-child(3) {
+		transform: translateY(-6px) rotate(-45deg);
 	}
 
 	.brand {
 		display: flex;
 		align-items: center;
-		gap: 0.5rem;
+		gap: 0.55rem;
 		text-decoration: none;
 		color: var(--text-color);
 	}
@@ -181,8 +185,8 @@
 	}
 
 	.flag-img {
-		width: 28px;
-		height: 28px;
+		width: 30px;
+		height: 30px;
 		filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.15));
 	}
 
@@ -192,7 +196,7 @@
 	}
 
 	.app-title {
-		font-size: 1.2rem;
+		font-size: 1.25rem;
 		font-weight: 900;
 		color: var(--green-color);
 		letter-spacing: -0.03em;
@@ -217,7 +221,7 @@
 	}
 
 	.app-subtitle {
-		font-size: 0.62rem;
+		font-size: 0.65rem;
 		font-weight: 800;
 		color: var(--accent-color);
 		text-transform: uppercase;
@@ -227,20 +231,20 @@
 	.actions {
 		display: flex;
 		align-items: center;
-		gap: 0.4rem;
+		gap: 0.45rem;
 	}
 
 	.duo-header-btn {
 		display: inline-flex;
 		align-items: center;
-		gap: 0.3rem;
-		padding: 0.4rem 0.65rem;
+		gap: 0.35rem;
+		padding: 0.45rem 0.75rem;
 		border-radius: 14px;
 		background-color: var(--card-bg-subtle);
 		border: 2px solid var(--border-color);
 		border-bottom: 3px solid var(--border-depth-color);
 		color: var(--text-color);
-		font-size: 0.78rem;
+		font-size: 0.8rem;
 		font-weight: 800;
 		cursor: pointer;
 		text-decoration: none;
@@ -257,16 +261,14 @@
 	}
 
 	.install-header-btn {
-		background: rgba(88, 204, 2, 0.18);
+		background: rgba(88, 204, 2, 0.15);
 		border-color: var(--green-color);
-		border-bottom-color: var(--green-depth);
 		color: var(--green-color);
-		font-weight: 900;
 	}
 
 	.btn-icon,
 	.theme-icon-symbol {
-		font-size: 0.95rem;
+		font-size: 1rem;
 		line-height: 1;
 	}
 
@@ -276,23 +278,23 @@
 		}
 	}
 
-	@media (max-width: 480px) {
+	@media (max-width: 640px) {
 		.app-subtitle {
 			display: none;
 		}
 		.header-container {
-			padding: 0.4rem 0.6rem;
+			padding: 0.45rem 0.75rem;
 		}
 		.flag-img {
-			width: 24px;
-			height: 24px;
+			width: 26px;
+			height: 26px;
 		}
 		.app-title {
-			font-size: 1.1rem;
+			font-size: 1.15rem;
 		}
 		.duo-header-btn {
-			padding: 0.35rem 0.55rem;
-			font-size: 0.75rem;
+			padding: 0.4rem 0.65rem;
+			font-size: 0.78rem;
 		}
 		.theme-name-text {
 			display: none;

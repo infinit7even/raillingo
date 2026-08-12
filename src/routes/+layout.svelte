@@ -2,17 +2,19 @@
 	import '../app.css';
 	import Header from '$lib/components/Header.svelte';
 	import Navbar from '$lib/components/Navbar.svelte';
-	import { goto } from '$app/navigation';
+	import { goto, onNavigate } from '$app/navigation';
 	import { page } from '$app/state';
 	import { fade } from 'svelte/transition';
-	import { onNavigate } from '$app/navigation';
-
-	import QuickAddCardModal from '$lib/components/QuickAddCardModal.svelte';
+	import { navStore } from '$lib/stores/navStore';
 
 	let { data, children } = $props();
 
-	let isQuickAddOpen = $state(false);
 	let user = $derived(data?.user);
+
+	// Chiudi la tendina mobile ad ogni navigazione
+	onNavigate(() => {
+		navStore.close();
+	});
 
 	// Route sequence for lateral swipe navigation
 	const routeOrder = ['/', '/flashcard', '/quiz', '/reels', '/scrittura', '/wiki'];
@@ -23,11 +25,13 @@
 
 	function handleTouchStart(e: TouchEvent) {
 		const target = e.target as HTMLElement;
-		// Don't swipe if typing in input/textarea, inside modals, or horizontal scroll boxes
+		// Don't swipe if typing in input/textarea, inside modals, drawer or scroll boxes
 		if (
 			target.tagName === 'INPUT' ||
 			target.tagName === 'TEXTAREA' ||
 			target.closest('.modal-backdrop') ||
+			target.closest('.drawer-backdrop') ||
+			target.closest('.duo-navigation') ||
 			target.closest('.nav-scroll-wrapper')
 		) {
 			return;
@@ -123,7 +127,7 @@
 		width: 100%;
 		max-width: 1200px;
 		margin: 0 auto;
-		padding: 0.85rem 0.85rem 4.5rem 0.85rem;
+		padding: 0.85rem 0.85rem 1.85rem 0.85rem;
 		box-sizing: border-box;
 		contain: layout style;
 	}
