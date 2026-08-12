@@ -22,7 +22,9 @@
 		submitted = false;
 		tick().then(() => {
 			// Esegui il focus solo su desktop con tastiera fisica per evitare l'apertura automatica della tastiera su mobile
-			const isTouchDevice = typeof window !== 'undefined' && (window.matchMedia('(pointer: coarse)').matches || window.innerWidth < 768);
+			const isTouchDevice =
+				typeof window !== 'undefined' &&
+				(window.matchMedia('(pointer: coarse)').matches || window.innerWidth < 768);
 			if (inputEl && !isTouchDevice) {
 				inputEl.focus();
 			}
@@ -52,10 +54,6 @@
 			const scoreDesc = calculateSimilarity(userInput, card.description);
 			const scoreFull = card.fullName ? calculateSimilarity(userInput, card.fullName) : 0;
 			return Math.max(scoreDesc, scoreFull);
-		} else if (subMode === 'title-to-fullname') {
-			return calculateSimilarity(userInput, card.fullName || card.description);
-		} else if (subMode === 'fullname-to-title') {
-			return calculateSimilarity(userInput, card.title);
 		}
 		return calculateSimilarity(userInput, card.title);
 	});
@@ -88,10 +86,6 @@
 				Scrivi Descrizione
 			{:else if subMode === 'desc-to-title'}
 				Scrivi Acronimo
-			{:else if subMode === 'title-to-fullname'}
-				Scrivi Significato Esteso
-			{:else if subMode === 'fullname-to-title'}
-				Scrivi Acronimo da Nome Completo
 			{:else}
 				Scrivi da Foto
 			{/if}
@@ -115,14 +109,6 @@
 				{/if}
 			</h2>
 			<p class="instruction">✍️ Scrivi la spiegazione o a cosa serve questo acronimo:</p>
-		{:else if subMode === 'title-to-fullname'}
-			<span class="label">Acronimo:</span>
-			<h2 class="title">{card.title}</h2>
-			<p class="instruction">✍️ Digita il significato esteso dell'acronimo (es. "Impresa Ferroviaria"):</p>
-		{:else if subMode === 'fullname-to-title'}
-			<span class="label">Significato Esteso:</span>
-			<h2 class="title">{card.fullName || card.description}</h2>
-			<p class="instruction">✍️ Digita l'acronimo o sigla breve corrispondente:</p>
 		{:else if subMode === 'desc-to-title'}
 			<span class="label">Descrizione / Funzione:</span>
 			<p class="desc-text">{card.description}</p>
@@ -148,14 +134,13 @@
 				disabled={submitted}
 				onkeydown={handleKeyDown}
 				autocomplete="off"
-				spellcheck="false"
-			></textarea>
+				spellcheck="false"></textarea>
 		{:else}
 			<input
 				type="text"
 				bind:this={inputEl}
 				bind:value={userInput}
-				placeholder={subMode === 'title-to-fullname' ? "Digita il significato esteso completo..." : "Digita qui l'acronimo esatto..."}
+				placeholder="Digita qui l'acronimo esatto..."
 				class="duo-input input-field"
 				disabled={submitted}
 				onkeydown={handleKeyDown}
@@ -174,11 +159,21 @@
 	<!-- Reveal / Self-Verification Box -->
 	{#if submitted}
 		<div class="comparison-card duo-card">
-			<div class="score-banner" class:score-high={similarityScore >= 70} class:score-med={similarityScore >= 40 && similarityScore < 70}>
-				<span class="score-icon">{similarityScore >= 70 ? '🎯' : similarityScore >= 40 ? '👍' : '💡'}</span>
+			<div
+				class="score-banner"
+				class:score-high={similarityScore >= 70}
+				class:score-med={similarityScore >= 40 && similarityScore < 70}
+			>
+				<span class="score-icon"
+					>{similarityScore >= 70 ? '🎯' : similarityScore >= 40 ? '👍' : '💡'}</span
+				>
 				<div class="score-info">
 					<strong>Comprensione: {similarityScore}%</strong>
-					<span>{similarityScore >= 70 ? 'Ottima memorizzazione!' : 'Confronta la tua risposta con il testo del database.'}</span>
+					<span
+						>{similarityScore >= 70
+							? 'Ottima memorizzazione!'
+							: 'Confronta la tua risposta con il testo del database.'}</span
+					>
 				</div>
 			</div>
 
@@ -300,7 +295,8 @@
 		gap: 0.85rem;
 	}
 
-	.input-field, .input-textarea {
+	.input-field,
+	.input-textarea {
 		width: 100%;
 		box-sizing: border-box;
 		font-size: 1.05rem;
@@ -309,10 +305,13 @@
 		border: 2px solid var(--border-color);
 		background: var(--card-bg);
 		color: var(--text-color);
-		transition: border-color 0.2s ease, box-shadow 0.2s ease;
+		transition:
+			border-color 0.2s ease,
+			box-shadow 0.2s ease;
 	}
 
-	.input-field:focus, .input-textarea:focus {
+	.input-field:focus,
+	.input-textarea:focus {
 		border-color: var(--accent-color);
 		box-shadow: 0 0 0 4px var(--accent-light-bg);
 		outline: none;
@@ -419,8 +418,13 @@
 	}
 
 	@keyframes fadeIn {
-		from { opacity: 0; transform: translateY(6px); }
-		to { opacity: 1; transform: translateY(0); }
+		from {
+			opacity: 0;
+			transform: translateY(6px);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
 	}
 </style>
-

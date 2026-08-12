@@ -28,7 +28,7 @@ class StatsStore {
 			if (saved) {
 				try {
 					this.data = { ...DEFAULT_STATS, ...JSON.parse(saved) };
-					this.updateStreak();
+					this.resetStreakIfStale();
 				} catch (e) {
 					console.error('Errore durante il parsing delle statistiche:', e);
 				}
@@ -46,6 +46,7 @@ class StatsStore {
 
 	public recordStudySession() {
 		const today = new Date().toISOString().split('T')[0];
+		this.bumpStreak(today);
 		this.data.cardsStudied += 1;
 		this.data.lastStudiedDate = today;
 		this.save();
@@ -75,23 +76,29 @@ class StatsStore {
 		return this.data.favorites.includes(cardId);
 	}
 
-	private updateStreak() {
+	private bumpStreak(today: string) {
+		const lastDate = this.data.lastStudiedDate;
+		if (!lastDate || lastDate === today) return;
+
+		const diffDays = Math.ceil(
+			(new Date(today).getTime() - new Date(lastDate).getTime()) / (1000 * 60 * 60 * 24)
+		);
+
+		this.data.streakDays = diffDays === 1 ? this.data.streakDays + 1 : 1;
+	}
+
+	private resetStreakIfStale() {
 		const today = new Date().toISOString().split('T')[0];
 		const lastDate = this.data.lastStudiedDate;
-		if (!lastDate) {
+		if (!lastDate) return;
+
+		const diffDays = Math.ceil(
+			(new Date(today).getTime() - new Date(lastDate).getTime()) / (1000 * 60 * 60 * 24)
+		);
+
+		if (diffDays > 1) {
 			this.data.streakDays = 1;
 			this.data.lastStudiedDate = today;
-			return;
-		}
-
-		const diffTime = Math.abs(new Date(today).getTime() - new Date(lastDate).getTime());
-		const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-		if (diffDays === 1) {
-			// Continuous streak!
-		} else if (diffDays > 1) {
-			// Streak reset
-			this.data.streakDays = 1;
 		}
 	}
 

@@ -1,9 +1,11 @@
 # RF - Rail Focus - Regole e Linee Guida per Agenti AI
 
 ## Panoramica Progetto
+
 **RF - Rail Focus** è una PWA (Progressive Web App) sviluppata in SvelteKit 5 e TypeScript per l'apprendimento e la memorizzazione di acronimi, termini e concetti del settore ferroviario (RFI, segnalamento, normativa, trazione, ecc.).
 
 ## Tecnologie Utilizzate
+
 - **Framework**: SvelteKit 5 (con Svelte Runes `$state`, `$derived`, `$props`, ecc.)
 - **Linguaggio**: TypeScript
 - **Styling**: CSS Vanilla moderno con variabili CSS (Design Tokens, Tema Scuro/Chiaro)
@@ -12,6 +14,7 @@
 - **PWA**: Web App Manifest (`static/manifest.webmanifest`) e Service Worker (`src/service-worker.ts`) per il supporto offline.
 
 ## Regole di Sviluppo e Comandi
+
 1. **Comandi Dev/Build**: MAI eseguire `bun dev`, `bun build` o `vite`. L'utente gestisce manualmente l'ambiente locale.
 2. **Controllo Tipi**: L'unico comando di verifica da eseguire al termine dei compiti è `bun check`.
 3. **Gestione Git**:
@@ -25,20 +28,22 @@
    - Supporto sia per il **Tema Scuro** che per il **Tema Chiaro**.
 
 ## Struttura delle Card (`src/lib/types/cards.ts`)
+
 ```typescript
 export interface Card {
 	id: string;
-	title: string;          // Acronimo o termine (es. "RFI", "SCMT")
-	description: string;    // Definizione e utilizzo (es. "Rete Ferroviaria Italiana...")
-	category?: string;     // Categoria (es. "Segnalamento", "Trazione", "Normativa")
-	tags?: string[];        // Etichette secondarie
-	images?: string[];      // Array di URL o percorsi immagine (es. ["/uploads/img1.webp"])
+	title: string; // Acronimo o termine (es. "RFI", "SCMT")
+	description: string; // Definizione e utilizzo (es. "Rete Ferroviaria Italiana...")
+	category?: string; // Categoria (es. "Segnalamento", "Trazione", "Normativa")
+	tags?: string[]; // Etichette secondarie
+	images?: string[]; // Array di URL o percorsi immagine (es. ["/uploads/img1.webp"])
 	createdAt: string;
 	updatedAt: string;
 }
 ```
 
 ## Modalità di Studio
+
 1. **Ripasso**: Mostra Acronimo -> Tap mostra Descrizione e Foto -> Avanti
 2. **Ripasso Foto**: Mostra Foto -> Tap 1 mostra Titolo -> Tap 2 mostra Descrizione
 3. **Inverso**: Mostra Descrizione -> Tap mostra Acronimo

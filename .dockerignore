@@ -1,0 +1,8 @@
+node_modules
+build
+.svelte-kit
+.git
+.env
+windows fluentui-emoji
+windows fluentui-emoji.zip
+base-fav

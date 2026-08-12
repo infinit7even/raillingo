@@ -3,7 +3,6 @@ import type { Card } from '$lib/types/cards';
 
 class CardsStore {
 	private cards: Card[] = [];
-	private loaded = false;
 	private loading = false;
 	private listeners = new Set<(cards: Card[]) => void>();
 
@@ -58,7 +57,6 @@ class CardsStore {
 			console.warn('Modalità offline o errore durante il caricamento delle card:', err);
 		} finally {
 			this.loading = false;
-			this.loaded = true;
 		}
 	}
 
@@ -66,12 +64,9 @@ class CardsStore {
 		return this.cards;
 	}
 
-	public get photoCards(): Card[] {
-		return this.cards.filter((c) => c.images && c.images.length > 0);
-	}
-
-
-	public async addCard(newCard: Omit<Card, 'id' | 'createdAt' | 'updatedAt'>): Promise<Card | null> {
+	public async addCard(
+		newCard: Omit<Card, 'id' | 'createdAt' | 'updatedAt'>
+	): Promise<Card | null> {
 		const now = new Date().toISOString();
 		const card: Card = {
 			...newCard,

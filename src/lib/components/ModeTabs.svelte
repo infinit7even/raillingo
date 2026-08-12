@@ -5,11 +5,7 @@
 		emoji?: string;
 	}
 
-	let {
-		tabs,
-		activeTab,
-		onSelect
-	} = $props<{
+	let { tabs, activeTab, onSelect } = $props<{
 		tabs: TabItem[];
 		activeTab: string;
 		onSelect: (id: any) => void;

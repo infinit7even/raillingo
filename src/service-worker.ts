@@ -5,16 +5,10 @@ const CACHE_NAME = `rf-v${version}`;
 const DATA_CACHE = `rf-data-v${version}`;
 
 // Asset statici da pre-cachare — build output + files statici
-const PRECACHE_ASSETS = [
-	...build,
-	...files
-];
+const PRECACHE_ASSETS = [...build, ...files];
 
 // Risorse critiche da cachare esplicitamente anche se non nel build
-const CRITICAL_PATHS = [
-	'/data/cards.json',
-	'/manifest.webmanifest'
-];
+const CRITICAL_PATHS = ['/data/cards.json', '/manifest.webmanifest'];
 
 // ─── INSTALL: pre-cache tutti gli asset e le risorse critiche ──────────────
 self.addEventListener('install', (event: any) => {

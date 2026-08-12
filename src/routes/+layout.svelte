@@ -19,12 +19,12 @@
 	// Route sequence for lateral swipe navigation
 	const routeOrder = ['/', '/flashcard', '/quiz', '/reels', '/scrittura', '/wiki'];
 	const swipeRoutes = [
-		{ href: '/', label: 'Home' },
-		{ href: '/flashcard', label: 'Flashcard' },
-		{ href: '/quiz', label: 'Quiz' },
-		{ href: '/reels', label: 'Reels' },
-		{ href: '/scrittura', label: 'Scrittura' },
-		{ href: '/wiki', label: 'Wiki' }
+		{ href: '/', label: 'Home', color: 'var(--accent-color)' },
+		{ href: '/flashcard', label: 'Flashcard', color: 'var(--green-color)' },
+		{ href: '/quiz', label: 'Quiz', color: 'var(--purple-color)' },
+		{ href: '/reels', label: 'Reels', color: 'var(--orange-color)' },
+		{ href: '/scrittura', label: 'Scrittura', color: '#ff5e5b' },
+		{ href: '/wiki', label: 'Wiki', color: 'var(--accent-color)' }
 	];
 
 	let activeSwipeIndex = $derived(routeOrder.indexOf(page.url.pathname));
@@ -96,8 +96,14 @@
 	<title>Raillingo</title>
 	<meta name="robots" content="noindex, nofollow" />
 	<meta name="googlebot" content="noindex, nofollow" />
-	<meta name="description" content="Raillingo - PWA in stile Duolingo per imparare e memorizzare gli acronimi e i concetti del corso ferroviario RFI." />
-	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+	<meta
+		name="description"
+		content="Raillingo - PWA in stile Duolingo per imparare e memorizzare gli acronimi e i concetti del corso ferroviario RFI."
+	/>
+	<meta
+		name="viewport"
+		content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
+	/>
 	<meta name="theme-color" content="#0f172a" />
 	<link rel="shortcut icon" href="/favicon.ico" />
 	<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
@@ -115,7 +121,7 @@
 	ontouchend={handleTouchEnd}
 >
 	<Header />
-	
+
 	<main class="main-content">
 		{#key page.url.pathname}
 			<div
@@ -136,6 +142,7 @@
 					href={route.href}
 					class="swipe-dot"
 					class:active={idx === activeSwipeIndex}
+					style="--dot-color: {route.color}"
 					aria-label="Vai alla pagina {route.label}"
 					title={route.label}
 				></a>
@@ -184,7 +191,9 @@
 		box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
 		backdrop-filter: blur(12px);
 		-webkit-backdrop-filter: blur(12px);
-		transition: background-color 0.3s ease, border-color 0.3s ease;
+		transition:
+			background-color 0.3s ease,
+			border-color 0.3s ease;
 	}
 
 	.swipe-dot {
@@ -204,9 +213,9 @@
 
 	.swipe-dot.active {
 		width: 22px;
-		background-color: var(--accent-color);
+		background-color: var(--dot-color, var(--accent-color));
 		opacity: 1;
-		box-shadow: 0 2px 8px rgba(28, 176, 246, 0.4);
+		box-shadow: 0 2px 8px color-mix(in srgb, var(--dot-color, var(--accent-color)) 45%, transparent);
 	}
 
 	@media (min-width: 1024px) {

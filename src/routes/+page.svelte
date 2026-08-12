@@ -9,13 +9,16 @@
 
 	let { data } = $props();
 
-	const initialList = data.initialCards || [];
-	let cards = $state<Card[]>(initialList);
-	let wordOfTheDay = $state<Card | null>(
-		initialList.length > 0 ? initialList[Math.floor(Math.random() * initialList.length)] : null
-	);
+	// Seed iniziale letto una sola volta dai dati del server (non reattivo)
+	const seed = (() => {
+		const list: Card[] = data.initialCards ?? [];
+		const word = list.length > 0 ? list[Math.floor(Math.random() * list.length)] : null;
+		return { list, word };
+	})();
+
+	let cards = $state<Card[]>(seed.list);
+	let wordOfTheDay = $state<Card | null>(seed.word);
 	let isQuickAddOpen = $state(false);
-	let isStandalone = $state(false);
 	let canInstall = $state(false);
 	let user = $derived(data.user);
 
@@ -45,7 +48,6 @@
 		});
 		const unstats = statsStore.subscribe((s) => (stats = s));
 		const unpwa = pwaStore.subscribe(() => {
-			isStandalone = pwaStore.isStandalone;
 			canInstall = pwaStore.canInstall;
 		});
 
@@ -61,11 +63,46 @@
 	}
 
 	const lessonNodes = [
-		{ id: 1, title: 'FLASHCARD', href: '/flashcard', icon: '/emoji/open_book_3d.png', state: 'active', offset: 0 },
-		{ id: 2, title: 'QUIZ', href: '/quiz', icon: '/emoji/star_3d.png', state: 'unlocked', offset: -40 },
-		{ id: 3, title: 'REELS', href: '/reels', icon: '/emoji/camera_3d.png', state: 'unlocked', offset: 35 },
-		{ id: 4, title: 'SCRITTURA', href: '/scrittura', icon: '/emoji/writing_hand_3d_default.png', state: 'unlocked', offset: -35 },
-		{ id: 5, title: 'WIKI', href: '/wiki', icon: '/emoji/books_3d.png', state: 'unlocked', offset: 0 }
+		{
+			id: 1,
+			title: 'FLASHCARD',
+			href: '/flashcard',
+			icon: '/emoji/open_book_3d.png',
+			state: 'active',
+			offset: 0
+		},
+		{
+			id: 2,
+			title: 'QUIZ',
+			href: '/quiz',
+			icon: '/emoji/star_3d.png',
+			state: 'unlocked',
+			offset: -40
+		},
+		{
+			id: 3,
+			title: 'REELS',
+			href: '/reels',
+			icon: '/emoji/camera_3d.png',
+			state: 'unlocked',
+			offset: 35
+		},
+		{
+			id: 4,
+			title: 'SCRITTURA',
+			href: '/scrittura',
+			icon: '/emoji/writing_hand_3d_default.png',
+			state: 'unlocked',
+			offset: -35
+		},
+		{
+			id: 5,
+			title: 'WIKI',
+			href: '/wiki',
+			icon: '/emoji/books_3d.png',
+			state: 'unlocked',
+			offset: 0
+		}
 	];
 
 	let totalXP = $derived(stats.quizCorrect * 15 + stats.cardsStudied * 5);
@@ -73,53 +110,9 @@
 </script>
 
 <div class="duo-page-grid">
-	<!-- 📍 MAIN CENTRAL COLUMN (Stats Bar Mobile, Parola del Giorno & Path) -->
+	<!-- 📍 MAIN CENTRAL COLUMN -->
 	<div class="duo-main-column">
-		<!-- 📊 Top Stats Bar (Mobile Only) -->
-		<a href="/missioni" class="top-stats-row duo-card mobile-top-stats" title="Clicca per aprire le Missioni ed i Dettagli">
-			<div class="stat-item streak">
-				<img src="/emoji/fire_3d.png" alt="Serie" class="widget-emoji-img" />
-				<div class="stat-text-group">
-					<span class="stat-lbl">Serie</span>
-					<span class="stat-val">{stats.streakDays}</span>
-				</div>
-			</div>
-			<div class="stat-item gems">
-				<img src="/emoji/gem_stone_3d.png" alt="Gemme" class="widget-emoji-img" />
-				<div class="stat-text-group">
-					<span class="stat-lbl">Gemme</span>
-					<span class="stat-val">{gems}</span>
-				</div>
-			</div>
-			<div class="stat-item hearts">
-				<img src="/emoji/high_voltage_3d.png" alt="XP" class="widget-emoji-img" />
-				<div class="stat-text-group">
-					<span class="stat-lbl">XP</span>
-					<span class="stat-val">{totalXP}</span>
-				</div>
-			</div>
-		</a>
-
-		<!-- 🎯 Widget Missioni Giornaliere (Subito Sotto le Gemme su Mobile) -->
-		<div class="duo-widget duo-card mobile-missions-widget">
-			<div class="widget-header-row">
-				<h3 class="widget-title">Missioni giornaliere</h3>
-				<a href="/missioni" class="widget-link">VEDI TUTTE &gt;</a>
-			</div>
-			<div class="mission-item">
-				<img src="/emoji/high_voltage_3d.png" alt="XP" class="widget-emoji-img" />
-				<div class="mission-info">
-					<span class="mission-desc">Guadagna 10 XP</span>
-					<div class="duo-progress-track">
-						<div class="duo-progress-fill" style="width: {Math.min(100, totalXP * 10)}%"></div>
-					</div>
-					<span class="mission-count">{Math.min(10, totalXP)} / 10</span>
-				</div>
-				<img src="/emoji/package_3d.png" alt="Premio" class="widget-emoji-img" />
-			</div>
-		</div>
-
-		<!-- 💡 Parola del Giorno Card (Cima alla Home) -->
+		<!--  Parola del Giorno Card -->
 		{#if wordOfTheDay}
 			<section class="word-of-day-section">
 				<div class="duo-card word-of-day-card">
@@ -129,7 +122,11 @@
 							<span class="wod-badge-text">PAROLA DEL GIORNO</span>
 						</div>
 						<div class="wod-header-actions">
-							<button class="wod-action-btn" onclick={() => pickRandomWord(cards)} title="Scopri un'altra parola">
+							<button
+								class="wod-action-btn"
+								onclick={() => pickRandomWord(cards)}
+								title="Scopri un'altra parola"
+							>
 								🎲 Altra Parola
 							</button>
 						</div>
@@ -155,17 +152,31 @@
 			</section>
 		{/if}
 
+		<!-- 🎯 Widget Missioni Giornaliere -->
+		<div class="duo-widget duo-card mobile-missions-widget">
+			<div class="widget-header-row">
+				<h3 class="widget-title">Missioni giornaliere</h3>
+				<a href="/missioni" class="widget-link">VEDI TUTTE &gt;</a>
+			</div>
+			<div class="mission-item">
+				<img src="/emoji/high_voltage_3d.png" alt="XP" class="widget-emoji-img" />
+				<div class="mission-info">
+					<span class="mission-desc">Guadagna 10 XP</span>
+					<div class="duo-progress-track">
+						<div class="duo-progress-fill" style="width: {Math.min(100, totalXP * 10)}%"></div>
+					</div>
+					<span class="mission-count">{Math.min(10, totalXP)} / 10</span>
+				</div>
+				<img src="/emoji/package_3d.png" alt="Premio" class="widget-emoji-img" />
+			</div>
+		</div>
+
 		<!-- Winding 3D Lesson Path with Owl Mascot & Section Names -->
 		<section class="duo-path-section">
 			<div class="nodes-container">
 				{#each lessonNodes as node, i}
 					<div class="node-wrapper" style="transform: translateX({node.offset}px)">
-						<a
-							href={node.href}
-							class="path-node-btn"
-							class:active={i === 0}
-							title={node.title}
-						>
+						<a href={node.href} class="path-node-btn" class:active={i === 0} title={node.title}>
 							<img src={node.icon} alt={node.title} class="node-emoji-img" />
 						</a>
 						<span class="path-node-label">{node.title}</span>
@@ -183,7 +194,11 @@
 	<!-- 📊 RIGHT SIDEBAR COLUMN (Desktop & Mobile Widgets) -->
 	<aside class="duo-right-sidebar">
 		<!-- Top Stats Row (Desktop Only) -->
-		<a href="/missioni" class="top-stats-row duo-card desktop-top-stats" title="Clicca per aprire le Missioni ed i Dettagli">
+		<a
+			href="/missioni"
+			class="top-stats-row duo-card desktop-top-stats"
+			title="Clicca per aprire le Missioni ed i Dettagli"
+		>
 			<div class="stat-item streak">
 				<img src="/emoji/fire_3d.png" alt="Serie" class="widget-emoji-img" />
 				<div class="stat-text-group">
@@ -238,18 +253,19 @@
 					</button>
 				{/if}
 
-				<a href="/wiki" class="duo-btn duo-btn-blue flex-btn">
-					📚 WIKI
-				</a>
-				<a href="https://ko-fi.com/infinit7even" target="_blank" rel="noopener noreferrer" class="duo-btn duo-btn-green flex-btn">
+				<a href="/wiki" class="duo-btn duo-btn-blue flex-btn"> 📚 WIKI </a>
+				<a
+					href="https://ko-fi.com/infinit7even"
+					target="_blank"
+					rel="noopener noreferrer"
+					class="duo-btn duo-btn-green flex-btn"
+				>
 					<img src="/emoji/sparkles_3d.png" alt="Splendore" class="btn-emoji-img" />
 					SOSTIENI IL PROGETTO
 				</a>
 
 				{#if user && (user.isAdmin || user.role === 'admin')}
-					<a href="/admin" class="duo-btn duo-btn-purple flex-btn">
-						🔐 PANNELLO ADMIN
-					</a>
+					<a href="/admin" class="duo-btn duo-btn-purple flex-btn"> 🔐 PANNELLO ADMIN </a>
 				{/if}
 			</div>
 		</div>
@@ -262,11 +278,7 @@
 </div>
 
 <!-- Quick 1-Click Add Card Modal for Admin -->
-<QuickAddCardModal
-	isOpen={isQuickAddOpen}
-	cards={cards}
-	onClose={() => (isQuickAddOpen = false)}
-/>
+<QuickAddCardModal isOpen={isQuickAddOpen} {cards} onClose={() => (isQuickAddOpen = false)} />
 
 <style>
 	.duo-page-grid {
@@ -334,7 +346,9 @@
 		justify-content: center;
 		text-decoration: none;
 		box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
-		transition: transform 0.1s ease, border-width 0.1s ease;
+		transition:
+			transform 0.1s ease,
+			border-width 0.1s ease;
 		user-select: none;
 	}
 
@@ -505,11 +519,6 @@
 		gap: 0.85rem;
 	}
 
-	.mobile-top-stats {
-		display: flex;
-		margin: 0;
-	}
-
 	.mobile-missions-widget {
 		margin: 0;
 	}
@@ -528,7 +537,6 @@
 	}
 
 	@media (min-width: 1024px) {
-		.mobile-top-stats,
 		.mobile-missions-widget {
 			display: none !important;
 			margin: 0 !important;
@@ -538,8 +546,8 @@
 	.top-stats-row {
 		display: flex;
 		align-items: center;
-		justify-content: space-around;
-		padding: 0.75rem 1rem;
+		justify-content: space-between;
+		padding: 0.75rem 0.35rem;
 		text-decoration: none;
 		transition: transform 0.15s ease;
 	}
@@ -552,9 +560,15 @@
 	.stat-item {
 		display: flex;
 		align-items: center;
+		justify-content: center;
 		gap: 0.5rem;
 		font-weight: 900;
 		font-size: 0.95rem;
+		flex: 1;
+	}
+
+	.stat-item + .stat-item {
+		border-left: 1px solid var(--border-color);
 	}
 
 	.stat-text-group {
@@ -563,9 +577,15 @@
 		line-height: 1;
 	}
 
-	.stat-item.streak { color: var(--orange-color); }
-	.stat-item.gems { color: var(--accent-color); }
-	.stat-item.hearts { color: var(--pink-color); }
+	.stat-item.streak {
+		color: var(--orange-color);
+	}
+	.stat-item.gems {
+		color: var(--accent-color);
+	}
+	.stat-item.hearts {
+		color: var(--pink-color);
+	}
 
 	.stat-lbl {
 		font-size: 0.65rem;
@@ -578,8 +598,6 @@
 		font-size: 1.05rem;
 		font-weight: 900;
 	}
-
-
 
 	.widget-emoji-img {
 		width: 24px;
@@ -713,14 +731,14 @@
 		color: var(--accent-color);
 	}
 
-	@keyframes bounce {
-		0%, 100% { transform: translateY(0); }
-		50% { transform: translateY(-5px); }
-	}
-
 	@keyframes floatMascot {
-		0%, 100% { transform: translateY(0); }
-		50% { transform: translateY(-8px); }
+		0%,
+		100% {
+			transform: translateY(0);
+		}
+		50% {
+			transform: translateY(-8px);
+		}
 	}
 
 	@media (max-width: 640px) {

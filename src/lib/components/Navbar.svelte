@@ -91,7 +91,9 @@
 		<a href="/" class="brand-link" onclick={handleNavClick}>
 			<img src="/emoji/triangular_flag_3d.png" alt="Bandiera" class="brand-emoji" />
 			<span class="brand-title">
-				Rai<span class="ll-track-box">l<img src="/emoji/railway_track_3d.png" alt="Binario" class="brand-track-img" />l</span>ingo
+				Rai<span class="ll-track-box"
+					>l<img src="/emoji/railway_track_3d.png" alt="Binario" class="brand-track-img" />l</span
+				>ingo
 			</span>
 		</a>
 		<button
@@ -151,11 +153,7 @@
 	</div>
 </nav>
 
-<QuickAddCardModal
-	isOpen={isQuickAddOpen}
-	onClose={() => (isQuickAddOpen = false)}
-	{cards}
-/>
+<QuickAddCardModal isOpen={isQuickAddOpen} onClose={() => (isQuickAddOpen = false)} {cards} />
 
 <style>
 	/* Overlay Sfocato Mobile */
@@ -197,7 +195,10 @@
 		gap: 1rem;
 		box-sizing: border-box;
 		transform: translateX(-100%);
-		transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.3s ease, border-color 0.3s ease;
+		transition:
+			transform 0.32s cubic-bezier(0.16, 1, 0.3, 1),
+			background-color 0.3s ease,
+			border-color 0.3s ease;
 	}
 
 	.duo-navigation.open {
@@ -262,7 +263,9 @@
 		font-size: 1.1rem;
 		font-weight: 800;
 		cursor: pointer;
-		transition: transform 0.15s ease, background-color 0.2s ease;
+		transition:
+			transform 0.15s ease,
+			background-color 0.2s ease;
 	}
 
 	.close-drawer-btn:active {
@@ -332,7 +335,7 @@
 		width: 26px;
 		height: 26px;
 		object-fit: contain;
-		filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+		filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
 	}
 
 	.nav-item:active .nav-emoji-img {

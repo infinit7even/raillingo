@@ -37,7 +37,9 @@
 				const firstLetter = c.title.trim().charAt(0).toUpperCase();
 				const matchesLetter =
 					selectedLetter === 'ALL' ||
-					(selectedLetter === '#' ? !(firstLetter >= 'A' && firstLetter <= 'Z') : firstLetter === selectedLetter);
+					(selectedLetter === '#'
+						? !(firstLetter >= 'A' && firstLetter <= 'Z')
+						: firstLetter === selectedLetter);
 
 				// Search query
 				const q = searchQuery.toLowerCase().trim();
@@ -62,7 +64,6 @@
 	<PageHeader
 		title="Wiki & Dizionario Ferroviario"
 		subtitle="Consultazione rapida di tutti gli acronimi in ordine alfabetico e ricerca globale."
-		badge="Dizionario RFI"
 		icon="/emoji/books_3d.png"
 		variant="blue"
 	/>
@@ -154,9 +155,7 @@
 					{/if}
 				</div>
 			{:else}
-				<div class="empty-wiki">
-					Nessun acronimo trovato corrispondente ai criteri di ricerca.
-				</div>
+				<div class="empty-wiki">Nessun acronimo trovato corrispondente ai criteri di ricerca.</div>
 			{/each}
 		</div>
 	</div>
@@ -379,7 +378,13 @@
 	}
 
 	@keyframes fadeIn {
-		from { opacity: 0; transform: translateY(6px); }
-		to { opacity: 1; transform: translateY(0); }
+		from {
+			opacity: 0;
+			transform: translateY(6px);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
 	}
 </style>

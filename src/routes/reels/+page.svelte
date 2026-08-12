@@ -44,7 +44,6 @@
 	<PageHeader
 		title="Reels Ferroviari"
 		subtitle="Scorri le schede visive ed ascolta le definizioni in un feed dinamico."
-		badge="Modalità Reels"
 		icon="/emoji/camera_3d.png"
 		variant="orange"
 	/>
@@ -62,7 +61,11 @@
 						<!-- Top Action Bar -->
 						<div class="reel-header-bar">
 							<div></div>
-							<button class="audio-tts-btn" onclick={(e) => speakAudio(e, card)} title="Ascolta audio">
+							<button
+								class="audio-tts-btn"
+								onclick={(e) => speakAudio(e, card)}
+								title="Ascolta audio"
+							>
 								🔊 Audio
 							</button>
 						</div>
@@ -270,7 +273,12 @@
 	.front-img-overlay {
 		position: absolute;
 		inset: 0;
-		background: linear-gradient(to top, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.4) 50%, rgba(0, 0, 0, 0.3) 100%);
+		background: linear-gradient(
+			to top,
+			rgba(0, 0, 0, 0.85) 0%,
+			rgba(0, 0, 0, 0.4) 50%,
+			rgba(0, 0, 0, 0.3) 100%
+		);
 		z-index: 2;
 	}
 

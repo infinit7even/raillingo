@@ -1,29 +1,18 @@
 import { json, type RequestHandler } from '@sveltejs/kit';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { env } from '$env/dynamic/private';
+import { isAuthorizedAdmin } from '$lib/server/auth';
 
 const ALLOWED_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif']);
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
-function isAuthorizedAdmin(cookies: any): boolean {
-	const cookieVal = cookies.get('admin_session') || cookies.get('user_session');
-	if (!cookieVal) return false;
-	try {
-		const session = JSON.parse(cookieVal);
-		if (session.isAdmin === true) return true;
-		const rawAdminIds = env.DISCORD_ADMIN_IDS || process.env.DISCORD_ADMIN_IDS || '691289686093725736';
-		const adminIds = rawAdminIds.split(',').map((id: string) => id.trim()).filter(Boolean);
-		return adminIds.includes(String(session.userId).trim());
-	} catch {
-		return false;
-	}
-}
-
 export const POST: RequestHandler = async ({ request, cookies }) => {
 	// Verifica autorizzazione admin prima dell'upload
 	if (!isAuthorizedAdmin(cookies)) {
-		return json({ error: 'Accesso negato: soltanto gli admin possono caricare immagini.' }, { status: 403 });
+		return json(
+			{ error: 'Accesso negato: soltanto gli admin possono caricare immagini.' },
+			{ status: 403 }
+		);
 	}
 
 	try {
@@ -42,7 +31,10 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 		// Verifica estensione file (whitelist)
 		const extension = path.extname(file.name).toLowerCase();
 		if (!ALLOWED_EXTENSIONS.has(extension)) {
-			return json({ error: 'Tipo di file non consentito. Usa JPG, PNG, WebP o GIF.' }, { status: 400 });
+			return json(
+				{ error: 'Tipo di file non consentito. Usa JPG, PNG, WebP o GIF.' },
+				{ status: 400 }
+			);
 		}
 
 		const bytes = await file.arrayBuffer();

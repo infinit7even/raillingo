@@ -26,7 +26,6 @@
 	<PageHeader
 		title="Quiz a Scelta Multipla"
 		subtitle="Metti alla prova la tua memoria selezionando la risposta corretta tra 5 opzioni."
-		badge="Modalità Quiz"
 		icon="/emoji/star_3d.png"
 		variant="purple"
 	/>
@@ -35,7 +34,7 @@
 		<MultipleChoiceQuiz
 			targetCard={cards[currentIndex]}
 			allCards={cards}
-			currentIndex={currentIndex}
+			{currentIndex}
 			totalCards={cards.length}
 			onNext={handleNext}
 		/>

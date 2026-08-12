@@ -29,11 +29,7 @@
 
 			<!-- Universal Form Component -->
 			<div class="modal-body">
-				<CardForm
-					onSave={handleSaveCard}
-					onCancel={onClose}
-					submitLabel="⚡ AGGIUNGI ORA SCHEDA"
-				/>
+				<CardForm onSave={handleSaveCard} onCancel={onClose} submitLabel="⚡ AGGIUNGI ORA SCHEDA" />
 			</div>
 		</div>
 	</div>

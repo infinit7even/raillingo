@@ -32,6 +32,15 @@
 		isSolved = false;
 	});
 
+	function shuffle(items: unknown[]): unknown[] {
+		const arr = [...items];
+		for (let i = arr.length - 1; i > 0; i--) {
+			const j = Math.floor(Math.random() * (i + 1));
+			[arr[i], arr[j]] = [arr[j], arr[i]];
+		}
+		return arr;
+	}
+
 	function generateOptions() {
 		// Decide quiz mode based on whether targetCard has fullName
 		const availableModes: QuizMode[] = ['description'];
@@ -43,8 +52,8 @@
 		const mode = availableModes[Math.floor(Math.random() * availableModes.length)];
 		quizMode = mode;
 
-		const otherCards = allCards.filter((c: Card) => c.id !== targetCard.id);
-		const shuffledOthers = [...otherCards].sort(() => 0.5 - Math.random());
+		const otherCards: Card[] = allCards.filter((c: Card) => c.id !== targetCard.id);
+		const shuffledOthers: Card[] = shuffle(otherCards) as Card[];
 
 		if (mode === 'meaning') {
 			questionTitle = `Cosa significa l'acronimo "${targetCard.title}"?`;
@@ -53,14 +62,12 @@
 				text: targetCard.fullName!,
 				isCorrect: true
 			};
-			const distractors: QuizOption[] = shuffledOthers
-				.slice(0, 4)
-				.map((c: Card) => ({
-					id: c.id,
-					text: c.fullName || c.description,
-					isCorrect: false
-				}));
-			options = [correct, ...distractors].sort(() => 0.5 - Math.random());
+			const distractors: QuizOption[] = shuffledOthers.slice(0, 4).map((c: Card) => ({
+				id: c.id,
+				text: c.fullName || c.description,
+				isCorrect: false
+			}));
+			options = shuffle([correct, ...distractors]) as QuizOption[];
 		} else if (mode === 'acronym') {
 			questionTitle = `Qual è l'acronimo di "${targetCard.fullName || targetCard.title}"?`;
 			const correct: QuizOption = {
@@ -68,17 +75,17 @@
 				text: targetCard.title,
 				isCorrect: true
 			};
-			const distractors: QuizOption[] = shuffledOthers
-				.slice(0, 4)
-				.map((c: Card) => ({
-					id: c.id,
-					text: c.title,
-					isCorrect: false
-				}));
-			options = [correct, ...distractors].sort(() => 0.5 - Math.random());
+			const distractors: QuizOption[] = shuffledOthers.slice(0, 4).map((c: Card) => ({
+				id: c.id,
+				text: c.title,
+				isCorrect: false
+			}));
+			options = shuffle([correct, ...distractors]) as QuizOption[];
 		} else {
 			// Mode description
-			const termLabel = targetCard.fullName ? `${targetCard.title} (${targetCard.fullName})` : targetCard.title;
+			const termLabel = targetCard.fullName
+				? `${targetCard.title} (${targetCard.fullName})`
+				: targetCard.title;
 			questionTitle = `Che cos'è "${termLabel}"?`;
 
 			const correct: QuizOption = {
@@ -86,14 +93,12 @@
 				text: targetCard.description,
 				isCorrect: true
 			};
-			const distractors: QuizOption[] = shuffledOthers
-				.slice(0, 4)
-				.map((c: Card) => ({
-					id: c.id,
-					text: c.description,
-					isCorrect: false
-				}));
-			options = [correct, ...distractors].sort(() => 0.5 - Math.random());
+			const distractors: QuizOption[] = shuffledOthers.slice(0, 4).map((c: Card) => ({
+				id: c.id,
+				text: c.description,
+				isCorrect: false
+			}));
+			options = shuffle([correct, ...distractors]) as QuizOption[];
 		}
 	}
 
@@ -134,7 +139,7 @@
 		{#each options as option, i}
 			{@const isWrong = wrongAttempts.has(option.id)}
 			{@const isRight = isSolved && option.isCorrect}
-			
+
 			<button
 				class="duo-option-btn duo-card"
 				class:correct={isRight}
@@ -156,12 +161,8 @@
 	<!-- Feedback & Next Button -->
 	<div class="quiz-footer">
 		{#if isSolved}
-			<div class="success-banner duo-card">
-				🎉 Esatto! Hai selezionato la risposta corretta.
-			</div>
-			<button class="duo-btn duo-btn-green next-btn" onclick={onNext}>
-				PROSSIMA DOMANDA →
-			</button>
+			<div class="success-banner duo-card">🎉 Esatto! Hai selezionato la risposta corretta.</div>
+			<button class="duo-btn duo-btn-green next-btn" onclick={onNext}> PROSSIMA DOMANDA → </button>
 		{:else if wrongAttempts.size > 0}
 			<div class="retry-banner duo-card">
 				❌ Risposta errata! Riprova pure (tentativi infiniti disponibili).
@@ -337,4 +338,3 @@
 		font-size: 1rem;
 	}
 </style>
-

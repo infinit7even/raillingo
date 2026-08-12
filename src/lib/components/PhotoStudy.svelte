@@ -120,7 +120,11 @@
 				RICOMINCIA SCHEDA
 			{/if}
 		</button>
-		<button class="duo-btn duo-btn-blue nav-btn" onclick={onNext} disabled={currentIndex === totalCards - 1}>
+		<button
+			class="duo-btn duo-btn-blue nav-btn"
+			onclick={onNext}
+			disabled={currentIndex === totalCards - 1}
+		>
 			Avanti →
 		</button>
 	</div>
@@ -279,8 +283,13 @@
 	}
 
 	@keyframes fadeIn {
-		from { opacity: 0; transform: translateY(6px); }
-		to { opacity: 1; transform: translateY(0); }
+		from {
+			opacity: 0;
+			transform: translateY(6px);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
 	}
 </style>
-

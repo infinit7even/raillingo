@@ -21,7 +21,7 @@
 	</div>
 
 	<div class="privacy-footer">
-		<a href="/" class="duo-btn duo-btn-green">Torna alla Home {SITE_NAME}</a>
+		<a href="/" class="duo-btn duo-btn-green">Torna alla Home</a>
 	</div>
 </div>
 

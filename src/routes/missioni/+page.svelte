@@ -80,17 +80,35 @@
 	<div class="sync-progress-box duo-card">
 		{#if user}
 			<div class="sync-info-row">
-				<span class="sync-status-text">✅ Progressi sincronizzati per <strong>{user.username}</strong></span>
-				<a href="/api/auth/logout" class="duo-btn duo-btn-gray sync-btn">
-					DISCONNETTI
-				</a>
+				<div class="sync-text-col">
+					<span class="sync-status-text"
+						>✅ Progressi sincronizzati per <strong>{user.username}</strong></span
+					>
+					<span class="sync-caption-text"
+						>I tuoi progressi vengono salvati automaticamente e sincronizzati su tutti i
+						dispositivi.</span
+					>
+				</div>
+				<a href="/api/auth/logout" class="duo-btn duo-btn-gray sync-btn"> DISCONNETTI </a>
 			</div>
 		{:else}
 			<div class="sync-info-row">
-				<span class="sync-desc-text">Salva i tuoi progressi, fai il login</span>
+				<div class="sync-text-col">
+					<span class="sync-desc-text">Salva i tuoi progressi, fai il login</span>
+					<span class="sync-caption-text"
+						>Accedi con Discord per sincronizzare serie, gemme e XP su tutti i tuoi dispositivi.</span
+					>
+				</div>
 				<a href="/api/auth/login" class="duo-btn sync-btn discord-sync-btn">
-					<svg class="discord-icon-mini" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 127.14 96.36" fill="currentColor">
-						<path d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.7,77.7,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1A105.25,105.25,0,0,0,126.6,80.22h0C129.24,52.84,122.09,29.11,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,45.92,53.87,53,48.8,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.25,60,73.25,53s5-12.74,11.44-12.74S96.23,45.92,96.1,53,91,65.69,84.69,65.69Z"/>
+					<svg
+						class="discord-icon-mini"
+						xmlns="http://www.w3.org/2000/svg"
+						viewBox="0 0 127.14 96.36"
+						fill="currentColor"
+					>
+						<path
+							d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.7,77.7,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1A105.25,105.25,0,0,0,126.6,80.22h0C129.24,52.84,122.09,29.11,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,45.92,53.87,53,48.8,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.25,60,73.25,53s5-12.74,11.44-12.74S96.23,45.92,96.1,53,91,65.69,84.69,65.69Z"
+						/>
 					</svg>
 					ACCEDI CON DISCORD
 				</a>
@@ -133,9 +151,7 @@
 	</div>
 
 	<div class="reels-cta-box">
-		<a href="/" class="duo-btn duo-btn-blue cta-btn">
-			← TORNA ALLA HOME BENVENUTO
-		</a>
+		<a href="/" class="duo-btn duo-btn-blue cta-btn"> TORNA ALLA HOME </a>
 	</div>
 </div>
 
@@ -295,7 +311,22 @@
 		gap: 1rem;
 	}
 
-	.sync-desc-text, .sync-status-text {
+	.sync-text-col {
+		display: flex;
+		flex-direction: column;
+		gap: 0.2rem;
+		min-width: 0;
+	}
+
+	.sync-caption-text {
+		font-size: 0.75rem;
+		font-weight: 600;
+		color: var(--text-muted);
+		line-height: 1.35;
+	}
+
+	.sync-desc-text,
+	.sync-status-text {
 		font-size: 0.95rem;
 		font-weight: 800;
 		color: var(--text-color);
@@ -316,7 +347,9 @@
 		align-items: center;
 		gap: 0.5rem;
 		text-decoration: none;
-		transition: filter 0.15s ease, transform 0.1s ease;
+		transition:
+			filter 0.15s ease,
+			transform 0.1s ease;
 	}
 
 	.discord-sync-btn:hover {

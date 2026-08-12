@@ -1,93 +1,73 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { themeStore, type ThemePreset } from '$lib/stores/themeStore';
-	import { cardsStore } from '$lib/stores/cardsStore';
-	import { pwaStore } from '$lib/stores/pwaStore';
 	import { navStore } from '$lib/stores/navStore';
-	import QuickAddCardModal from '$lib/components/QuickAddCardModal.svelte';
-	import type { Card } from '$lib/types/cards';
+	import { statsStore, type StatsData } from '$lib/stores/statsStore';
 
-	let currentTheme = $state<ThemePreset>('dark');
-	let cards = $state<Card[]>([]);
-	let isQuickAddOpen = $state(false);
-	let canInstall = $state(false);
 	let isNavOpen = $state(false);
-
-	onMount(() => {
-		const unTheme = themeStore.subscribe((t) => (currentTheme = t));
-		const unCards = cardsStore.subscribe((c) => (cards = c));
-		const unPwa = pwaStore.subscribe(() => {
-			canInstall = pwaStore.canInstall;
-		});
-		const unNav = navStore.subscribe((o) => (isNavOpen = o));
-
-		return () => {
-			unTheme();
-			unCards();
-			unPwa();
-			unNav();
-		};
+	let stats = $state<StatsData>({
+		cardsStudied: 0,
+		quizAnswered: 0,
+		quizCorrect: 0,
+		streakDays: 1,
+		lastStudiedDate: '',
+		favorites: []
 	});
 
-	async function handleInstallApp() {
-		await pwaStore.promptInstall();
-	}
+	let totalXP = $derived(stats.quizCorrect * 15 + stats.cardsStudied * 5);
+	let gems = $derived(stats.quizCorrect * 10 + 100);
+
+	onMount(() => {
+		const unNav = navStore.subscribe((o) => (isNavOpen = o));
+		const unStats = statsStore.subscribe((s) => (stats = s));
+
+		return () => {
+			unNav();
+			unStats();
+		};
+	});
 </script>
 
 <header class="app-header">
-	<div class="header-container">
-		<div class="brand-group">
-			<!-- Hamburger Menu Toggle Button (Mobile) -->
-			<button
-				type="button"
-				class="duo-header-btn menu-toggle-btn"
-				onclick={() => navStore.toggle()}
-				aria-label="Menu navigazione"
-				title="Apri menu navigazione"
-			>
-				<div class="hamburger-icon" class:open={isNavOpen}>
-					<span></span>
-					<span></span>
-					<span></span>
-				</div>
-			</button>
-
-			<!-- Brand Logo & Flag -->
-			<a href="/" class="brand">
-				<img src="/emoji/triangular_flag_3d.png" alt="Bandiera" class="emoji-img flag-img" />
-				<div class="title-group">
-					<span class="app-title">
-						Rai<span class="ll-track-box"
-							>l<img
-								src="/emoji/railway_track_3d.png"
-								alt="Binario"
-								class="brand-track-img-sm"
-							/>l</span
-						>ingo
-					</span>
-					<span class="app-subtitle">Rail Focus</span>
-				</div>
-			</a>
+	<!-- Hamburger Menu Toggle Button (Mobile) -->
+	<button
+		type="button"
+		class="duo-header-btn menu-toggle-btn"
+		onclick={() => navStore.toggle()}
+		aria-label="Menu navigazione"
+		title="Apri menu navigazione"
+	>
+		<div class="hamburger-icon" class:open={isNavOpen}>
+			<span></span>
+			<span></span>
+			<span></span>
 		</div>
+	</button>
 
-		<!-- Action Buttons (Mobile Optimized) -->
-		<div class="actions">
-			<!-- Theme Selector Button -->
-			<button
-				class="duo-header-btn theme-btn"
-				onclick={() => themeStore.setTheme(currentTheme === 'dark' ? 'light' : 'dark')}
-				aria-label="Cambia tema"
-				title="Alterna Scuro/Chiaro"
-			>
-				<span class="theme-icon-symbol">{currentTheme === 'dark' ? '🌙' : '☀️'}</span>
-				<span class="theme-name-text">{currentTheme === 'dark' ? 'Scuro' : 'Chiaro'}</span>
-			</button>
+	<!-- Statistiche (Serie, Gemme, XP) -->
+	<a href="/missioni" class="header-stats" title="Clicca per aprire le Missioni ed i Dettagli">
+		<div class="hstat-item streak">
+			<img src="/emoji/fire_3d.png" alt="Serie" class="hstat-emoji" />
+			<div class="hstat-text">
+				<span class="hstat-lbl">Serie</span>
+				<span class="hstat-val">{stats.streakDays}</span>
+			</div>
 		</div>
-	</div>
+		<div class="hstat-item gems">
+			<img src="/emoji/gem_stone_3d.png" alt="Gemme" class="hstat-emoji" />
+			<div class="hstat-text">
+				<span class="hstat-lbl">Gemme</span>
+				<span class="hstat-val">{gems}</span>
+			</div>
+		</div>
+		<div class="hstat-item hearts">
+			<img src="/emoji/high_voltage_3d.png" alt="XP" class="hstat-emoji" />
+			<div class="hstat-text">
+				<span class="hstat-lbl">XP</span>
+				<span class="hstat-val">{totalXP}</span>
+			</div>
+		</div>
+	</a>
 </header>
-
-<!-- Quick 1-Click Add Card Modal -->
-<QuickAddCardModal isOpen={isQuickAddOpen} onClose={() => (isQuickAddOpen = false)} {cards} />
 
 <style>
 	.app-header {
@@ -97,31 +77,9 @@
 		width: calc(100% - 1.25rem);
 		max-width: 1200px;
 		margin: 0.5rem auto 0 auto;
-		background-color: var(--card-bg);
-		border: 2px solid var(--border-color);
-		border-bottom: 4px solid var(--border-depth-color);
-		border-radius: 24px;
-		box-shadow: none;
-		backdrop-filter: blur(16px);
-		-webkit-backdrop-filter: blur(16px);
-		transition:
-			background-color 0.3s ease,
-			border-color 0.3s ease,
-			transform 0.2s ease;
-	}
-
-	.header-container {
-		padding: 0.5rem 0.85rem;
 		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 0.5rem;
-	}
-
-	.brand-group {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
+		align-items: stretch;
+		gap: 0.6rem;
 	}
 
 	.menu-toggle-btn {
@@ -159,67 +117,54 @@
 		transform: translateY(-6px) rotate(-45deg);
 	}
 
-	.brand {
+	.header-stats {
+		flex: 1;
 		display: flex;
 		align-items: center;
-		gap: 0.55rem;
+		justify-content: space-around;
+		gap: 0.5rem;
 		text-decoration: none;
-		color: var(--text-color);
+		background: var(--card-bg);
+		border: 2px solid var(--border-color);
+		border-bottom: 4px solid var(--border-depth-color);
+		border-radius: 20px;
+		padding: 0.6rem 0.75rem;
 	}
 
-	.emoji-img {
-		object-fit: contain;
-		display: inline-block;
-	}
-
-	.flag-img {
-		width: 30px;
-		height: 30px;
-		filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.15));
-	}
-
-	.title-group {
-		display: flex;
-		flex-direction: column;
-	}
-
-	.app-title {
-		font-size: 1.25rem;
-		font-weight: 900;
-		color: var(--green-color);
-		letter-spacing: -0.03em;
-		line-height: 1;
-		display: inline-flex;
-		align-items: center;
-	}
-
-	.ll-track-box {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		position: relative;
-	}
-
-	.brand-track-img-sm {
-		width: 0.72em;
-		height: 0.72em;
-		object-fit: contain;
-		margin: 0 -0.04em;
-		vertical-align: middle;
-	}
-
-	.app-subtitle {
-		font-size: 0.65rem;
-		font-weight: 800;
-		color: var(--accent-color);
-		text-transform: uppercase;
-		letter-spacing: 0.08em;
-	}
-
-	.actions {
+	.hstat-item {
 		display: flex;
 		align-items: center;
 		gap: 0.45rem;
+		font-weight: 900;
+		font-size: 0.95rem;
+	}
+
+	.hstat-item.streak { color: var(--orange-color); }
+	.hstat-item.gems { color: var(--accent-color); }
+	.hstat-item.hearts { color: var(--pink-color); }
+
+	.hstat-emoji {
+		width: 24px;
+		height: 24px;
+		object-fit: contain;
+	}
+
+	.hstat-text {
+		display: flex;
+		flex-direction: column;
+		line-height: 1;
+	}
+
+	.hstat-lbl {
+		font-size: 0.65rem;
+		font-weight: 800;
+		text-transform: uppercase;
+		opacity: 0.8;
+	}
+
+	.hstat-val {
+		font-size: 1.05rem;
+		font-weight: 900;
 	}
 
 	.duo-header-btn {
@@ -248,11 +193,6 @@
 		border-bottom-width: 1.5px;
 	}
 
-	.theme-icon-symbol {
-		font-size: 1rem;
-		line-height: 1;
-	}
-
 	@media (min-width: 1024px) {
 		.app-header {
 			display: none;
@@ -260,25 +200,28 @@
 	}
 
 	@media (max-width: 640px) {
-		.app-subtitle {
-			display: none;
-		}
-		.header-container {
-			padding: 0.45rem 0.75rem;
-		}
-		.flag-img {
-			width: 26px;
-			height: 26px;
-		}
-		.app-title {
-			font-size: 1.15rem;
+		.app-header {
+			gap: 0.5rem;
 		}
 		.duo-header-btn {
-			padding: 0.4rem 0.65rem;
+			padding: 0.4rem 0.6rem;
 			font-size: 0.78rem;
 		}
-		.theme-name-text {
-			display: none;
+		.header-stats {
+			padding: 0.5rem 0.5rem;
+			gap: 0.25rem;
+			border-radius: 16px;
+		}
+		.hstat-emoji {
+			width: 20px;
+			height: 20px;
+		}
+		.hstat-item {
+			gap: 0.3rem;
+			font-size: 0.9rem;
+		}
+		.hstat-lbl {
+			font-size: 0.58rem;
 		}
 	}
 </style>

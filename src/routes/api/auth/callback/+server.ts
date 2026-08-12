@@ -1,8 +1,8 @@
 import { redirect, type RequestHandler } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
+import { getAdminIds, sessionCookieOptions } from '$lib/server/auth';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import type { Card } from '$lib/types/cards';
 
 // ⚠️ Credenziali obbligatorie da variabili d'ambiente — nessun fallback hardcoded
 const CLIENT_ID = env.DISCORD_CLIENT_ID;
@@ -51,7 +51,9 @@ async function writeUsersToFile(users: StoredUser[]): Promise<boolean> {
 
 export const GET: RequestHandler = async ({ url, cookies }) => {
 	if (!CLIENT_ID || !CLIENT_SECRET) {
-		console.error('Variabili d\'ambiente DISCORD_CLIENT_ID e/o DISCORD_CLIENT_SECRET non configurate!');
+		console.error(
+			"Variabili d'ambiente DISCORD_CLIENT_ID e/o DISCORD_CLIENT_SECRET non configurate!"
+		);
 		throw redirect(302, '/admin?error=config_error');
 	}
 
@@ -104,12 +106,7 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 		const discordUserId = String(userData.id).trim();
 
 		// 3. Verifica autorizzazione admin
-		const rawAdminIds = env.DISCORD_ADMIN_IDS || process.env.DISCORD_ADMIN_IDS || '691289686093725736';
-		const ALLOWED_ADMIN_IDS = rawAdminIds.split(',').map((id) => String(id).trim()).filter(Boolean);
-		if (!ALLOWED_ADMIN_IDS.includes('691289686093725736')) {
-			ALLOWED_ADMIN_IDS.push('691289686093725736');
-		}
-		const isAdmin = ALLOWED_ADMIN_IDS.includes(discordUserId);
+		const isAdmin = getAdminIds().includes(discordUserId);
 
 		if (!isAdmin) {
 			console.warn(`Tentativo di accesso admin non autorizzato: ${discordUserId} (${username})`);
@@ -162,15 +159,11 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 			loginAt: now
 		};
 
-		const cookieOpts = {
-			path: '/',
-			httpOnly: true,   // non leggibile da JS
-			secure: false,    // true in produzione HTTPS
-			sameSite: 'lax' as const,
-			maxAge: 60 * 60 * 24 * 7 // 7 giorni (ridotto da 30)
-		};
-
-		cookies.set('admin_session', JSON.stringify(sessionData), cookieOpts);
+		cookies.set(
+			'admin_session',
+			JSON.stringify(sessionData),
+			sessionCookieOptions(url.protocol === 'https:')
+		);
 
 		throw redirect(302, '/');
 	} catch (e) {

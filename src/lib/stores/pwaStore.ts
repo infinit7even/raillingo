@@ -59,11 +59,11 @@ class PwaStore {
 	}
 
 	public get canInstall(): boolean {
-		return !this.standalone && !this.installed && (this.deferredPrompt !== null || (browser && (window as any).deferredPwaPrompt !== null));
-	}
-
-	public get hasDeferredPrompt(): boolean {
-		return this.deferredPrompt !== null || (browser && (window as any).deferredPwaPrompt !== null);
+		return (
+			!this.standalone &&
+			!this.installed &&
+			(this.deferredPrompt !== null || (browser && (window as any).deferredPwaPrompt !== null))
+		);
 	}
 
 	public subscribe(run: () => void): () => void {

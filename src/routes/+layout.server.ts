@@ -1,5 +1,5 @@
 import type { LayoutServerLoad } from './$types';
-import { env } from '$env/dynamic/private';
+import { getAdminIds } from '$lib/server/auth';
 import fs from 'fs/promises';
 import path from 'path';
 
@@ -15,11 +15,6 @@ export const load: LayoutServerLoad = async ({ cookies }) => {
 			// Valida che il cookie abbia i campi minimi attesi
 			if (parsed && parsed.userId && parsed.username) {
 				const discordUserId = String(parsed.userId).trim();
-				const rawAdminIds = env.DISCORD_ADMIN_IDS || process.env.DISCORD_ADMIN_IDS || '691289686093725736';
-				const ALLOWED_ADMIN_IDS = rawAdminIds.split(',').map((id) => String(id).trim()).filter(Boolean);
-				if (!ALLOWED_ADMIN_IDS.includes('691289686093725736')) {
-					ALLOWED_ADMIN_IDS.push('691289686093725736');
-				}
 
 				// Verifica che l'utente sia admin anche nel file (doppio check)
 				let isAdminInFile = false;
@@ -34,7 +29,7 @@ export const load: LayoutServerLoad = async ({ cookies }) => {
 					// File non trovato o errore lettura — assume non-admin
 				}
 
-				const isAdmin = ALLOWED_ADMIN_IDS.includes(discordUserId) || isAdminInFile;
+				const isAdmin = getAdminIds().includes(discordUserId) || isAdminInFile;
 				user = {
 					...parsed,
 					isAdmin,

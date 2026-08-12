@@ -139,7 +139,6 @@
 			/>
 		</div>
 
-
 		<!-- Descrizione / Spiegazione -->
 		<div class="form-group full-width">
 			<label for="card-desc-field">Spiegazione & Utilizzo Dettagliato *</label>
@@ -149,13 +148,14 @@
 				placeholder="Scrivi qui la definizione completa e l'utilizzo operativo dell'acronimo..."
 				rows="3"
 				required
-				class="duo-input form-textarea"
-			></textarea>
+				class="duo-input form-textarea"></textarea>
 		</div>
 
 		<!-- Gestione Immagini -->
 		<div class="form-group full-width">
-			<label for="card-image-url-field">Immagini Visive (Carica File, Incolla dagli appunti o inserisci URL)</label>
+			<label for="card-image-url-field"
+				>Immagini Visive (Carica File, Incolla dagli appunti o inserisci URL)</label
+			>
 
 			<div class="upload-controls-row">
 				<!-- File Upload Input -->
@@ -186,12 +186,13 @@
 							}
 						}}
 					/>
-					<button type="button" class="duo-btn duo-btn-gray" onclick={addImageUrl}>
-						+ URL
-					</button>
+					<button type="button" class="duo-btn duo-btn-gray" onclick={addImageUrl}> + URL </button>
 				</div>
 			</div>
-			<p class="paste-hint-text">💡 Puoi anche fare <strong>Incolla (Ctrl+V)</strong> per caricare direttamente uno screenshot copiato negli appunti!</p>
+			<p class="paste-hint-text">
+				💡 Puoi anche fare <strong>Incolla (Ctrl+V)</strong> per caricare direttamente uno screenshot
+				copiato negli appunti!
+			</p>
 
 			<!-- Gallery Preview Grid -->
 			{#if images.length > 0}
@@ -199,7 +200,12 @@
 					{#each images as img, i}
 						<div class="img-preview-item duo-card">
 							<img src={img} alt="Anteprima {i + 1}" class="preview-img" />
-							<button type="button" class="remove-img-btn" onclick={() => removeImage(i)} title="Rimuovi immagine">
+							<button
+								type="button"
+								class="remove-img-btn"
+								onclick={() => removeImage(i)}
+								title="Rimuovi immagine"
+							>
 								✕
 							</button>
 						</div>

@@ -3,6 +3,8 @@
 	import { cardsStore } from '$lib/stores/cardsStore';
 	import FlashCard from '$lib/components/FlashCard.svelte';
 	import PhotoStudy from '$lib/components/PhotoStudy.svelte';
+	import PageHeader from '$lib/components/PageHeader.svelte';
+	import ModeTabs from '$lib/components/ModeTabs.svelte';
 	import { statsStore } from '$lib/stores/statsStore';
 	import type { Card } from '$lib/types/cards';
 
@@ -44,8 +46,6 @@
 			statsStore.recordStudySession();
 		}
 	}
-	import PageHeader from '$lib/components/PageHeader.svelte';
-	import ModeTabs from '$lib/components/ModeTabs.svelte';
 
 	const flashcardTabs = [
 		{ id: 'standard', label: 'TESTUALE', emoji: '/emoji/open_book_3d.png' },
@@ -57,9 +57,8 @@
 <div class="ripasso-page-container">
 	<!-- Page Header standard -->
 	<PageHeader
-		title="Ripasso e Flashcard 3D"
-		subtitle="Gira le carte 3D, ascolta la pronuncia audio e allenati con la memoria visiva delle foto."
-		badge="Modalità Ripasso"
+		title="Ripasso e Flashcard"
+		subtitle="Gira le card, ascolta la pronuncia audio e allenati con la memoria visiva delle foto."
 		icon="/emoji/open_book_3d.png"
 		variant="green"
 	/>
@@ -78,7 +77,7 @@
 		{#if activeCards.length > 0}
 			<FlashCard
 				card={activeCards[currentIndex]}
-				currentIndex={currentIndex}
+				{currentIndex}
 				totalCards={activeCards.length}
 				onNext={handleNext}
 				onPrev={handlePrev}
@@ -90,7 +89,7 @@
 		{#if photoCards.length > 0}
 			<PhotoStudy
 				card={photoCards[currentIndex]}
-				currentIndex={currentIndex}
+				{currentIndex}
 				totalCards={photoCards.length}
 				onNext={handleNext}
 				onPrev={handlePrev}
@@ -133,13 +132,21 @@
 				</div>
 
 				<div class="controls">
-					<button class="duo-btn duo-btn-gray nav-btn" onclick={handlePrev} disabled={currentIndex === 0}>
+					<button
+						class="duo-btn duo-btn-gray nav-btn"
+						onclick={handlePrev}
+						disabled={currentIndex === 0}
+					>
 						← Indietro
 					</button>
 					<button class="duo-btn duo-btn-green action-btn" onclick={toggleReveal}>
 						{revealed ? 'Nascondi' : 'Mostra Acronimo'}
 					</button>
-					<button class="duo-btn duo-btn-blue nav-btn" onclick={handleNext} disabled={currentIndex === activeCards.length - 1}>
+					<button
+						class="duo-btn duo-btn-blue nav-btn"
+						onclick={handleNext}
+						disabled={currentIndex === activeCards.length - 1}
+					>
 						Avanti →
 					</button>
 				</div>
@@ -158,8 +165,6 @@
 		flex-direction: column;
 		gap: 1.25rem;
 	}
-
-
 
 	.reverse-container {
 		display: flex;

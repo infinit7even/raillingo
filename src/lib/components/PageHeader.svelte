@@ -13,7 +13,7 @@
 		subtitle?: string;
 		badge?: string;
 		icon?: string;
-		variant?: 'green' | 'blue' | 'purple' | 'orange';
+		variant?: 'green' | 'blue' | 'purple' | 'orange' | 'red';
 		children?: Snippet;
 	}>();
 </script>
@@ -83,6 +83,13 @@
 		background-color: var(--orange-color);
 		border: 2px solid var(--orange-depth);
 		border-bottom: 4px solid var(--orange-depth);
+		color: #ffffff;
+	}
+
+	.duo-banner-red {
+		background-color: #ff5e5b;
+		border: 2px solid #d9423f;
+		border-bottom: 4px solid #d9423f;
 		color: #ffffff;
 	}
 

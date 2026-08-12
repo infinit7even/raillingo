@@ -1,7 +1,7 @@
 import { json, type RequestHandler } from '@sveltejs/kit';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { env } from '$env/dynamic/private';
+import { isAuthorizedAdmin } from '$lib/server/auth';
 import type { Card } from '$lib/types/cards';
 
 const CARDS_FILE_PATH = path.resolve('data/cards.json');
@@ -26,22 +26,6 @@ async function writeCardsToFile(cards: Card[]): Promise<boolean> {
 	}
 }
 
-function isAuthorizedAdmin(cookies: any): boolean {
-	const cookieVal = cookies.get('admin_session') || cookies.get('user_session');
-	if (!cookieVal) return false;
-
-	try {
-		const session = JSON.parse(cookieVal);
-		if (session.isAdmin === true) return true;
-
-		const rawAdminIds = env.DISCORD_ADMIN_IDS || process.env.DISCORD_ADMIN_IDS || '691289686093725736';
-		const adminIds = rawAdminIds.split(',').map((id: string) => id.trim()).filter(Boolean);
-		return adminIds.includes(String(session.userId).trim());
-	} catch {
-		return false;
-	}
-}
-
 export const GET: RequestHandler = async () => {
 	const cards = await readCardsFromFile();
 	return json(cards);
@@ -49,7 +33,13 @@ export const GET: RequestHandler = async () => {
 
 export const POST: RequestHandler = async ({ request, cookies }) => {
 	if (!isAuthorizedAdmin(cookies)) {
-		return json({ error: 'Accesso negato: Soltanto gli amministratori specificati in DISCORD_ADMIN_IDS possono inserire nuove schede.' }, { status: 403 });
+		return json(
+			{
+				error:
+					'Accesso negato: Soltanto gli amministratori specificati in DISCORD_ADMIN_IDS possono inserire nuove schede.'
+			},
+			{ status: 403 }
+		);
 	}
 
 	const newCard: Card = await request.json();
@@ -71,7 +61,13 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 
 export const PUT: RequestHandler = async ({ request, cookies }) => {
 	if (!isAuthorizedAdmin(cookies)) {
-		return json({ error: 'Accesso negato: Soltanto gli amministratori specificati in DISCORD_ADMIN_IDS possono modificare le schede.' }, { status: 403 });
+		return json(
+			{
+				error:
+					'Accesso negato: Soltanto gli amministratori specificati in DISCORD_ADMIN_IDS possono modificare le schede.'
+			},
+			{ status: 403 }
+		);
 	}
 
 	const updatedCard: Card = await request.json();
@@ -97,7 +93,13 @@ export const PUT: RequestHandler = async ({ request, cookies }) => {
 
 export const DELETE: RequestHandler = async ({ url, cookies }) => {
 	if (!isAuthorizedAdmin(cookies)) {
-		return json({ error: 'Accesso negato: Soltanto gli amministratori specificati in DISCORD_ADMIN_IDS possono eliminare le schede.' }, { status: 403 });
+		return json(
+			{
+				error:
+					'Accesso negato: Soltanto gli amministratori specificati in DISCORD_ADMIN_IDS possono eliminare le schede.'
+			},
+			{ status: 403 }
+		);
 	}
 
 	const id = url.searchParams.get('id');

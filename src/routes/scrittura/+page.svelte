@@ -24,8 +24,16 @@
 	}
 
 	const writingTabs = [
-		{ id: 'title-to-desc', label: 'ACRONIMO ➔ DESCRIZIONE', emoji: '/emoji/writing_hand_3d_default.png' },
-		{ id: 'desc-to-title', label: 'DESCRIZIONE ➔ ACRONIMO', emoji: '/emoji/counterclockwise_arrows_button_3d.png' },
+		{
+			id: 'title-to-desc',
+			label: 'ACRONIMO ➔ DESCRIZIONE',
+			emoji: '/emoji/writing_hand_3d_default.png'
+		},
+		{
+			id: 'desc-to-title',
+			label: 'DESCRIZIONE ➔ ACRONIMO',
+			emoji: '/emoji/counterclockwise_arrows_button_3d.png'
+		},
 		{ id: 'photo-to-title', label: 'FOTO ➔ SCRITTURA', emoji: '/emoji/camera_3d.png' }
 	];
 </script>
@@ -35,9 +43,8 @@
 	<PageHeader
 		title="Scrittura Libera"
 		subtitle="Digita l'acronimo, il significato esteso o la spiegazione per fissare la memorizzazione motoria."
-		badge="Modalità Scrittura"
 		icon="/emoji/writing_hand_3d_default.png"
-		variant="blue"
+		variant="red"
 	/>
 
 	<ModeTabs
@@ -53,7 +60,7 @@
 		<FreeWriteExercise
 			card={cards[currentIndex]}
 			subMode={selectedSubMode}
-			currentIndex={currentIndex}
+			{currentIndex}
 			totalCards={cards.length}
 			onNext={handleNext}
 		/>

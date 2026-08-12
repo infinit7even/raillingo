@@ -1,6 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800;900&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Noto+Color+Emoji&display=swap');
 
-:root, [data-theme='dark'] {
+:root,
+[data-theme='dark'] {
 	/* 🦉 Duolingo Dark (Default) */
 	--bg-color: #131f24;
 	--header-bg: #131f24;
@@ -13,26 +14,26 @@
 	--border-depth-color: #202f36;
 	--text-color: #ffffff;
 	--text-muted: #93a5b1;
-	
+
 	/* 🎨 Duolingo Palette Colors */
-	--accent-color: #1cb0f6;      /* Sky Blue */
+	--accent-color: #1cb0f6; /* Sky Blue */
 	--accent-depth: #1899d6;
 	--accent-light: #84d8ff;
 	--accent-light-bg: rgba(28, 176, 246, 0.15);
 
-	--green-color: #58cc02;       /* Duolingo Green */
+	--green-color: #58cc02; /* Duolingo Green */
 	--green-depth: #46a302;
-	
-	--orange-color: #ff9600;      /* Streak Orange */
+
+	--orange-color: #ff9600; /* Streak Orange */
 	--orange-depth: #e58700;
 
-	--yellow-color: #ffc800;      /* Gold / Stars */
+	--yellow-color: #ffc800; /* Gold / Stars */
 	--yellow-depth: #e5b200;
 
-	--purple-color: #ce82ff;      /* Super Purple */
+	--purple-color: #ce82ff; /* Super Purple */
 	--purple-depth: #a560e8;
 
-	--pink-color: #ff4b4b;        /* Energy / Hearts */
+	--pink-color: #ff4b4b; /* Energy / Hearts */
 	--pink-depth: #ea2b2b;
 
 	--badge-bg: #202f36;
@@ -226,24 +227,41 @@ html {
 }
 
 body {
-	font-family: 'Outfit', 'Plus Jakarta Sans', 'Noto Color Emoji', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+	font-family:
+		'Outfit',
+		'Plus Jakarta Sans',
+		'Noto Color Emoji',
+		-apple-system,
+		BlinkMacSystemFont,
+		'Segoe UI',
+		Roboto,
+		sans-serif;
 	background-color: var(--bg-color);
 	color: var(--text-color);
 	min-height: 100vh;
-	transition: background-color 0.3s ease, color 0.3s ease;
+	transition:
+		background-color 0.3s ease,
+		color 0.3s ease;
 	-webkit-font-smoothing: antialiased;
 	padding-bottom: 1.5rem;
 	overflow-x: hidden;
 	overscroll-behavior-y: none;
 }
 
-h1, h2, h3, h4, .app-title {
+h1,
+h2,
+h3,
+h4,
+.app-title {
 	font-family: 'Outfit', 'Noto Color Emoji', sans-serif;
 	font-weight: 800;
 	letter-spacing: -0.01em;
 }
 
-button, input, textarea, select {
+button,
+input,
+textarea,
+select {
 	font-family: inherit;
 }
 
@@ -265,7 +283,10 @@ button, input, textarea, select {
 	user-select: none;
 	border: 2px solid transparent;
 	border-bottom: 4px solid transparent;
-	transition: transform 0.1s ease, border-width 0.1s ease, background-color 0.15s ease;
+	transition:
+		transform 0.1s ease,
+		border-width 0.1s ease,
+		background-color 0.15s ease;
 }
 
 .duo-btn:active:not(:disabled) {
@@ -334,7 +355,9 @@ button, input, textarea, select {
 	border-bottom: 4px solid var(--border-depth-color);
 	border-radius: 20px;
 	padding: 1.25rem;
-	transition: transform 0.2s ease, border-color 0.2s ease;
+	transition:
+		transform 0.2s ease,
+		border-color 0.2s ease;
 }
 
 /* 🏷️ Duolingo Badge */
@@ -414,7 +437,9 @@ button, input, textarea, select {
 	font-family: inherit;
 	font-size: 0.95rem;
 	font-weight: 700;
-	transition: border-color 0.2s ease, box-shadow 0.2s ease;
+	transition:
+		border-color 0.2s ease,
+		box-shadow 0.2s ease;
 	box-sizing: border-box;
 }
 
@@ -434,5 +459,3 @@ button, input, textarea, select {
 .active-press:active {
 	transform: scale(0.97);
 }
-
-

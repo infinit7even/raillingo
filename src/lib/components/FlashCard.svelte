@@ -40,9 +40,7 @@
 	function speakAudio(e: MouseEvent) {
 		e.stopPropagation();
 		const fullText = card.fullName ? `${card.title}, ${card.fullName}` : card.title;
-		const textToRead = flipped
-			? `${fullText}. ${card.description}`
-			: fullText;
+		const textToRead = flipped ? `${fullText}. ${card.description}` : fullText;
 		tts.speak(textToRead);
 		isSpeaking = true;
 	}
@@ -75,7 +73,7 @@
 	<!-- Top Progress / Bar Header -->
 	<div class="card-top-bar">
 		<span class="duo-badge">{card.category || 'Generale'}</span>
-		
+
 		<div class="top-actions">
 			<button
 				class="duo-btn duo-btn-gray audio-btn"
@@ -116,11 +114,16 @@
 						🗣️ Pronuncia a voce la definizione, poi <strong>tocca per verificare</strong>
 					</p>
 				</div>
-				
+
 				<div class="tap-hint">
 					<span>Tocca per girare <kbd class="kbd-badge">Spazio</kbd></span>
 					<svg class="flip-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2.5"
+							d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+						/>
 					</svg>
 				</div>
 			</div>
@@ -176,9 +179,13 @@
 			← Indietro
 		</button>
 		<button class="duo-btn duo-btn-green reveal-btn" onclick={handleCardClick}>
-			{flipped ? 'NASCONDI' : 'MOSTRA RISPOSTA'}
+			{flipped ? 'NASCONDI' : 'RISPOSTA'}
 		</button>
-		<button class="duo-btn duo-btn-blue nav-btn" onclick={onNext} disabled={currentIndex === totalCards - 1}>
+		<button
+			class="duo-btn duo-btn-blue nav-btn"
+			onclick={onNext}
+			disabled={currentIndex === totalCards - 1}
+		>
 			Avanti →
 		</button>
 	</div>
@@ -225,7 +232,9 @@
 		font-size: 1.5rem;
 		color: var(--text-muted);
 		cursor: pointer;
-		transition: color 0.2s ease, transform 0.2s ease;
+		transition:
+			color 0.2s ease,
+			transform 0.2s ease;
 	}
 
 	.fav-btn.active {
@@ -436,7 +445,8 @@
 			display: none;
 		}
 
-		.scene, .card {
+		.scene,
+		.card {
 			min-height: 360px;
 		}
 
@@ -473,4 +483,3 @@
 		}
 	}
 </style>
-
