@@ -255,9 +255,9 @@
 
 		.duo-navigation {
 			position: fixed;
-			top: 0.65rem;
-			bottom: 0.65rem;
-			left: 0.65rem;
+			top: 1.25rem;
+			bottom: 1.25rem;
+			left: 1.25rem;
 			right: auto;
 			width: 230px;
 			border: 2px solid var(--border-color);
