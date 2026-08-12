@@ -238,8 +238,8 @@
 					</button>
 				{/if}
 
-				<a href="https://epod.rfi.it" target="_blank" rel="noopener noreferrer" class="duo-btn duo-btn-blue flex-btn">
-					📚 DISPENSA RFI
+				<a href="/wiki" class="duo-btn duo-btn-blue flex-btn">
+					📚 WIKI
 				</a>
 				<a href="https://ko-fi.com/infinit7even" target="_blank" rel="noopener noreferrer" class="duo-btn duo-btn-green flex-btn">
 					<img src="/emoji/sparkles_3d.png" alt="Splendore" class="btn-emoji-img" />
