@@ -254,13 +254,16 @@
 		}
 
 		.duo-navigation {
+			position: fixed;
 			top: 0;
 			bottom: 0;
+			left: 0;
 			right: auto;
 			width: 240px;
-			border-top: none;
+			border: none;
+			border-radius: 0;
 			border-right: 2px solid var(--border-color);
-			padding: 1.5rem 1rem;
+			padding: 1.75rem 1.25rem 2rem 1.25rem;
 			display: flex;
 			flex-direction: column;
 			justify-content: space-between;
