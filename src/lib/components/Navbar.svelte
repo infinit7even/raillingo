@@ -2,7 +2,9 @@
 	import { page } from '$app/state';
 	import { themeStore, type ThemePreset } from '$lib/stores/themeStore';
 	import { cardsStore } from '$lib/stores/cardsStore';
+	import { statsStore, type StatsData } from '$lib/stores/statsStore';
 	import { pwaStore } from '$lib/stores/pwaStore';
+	import { isDrawerOpenStore, closeDrawer } from '$lib/stores/drawerStore';
 	import QuickAddCardModal from '$lib/components/QuickAddCardModal.svelte';
 	import InstallAppModal from '$lib/components/InstallAppModal.svelte';
 	import type { Card } from '$lib/types/cards';
@@ -16,23 +18,40 @@
 	let isInstallModalOpen = $state(false);
 	let canInstall = $state(false);
 	let isStandalone = $state(false);
+	let isDrawerOpen = $state(false);
+
+	let stats = $state<StatsData>({
+		cardsStudied: 0,
+		quizAnswered: 0,
+		quizCorrect: 0,
+		streakDays: 1,
+		lastStudiedDate: '',
+		favorites: []
+	});
 
 	onMount(() => {
 		const unTheme = themeStore.subscribe((t) => (currentTheme = t));
 		const unCards = cardsStore.subscribe((c) => (cards = c));
+		const unStats = statsStore.subscribe((s) => (stats = s));
 		const unPwa = pwaStore.subscribe(() => {
 			canInstall = pwaStore.canInstall;
 			isStandalone = pwaStore.isStandalone;
+		});
+		const unDrawer = isDrawerOpenStore.subscribe((open) => {
+			isDrawerOpen = open;
 		});
 
 		return () => {
 			unTheme();
 			unCards();
+			unStats();
 			unPwa();
+			unDrawer();
 		};
 	});
 
 	async function handleInstallApp() {
+		closeDrawer();
 		if (canInstall) {
 			const success = await pwaStore.promptInstall();
 			if (!success) {
@@ -51,7 +70,128 @@
 		{ href: '/scrittura', label: 'SCRITTURA', emoji: '/emoji/writing_hand_3d_default.png' },
 		{ href: '/wiki', label: 'WIKI', emoji: '/emoji/books_3d.png' }
 	];
+
+	let totalXP = $derived(stats.quizCorrect * 15 + stats.cardsStudied * 5);
+	let gems = $derived(stats.quizCorrect * 10 + 100);
 </script>
+
+<!-- 📱 Mobile Side Drawer Backdrop & Panel -->
+{#if isDrawerOpen}
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+	<div
+		class="drawer-backdrop"
+		onclick={closeDrawer}
+		role="presentation"
+	>
+		<div
+			class="drawer-panel duo-card"
+			onclick={(e) => e.stopPropagation()}
+			role="dialog"
+			aria-modal="true"
+			aria-label="Menu di navigazione laterale"
+			tabindex="-1"
+		>
+			<!-- Drawer Top Header -->
+			<div class="drawer-header">
+				<a href="/" class="brand-link" onclick={closeDrawer}>
+					<img src="/emoji/triangular_flag_3d.png" alt="Bandiera" class="brand-emoji" />
+					<div class="drawer-title-group">
+						<span class="brand-title">
+							Rai<span class="ll-track-box">l<img src="/emoji/railway_track_3d.png" alt="Binario" class="brand-track-img" />l</span>ingo
+						</span>
+						<span class="drawer-subtitle">Rail Focus</span>
+					</div>
+				</a>
+				<button class="drawer-close-btn" onclick={closeDrawer} aria-label="Chiudi menu">✕</button>
+			</div>
+
+			<!-- Drawer Stats Row Widget -->
+			<a href="/missioni" class="drawer-stats-row duo-card" onclick={closeDrawer}>
+				<div class="stat-item streak">
+					<img src="/emoji/fire_3d.png" alt="Serie" class="widget-emoji-img" />
+					<span>{stats.streakDays}</span>
+				</div>
+				<div class="stat-item gems">
+					<img src="/emoji/gem_stone_3d.png" alt="Gemme" class="widget-emoji-img" />
+					<span>{gems}</span>
+				</div>
+				<div class="stat-item hearts">
+					<img src="/emoji/high_voltage_3d.png" alt="XP" class="widget-emoji-img" />
+					<span>{totalXP} XP</span>
+				</div>
+			</a>
+
+			<!-- Vertical Navigation Menu -->
+			<div class="drawer-nav-list">
+				{#each navItems as item}
+					{@const isActive = page.url.pathname === item.href}
+					<a
+						href={item.href}
+						class="drawer-nav-item"
+						class:active={isActive}
+						onclick={closeDrawer}
+					>
+						<img src={item.emoji} alt={item.label} class="drawer-emoji-img" />
+						<span class="drawer-nav-label">{item.label}</span>
+					</a>
+				{/each}
+			</div>
+
+			<!-- Quick Actions & Links Section -->
+			<div class="drawer-actions-section">
+				{#if !isStandalone}
+					<button
+						type="button"
+						class="duo-btn duo-btn-green drawer-action-btn"
+						onclick={handleInstallApp}
+					>
+						📲 SCARICA APP
+					</button>
+				{/if}
+
+				{#if user && (user.isAdmin || user.role === 'admin')}
+					<button
+						type="button"
+						class="duo-btn duo-btn-purple drawer-action-btn"
+						onclick={() => {
+							closeDrawer();
+							isQuickAddOpen = true;
+						}}
+					>
+						⚡ AGGIUNGI SCHEDA
+					</button>
+				{/if}
+
+				<button
+					class="duo-btn duo-btn-gray drawer-action-btn"
+					onclick={() => themeStore.setTheme(currentTheme === 'dark' ? 'light' : 'dark')}
+				>
+					<span>TEMA: {currentTheme === 'dark' ? 'SCURO 🌙' : 'CHIARO ☀️'}</span>
+				</button>
+
+				<a href="https://epod.rfi.it" target="_blank" rel="noopener noreferrer" class="duo-btn duo-btn-blue drawer-action-btn" onclick={closeDrawer}>
+					📚 DISPENSA RFI
+				</a>
+
+				<a href="https://ko-fi.com/infinit7even" target="_blank" rel="noopener noreferrer" class="duo-btn kofi-btn drawer-action-btn" onclick={closeDrawer}>
+					<img src="/emoji/sparkles_3d.png" alt="Splendore" class="btn-emoji-img" />
+					SOSTIENI IL SITO
+				</a>
+
+				{#if user && (user.isAdmin || user.role === 'admin')}
+					<a href="/admin" class="duo-btn duo-btn-purple drawer-action-btn" onclick={closeDrawer}>
+						🔐 PANNELLO ADMIN
+					</a>
+				{/if}
+
+				<a href="/privacy" class="drawer-privacy-link" onclick={closeDrawer}>
+					Informativa sulla Privacy
+				</a>
+			</div>
+		</div>
+	</div>
+{/if}
 
 <nav class="duo-navigation">
 	<!-- Desktop Sidebar Header Brand (Hidden on Mobile) -->
@@ -427,6 +567,156 @@
 			font-weight: 900;
 			letter-spacing: 0.04em;
 		}
+	}
+
+	/* 📱 Mobile Side Drawer Navigation Styles */
+	.drawer-backdrop {
+		position: fixed;
+		inset: 0;
+		z-index: 500;
+		background: rgba(0, 0, 0, 0.65);
+		backdrop-filter: blur(8px);
+		-webkit-backdrop-filter: blur(8px);
+		display: flex;
+		justify-content: flex-start;
+		animation: drawerFadeIn 0.25s ease;
+	}
+
+	.drawer-panel {
+		width: 84%;
+		max-width: 320px;
+		height: 100%;
+		border-radius: 0 24px 24px 0;
+		border: none;
+		border-right: 3px solid var(--border-color);
+		background: var(--card-bg);
+		padding: 1.2rem 1rem;
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+		box-shadow: 8px 0 30px rgba(0, 0, 0, 0.4);
+		overflow-y: auto;
+		animation: slideInLeft 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+		position: relative;
+	}
+
+	.drawer-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding-bottom: 0.75rem;
+		border-bottom: 2px solid var(--border-color);
+	}
+
+	.drawer-title-group {
+		display: flex;
+		flex-direction: column;
+	}
+
+	.drawer-subtitle {
+		font-size: 0.65rem;
+		font-weight: 800;
+		color: var(--accent-color);
+		text-transform: uppercase;
+		letter-spacing: 0.08em;
+	}
+
+	.drawer-close-btn {
+		background: var(--card-bg-subtle);
+		border: 2px solid var(--border-color);
+		color: var(--text-muted);
+		width: 34px;
+		height: 34px;
+		border-radius: 50%;
+		font-size: 1.1rem;
+		font-weight: 800;
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.drawer-stats-row {
+		display: flex;
+		align-items: center;
+		justify-content: space-around;
+		padding: 0.6rem 0.75rem;
+		text-decoration: none;
+		background: var(--card-bg-subtle);
+	}
+
+	.drawer-nav-list {
+		display: flex;
+		flex-direction: column;
+		gap: 0.45rem;
+	}
+
+	.drawer-nav-item {
+		display: flex;
+		align-items: center;
+		gap: 0.85rem;
+		padding: 0.65rem 0.85rem;
+		border-radius: 14px;
+		border: 2px solid transparent;
+		color: var(--text-color);
+		text-decoration: none;
+		font-weight: 800;
+		font-size: 0.9rem;
+		transition: all 0.15s ease;
+	}
+
+	.drawer-nav-item.active {
+		border-color: var(--accent-color);
+		border-bottom: 4px solid var(--accent-depth);
+		background-color: var(--accent-light-bg);
+		color: var(--accent-color);
+		font-weight: 900;
+	}
+
+	.drawer-emoji-img {
+		width: 26px;
+		height: 26px;
+		object-fit: contain;
+	}
+
+	.drawer-nav-label {
+		font-family: 'Outfit', sans-serif;
+		letter-spacing: 0.03em;
+	}
+
+	.drawer-actions-section {
+		display: flex;
+		flex-direction: column;
+		gap: 0.6rem;
+		margin-top: auto;
+		padding-top: 1rem;
+		border-top: 2px solid var(--border-color);
+	}
+
+	.drawer-action-btn {
+		width: 100%;
+		font-size: 0.82rem;
+		padding: 0.6rem;
+		justify-content: center;
+	}
+
+	.drawer-privacy-link {
+		font-size: 0.75rem;
+		color: var(--text-muted);
+		text-decoration: none;
+		text-align: center;
+		font-weight: 700;
+		margin-top: 0.4rem;
+	}
+
+	@keyframes drawerFadeIn {
+		from { opacity: 0; }
+		to { opacity: 1; }
+	}
+
+	@keyframes slideInLeft {
+		from { transform: translateX(-100%); }
+		to { transform: translateX(0); }
 	}
 </style>
 

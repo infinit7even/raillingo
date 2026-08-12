@@ -4,6 +4,7 @@
 	import { cardsStore } from '$lib/stores/cardsStore';
 	import { statsStore, type StatsData } from '$lib/stores/statsStore';
 	import { pwaStore } from '$lib/stores/pwaStore';
+	import { toggleDrawer } from '$lib/stores/drawerStore';
 	import QuickAddCardModal from '$lib/components/QuickAddCardModal.svelte';
 	import InstallAppModal from '$lib/components/InstallAppModal.svelte';
 	import type { Card } from '$lib/types/cards';
@@ -55,22 +56,34 @@
 
 <header class="app-header">
 	<div class="header-container">
-		<!-- Brand Logo & Flag -->
-		<a href="/" class="brand">
-			<img src="/emoji/triangular_flag_3d.png" alt="Bandiera" class="emoji-img flag-img" />
-			<div class="title-group">
-				<span class="app-title">
-					Rai<span class="ll-track-box"
-						>l<img
-							src="/emoji/railway_track_3d.png"
-							alt="Binario"
-							class="brand-track-img-sm"
-						/>l</span
-					>ingo
-				</span>
-				<span class="app-subtitle">Rail Focus</span>
-			</div>
-		</a>
+		<div class="brand-group">
+			<!-- Hamburger Menu Button (Mobile Drawer) -->
+			<button
+				class="duo-header-btn drawer-menu-btn"
+				onclick={toggleDrawer}
+				aria-label="Apri menu laterale"
+				title="Menu nav"
+			>
+				<span class="hamburger-icon">☰</span>
+			</button>
+
+			<!-- Brand Logo & Flag -->
+			<a href="/" class="brand">
+				<img src="/emoji/triangular_flag_3d.png" alt="Bandiera" class="emoji-img flag-img" />
+				<div class="title-group">
+					<span class="app-title">
+						Rai<span class="ll-track-box"
+							>l<img
+								src="/emoji/railway_track_3d.png"
+								alt="Binario"
+								class="brand-track-img-sm"
+							/>l</span
+						>ingo
+					</span>
+					<span class="app-subtitle">Rail Focus</span>
+				</div>
+			</a>
+		</div>
 
 		<!-- Action Buttons (Mobile Optimized) -->
 		<div class="actions">
@@ -134,6 +147,24 @@
 		align-items: center;
 		justify-content: space-between;
 		gap: 0.4rem;
+	}
+
+	.brand-group {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	.drawer-menu-btn {
+		padding: 0.35rem 0.55rem;
+		background: var(--card-bg-subtle);
+		border-color: var(--border-color);
+	}
+
+	.hamburger-icon {
+		font-size: 1.1rem;
+		line-height: 1;
+		font-weight: 900;
 	}
 
 	.brand {
