@@ -263,11 +263,11 @@
 			border: 2px solid var(--border-color);
 			border-bottom: 4px solid var(--border-depth-color);
 			border-radius: 24px;
-			padding: 1.25rem 1rem;
+			padding: 1rem 0.85rem;
 			display: flex;
 			flex-direction: column;
 			justify-content: space-between;
-			gap: 1.25rem;
+			gap: 0.75rem;
 			box-shadow: none;
 			backdrop-filter: blur(16px);
 			-webkit-backdrop-filter: blur(16px);
@@ -276,17 +276,17 @@
 		.sidebar-desktop-actions {
 			display: flex;
 			flex-direction: column;
-			gap: 0.75rem;
+			gap: 0.5rem;
 			width: 100%;
 			margin-top: auto;
-			padding-top: 1rem;
+			padding-top: 0.65rem;
 			border-top: 2px solid var(--border-color);
 		}
 
 		.desktop-quick-add-btn {
 			width: 100%;
-			font-size: 0.85rem;
-			padding: 0.75rem;
+			font-size: 0.8rem;
+			padding: 0.55rem;
 			text-align: center;
 			justify-content: center;
 		}
@@ -294,7 +294,7 @@
 		.desktop-theme-btn {
 			width: 100%;
 			font-size: 0.75rem;
-			padding: 0.65rem;
+			padding: 0.55rem;
 			display: flex;
 			align-items: center;
 			justify-content: center;
@@ -352,7 +352,7 @@
 
 		.nav-scroll-wrapper {
 			flex-direction: column;
-			gap: 0.5rem;
+			gap: 0.35rem;
 			width: 100%;
 			align-items: stretch;
 			padding: 0;
@@ -361,12 +361,12 @@
 		.nav-item {
 			flex-direction: row;
 			align-items: center;
-			gap: 0.85rem;
+			gap: 0.75rem;
 			min-width: 0;
 			max-width: 100%;
 			width: 100%;
-			padding: 0.75rem 1rem;
-			border-radius: 16px;
+			padding: 0.55rem 0.85rem;
+			border-radius: 14px;
 			border: 2px solid transparent;
 			text-align: left;
 			font-size: 0.85rem;
