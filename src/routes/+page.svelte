@@ -2,7 +2,6 @@
 	import { onMount } from 'svelte';
 	import { cardsStore } from '$lib/stores/cardsStore';
 	import { statsStore, type StatsData } from '$lib/stores/statsStore';
-	import { tts } from '$lib/utils/tts';
 	import WikiSearchModal from '$lib/components/WikiSearchModal.svelte';
 	import QuickAddCardModal from '$lib/components/QuickAddCardModal.svelte';
 	import type { Card } from '$lib/types/cards';
@@ -45,14 +44,6 @@
 		};
 	});
 
-	function speakWord() {
-		if (!wordOfTheDay) return;
-		const text = wordOfTheDay.fullName
-			? `${wordOfTheDay.title}, ${wordOfTheDay.fullName}. ${wordOfTheDay.description}`
-			: `${wordOfTheDay.title}. ${wordOfTheDay.description}`;
-		tts.speak(text);
-	}
-
 	const lessonNodes = [
 		{ id: 1, title: 'FLASHCARD', href: '/flashcard', icon: '/emoji/open_book_3d.png', state: 'active', offset: 0 },
 		{ id: 2, title: 'QUIZ', href: '/quiz', icon: '/emoji/star_3d.png', state: 'unlocked', offset: -40 },
@@ -78,9 +69,6 @@
 							<span class="wod-badge-text">PAROLA DEL GIORNO</span>
 						</div>
 						<div class="wod-header-actions">
-							<button class="wod-action-btn" onclick={speakWord} title="Ascolta pronuncia audio">
-								🔊 Audio
-							</button>
 							<button class="wod-action-btn" onclick={() => pickRandomWord(cards)} title="Scopri un'altra parola">
 								🎲 Altra Parola
 							</button>
@@ -337,15 +325,9 @@
 	}
 
 	.word-of-day-card {
-		background: linear-gradient(135deg, var(--card-bg), var(--card-bg-subtle));
-		border: 2px solid var(--accent-color);
-		border-bottom: 5px solid var(--accent-depth);
-		border-radius: 24px;
-		padding: 1.25rem 1.5rem;
 		display: flex;
 		flex-direction: column;
 		gap: 1rem;
-		box-shadow: 0 8px 25px rgba(28, 176, 246, 0.15);
 	}
 
 	.wod-header {
