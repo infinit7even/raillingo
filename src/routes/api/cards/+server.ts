@@ -4,7 +4,7 @@ import path from 'node:path';
 import { env } from '$env/dynamic/private';
 import type { Card } from '$lib/types/cards';
 
-const CARDS_FILE_PATH = path.resolve('static/data/cards.json');
+const CARDS_FILE_PATH = path.resolve('data/cards.json');
 
 async function readCardsFromFile(): Promise<Card[]> {
 	try {
