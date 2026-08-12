@@ -185,8 +185,8 @@
 	.wiki-container {
 		display: flex;
 		flex-direction: column;
-		gap: 1.75rem;
-		max-width: 800px;
+		gap: 1rem;
+		max-width: 600px;
 		margin: 0 auto;
 	}
 
