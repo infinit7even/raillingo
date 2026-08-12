@@ -231,7 +231,7 @@
 
 				<div class="top-actions">
 					<button class="duo-btn duo-btn-blue export-btn" onclick={exportJSON}>
-						📥 ESPORTA DB JSON
+						📥 ESPORTA DATI JSON
 					</button>
 					<a href="/api/auth/logout" class="duo-btn duo-btn-gray logout-btn">
 						Esci
@@ -253,7 +253,7 @@
 				<div class="form-group">
 					<textarea
 						bind:value={announcementText}
-						placeholder="Scrivi qui l'annuncio dell'amministratore (es: Nuovi acronimi caricati nel DB!)..."
+						placeholder="Scrivi qui l'annuncio dell'amministratore (es: Nuovi acronimi caricati!)..."
 						rows="2"
 						class="duo-input form-textarea"
 					></textarea>
@@ -269,7 +269,7 @@
 			<!-- Card Editor Form -->
 			<form class="editor-card duo-card" onsubmit={handleSaveCard}>
 				<h2 class="form-title">
-					{editingCardId ? '✏️ Modifica Scheda' : '➕ Aggiungi Nuova Card Informativa (PostgreSQL DB)'}
+					{editingCardId ? '✏️ Modifica Scheda' : '➕ Aggiungi Nuova Card Informativa'}
 				</h2>
 
 				<div class="form-grid">
@@ -373,7 +373,7 @@
 						</button>
 					{/if}
 					<button type="submit" class="duo-btn duo-btn-green save-btn">
-						{editingCardId ? 'Salva Modifiche DB' : '➕ AGGIUNGI AL DB POSTGRESQL'}
+						{editingCardId ? 'Salva Modifiche' : '➕ AGGIUNGI SCHEDA'}
 					</button>
 				</div>
 			</form>
@@ -381,7 +381,7 @@
 			<!-- Existing Cards List -->
 			<div class="list-section">
 				<div class="list-header">
-					<h2>Schede nel DB ({filteredCards.length})</h2>
+					<h2>Schede Registrate ({filteredCards.length})</h2>
 					<input
 						type="text"
 						bind:value={searchQuery}

@@ -16,7 +16,7 @@ export const PRIVACY_POLICY = {
 		},
 		{
 			title: '3. Conservazione e Sicurezza dei Dati',
-			content: 'I dati relativi al profilo utente sono conservati in modo sicuro all\'interno del database locale PostgreSQL e non vengono mai ceduti o venduti a terzi.'
+			content: 'I dati relativi al profilo utente sono conservati in modo sicuro e non vengono mai ceduti o venduti a terzi.'
 		},
 		{
 			title: '4. Diritti dell\'Utente',
