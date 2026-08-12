@@ -27,16 +27,16 @@ async function writeCardsToFile(cards: Card[]): Promise<boolean> {
 }
 
 function isAuthorizedAdmin(cookies: any): boolean {
-	const cookieVal = cookies.get('user_session') || cookies.get('admin_session');
+	const cookieVal = cookies.get('admin_session') || cookies.get('user_session');
 	if (!cookieVal) return false;
 
 	try {
 		const session = JSON.parse(cookieVal);
-		if (session.isAdmin) return true;
+		if (session.isAdmin === true) return true;
 
 		const rawAdminIds = env.DISCORD_ADMIN_IDS || process.env.DISCORD_ADMIN_IDS || '691289686093725736';
-		const adminIds = rawAdminIds.split(',').map((id: string) => id.trim());
-		return adminIds.includes(session.userId);
+		const adminIds = rawAdminIds.split(',').map((id: string) => id.trim()).filter(Boolean);
+		return adminIds.includes(String(session.userId).trim());
 	} catch {
 		return false;
 	}

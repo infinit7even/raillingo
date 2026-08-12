@@ -1,8 +1,31 @@
 import { json, type RequestHandler } from '@sveltejs/kit';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { env } from '$env/dynamic/private';
 
-export const POST: RequestHandler = async ({ request }) => {
+const ALLOWED_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif']);
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
+function isAuthorizedAdmin(cookies: any): boolean {
+	const cookieVal = cookies.get('admin_session') || cookies.get('user_session');
+	if (!cookieVal) return false;
+	try {
+		const session = JSON.parse(cookieVal);
+		if (session.isAdmin === true) return true;
+		const rawAdminIds = env.DISCORD_ADMIN_IDS || process.env.DISCORD_ADMIN_IDS || '691289686093725736';
+		const adminIds = rawAdminIds.split(',').map((id: string) => id.trim()).filter(Boolean);
+		return adminIds.includes(String(session.userId).trim());
+	} catch {
+		return false;
+	}
+}
+
+export const POST: RequestHandler = async ({ request, cookies }) => {
+	// Verifica autorizzazione admin prima dell'upload
+	if (!isAuthorizedAdmin(cookies)) {
+		return json({ error: 'Accesso negato: soltanto gli admin possono caricare immagini.' }, { status: 403 });
+	}
+
 	try {
 		const formData = await request.formData();
 		const file = formData.get('file') as File | null;
@@ -11,12 +34,23 @@ export const POST: RequestHandler = async ({ request }) => {
 			return json({ error: 'Nessun file caricato' }, { status: 400 });
 		}
 
+		// Verifica dimensione file
+		if (file.size > MAX_FILE_SIZE) {
+			return json({ error: 'File troppo grande (max 5MB)' }, { status: 400 });
+		}
+
+		// Verifica estensione file (whitelist)
+		const extension = path.extname(file.name).toLowerCase();
+		if (!ALLOWED_EXTENSIONS.has(extension)) {
+			return json({ error: 'Tipo di file non consentito. Usa JPG, PNG, WebP o GIF.' }, { status: 400 });
+		}
+
 		const bytes = await file.arrayBuffer();
 		const buffer = Buffer.from(bytes);
 
-		// Sanitizza nome file
-		const extension = path.extname(file.name) || '.jpg';
-		const filename = `img-${Date.now()}-${Math.random().toString(36).substring(2, 7)}${extension}`;
+		// Genera nome file sicuro (senza usare il nome originale)
+		const safeExtension = extension || '.jpg';
+		const filename = `img-${Date.now()}-${Math.random().toString(36).substring(2, 7)}${safeExtension}`;
 		const uploadDir = path.resolve('static/uploads');
 
 		await fs.mkdir(uploadDir, { recursive: true });

@@ -1,3 +1,4 @@
+import { redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ cookies, url }) => {
@@ -10,15 +11,19 @@ export const load: PageServerLoad = async ({ cookies, url }) => {
 		} catch (e) {
 			cookies.delete('admin_session', { path: '/' });
 			cookies.delete('user_session', { path: '/' });
-			user = null;
 		}
 	}
 
 	const isAdminUser = user && (user.isAdmin || user.role === 'admin' || String(user.userId).trim() === '691289686093725736');
+
+	if (!isAdminUser) {
+		throw redirect(302, '/login?error=admin_required');
+	}
+
 	const error = url.searchParams.get('error');
 
 	return {
-		user: isAdminUser ? user : null,
+		user,
 		error
 	};
 };

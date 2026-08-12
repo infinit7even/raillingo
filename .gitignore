@@ -31,3 +31,4 @@ docker-compose.yml
 static/data/*
 static/uploads/*
 static/data/cards.json
+data

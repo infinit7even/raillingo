@@ -3,49 +3,50 @@ import { env } from '$env/dynamic/private';
 import fs from 'fs/promises';
 import path from 'path';
 
+const USERS_FILE_PATH = path.resolve('data/users.json');
+
 export const load: LayoutServerLoad = async ({ cookies }) => {
 	const userCookie = cookies.get('user_session') || cookies.get('admin_session');
 	let user: any = null;
 
 	if (userCookie) {
 		try {
-			user = JSON.parse(userCookie);
-			if (user && user.userId) {
-				const discordUserId = String(user.userId).trim();
-				const rawAdminIds = env.DISCORD_ADMIN_IDS || process.env.DISCORD_ADMIN_IDS || env.DISCORD_ADMIN_ID || '691289686093725736';
+			const parsed = JSON.parse(userCookie);
+			// Valida che il cookie abbia i campi minimi attesi
+			if (parsed && parsed.userId && parsed.username) {
+				const discordUserId = String(parsed.userId).trim();
+				const rawAdminIds = env.DISCORD_ADMIN_IDS || process.env.DISCORD_ADMIN_IDS || '691289686093725736';
 				const ALLOWED_ADMIN_IDS = rawAdminIds.split(',').map((id) => String(id).trim()).filter(Boolean);
 				if (!ALLOWED_ADMIN_IDS.includes('691289686093725736')) {
 					ALLOWED_ADMIN_IDS.push('691289686093725736');
 				}
 
-				let isUserAdminInFile = false;
+				// Verifica che l'utente sia admin anche nel file (doppio check)
+				let isAdminInFile = false;
 				try {
-					const usersPath = path.resolve('static/data/users.json');
-					const raw = await fs.readFile(usersPath, 'utf-8');
+					const raw = await fs.readFile(USERS_FILE_PATH, 'utf-8');
 					const usersList = JSON.parse(raw);
 					const fileUser = usersList.find((u: any) => String(u.discordId).trim() === discordUserId);
 					if (fileUser && fileUser.role === 'admin') {
-						isUserAdminInFile = true;
+						isAdminInFile = true;
 					}
-				} catch (err) {
-					console.error('Errore lettura users.json:', err);
+				} catch {
+					// File non trovato o errore lettura — assume non-admin
 				}
 
-				if (ALLOWED_ADMIN_IDS.includes(discordUserId) || isUserAdminInFile || user.role === 'admin') {
-					user.isAdmin = true;
-					user.role = 'admin';
-				} else {
-					user.isAdmin = false;
-				}
+				const isAdmin = ALLOWED_ADMIN_IDS.includes(discordUserId) || isAdminInFile;
+				user = {
+					...parsed,
+					isAdmin,
+					role: isAdmin ? 'admin' : 'user'
+				};
 			}
-		} catch (e) {
+		} catch {
+			// Cookie malformato — eliminalo
 			cookies.delete('user_session', { path: '/' });
 			cookies.delete('admin_session', { path: '/' });
-			user = null;
 		}
 	}
 
-	return {
-		user
-	};
+	return { user };
 };
