@@ -3,13 +3,11 @@
 	import { themeStore, type ThemePreset } from '$lib/stores/themeStore';
 	import { cardsStore } from '$lib/stores/cardsStore';
 	import QuickAddCardModal from '$lib/components/QuickAddCardModal.svelte';
-	import WikiSearchModal from '$lib/components/WikiSearchModal.svelte';
 	import type { Card } from '$lib/types/cards';
 
 	let currentTheme = $state<ThemePreset>('dark');
 	let cards = $state<Card[]>([]);
 	let isQuickAddOpen = $state(false);
-	let isWikiSearchOpen = $state(false);
 
 	onMount(() => {
 		const unTheme = themeStore.subscribe((t) => (currentTheme = t));
@@ -34,28 +32,17 @@
 			</div>
 		</a>
 
-		<!-- Action Buttons (Mobile Accessible) -->
+		<!-- Action Buttons (Mobile Optimized) -->
 		<div class="actions">
-			<!-- Quick Search Button -->
-			<button
-				class="duo-header-btn search-btn"
-				onclick={() => (isWikiSearchOpen = true)}
-				aria-label="Cerca acronimi"
-				title="Ricerca Rapida Wiki"
-			>
-				<span class="btn-icon">🔍</span>
-				<span class="btn-text">Wiki</span>
-			</button>
-
 			<!-- Quick Add Card Button -->
 			<button
 				class="duo-header-btn add-btn"
 				onclick={() => (isQuickAddOpen = true)}
-				aria-label="Aggiungi Scheda"
+				aria-label="Aggiungi Scheda Rapida"
 				title="Aggiungi Scheda Rapida"
 			>
 				<span class="btn-icon">⚡</span>
-				<span class="btn-text">+ Scheda</span>
+				<span class="btn-text">+ SCHEDA</span>
 			</button>
 
 			<!-- Theme Selector Button -->
@@ -72,16 +59,10 @@
 	</div>
 </header>
 
-<!-- Global Modals triggered from Header -->
+<!-- Quick 1-Click Add Card Modal -->
 <QuickAddCardModal
 	isOpen={isQuickAddOpen}
 	onClose={() => (isQuickAddOpen = false)}
-	{cards}
-/>
-
-<WikiSearchModal
-	isOpen={isWikiSearchOpen}
-	onClose={() => (isWikiSearchOpen = false)}
 	{cards}
 />
 
@@ -92,25 +73,26 @@
 		z-index: 150;
 		background-color: var(--header-bg);
 		border-bottom: 2px solid var(--border-color);
-		box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-		backdrop-filter: blur(12px);
+		box-shadow: 0 4px 16px var(--shadow-color);
+		backdrop-filter: blur(16px);
+		-webkit-backdrop-filter: blur(16px);
 		transition: background-color 0.3s ease, border-color 0.3s ease;
 	}
 
 	.header-container {
 		max-width: 1200px;
 		margin: 0 auto;
-		padding: 0.5rem 0.85rem;
+		padding: 0.6rem 1rem;
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		gap: 0.4rem;
+		gap: 0.5rem;
 	}
 
 	.brand {
 		display: flex;
 		align-items: center;
-		gap: 0.5rem;
+		gap: 0.55rem;
 		text-decoration: none;
 		color: var(--text-color);
 	}
@@ -121,8 +103,8 @@
 	}
 
 	.flag-img {
-		width: 28px;
-		height: 28px;
+		width: 32px;
+		height: 32px;
 	}
 
 	.title-group {
@@ -131,7 +113,7 @@
 	}
 
 	.app-title {
-		font-size: 1.2rem;
+		font-size: 1.3rem;
 		font-weight: 900;
 		color: var(--green-color);
 		letter-spacing: -0.03em;
@@ -166,25 +148,26 @@
 	.actions {
 		display: flex;
 		align-items: center;
-		gap: 0.35rem;
+		gap: 0.5rem;
 	}
 
 	.duo-header-btn {
 		display: inline-flex;
 		align-items: center;
-		gap: 0.3rem;
-		padding: 0.4rem 0.6rem;
-		border-radius: 12px;
+		gap: 0.35rem;
+		padding: 0.45rem 0.75rem;
+		border-radius: 14px;
 		background-color: var(--card-bg-subtle);
 		border: 2px solid var(--border-color);
 		border-bottom: 3px solid var(--border-depth-color);
 		color: var(--text-color);
-		font-size: 0.78rem;
+		font-size: 0.82rem;
 		font-weight: 800;
 		cursor: pointer;
 		text-decoration: none;
-		transition: all 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+		transition: all 0.15s ease;
 		white-space: nowrap;
+		user-select: none;
 	}
 
 	.duo-header-btn:active {
@@ -198,13 +181,8 @@
 		color: var(--accent-color);
 	}
 
-	.search-btn {
-		background: var(--card-bg-subtle);
-		border-color: var(--border-color);
-	}
-
 	.btn-icon, .theme-icon-symbol {
-		font-size: 0.95rem;
+		font-size: 1rem;
 		line-height: 1;
 	}
 
@@ -215,23 +193,25 @@
 	}
 
 	@media (max-width: 640px) {
-		.app-subtitle, .theme-name-text {
+		.app-subtitle {
 			display: none;
 		}
 		.header-container {
-			padding: 0.35rem 0.5rem;
+			padding: 0.45rem 0.65rem;
 		}
 		.flag-img {
-			width: 24px;
-			height: 24px;
+			width: 26px;
+			height: 26px;
 		}
 		.app-title {
-			font-size: 1.05rem;
+			font-size: 1.15rem;
 		}
 		.duo-header-btn {
-			padding: 0.35rem 0.45rem;
-			font-size: 0.75rem;
+			padding: 0.4rem 0.6rem;
+			font-size: 0.78rem;
+		}
+		.theme-name-text {
+			display: none;
 		}
 	}
 </style>
-

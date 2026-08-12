@@ -2,7 +2,6 @@
 	import { onMount } from 'svelte';
 	import { cardsStore } from '$lib/stores/cardsStore';
 	import { statsStore, type StatsData } from '$lib/stores/statsStore';
-	import WikiSearchModal from '$lib/components/WikiSearchModal.svelte';
 	import QuickAddCardModal from '$lib/components/QuickAddCardModal.svelte';
 	import type { Card } from '$lib/types/cards';
 
@@ -10,7 +9,6 @@
 
 	let cards = $state<Card[]>([]);
 	let wordOfTheDay = $state<Card | null>(null);
-	let isWikiModalOpen = $state(false);
 	let isQuickAddOpen = $state(false);
 	let user = $derived(data.user);
 
@@ -203,13 +201,6 @@
 		</div>
 	</aside>
 </div>
-
-<!-- Interactive Instant Wiki Search Modal -->
-<WikiSearchModal
-	isOpen={isWikiModalOpen}
-	cards={cards}
-	onClose={() => (isWikiModalOpen = false)}
-/>
 
 <!-- Quick 1-Click Add Card Modal for Admin -->
 <QuickAddCardModal

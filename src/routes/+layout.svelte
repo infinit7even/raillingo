@@ -20,7 +20,7 @@
 		if (
 			target.tagName === 'INPUT' ||
 			target.tagName === 'TEXTAREA' ||
-			target.closest('.search-modal-backdrop') ||
+			target.closest('.modal-backdrop') ||
 			target.closest('.nav-scroll-wrapper')
 		) {
 			return;
