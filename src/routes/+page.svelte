@@ -236,18 +236,14 @@
 					>
 						📲 INSTALLA L'APP
 					</button>
-				{:else}
-					<a href="/flashcard" class="duo-btn duo-btn-green flex-btn">
-						📖 RIPASSO
-					</a>
 				{/if}
 
 				<a href="https://epod.rfi.it" target="_blank" rel="noopener noreferrer" class="duo-btn duo-btn-blue flex-btn">
 					📚 DISPENSA RFI
 				</a>
-				<a href="https://ko-fi.com/infinit7even" target="_blank" rel="noopener noreferrer" class="duo-btn kofi-btn flex-btn">
+				<a href="https://ko-fi.com/infinit7even" target="_blank" rel="noopener noreferrer" class="duo-btn duo-btn-green flex-btn">
 					<img src="/emoji/sparkles_3d.png" alt="Splendore" class="btn-emoji-img" />
-					SOSTIENI IL SITO
+					SOSTIENI IL PROGETTO
 				</a>
 
 				{#if user && (user.isAdmin || user.role === 'admin')}
@@ -673,16 +669,6 @@
 		font-size: 0.85rem;
 		text-align: center;
 		text-decoration: none;
-	}
-
-	.kofi-btn {
-		background-color: #ff5e5b;
-		color: #ffffff;
-		border-color: #d9423f;
-	}
-
-	.kofi-btn:hover:not(:disabled) {
-		background-color: #ff7370;
 	}
 
 	.btn-emoji-img {
