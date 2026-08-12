@@ -1,5 +1,5 @@
 export const SITE_NAME = 'Raillingo';
-export const SITE_SUBTITLE = 'Apprendimento Ferroviario RFI';
+export const SITE_SUBTITLE = 'Raillingo';
 
 export const PRIVACY_POLICY = {
 	lastUpdated: '2 Agosto 2026',

@@ -66,7 +66,7 @@
 </script>
 
 <svelte:head>
-	<title>Raillingo | Apprendimento Acronimi Ferroviari</title>
+	<title>Raillingo</title>
 	<meta name="robots" content="noindex, nofollow" />
 	<meta name="googlebot" content="noindex, nofollow" />
 	<meta name="description" content="Raillingo - PWA in stile Duolingo per imparare e memorizzare gli acronimi e i concetti del corso ferroviario RFI." />

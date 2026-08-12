@@ -176,12 +176,12 @@
 		margin: 0 auto;
 		display: flex;
 		flex-direction: column;
-		gap: 1rem;
+		gap: 0.75rem;
 	}
 
 	.reels-feed-container {
 		width: 100%;
-		height: 580px;
+		height: 560px;
 		max-height: 70vh;
 		overflow-y: scroll;
 		scroll-snap-type: y mandatory;
@@ -191,6 +191,23 @@
 		box-shadow: 0 12px 35px rgba(0, 0, 0, 0.25);
 		position: relative;
 		scrollbar-width: none;
+	}
+
+	@media (max-width: 768px) {
+		.reels-page-wrapper {
+			gap: 0.4rem;
+		}
+
+		.reels-feed-container {
+			height: calc(100vh - 275px);
+			min-height: 360px;
+			max-height: 500px;
+			border-radius: 18px;
+		}
+
+		.reel-slide {
+			padding: 0.75rem !important;
+		}
 	}
 
 	.reels-feed-container::-webkit-scrollbar {
