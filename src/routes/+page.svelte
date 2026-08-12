@@ -159,10 +159,6 @@
 				</div>
 			</div>
 		</section>
-		<!-- Footer privacy visibile in fondo alla Home su mobile -->
-		<div class="mobile-privacy-footer">
-			<a href="/privacy" class="privacy-link">Informativa sulla Privacy</a>
-		</div>
 	</div>
 
 	<!-- 📊 RIGHT SIDEBAR COLUMN (Desktop & Mobile Widgets) -->
@@ -243,8 +239,8 @@
 			</div>
 		</div>
 
-		<!-- Footer Link to Privacy Policy su Desktop -->
-		<div class="sidebar-privacy-footer desktop-only">
+		<!-- Footer Link to Privacy Policy (Visibile a fine pagina su Mobile & Desktop) -->
+		<div class="sidebar-privacy-footer">
 			<a href="/privacy" class="privacy-link">Informativa sulla Privacy</a>
 		</div>
 	</aside>
@@ -473,20 +469,18 @@
 		object-fit: cover;
 	}
 
-	/* 📊 RIGHT SIDEBAR & MOBILE WIDGETS */
+	/* 📊 RIGHT SIDEBAR (Desktop Only >= 1024px) */
 	.duo-right-sidebar {
-		display: flex;
-		flex-direction: column;
-		gap: 0.75rem;
-		width: 100%;
-		margin-top: 1rem;
+		display: none;
 	}
 
 	@media (min-width: 1024px) {
 		.duo-right-sidebar {
+			display: flex;
+			flex-direction: column;
+			gap: 0.75rem;
 			position: sticky;
 			top: 1.5rem;
-			margin-top: 0;
 		}
 	}
 
@@ -659,26 +653,19 @@
 		object-fit: contain;
 	}
 
-	.mobile-privacy-footer {
-		text-align: center;
-		padding: 1.5rem 0 0.5rem 0;
-	}
-
 	.sidebar-privacy-footer {
 		text-align: center;
-		padding: 0.1rem 0;
-		margin-top: -0.25rem;
-	}
-
-	@media (min-width: 1024px) {
-		.mobile-privacy-footer {
-			display: none;
-		}
+		padding: 0.8rem 0 1rem 0;
 	}
 
 	@media (max-width: 1023px) {
-		.desktop-only {
-			display: none !important;
+		.duo-right-sidebar {
+			display: flex;
+			flex-direction: column;
+			gap: 1.25rem;
+			width: 100%;
+			max-width: 480px;
+			margin: 0 auto;
 		}
 	}
 
