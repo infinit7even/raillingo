@@ -494,6 +494,12 @@
 		margin-bottom: 0;
 	}
 
+	@media (max-width: 1023px) {
+		.desktop-top-stats {
+			display: none !important;
+		}
+	}
+
 	@media (min-width: 1024px) {
 		.mobile-top-stats {
 			display: none !important;
