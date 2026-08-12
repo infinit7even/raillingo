@@ -118,7 +118,7 @@
 		width: 100%;
 		max-width: 1350px;
 		margin: 0 auto;
-		padding: 0.85rem 0.85rem 6rem 0.85rem;
+		padding: 0.85rem 0.85rem 4.5rem 0.85rem;
 		box-sizing: border-box;
 		contain: layout style;
 	}
@@ -133,7 +133,7 @@
 		}
 
 		.main-content {
-			padding: 1.5rem 2rem 3rem 2rem;
+			padding: 1.5rem 2rem 1.5rem 2rem;
 		}
 	}
 </style>

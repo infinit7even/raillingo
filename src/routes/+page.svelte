@@ -159,6 +159,10 @@
 				</div>
 			</div>
 		</section>
+		<!-- Footer privacy visibile in fondo alla Home su mobile -->
+		<div class="mobile-privacy-footer">
+			<a href="/privacy" class="privacy-link">Informativa sulla Privacy</a>
+		</div>
 	</div>
 
 	<!-- 📊 RIGHT SIDEBAR COLUMN (Desktop & Mobile Widgets) -->
@@ -242,8 +246,8 @@
 			</div>
 		</div>
 
-		<!-- Footer Link to Privacy Policy -->
-		<div class="sidebar-privacy-footer">
+		<!-- Footer Link to Privacy Policy su Desktop -->
+		<div class="sidebar-privacy-footer desktop-only">
 			<a href="/privacy" class="privacy-link">Informativa sulla Privacy</a>
 		</div>
 	</aside>
@@ -656,9 +660,26 @@
 		object-fit: contain;
 	}
 
+	.mobile-privacy-footer {
+		text-align: center;
+		padding: 1.5rem 0 0.5rem 0;
+	}
+
 	.sidebar-privacy-footer {
 		text-align: center;
 		padding: 0.5rem 0;
+	}
+
+	@media (min-width: 1024px) {
+		.mobile-privacy-footer {
+			display: none;
+		}
+	}
+
+	@media (max-width: 1023px) {
+		.desktop-only {
+			display: none !important;
+		}
 	}
 
 	.privacy-link {
