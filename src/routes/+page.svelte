@@ -3,26 +3,18 @@
 	import { cardsStore } from '$lib/stores/cardsStore';
 	import { statsStore, type StatsData } from '$lib/stores/statsStore';
 	import QuickAddCardModal from '$lib/components/QuickAddCardModal.svelte';
-	import InstallAppModal from '$lib/components/InstallAppModal.svelte';
 	import type { Card } from '$lib/types/cards';
 
 	import { pwaStore } from '$lib/stores/pwaStore';
 
 	let { data } = $props();
 
-	let cards = $state<Card[]>([]);
-	let wordOfTheDay = $state<Card | null>(null);
-
-	$effect.root(() => {
-		const list = data.initialCards || [];
-		if (cards.length === 0 && list.length > 0) {
-			cards = list;
-			wordOfTheDay = list[Math.floor(Math.random() * list.length)];
-		}
-	});
-
+	const initialList = data.initialCards || [];
+	let cards = $state<Card[]>(initialList);
+	let wordOfTheDay = $state<Card | null>(
+		initialList.length > 0 ? initialList[Math.floor(Math.random() * initialList.length)] : null
+	);
 	let isQuickAddOpen = $state(false);
-	let isInstallModalOpen = $state(false);
 	let isStandalone = $state(false);
 	let canInstall = $state(false);
 	let user = $derived(data.user);
@@ -65,14 +57,7 @@
 	});
 
 	async function handleInstallApp() {
-		if (canInstall) {
-			const success = await pwaStore.promptInstall();
-			if (!success) {
-				isInstallModalOpen = true;
-			}
-		} else {
-			isInstallModalOpen = true;
-		}
+		await pwaStore.promptInstall();
 	}
 
 	const lessonNodes = [
@@ -114,22 +99,6 @@
 				</div>
 			</div>
 		</a>
-
-		<!-- 📲 Download App Banner (Mobile & Desktop when not standalone) -->
-		{#if !isStandalone}
-			<div class="duo-card download-app-banner">
-				<div class="download-banner-content">
-					<div class="download-banner-text">
-						<span class="download-badge">📲 APP MOBILE & DESKTOP</span>
-						<h3 class="download-title">Installa Raillingo sul tuo telefono!</h3>
-						<p class="download-desc">Studia gli acronimi RFI ovunque, a schermo intero e con supporto offline.</p>
-					</div>
-					<button class="duo-btn duo-btn-green download-action-btn" onclick={handleInstallApp}>
-						📲 SCARICA APP
-					</button>
-				</div>
-			</div>
-		{/if}
 
 		<!-- 💡 Parola del Giorno Card (Cima alla Home) -->
 		{#if wordOfTheDay}
@@ -190,68 +159,13 @@
 				</div>
 			</div>
 		</section>
-
-		<!-- 📱 Mobile Widgets Section (Equal feature parity with Desktop) -->
-		<div class="mobile-widgets-container">
-			<div class="duo-widget duo-card">
-				<div class="widget-header-row">
-					<h3 class="widget-title">Missioni giornaliere</h3>
-					<a href="/missioni" class="widget-link">VEDI TUTTE &gt;</a>
-				</div>
-				<div class="mission-item">
-					<img src="/emoji/high_voltage_3d.png" alt="XP" class="widget-emoji-img" />
-					<div class="mission-info">
-						<span class="mission-desc">Guadagna 10 XP</span>
-						<div class="duo-progress-track">
-							<div class="duo-progress-fill" style="width: {Math.min(100, totalXP * 10)}%"></div>
-						</div>
-						<span class="mission-count">{Math.min(10, totalXP)} / 10</span>
-					</div>
-					<img src="/emoji/package_3d.png" alt="Premio" class="widget-emoji-img" />
-				</div>
-			</div>
-
-			<div class="duo-widget duo-card admin-widget">
-				<h3 class="widget-title">Risorse e Link</h3>
-				<div class="profile-actions">
-					{#if !isStandalone}
-						<button
-							type="button"
-							class="duo-btn duo-btn-green flex-btn install-app-btn"
-							onclick={handleInstallApp}
-						>
-							📲 SCARICA L'APP
-						</button>
-					{:else}
-						<a href="/flashcard" class="duo-btn duo-btn-green flex-btn">
-							📖 RIPASSO
-						</a>
-					{/if}
-
-					<a href="https://epod.rfi.it" target="_blank" rel="noopener noreferrer" class="duo-btn duo-btn-blue flex-btn">
-						📚 DISPENSA RFI
-					</a>
-					<a href="https://ko-fi.com/infinit7even" target="_blank" rel="noopener noreferrer" class="duo-btn kofi-btn flex-btn">
-						<img src="/emoji/sparkles_3d.png" alt="Splendore" class="btn-emoji-img" />
-						SOSTIENI IL SITO
-					</a>
-
-					{#if user && (user.isAdmin || user.role === 'admin')}
-						<a href="/admin" class="duo-btn duo-btn-purple flex-btn">
-							🔐 PANNELLO ADMIN
-						</a>
-					{/if}
-				</div>
-			</div>
-		</div>
-
 		<!-- Footer privacy visibile in fondo alla Home su mobile -->
 		<div class="mobile-privacy-footer">
 			<a href="/privacy" class="privacy-link">Informativa sulla Privacy</a>
 		</div>
 	</div>
 
-	<!-- 📊 RIGHT SIDEBAR COLUMN (Desktop Only >= 1024px) -->
+	<!-- 📊 RIGHT SIDEBAR COLUMN (Desktop & Mobile Widgets) -->
 	<aside class="duo-right-sidebar">
 		<!-- Top Stats Row (Desktop Only) -->
 		<a href="/missioni" class="top-stats-row duo-card desktop-top-stats" title="Clicca per aprire le Missioni ed i Dettagli">
@@ -299,13 +213,13 @@
 		<div class="duo-widget duo-card admin-widget">
 			<h3 class="widget-title">Risorse e Link</h3>
 			<div class="profile-actions">
-				{#if !isStandalone}
+				{#if canInstall}
 					<button
 						type="button"
 						class="duo-btn duo-btn-green flex-btn install-app-btn"
 						onclick={handleInstallApp}
 					>
-						📲 SCARICA L'APP
+						📲 INSTALLA L'APP
 					</button>
 				{:else}
 					<a href="/flashcard" class="duo-btn duo-btn-green flex-btn">
@@ -341,12 +255,6 @@
 	isOpen={isQuickAddOpen}
 	cards={cards}
 	onClose={() => (isQuickAddOpen = false)}
-/>
-
-<!-- PWA Install Modal -->
-<InstallAppModal
-	isOpen={isInstallModalOpen}
-	onClose={() => (isInstallModalOpen = false)}
 />
 
 <style>
@@ -565,18 +473,20 @@
 		object-fit: cover;
 	}
 
-	/* 📊 RIGHT SIDEBAR (Desktop Only >= 1024px) */
+	/* 📊 RIGHT SIDEBAR & MOBILE WIDGETS */
 	.duo-right-sidebar {
-		display: none;
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+		width: 100%;
+		margin-top: 1rem;
 	}
 
 	@media (min-width: 1024px) {
 		.duo-right-sidebar {
-			display: flex;
-			flex-direction: column;
-			gap: 0.75rem;
 			position: sticky;
 			top: 1.5rem;
+			margin-top: 0;
 		}
 	}
 
@@ -768,68 +678,6 @@
 
 	@media (max-width: 1023px) {
 		.desktop-only {
-			display: none !important;
-		}
-	}
-
-	.download-app-banner {
-		background: linear-gradient(135deg, var(--card-bg) 0%, var(--card-bg-subtle) 100%);
-		border: 2px solid var(--green-color);
-		border-bottom: 4px solid var(--green-depth);
-		margin-bottom: 1rem;
-	}
-
-	.download-banner-content {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 1rem;
-		flex-wrap: wrap;
-	}
-
-	.download-banner-text {
-		display: flex;
-		flex-direction: column;
-		gap: 0.3rem;
-		flex: 1 1 240px;
-	}
-
-	.download-badge {
-		font-size: 0.68rem;
-		font-weight: 900;
-		color: var(--green-color);
-		letter-spacing: 0.06em;
-	}
-
-	.download-title {
-		font-size: 1.15rem;
-		font-weight: 900;
-		color: var(--text-color);
-		margin: 0;
-	}
-
-	.download-desc {
-		font-size: 0.82rem;
-		color: var(--text-muted);
-		margin: 0;
-		line-height: 1.4;
-	}
-
-	.download-action-btn {
-		font-size: 0.85rem;
-		padding: 0.65rem 1.1rem;
-		flex-shrink: 0;
-	}
-
-	.mobile-widgets-container {
-		display: flex;
-		flex-direction: column;
-		gap: 1rem;
-		margin-top: 1.5rem;
-	}
-
-	@media (min-width: 1024px) {
-		.mobile-widgets-container {
 			display: none !important;
 		}
 	}
