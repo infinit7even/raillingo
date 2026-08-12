@@ -70,15 +70,19 @@
 
 	.duo-navigation {
 		position: fixed;
-		bottom: 0;
-		left: 0;
-		right: 0;
+		bottom: calc(0.6rem + var(--safe-area-bottom, 0px));
+		left: 0.65rem;
+		right: 0.65rem;
 		z-index: 200;
 		background: var(--card-bg);
-		border-top: 2px solid var(--border-color);
-		padding: 0.35rem 0.2rem calc(0.35rem + var(--safe-area-bottom, 0px)) 0.2rem;
-		box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.25);
-		backdrop-filter: blur(14px);
+		border: 2px solid var(--border-color);
+		border-bottom: 4px solid var(--border-depth-color);
+		border-radius: 24px;
+		padding: 0.4rem 0.3rem;
+		box-shadow: 0 10px 30px var(--shadow-color);
+		backdrop-filter: blur(16px);
+		-webkit-backdrop-filter: blur(16px);
+		transition: background-color 0.3s ease, border-color 0.3s ease;
 	}
 
 	.nav-container {
@@ -97,10 +101,10 @@
 	.nav-scroll-wrapper {
 		display: flex;
 		align-items: center;
-		justify-content: flex-start;
+		justify-content: space-around;
 		width: 100%;
-		padding: 0 0.25rem;
-		gap: 0.25rem;
+		padding: 0 0.15rem;
+		gap: 0.15rem;
 	}
 
 	.nav-item {
@@ -108,30 +112,31 @@
 		flex-direction: column;
 		align-items: center;
 		gap: 0.15rem;
-		padding: 0.25rem 0.2rem;
+		padding: 0.3rem 0.25rem;
 		color: var(--text-muted);
 		text-decoration: none;
-		font-size: 0.62rem;
+		font-size: 0.65rem;
 		font-weight: 800;
-		transition: all 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+		transition: all 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
 		flex: 1 0 auto;
-		min-width: 58px;
-		max-width: 80px;
+		min-width: 54px;
+		max-width: 76px;
 		text-align: center;
 		background: none;
 		border: none;
 		cursor: pointer;
 		user-select: none;
+		border-radius: 16px;
 		-webkit-tap-highlight-color: transparent;
 	}
 
 	.icon-wrapper {
-		width: 36px;
+		width: 38px;
 		height: 34px;
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		border-radius: 12px;
+		border-radius: 14px;
 		border: 2px solid transparent;
 		transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 	}
@@ -139,14 +144,20 @@
 	.icon-wrapper.active-outline {
 		border-color: var(--accent-color);
 		background-color: var(--accent-light-bg);
-		transform: translateY(-2px) scale(1.05);
-		box-shadow: 0 4px 12px rgba(88, 204, 2, 0.25);
+		transform: translateY(-2px) scale(1.08);
+		box-shadow: 0 4px 14px rgba(28, 176, 246, 0.3);
 	}
 
 	.nav-emoji-img {
 		width: 24px;
 		height: 24px;
 		object-fit: contain;
+		filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+		transition: transform 0.2s ease;
+	}
+
+	.nav-item:active .nav-emoji-img {
+		transform: scale(0.9);
 	}
 
 	.nav-item:hover {
@@ -159,9 +170,9 @@
 
 	.nav-label {
 		font-family: 'Outfit', sans-serif;
-		font-weight: 800;
-		font-size: 0.62rem;
-		letter-spacing: 0.01em;
+		font-weight: 900;
+		font-size: 0.64rem;
+		letter-spacing: 0.02em;
 		white-space: nowrap;
 	}
 

@@ -81,20 +81,23 @@
 <style>
 	.app-header {
 		position: sticky;
-		top: 0;
+		top: 0.65rem;
 		z-index: 150;
-		background-color: var(--header-bg);
-		border-bottom: 2px solid var(--border-color);
-		box-shadow: 0 4px 16px var(--shadow-color);
+		width: calc(100% - 1.25rem);
+		max-width: 1200px;
+		margin: 0.5rem auto 0 auto;
+		background-color: var(--card-bg);
+		border: 2px solid var(--border-color);
+		border-bottom: 4px solid var(--border-depth-color);
+		border-radius: 24px;
+		box-shadow: 0 8px 24px var(--shadow-color);
 		backdrop-filter: blur(16px);
 		-webkit-backdrop-filter: blur(16px);
-		transition: background-color 0.3s ease, border-color 0.3s ease;
+		transition: background-color 0.3s ease, border-color 0.3s ease, transform 0.2s ease;
 	}
 
 	.header-container {
-		max-width: 1200px;
-		margin: 0 auto;
-		padding: 0.6rem 1rem;
+		padding: 0.5rem 0.85rem;
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
@@ -115,8 +118,9 @@
 	}
 
 	.flag-img {
-		width: 32px;
-		height: 32px;
+		width: 30px;
+		height: 30px;
+		filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15));
 	}
 
 	.title-group {
@@ -125,7 +129,7 @@
 	}
 
 	.app-title {
-		font-size: 1.3rem;
+		font-size: 1.25rem;
 		font-weight: 900;
 		color: var(--green-color);
 		letter-spacing: -0.03em;
@@ -150,7 +154,7 @@
 	}
 
 	.app-subtitle {
-		font-size: 0.68rem;
+		font-size: 0.65rem;
 		font-weight: 800;
 		color: var(--accent-color);
 		text-transform: uppercase;
@@ -160,7 +164,7 @@
 	.actions {
 		display: flex;
 		align-items: center;
-		gap: 0.5rem;
+		gap: 0.45rem;
 	}
 
 	.duo-header-btn {
@@ -173,11 +177,11 @@
 		border: 2px solid var(--border-color);
 		border-bottom: 3px solid var(--border-depth-color);
 		color: var(--text-color);
-		font-size: 0.82rem;
+		font-size: 0.8rem;
 		font-weight: 800;
 		cursor: pointer;
 		text-decoration: none;
-		transition: all 0.15s ease;
+		transition: transform 0.1s ease, border-width 0.1s ease;
 		white-space: nowrap;
 		user-select: none;
 	}
@@ -209,7 +213,7 @@
 			display: none;
 		}
 		.header-container {
-			padding: 0.45rem 0.65rem;
+			padding: 0.45rem 0.75rem;
 		}
 		.flag-img {
 			width: 26px;
@@ -219,7 +223,7 @@
 			font-size: 1.15rem;
 		}
 		.duo-header-btn {
-			padding: 0.4rem 0.6rem;
+			padding: 0.4rem 0.65rem;
 			font-size: 0.78rem;
 		}
 		.theme-name-text {

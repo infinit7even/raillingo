@@ -153,7 +153,7 @@
 	/* ⚡ Floating Action Button (FAB) Sovraimpresso in Basso a Destra */
 	.fab-quick-add {
 		position: fixed;
-		bottom: calc(4.5rem + var(--safe-area-bottom, 0px));
+		bottom: calc(5.2rem + var(--safe-area-bottom, 0px));
 		right: 1.25rem;
 		z-index: 180;
 		display: inline-flex;
