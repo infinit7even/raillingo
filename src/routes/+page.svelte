@@ -497,7 +497,7 @@
 
 	.mobile-top-stats {
 		display: flex;
-		margin-bottom: 1rem;
+		margin-bottom: 0.5rem;
 	}
 
 	.desktop-top-stats {
