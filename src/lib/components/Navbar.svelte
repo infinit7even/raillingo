@@ -132,7 +132,7 @@
 		border-bottom: 4px solid var(--border-depth-color);
 		border-radius: 24px;
 		padding: 0.4rem 0.3rem;
-		box-shadow: 0 10px 30px var(--shadow-color);
+		box-shadow: none;
 		backdrop-filter: blur(16px);
 		-webkit-backdrop-filter: blur(16px);
 		transition: background-color 0.3s ease, border-color 0.3s ease;
@@ -268,7 +268,7 @@
 			flex-direction: column;
 			justify-content: space-between;
 			gap: 1.25rem;
-			box-shadow: 0 10px 30px var(--shadow-color);
+			box-shadow: none;
 			backdrop-filter: blur(16px);
 			-webkit-backdrop-filter: blur(16px);
 		}

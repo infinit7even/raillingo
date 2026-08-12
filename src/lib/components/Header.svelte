@@ -90,7 +90,7 @@
 		border: 2px solid var(--border-color);
 		border-bottom: 4px solid var(--border-depth-color);
 		border-radius: 24px;
-		box-shadow: 0 8px 24px var(--shadow-color);
+		box-shadow: none;
 		backdrop-filter: blur(16px);
 		-webkit-backdrop-filter: blur(16px);
 		transition: background-color 0.3s ease, border-color 0.3s ease, transform 0.2s ease;
