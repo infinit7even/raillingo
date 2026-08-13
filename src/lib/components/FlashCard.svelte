@@ -4,8 +4,16 @@
 	import { statsStore } from '$lib/stores/statsStore';
 	import { ignoredCardsStore } from '$lib/stores/ignoredCardsStore';
 
-	let { card, onNext, onPrev, currentIndex, totalCards } = $props<{
+	let {
+		card,
+		mode = 'standard',
+		onNext,
+		onPrev,
+		currentIndex,
+		totalCards
+	} = $props<{
 		card: Card;
+		mode?: 'standard' | 'foto' | 'inverso';
 		onNext: () => void;
 		onPrev: () => void;
 		currentIndex: number;
@@ -81,31 +89,63 @@
 		tabindex="0"
 	>
 		<div class="card" class:is-flipped={flipped}>
-			<!-- FRONT (Acronimo se presente, altrimenti Titolo. MAI solo descrizione!) -->
+			<!-- FRONT FACE -->
 			<div class="card-face front duo-card">
-				<!-- Star Ignored Button in Top Right of Card -->
 				<button
 					class="card-star-btn"
 					class:ignored={isIgnored}
 					onclick={toggleIgnored}
-					aria-label={isIgnored ? 'Card ignorata (Clicca per riattivare)' : 'Ignora questa card'}
+					aria-label={isIgnored ? 'Card ignorata' : 'Ignora card'}
 					title={isIgnored ? 'Card ignorata (Clicca per riattivare)' : 'Ignora card durante il mescolaggio'}
 				>
 					★
 				</button>
 
 				<div class="face-content">
-					<span class="title-badge">
-						{card.title ? 'ACRONIMO / SIGLA' : 'TITOLO ESTESO'}
-					</span>
+					{#if mode === 'standard'}
+						<span class="title-badge">
+							{card.title ? 'ACRONIMO / SIGLA' : 'TITOLO ESTESO'}
+						</span>
 
-					<h2 class="card-title">
-						{card.title || card.fullName}
-					</h2>
+						<h2 class="card-title">
+							{card.title || card.fullName}
+						</h2>
 
-					<p class="instruction">
-						🗣️ Pronuncia a voce la definizione, poi <strong>tocca per verificare</strong>
-					</p>
+						<p class="instruction">
+							🗣️ Pronuncia a voce la definizione, poi <strong>tocca per verificare</strong>
+						</p>
+					{:else if mode === 'inverso'}
+						<span class="title-badge">DEFINIZIONE & UTILIZZO</span>
+
+						<div class="description-box duo-card front-desc-box">
+							<p>{card.description || '(Nessuna descrizione specificata)'}</p>
+						</div>
+
+						<p class="instruction">
+							🗣️ Di' a voce l'acronimo o titolo, poi <strong>tocca per verificare</strong>
+						</p>
+					{:else if mode === 'foto'}
+						<span class="title-badge">IMMAGINE / FOTO DI STUDIO</span>
+
+						{#if card.images && card.images.length > 0}
+							<div class="front-photo-wrapper">
+								<img
+									src={card.images[currentImageIndex]}
+									alt="Foto di studio"
+									class="front-photo-img"
+								/>
+								{#if card.images.length > 1}
+									<button class="duo-btn duo-btn-gray photo-count-btn" onclick={nextImage}>
+										Foto {currentImageIndex + 1}/{card.images.length} 🔄
+									</button>
+								{/if}
+							</div>
+						{/if}
+
+						<p class="instruction">
+							🗣️ Guarda la foto e di' a voce il concetto, poi <strong>tocca per verificare</strong>
+						</p>
+					{/if}
 				</div>
 
 				<div class="tap-hint">
@@ -121,7 +161,7 @@
 				</div>
 			</div>
 
-			<!-- BACK (Mostra il resto + Descrizione) -->
+			<!-- BACK FACE -->
 			<div class="card-face back duo-card">
 				<button
 					class="card-star-btn"
@@ -144,12 +184,13 @@
 						{/if}
 					</div>
 
-					<div class="description-box duo-card">
-						<p>{card.description || '(Nessuna descrizione specificata)'}</p>
-					</div>
+					{#if mode !== 'inverso'}
+						<div class="description-box duo-card">
+							<p>{card.description || '(Nessuna descrizione specificata)'}</p>
+						</div>
+					{/if}
 
-					<!-- Image Section -->
-					{#if card.images && card.images.length > 0}
+					{#if mode !== 'foto' && card.images && card.images.length > 0}
 						<div class="image-gallery">
 							<img
 								src={card.images[currentImageIndex]}
@@ -197,13 +238,13 @@
 		margin: 0 auto;
 		display: flex;
 		flex-direction: column;
-		gap: 1rem;
+		gap: 0.75rem;
 	}
 
 	.card-star-btn {
 		position: absolute;
-		top: 1rem;
-		right: 1rem;
+		top: 0.85rem;
+		right: 0.85rem;
 		z-index: 10;
 		background: none;
 		border: none;
@@ -240,7 +281,7 @@
 	/* 3D Scene */
 	.scene {
 		width: 100%;
-		min-height: clamp(280px, 42vh, 400px);
+		min-height: clamp(300px, 44vh, 420px);
 		perspective: 1200px;
 		cursor: pointer;
 	}
@@ -248,7 +289,7 @@
 	.card {
 		width: 100%;
 		height: 100%;
-		min-height: clamp(280px, 42vh, 400px);
+		min-height: clamp(300px, 44vh, 420px);
 		position: relative;
 		transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
 		transform-style: preserve-3d;
@@ -265,7 +306,7 @@
 		backface-visibility: hidden;
 		-webkit-backface-visibility: hidden;
 		border-radius: 24px;
-		padding: 2rem;
+		padding: 1.75rem 1.5rem;
 		display: flex;
 		flex-direction: column;
 		justify-content: space-between;
@@ -280,9 +321,10 @@
 	.face-content {
 		display: flex;
 		flex-direction: column;
-		gap: 1.25rem;
+		gap: 1rem;
 		align-items: center;
 		text-align: center;
+		width: 100%;
 	}
 
 	.title-badge {
@@ -294,7 +336,7 @@
 	}
 
 	.card-title {
-		font-size: 3.2rem;
+		font-size: 2.8rem;
 		font-weight: 900;
 		letter-spacing: -0.03em;
 		color: var(--text-color);
@@ -303,38 +345,74 @@
 	}
 
 	.card-title-small {
-		font-size: 1.75rem;
+		font-size: 1.65rem;
 		font-weight: 900;
 		color: var(--accent-color);
 		margin: 0;
 	}
 
 	.fullname-banner {
-		font-size: 1.15rem;
+		font-size: 1.05rem;
 		font-weight: 800;
 		color: var(--green-color);
 		background: rgba(34, 197, 94, 0.12);
 		padding: 0.35rem 0.85rem;
 		border-radius: 12px;
 		border: 1.5px solid var(--green-color);
-		margin-top: 0.25rem;
+		margin-top: 0.2rem;
 	}
 
 	.instruction {
-		font-size: 0.95rem;
+		font-size: 0.9rem;
 		color: var(--text-muted);
-		line-height: 1.5;
+		line-height: 1.4;
 	}
 
 	.description-box {
-		padding: 1.25rem;
+		padding: 1.1rem;
 		border-radius: 18px;
-		font-size: 1.05rem;
-		line-height: 1.6;
+		font-size: 1rem;
+		line-height: 1.55;
 		color: var(--text-color);
 		text-align: left;
 		width: 100%;
 		box-sizing: border-box;
+	}
+
+	.front-desc-box {
+		margin: auto 0;
+		max-height: 220px;
+		overflow-y: auto;
+		background: var(--card-bg-subtle);
+	}
+
+	.front-photo-wrapper {
+		position: relative;
+		width: 100%;
+		border-radius: 16px;
+		overflow: hidden;
+		background-color: #000;
+		min-height: clamp(160px, 26vh, 230px);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		border: 2px solid var(--border-color);
+		margin: auto 0;
+	}
+
+	.front-photo-img {
+		width: 100%;
+		max-height: clamp(160px, 26vh, 230px);
+		object-fit: cover;
+		display: block;
+	}
+
+	.photo-count-btn {
+		position: absolute;
+		bottom: 10px;
+		right: 10px;
+		padding: 0.3rem 0.65rem;
+		font-size: 0.75rem;
 	}
 
 	.image-gallery {
@@ -347,7 +425,7 @@
 
 	.card-img {
 		width: 100%;
-		max-height: 220px;
+		max-height: 180px;
 		object-fit: cover;
 		border-radius: 14px;
 		border: 2px solid var(--border-color);
@@ -363,10 +441,10 @@
 		align-items: center;
 		justify-content: center;
 		gap: 0.5rem;
-		font-size: 0.85rem;
+		font-size: 0.82rem;
 		font-weight: 800;
 		color: var(--text-muted);
-		margin-top: 1rem;
+		margin-top: 0.5rem;
 	}
 
 	.kbd-badge {
@@ -409,25 +487,25 @@
 
 		.scene,
 		.card {
-			min-height: 360px;
+			min-height: 340px;
 		}
 
 		.card-face {
-			padding: 1.25rem;
+			padding: 1.1rem;
 			border-radius: 20px;
 		}
 
 		.card-title {
-			font-size: 2.3rem;
+			font-size: 2.2rem;
 		}
 
 		.card-title-small {
-			font-size: 1.4rem;
+			font-size: 1.35rem;
 		}
 
 		.description-box {
-			padding: 0.9rem;
-			font-size: 0.95rem;
+			padding: 0.85rem;
+			font-size: 0.92rem;
 		}
 
 		.card-controls {

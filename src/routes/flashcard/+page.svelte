@@ -149,6 +149,7 @@
 		{#if activeCards.length > 0}
 			<FlashCard
 				card={activeCards[currentIndex]}
+				mode="standard"
 				{currentIndex}
 				totalCards={activeCards.length}
 				onNext={handleNext}
@@ -159,8 +160,9 @@
 		{/if}
 	{:else if subMode === 'foto'}
 		{#if photoCards.length > 0}
-			<PhotoStudy
+			<FlashCard
 				card={photoCards[currentIndex]}
+				mode="foto"
 				{currentIndex}
 				totalCards={photoCards.length}
 				onNext={handleNext}
@@ -174,75 +176,16 @@
 		{/if}
 	{:else if subMode === 'inverso'}
 		{#if activeCards.length > 0}
-			{@const currentCard = activeCards[currentIndex]}
-			{@const isCurrentIgnored = ignoredCardsStore.isIgnored(currentCard.id)}
-
-			<div class="reverse-container">
-				<!-- Progress Track -->
-				<div class="duo-progress-track">
-					<div
-						class="duo-progress-fill"
-						style="width: {((currentIndex + 1) / activeCards.length) * 100}%"
-					></div>
-				</div>
-
-				<div
-					class="study-box duo-card"
-					onclick={toggleReveal}
-					role="button"
-					tabindex="0"
-					onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && toggleReveal()}
-				>
-					<button
-						class="study-star-btn"
-						class:ignored={isCurrentIgnored}
-						onclick={toggleIgnoredCurrentCard}
-						title={isCurrentIgnored ? 'Card ignorata (Clicca per riattivare)' : 'Ignora card durante il mescolaggio'}
-						aria-label="Ignora card"
-					>
-						★
-					</button>
-
-					<span class="label">Come si chiama:</span>
-					<p class="description-text">{currentCard.description}</p>
-
-					{#if !revealed}
-						<div class="prompt-box">
-							<span>🗣️ Di' a voce l'acronimo/titolo, poi <strong>tocca per verificare</strong></span>
-						</div>
-					{:else}
-						<div class="reveal-box">
-							<span class="reveal-label">Acronimo / Titolo:</span>
-							<h2 class="revealed-title">{currentCard.title}</h2>
-							{#if currentCard.fullName}
-								<p class="revealed-fullname">{currentCard.fullName}</p>
-							{/if}
-						</div>
-					{/if}
-				</div>
-
-				<div class="controls">
-					<button
-						class="duo-btn duo-btn-gray nav-btn"
-						onclick={handlePrev}
-						disabled={currentIndex === 0}
-					>
-						← Indietro
-					</button>
-					<button class="duo-btn duo-btn-green action-btn" onclick={toggleReveal}>
-						{revealed ? 'Nascondi' : 'Mostra Acronimo & Titolo'}
-					</button>
-					<button
-						class="duo-btn duo-btn-blue nav-btn"
-						onclick={handleNext}
-						disabled={currentIndex === activeCards.length - 1}
-					>
-						Avanti →
-					</button>
-				</div>
-			</div>
+			<FlashCard
+				card={activeCards[currentIndex]}
+				mode="inverso"
+				{currentIndex}
+				totalCards={activeCards.length}
+				onNext={handleNext}
+				onPrev={handlePrev}
+			/>
 		{:else}
-			<div class="duo-card empty-box">Nessuna scheda trovata per questa categoria.</div>
+			<div class="duo-card empty-box">Nessuna scheda trovata per la categoria selezionata.</div>
 		{/if}
 	{/if}
 </div>
@@ -254,128 +197,6 @@
 		display: flex;
 		flex-direction: column;
 		gap: 0.75rem;
-	}
-
-	.reverse-container {
-		display: flex;
-		flex-direction: column;
-		gap: 0.75rem;
-	}
-
-	.duo-progress-track {
-		width: 100%;
-		height: 12px;
-		background: var(--card-bg-subtle);
-		border-radius: 9999px;
-		overflow: hidden;
-		border: 1.5px solid var(--border-color);
-	}
-
-	.duo-progress-fill {
-		height: 100%;
-		background: var(--green-color);
-		border-radius: 9999px;
-		transition: width 0.3s ease;
-	}
-
-	.study-box {
-		background: var(--card-bg-subtle);
-		padding: 1.5rem;
-		display: flex;
-		flex-direction: column;
-		gap: 1.25rem;
-		cursor: pointer;
-		min-height: 260px;
-		justify-content: space-between;
-		position: relative;
-	}
-
-	.study-star-btn {
-		position: absolute;
-		top: 1rem;
-		right: 1rem;
-		background: none;
-		border: none;
-		font-size: 1.6rem;
-		color: var(--text-muted);
-		cursor: pointer;
-		line-height: 1;
-		padding: 0.25rem;
-		transition: transform 0.2s ease, color 0.2s ease;
-	}
-
-	.study-star-btn.ignored {
-		color: var(--yellow-color);
-		transform: scale(1.25);
-		filter: drop-shadow(0 0 6px rgba(250, 204, 21, 0.5));
-	}
-
-	.label {
-		font-size: 0.75rem;
-		font-weight: 900;
-		text-transform: uppercase;
-		color: var(--accent-color);
-	}
-
-	.description-text {
-		font-size: 1.1rem;
-		line-height: 1.6;
-		color: var(--text-color);
-		margin: 0;
-	}
-
-	.prompt-box {
-		background: var(--card-bg);
-		border: 1.5px dashed var(--accent-color);
-		padding: 0.85rem;
-		border-radius: 14px;
-		text-align: center;
-		color: var(--text-muted);
-		font-size: 0.85rem;
-	}
-
-	.reveal-box {
-		background: var(--card-bg);
-		border: 2px solid var(--accent-color);
-		padding: 1rem;
-		border-radius: 14px;
-		text-align: center;
-	}
-
-	.reveal-label {
-		font-size: 0.7rem;
-		font-weight: 800;
-		text-transform: uppercase;
-		color: var(--accent-color);
-		display: block;
-	}
-
-	.revealed-title {
-		font-size: 2.2rem;
-		font-weight: 900;
-		color: var(--text-color);
-		margin: 0.25rem 0 0 0;
-	}
-
-	.revealed-fullname {
-		font-size: 1rem;
-		font-weight: 800;
-		color: var(--green-color);
-		margin: 0.25rem 0 0 0;
-	}
-
-	.controls {
-		display: flex;
-		gap: 0.65rem;
-	}
-
-	.nav-btn {
-		font-size: 0.85rem;
-	}
-
-	.action-btn {
-		flex: 1;
-		font-size: 0.9rem;
 	}
 
 	.empty-box {
