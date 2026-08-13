@@ -519,4 +519,28 @@
 			font-size: 0.85rem;
 		}
 	}
+
+	@media (min-width: 1024px) and (max-height: 820px) {
+		.scene,
+		.card {
+			min-height: clamp(250px, 36vh, 320px);
+		}
+
+		.card-face {
+			padding: 1.1rem;
+		}
+
+		.card-title {
+			font-size: 2.1rem;
+		}
+
+		.description-box {
+			padding: 0.75rem 0.85rem;
+			font-size: 0.92rem;
+		}
+
+		.card-img {
+			max-height: 140px;
+		}
+	}
 </style>

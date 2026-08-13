@@ -148,4 +148,24 @@
 			display: none !important;
 		}
 	}
+
+	@media (min-width: 1024px) and (max-height: 820px) {
+		.page-header-banner {
+			padding: 0.45rem 0.85rem;
+			margin-bottom: 0.5rem;
+		}
+
+		.header-icon-img {
+			width: 28px;
+			height: 28px;
+		}
+
+		.header-title-heading {
+			font-size: 1.1rem;
+		}
+
+		.header-subtitle-text {
+			font-size: 0.75rem;
+		}
+	}
 </style>

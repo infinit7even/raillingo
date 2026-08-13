@@ -223,15 +223,22 @@
 	@media (min-width: 1024px) {
 		.layout-wrapper {
 			padding-left: 240px;
+			min-height: 100vh;
 		}
 
 		.main-content {
 			max-width: 1200px;
-			padding: 1rem 1.5rem 1.5rem 1.5rem;
+			padding: 0.85rem 1.5rem 1rem 1.5rem;
 		}
 
 		.mobile-swipe-indicator {
 			display: none !important;
+		}
+	}
+
+	@media (min-width: 1024px) and (max-height: 820px) {
+		.main-content {
+			padding: 0.65rem 1.25rem 0.85rem 1.25rem;
 		}
 	}
 </style>
