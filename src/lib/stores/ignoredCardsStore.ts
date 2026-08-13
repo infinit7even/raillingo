@@ -117,6 +117,22 @@ class IgnoredCardsStore {
 		}
 	}
 
+	public async setIgnoredIds(ids: string[]): Promise<void> {
+		this.ignoredIds = new Set(ids);
+		this.saveToStorage();
+		this.notify();
+
+		try {
+			await fetch('/api/ignored-cards', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ ignoredCardIds: Array.from(this.ignoredIds) })
+			});
+		} catch (e) {
+			console.warn('Errore sync API card ignorate:', e);
+		}
+	}
+
 	private saveToStorage() {
 		const arr = Array.from(this.ignoredIds);
 		this.setCookie('rf_ignored_cards', JSON.stringify(arr));

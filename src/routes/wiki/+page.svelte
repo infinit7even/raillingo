@@ -101,10 +101,16 @@
 	}
 
 	async function handleClearAllIgnored() {
+		const previousIgnored = Array.from(ignoredIds);
 		await ignoredCardsStore.clearAll();
 		showOnlyIgnored = false;
+
 		toastStore.show({
-			message: '✨ Tutte le schede sono state riattivate nel ripasso!'
+			message: '✨ Tutte le schede sono state riattivate nel ripasso!',
+			actionLabel: 'Annulla',
+			onAction: async () => {
+				await ignoredCardsStore.setIgnoredIds(previousIgnored);
+			}
 		});
 	}
 </script>
