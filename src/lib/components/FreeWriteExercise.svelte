@@ -122,20 +122,23 @@
 			★
 		</button>
 
-		<span class="prompt-badge-label">Domanda:</span>
-
-		{#if subMode === 'title-to-desc'}
-			<h2 class="prompt-title">
-				Che cos'è: <span class="prompt-term">{card.title || card.fullName}</span>
-				{#if card.title && card.fullName}
-					<span class="prompt-fullname">({card.fullName})</span>
-				{/if}
-			</h2>
-		{:else if subMode === 'desc-to-title'}
-			<p class="prompt-desc-text">{card.description}</p>
-		{:else if subMode === 'photo-to-title'}
+		{#if subMode === 'photo-to-title'}
+			<span class="prompt-badge-label">Descrivi l'immagine:</span>
 			{#if card.images && card.images.length > 0}
 				<img src={card.images[0]} alt="Foto per esercizio" class="prompt-img" />
+			{/if}
+		{:else}
+			<span class="prompt-badge-label">Domanda:</span>
+
+			{#if subMode === 'title-to-desc'}
+				<h2 class="prompt-title">
+					Che cos'è: <span class="prompt-term">{card.title || card.fullName}</span>
+					{#if card.title && card.fullName}
+						<span class="prompt-fullname">({card.fullName})</span>
+					{/if}
+				</h2>
+			{:else if subMode === 'desc-to-title'}
+				<p class="prompt-desc-text">{card.description}</p>
 			{/if}
 		{/if}
 	</div>
