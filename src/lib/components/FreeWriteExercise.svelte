@@ -121,7 +121,6 @@
 		</button>
 
 		{#if subMode === 'title-to-desc'}
-			<span class="label">Acronimo / Titolo:</span>
 			<h2 class="title">
 				{card.title || card.fullName}
 				{#if card.title && card.fullName}
@@ -130,11 +129,9 @@
 			</h2>
 			<p class="instruction">✍️ Scrivi la descrizione o spiegazione di questa card:</p>
 		{:else if subMode === 'desc-to-title'}
-			<span class="label">Descrizione / Funzione:</span>
 			<p class="desc-text">{card.description}</p>
 			<p class="instruction">✍️ Digita l'acronimo o titolo corrispondente:</p>
 		{:else if subMode === 'photo-to-title'}
-			<span class="label">Foto Impianto / Mezzo:</span>
 			{#if card.images && card.images.length > 0}
 				<img src={card.images[0]} alt="Foto per esercizio" class="prompt-img" />
 			{/if}
@@ -281,20 +278,11 @@
 		filter: drop-shadow(0 0 6px rgba(250, 204, 21, 0.5));
 	}
 
-	.label {
-		font-size: 0.75rem;
-		font-weight: 900;
-		text-transform: uppercase;
-		color: var(--accent-color);
-		display: block;
-		margin-bottom: 0.4rem;
-	}
-
 	.title {
 		font-size: 2.3rem;
 		font-weight: 900;
 		margin: 0 0 0.6rem 0;
-		color: var(--text-color);
+		color: var(--accent-color);
 	}
 
 	.sub-title {

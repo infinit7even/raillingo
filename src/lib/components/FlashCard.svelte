@@ -103,10 +103,6 @@
 
 				<div class="face-content">
 					{#if mode === 'standard'}
-						<span class="title-badge">
-							{card.title ? 'ACRONIMO / SIGLA' : 'TITOLO ESTESO'}
-						</span>
-
 						<h2 class="card-title">
 							{card.title || card.fullName}
 						</h2>
@@ -115,8 +111,6 @@
 							🗣️ Pronuncia a voce la definizione, poi <strong>tocca per verificare</strong>
 						</p>
 					{:else if mode === 'inverso'}
-						<span class="title-badge">DEFINIZIONE & UTILIZZO</span>
-
 						<div class="description-box duo-card front-desc-box">
 							<p>{card.description || '(Nessuna descrizione specificata)'}</p>
 						</div>
@@ -125,8 +119,6 @@
 							🗣️ Di' a voce l'acronimo o titolo, poi <strong>tocca per verificare</strong>
 						</p>
 					{:else if mode === 'foto'}
-						<span class="title-badge">IMMAGINE / FOTO DI STUDIO</span>
-
 						{#if card.images && card.images.length > 0}
 							<div class="front-photo-wrapper">
 								<img
@@ -327,19 +319,11 @@
 		width: 100%;
 	}
 
-	.title-badge {
-		font-size: 0.75rem;
-		font-weight: 900;
-		text-transform: uppercase;
-		color: var(--accent-color);
-		letter-spacing: 0.1em;
-	}
-
 	.card-title {
 		font-size: 2.8rem;
 		font-weight: 900;
 		letter-spacing: -0.03em;
-		color: var(--text-color);
+		color: var(--accent-color);
 		margin: auto 0;
 		line-height: 1.1;
 	}
