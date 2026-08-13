@@ -54,12 +54,13 @@
 		return arr;
 	}
 
+	let questionTerm = $state('');
+
 	function generateOptions() {
 		if (!targetCard) return;
 
 		// Question format: "Che cos'è: [Titolo oppure Acronimo]"
-		const labelTerm = targetCard.title || targetCard.fullName;
-		questionTitle = `Che cos'è: ${labelTerm}`;
+		questionTerm = targetCard.title || targetCard.fullName;
 
 		// Distractors from other cards (using their descriptions)
 		const otherCards = allCards.filter((c: Card) => c.id !== targetCard.id && c.description);
@@ -146,7 +147,10 @@
 			★
 		</button>
 
-		<h2 class="question-title">{questionTitle}</h2>
+		<h2 class="question-title">
+			<span class="question-prefix">Che cos'è:</span>
+			<span class="question-term">{questionTerm}</span>
+		</h2>
 	</div>
 
 	<!-- 5 Choice Options -->
@@ -230,7 +234,18 @@
 		font-size: 1.6rem;
 		font-weight: 900;
 		margin: 0;
+		color: var(--text-color);
+		line-height: 1.25;
+	}
+
+	.question-prefix {
+		color: var(--text-color);
+		font-weight: 800;
+	}
+
+	.question-term {
 		color: var(--accent-color);
+		font-weight: 900;
 	}
 
 	.options-list {
