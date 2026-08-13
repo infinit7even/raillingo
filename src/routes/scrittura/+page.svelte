@@ -1,22 +1,85 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { cardsStore } from '$lib/stores/cardsStore';
+	import { ignoredCardsStore } from '$lib/stores/ignoredCardsStore';
 	import FreeWriteExercise from '$lib/components/FreeWriteExercise.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import ModeTabs from '$lib/components/ModeTabs.svelte';
+	import CategoryFilter from '$lib/components/CategoryFilter.svelte';
 	import type { Card, WritingSubMode } from '$lib/types/cards';
 
-	let cards = $state<Card[]>([]);
+	let rawCards = $state<Card[]>([]);
+	let ignoredIds = $state<Set<string>>(new Set());
+	let selectedCategory = $state('ALL');
 	let currentIndex = $state(0);
 	let selectedSubMode = $state<WritingSubMode>('title-to-desc');
 
+	let shuffledDeck = $state<Card[]>([]);
+
+	function shuffleArray<T>(array: T[]): T[] {
+		const result = [...array];
+		for (let i = result.length - 1; i > 0; i--) {
+			const j = Math.floor(Math.random() * (i + 1));
+			[result[i], result[j]] = [result[j], result[i]];
+		}
+		return result;
+	}
+
 	onMount(() => {
-		const unsubscribe = cardsStore.subscribe((c) => (cards = c));
-		return unsubscribe;
+		const unsubCards = cardsStore.subscribe((c) => {
+			rawCards = c;
+			refreshDeck();
+		});
+
+		const unsubIgnored = ignoredCardsStore.subscribe((ids) => {
+			ignoredIds = ids;
+			refreshDeck();
+		});
+
+		return () => {
+			unsubCards();
+			unsubIgnored();
+		};
 	});
 
+	let availableCategories = $derived.by<string[]>(() => {
+		const set = new Set<string>();
+		for (const c of rawCards) {
+			if (c.category && c.category.trim()) {
+				set.add(c.category.trim());
+			}
+		}
+		return Array.from(set).sort();
+	});
+
+	let validCards = $derived(
+		rawCards.filter((c) => {
+			const notIgnored = !ignoredIds.has(c.id);
+			const matchesCategory =
+				selectedCategory === 'ALL' || (c.category && c.category.trim() === selectedCategory);
+			return notIgnored && matchesCategory;
+		})
+	);
+
+	function refreshDeck() {
+		shuffledDeck = shuffleArray(validCards);
+		currentIndex = 0;
+	}
+
+	$effect(() => {
+		const _cat = selectedCategory;
+		const _subMode = selectedSubMode;
+		refreshDeck();
+	});
+
+	let activeCards = $derived(
+		selectedSubMode === 'photo-to-title'
+			? shuffledDeck.filter((c) => c.images && c.images.length > 0)
+			: shuffledDeck
+	);
+
 	function handleNext() {
-		if (currentIndex < cards.length - 1) {
+		if (currentIndex < activeCards.length - 1) {
 			currentIndex++;
 		} else {
 			currentIndex = 0;
@@ -42,30 +105,50 @@
 	<!-- Page Header standard -->
 	<PageHeader
 		title="Scrittura Libera"
-		subtitle="Digita l'acronimo, il significato esteso o la spiegazione per fissare la memorizzazione motoria."
+		subtitle="Digita l'acronimo, il titolo o la spiegazione per fissare la memorizzazione motoria."
 		icon="/emoji/writing_hand_3d_default.png"
 		variant="red"
 	/>
 
-	<ModeTabs
-		tabs={writingTabs}
-		activeTab={selectedSubMode}
-		onSelect={(id) => {
-			selectedSubMode = id as WritingSubMode;
-			currentIndex = 0;
-		}}
+	<div class="top-controls-row">
+		<ModeTabs
+			tabs={writingTabs}
+			activeTab={selectedSubMode}
+			onSelect={(id) => {
+				selectedSubMode = id as WritingSubMode;
+				currentIndex = 0;
+				refreshDeck();
+			}}
+		/>
+
+		<button class="duo-btn duo-btn-purple refresh-btn" onclick={refreshDeck} title="Rimescola schede">
+			🔄 Rimescola
+		</button>
+	</div>
+
+	<!-- Category Filter -->
+	<CategoryFilter
+		categories={availableCategories}
+		{selectedCategory}
+		onSelect={(cat) => (selectedCategory = cat)}
 	/>
 
-	{#if cards.length > 0}
+	{#if activeCards.length > 0}
 		<FreeWriteExercise
-			card={cards[currentIndex]}
+			card={activeCards[currentIndex]}
 			subMode={selectedSubMode}
 			{currentIndex}
-			totalCards={cards.length}
+			totalCards={activeCards.length}
 			onNext={handleNext}
 		/>
 	{:else}
-		<div class="duo-card empty-box">Nessuna scheda trovata per la categoria selezionata.</div>
+		<div class="duo-card empty-box">
+			{#if selectedSubMode === 'photo-to-title'}
+				Nessuna scheda con foto trovata per i filtri selezionati.
+			{:else}
+				Nessuna scheda trovata per la categoria selezionata.
+			{/if}
+		</div>
 	{/if}
 </div>
 
@@ -75,7 +158,21 @@
 		margin: 0 auto;
 		display: flex;
 		flex-direction: column;
-		gap: 1.25rem;
+		gap: 1rem;
+	}
+
+	.top-controls-row {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		gap: 0.5rem;
+		flex-wrap: wrap;
+	}
+
+	.refresh-btn {
+		font-size: 0.8rem;
+		padding: 0.55rem 0.85rem;
+		white-space: nowrap;
 	}
 
 	.empty-box {

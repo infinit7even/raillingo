@@ -1,6 +1,8 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import type { Card } from '$lib/types/cards';
 	import { statsStore } from '$lib/stores/statsStore';
+	import { ignoredCardsStore } from '$lib/stores/ignoredCardsStore';
 
 	let { targetCard, allCards, onNext, currentIndex, totalCards } = $props<{
 		targetCard: Card;
@@ -16,23 +18,33 @@
 		isCorrect: boolean;
 	}
 
-	type QuizMode = 'meaning' | 'acronym' | 'description';
-
 	let options = $state<QuizOption[]>([]);
 	let selectedOptionId = $state<string | null>(null);
 	let wrongAttempts = $state<Set<string>>(new Set());
 	let isSolved = $state(false);
-	let quizMode = $state<QuizMode>('description');
 	let questionTitle = $state('');
+	let isIgnored = $state(false);
 
-	$effect(() => {
-		generateOptions();
-		selectedOptionId = null;
-		wrongAttempts = new Set();
-		isSolved = false;
+	onMount(() => {
+		const unsub = ignoredCardsStore.subscribe(() => {
+			if (targetCard) {
+				isIgnored = ignoredCardsStore.isIgnored(targetCard.id);
+			}
+		});
+		return unsub;
 	});
 
-	function shuffle(items: unknown[]): unknown[] {
+	$effect(() => {
+		if (targetCard) {
+			generateOptions();
+			selectedOptionId = null;
+			wrongAttempts = new Set();
+			isSolved = false;
+			isIgnored = ignoredCardsStore.isIgnored(targetCard.id);
+		}
+	});
+
+	function shuffle<T>(items: T[]): T[] {
 		const arr = [...items];
 		for (let i = arr.length - 1; i > 0; i--) {
 			const j = Math.floor(Math.random() * (i + 1));
@@ -42,63 +54,36 @@
 	}
 
 	function generateOptions() {
-		// Decide quiz mode based on whether targetCard has fullName
-		const availableModes: QuizMode[] = ['description'];
-		if (targetCard.fullName) {
-			availableModes.push('meaning', 'acronym');
-		}
+		if (!targetCard) return;
 
-		// Pick random mode or alternate
-		const mode = availableModes[Math.floor(Math.random() * availableModes.length)];
-		quizMode = mode;
+		// Question format: "Che cos'è: [Titolo oppure Acronimo]"
+		const labelTerm = targetCard.title || targetCard.fullName;
+		questionTitle = `Che cos'è: ${labelTerm}`;
 
-		const otherCards: Card[] = allCards.filter((c: Card) => c.id !== targetCard.id);
-		const shuffledOthers: Card[] = shuffle(otherCards) as Card[];
+		// Distractors from other cards (using their descriptions)
+		const otherCards = allCards.filter((c: Card) => c.id !== targetCard.id && c.description);
+		const shuffledOthers = shuffle<Card>(otherCards);
 
-		if (mode === 'meaning') {
-			questionTitle = `Cosa significa l'acronimo "${targetCard.title}"?`;
-			const correct: QuizOption = {
-				id: targetCard.id,
-				text: targetCard.fullName!,
-				isCorrect: true
-			};
-			const distractors: QuizOption[] = shuffledOthers.slice(0, 4).map((c: Card) => ({
-				id: c.id,
-				text: c.fullName || c.description,
-				isCorrect: false
-			}));
-			options = shuffle([correct, ...distractors]) as QuizOption[];
-		} else if (mode === 'acronym') {
-			questionTitle = `Qual è l'acronimo di "${targetCard.fullName || targetCard.title}"?`;
-			const correct: QuizOption = {
-				id: targetCard.id,
-				text: targetCard.title,
-				isCorrect: true
-			};
-			const distractors: QuizOption[] = shuffledOthers.slice(0, 4).map((c: Card) => ({
-				id: c.id,
-				text: c.title,
-				isCorrect: false
-			}));
-			options = shuffle([correct, ...distractors]) as QuizOption[];
-		} else {
-			// Mode description
-			const termLabel = targetCard.fullName
-				? `${targetCard.title} (${targetCard.fullName})`
-				: targetCard.title;
-			questionTitle = `Che cos'è "${termLabel}"?`;
+		const correctOption: QuizOption = {
+			id: targetCard.id,
+			text: targetCard.description,
+			isCorrect: true
+		};
 
-			const correct: QuizOption = {
-				id: targetCard.id,
-				text: targetCard.description,
-				isCorrect: true
-			};
-			const distractors: QuizOption[] = shuffledOthers.slice(0, 4).map((c: Card) => ({
-				id: c.id,
-				text: c.description,
-				isCorrect: false
-			}));
-			options = shuffle([correct, ...distractors]) as QuizOption[];
+		const distractorOptions: QuizOption[] = shuffledOthers.slice(0, 4).map((c: Card) => ({
+			id: c.id,
+			text: c.description,
+			isCorrect: false
+		}));
+
+		options = shuffle([correctOption, ...distractorOptions]);
+	}
+
+	async function toggleIgnored(e: MouseEvent) {
+		e.stopPropagation();
+		if (targetCard) {
+			await ignoredCardsStore.toggleIgnored(targetCard.id);
+			isIgnored = ignoredCardsStore.isIgnored(targetCard.id);
 		}
 	}
 
@@ -110,6 +95,11 @@
 		if (opt.isCorrect) {
 			isSolved = true;
 			statsStore.recordQuizAnswer(true);
+
+			// Automatically pass to next question after 0.5s (500ms)
+			setTimeout(() => {
+				onNext();
+			}, 500);
 		} else {
 			wrongAttempts = new Set(wrongAttempts).add(opt.id);
 			statsStore.recordQuizAnswer(false);
@@ -120,7 +110,17 @@
 <div class="quiz-container">
 	<div class="quiz-header">
 		<span class="duo-badge">Quiz Scelta Multipla</span>
-		<span class="counter-text">Domanda {currentIndex + 1} / {totalCards}</span>
+		<div class="header-right">
+			<span class="counter-text">Domanda {currentIndex + 1} / {totalCards}</span>
+			<button
+				class="star-ignored-btn"
+				class:ignored={isIgnored}
+				onclick={toggleIgnored}
+				title={isIgnored ? 'Card ignorata' : 'Ignora card durante il mescolaggio'}
+			>
+				★
+			</button>
+		</div>
 	</div>
 
 	<!-- Duolingo Progress Track -->
@@ -134,7 +134,7 @@
 		<h2 class="question-title">{questionTitle}</h2>
 	</div>
 
-	<!-- 5 Choice Options with 3D Duolingo Buttons -->
+	<!-- 5 Choice Options -->
 	<div class="options-list">
 		{#each options as option, i}
 			{@const isWrong = wrongAttempts.has(option.id)}
@@ -157,18 +157,6 @@
 			</button>
 		{/each}
 	</div>
-
-	<!-- Feedback & Next Button -->
-	<div class="quiz-footer">
-		{#if isSolved}
-			<div class="success-banner duo-card">🎉 Esatto! Hai selezionato la risposta corretta.</div>
-			<button class="duo-btn duo-btn-green next-btn" onclick={onNext}> PROSSIMA DOMANDA → </button>
-		{:else if wrongAttempts.size > 0}
-			<div class="retry-banner duo-card">
-				❌ Risposta errata! Riprova pure (tentativi infiniti disponibili).
-			</div>
-		{/if}
-	</div>
 </div>
 
 <style>
@@ -187,11 +175,33 @@
 		align-items: center;
 	}
 
+	.header-right {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+	}
+
 	.counter-text {
 		font-family: 'Outfit', sans-serif;
 		font-size: 0.9rem;
 		font-weight: 800;
 		color: var(--text-muted);
+	}
+
+	.star-ignored-btn {
+		background: none;
+		border: none;
+		font-size: 1.6rem;
+		color: var(--text-muted);
+		cursor: pointer;
+		line-height: 1;
+		padding: 0;
+		transition: transform 0.2s ease, color 0.2s ease;
+	}
+
+	.star-ignored-btn.ignored {
+		color: var(--yellow-color);
+		transform: scale(1.25);
 	}
 
 	.duo-progress-track {
@@ -306,35 +316,5 @@
 
 	.status-icon.wrong {
 		color: var(--pink-color);
-	}
-
-	.quiz-footer {
-		display: flex;
-		flex-direction: column;
-		gap: 0.75rem;
-	}
-
-	.success-banner {
-		background: rgba(88, 204, 2, 0.15);
-		border-color: var(--green-color);
-		color: var(--green-color);
-		padding: 1rem;
-		font-weight: 800;
-		text-align: center;
-	}
-
-	.retry-banner {
-		background: rgba(255, 75, 75, 0.15);
-		border-color: var(--pink-color);
-		color: var(--pink-color);
-		padding: 0.85rem;
-		font-size: 0.9rem;
-		font-weight: 800;
-		text-align: center;
-	}
-
-	.next-btn {
-		width: 100%;
-		font-size: 1rem;
 	}
 </style>

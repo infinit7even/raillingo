@@ -15,10 +15,28 @@
 	// Form state for creating / editing card
 	let editingCard = $state<Card | null>(null);
 	let searchQuery = $state('');
+	let selectedCategoryFilter = $state('ALL');
+
+	// Category batch edit state
+	let categoryToRename = $state<string | null>(null);
+	let newCategoryName = $state('');
+	let renamingInProgress = $state(false);
 
 	onMount(() => {
 		const unsubscribe = cardsStore.subscribe((c) => (cards = c));
 		return unsubscribe;
+	});
+
+	// Derive category stats map
+	let categoryStats = $derived.by<{ category: string; count: number }[]>(() => {
+		const map = new Map<string, number>();
+		for (const c of cards) {
+			const cat = c.category && c.category.trim() ? c.category.trim() : 'Senza Categoria';
+			map.set(cat, (map.get(cat) || 0) + 1);
+		}
+		return Array.from(map.entries())
+			.map(([category, count]) => ({ category, count }))
+			.sort((a, b) => b.count - a.count);
 	});
 
 	function resetForm() {
@@ -30,14 +48,14 @@
 		window.scrollTo({ top: 0, behavior: 'smooth' });
 	}
 
-	async function handleSaveCard(data: Omit<Card, 'id' | 'createdAt' | 'updatedAt'>) {
+	async function handleSaveCard(cardData: Omit<Card, 'id' | 'createdAt' | 'updatedAt'>) {
 		if (editingCard) {
 			await cardsStore.updateCard({
 				...editingCard,
-				...data
+				...cardData
 			});
 		} else {
-			await cardsStore.addCard(data);
+			await cardsStore.addCard(cardData);
 		}
 		resetForm();
 	}
@@ -45,6 +63,21 @@
 	async function handleDeleteCard(id: string) {
 		if (confirm('Sei sicuro di voler eliminare questa scheda?')) {
 			await cardsStore.deleteCard(id);
+		}
+	}
+
+	async function handleBatchRenameCategory(oldCat: string) {
+		if (!newCategoryName.trim()) return;
+		renamingInProgress = true;
+		try {
+			const count = await cardsStore.updateCategoryBatch(oldCat, newCategoryName.trim());
+			alert(`Aggiornate ${count} schede con la nuova categoria "${newCategoryName.trim()}".`);
+			categoryToRename = null;
+			newCategoryName = '';
+		} catch (err) {
+			console.error('Errore durante la modifica in blocco della categoria:', err);
+		} finally {
+			renamingInProgress = false;
 		}
 	}
 
@@ -63,13 +96,23 @@
 	}
 
 	let filteredCards = $derived(
-		cards.filter(
-			(c) =>
-				!searchQuery ||
-				c.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-				(c.fullName && c.fullName.toLowerCase().includes(searchQuery.toLowerCase())) ||
-				c.description.toLowerCase().includes(searchQuery.toLowerCase())
-		)
+		cards.filter((c) => {
+			const matchesCat =
+				selectedCategoryFilter === 'ALL' ||
+				(selectedCategoryFilter === 'Senza Categoria'
+					? !c.category || !c.category.trim()
+					: c.category === selectedCategoryFilter);
+
+			const q = searchQuery.toLowerCase().trim();
+			const matchesQuery =
+				!q ||
+				c.title.toLowerCase().includes(q) ||
+				(c.fullName && c.fullName.toLowerCase().includes(q)) ||
+				c.description.toLowerCase().includes(q) ||
+				(c.category && c.category.toLowerCase().includes(q));
+
+			return matchesCat && matchesQuery;
+		})
 	);
 </script>
 
@@ -104,7 +147,7 @@
 	{:else}
 		<!-- Admin Panel Dashboard -->
 		<div class="admin-panel">
-			<!-- Header Admin Bar (NO photos as requested) -->
+			<!-- Header Admin Bar -->
 			<div class="admin-top duo-card">
 				<div class="user-info">
 					<div>
@@ -121,7 +164,7 @@
 				</div>
 			</div>
 
-			<!-- Card Editor Form -->
+			<!-- Form Creazione / Modifica Card -->
 			<div class="editor-card duo-card">
 				<h2 class="form-title">
 					{editingCard ? '✏️ Modifica Scheda' : '➕ Aggiungi Nuova Card Informativa'}
@@ -131,30 +174,100 @@
 					initialCard={editingCard}
 					onSave={handleSaveCard}
 					onCancel={editingCard ? resetForm : undefined}
+					onSelectExistingCard={startEdit}
 					submitLabel={editingCard ? 'Salva Modifiche' : '➕ AGGIUNGI SCHEDA'}
 				/>
 			</div>
 
-			<!-- Existing Cards List -->
+			<!-- Sezione Gestione Categorie in Blocco -->
+			<div class="categories-admin-card duo-card">
+				<h2 class="section-title">🏷️ Gestione Categorie & Conteggio Card</h2>
+				<p class="section-subtitle">
+					Visualizza il numero di schede per ciascuna categoria e modificala in blocco.
+				</p>
+
+				<div class="category-stats-grid">
+					{#each categoryStats as stat}
+						<div class="category-stat-item duo-card">
+							<div class="stat-main">
+								<span class="category-name">{stat.category}</span>
+								<span class="category-count-badge">{stat.count} card</span>
+							</div>
+
+							{#if categoryToRename === stat.category}
+								<div class="rename-inline-box">
+									<input
+										type="text"
+										bind:value={newCategoryName}
+										placeholder="Nuovo nome categoria..."
+										class="duo-input rename-input"
+									/>
+									<button
+										class="duo-btn duo-btn-green"
+										disabled={renamingInProgress}
+										onclick={() => handleBatchRenameCategory(stat.category)}
+									>
+										Salva
+									</button>
+									<button
+										class="duo-btn duo-btn-gray"
+										onclick={() => {
+											categoryToRename = null;
+											newCategoryName = '';
+										}}
+									>
+										Annulla
+									</button>
+								</div>
+							{:else}
+								<button
+									class="rename-btn"
+									onclick={() => {
+										categoryToRename = stat.category;
+										newCategoryName = stat.category;
+									}}
+								>
+									✏️ Rinomina in blocco
+								</button>
+							{/if}
+						</div>
+					{/each}
+				</div>
+			</div>
+
+			<!-- List Sezione Schede Registrate -->
 			<div class="list-section">
 				<div class="list-header">
 					<h2>Schede Registrate ({filteredCards.length})</h2>
-					<input
-						type="text"
-						bind:value={searchQuery}
-						placeholder="Filtra tra le schede..."
-						class="search-input"
-					/>
+
+					<div class="list-filters">
+						<select bind:value={selectedCategoryFilter} class="duo-input category-select-filter">
+							<option value="ALL">Tutte le Categorie</option>
+							{#each categoryStats as stat}
+								<option value={stat.category}>{stat.category} ({stat.count})</option>
+							{/each}
+						</select>
+
+						<input
+							type="text"
+							bind:value={searchQuery}
+							placeholder="Filtra tra le schede..."
+							class="search-input duo-input"
+						/>
+					</div>
 				</div>
 
 				<div class="cards-list">
 					{#each filteredCards as card}
-						<div class="admin-card-item">
+						<div class="admin-card-item duo-card">
 							<div class="card-main-info">
 								<div class="item-title-row">
 									<h3 class="card-item-title">{card.title}</h3>
 									{#if card.fullName}
 										<span class="fullname-badge">{card.fullName}</span>
+									{/if}
+									{#if card.category}
+										<span class="category-pill">{card.category}</span>
 									{/if}
 									{#if card.images && card.images.length > 0}
 										<span class="img-count-pill">📷 {card.images.length}</span>
@@ -180,7 +293,7 @@
 <style>
 	.admin-container {
 		width: 100%;
-		max-width: 800px;
+		max-width: 850px;
 		margin: 0 auto;
 	}
 
@@ -332,6 +445,86 @@
 		margin: 0 0 1rem 0;
 	}
 
+	/* Sezione Categorie Admin */
+	.categories-admin-card {
+		background: var(--card-bg);
+		border-radius: 24px;
+		padding: 1.5rem;
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+	}
+
+	.section-title {
+		font-size: 1.3rem;
+		font-weight: 900;
+		margin: 0;
+	}
+
+	.section-subtitle {
+		font-size: 0.85rem;
+		color: var(--text-muted);
+		margin: 0;
+	}
+
+	.category-stats-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+		gap: 0.75rem;
+	}
+
+	.category-stat-item {
+		padding: 1rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.6rem;
+		background: var(--card-bg-subtle);
+	}
+
+	.stat-main {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+	}
+
+	.category-name {
+		font-weight: 900;
+		font-size: 0.95rem;
+		color: var(--text-color);
+	}
+
+	.category-count-badge {
+		font-size: 0.75rem;
+		font-weight: 800;
+		background: var(--accent-color);
+		color: #ffffff;
+		padding: 0.2rem 0.55rem;
+		border-radius: 12px;
+	}
+
+	.rename-btn {
+		background: transparent;
+		border: 1px dashed var(--border-color);
+		color: var(--accent-color);
+		font-size: 0.78rem;
+		font-weight: 800;
+		padding: 0.35rem 0.6rem;
+		border-radius: 8px;
+		cursor: pointer;
+		text-align: left;
+	}
+
+	.rename-inline-box {
+		display: flex;
+		gap: 0.35rem;
+		align-items: center;
+	}
+
+	.rename-input {
+		font-size: 0.8rem;
+		padding: 0.35rem 0.5rem;
+	}
+
 	/* List Section */
 	.list-section {
 		display: flex;
@@ -347,12 +540,20 @@
 		gap: 0.75rem;
 	}
 
+	.list-filters {
+		display: flex;
+		gap: 0.5rem;
+		flex-wrap: wrap;
+	}
+
+	.category-select-filter {
+		font-size: 0.85rem;
+		padding: 0.55rem 0.85rem;
+	}
+
 	.search-input {
-		padding: 0.6rem 1rem;
-		border-radius: 10px;
-		background: var(--card-bg);
-		border: 1px solid var(--border-color);
-		color: var(--text-color);
+		padding: 0.55rem 0.85rem;
+		font-size: 0.85rem;
 	}
 
 	.cards-list {
@@ -413,6 +614,16 @@
 		border: 1px solid var(--accent-color);
 	}
 
+	.category-pill {
+		font-size: 0.75rem;
+		font-weight: 800;
+		color: var(--green-color);
+		background: rgba(34, 197, 94, 0.12);
+		padding: 0.15rem 0.55rem;
+		border-radius: 8px;
+		border: 1px solid var(--green-color);
+	}
+
 	.img-count-pill {
 		font-size: 0.7rem;
 		font-weight: 700;
@@ -426,8 +637,6 @@
 		font-size: 0.875rem;
 		color: var(--text-muted);
 		margin: 0;
-
-		/* Truncate text */
 		display: -webkit-box;
 		-webkit-line-clamp: 2;
 		line-clamp: 2;

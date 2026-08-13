@@ -1,7 +1,8 @@
 <script lang="ts">
-	import { tick } from 'svelte';
+	import { tick, onMount } from 'svelte';
 	import type { Card, WritingSubMode } from '$lib/types/cards';
 	import { statsStore } from '$lib/stores/statsStore';
+	import { ignoredCardsStore } from '$lib/stores/ignoredCardsStore';
 
 	let { card, subMode, onNext, currentIndex, totalCards } = $props<{
 		card: Card;
@@ -14,14 +15,26 @@
 	let userInput = $state('');
 	let submitted = $state(false);
 	let inputEl = $state<HTMLInputElement | HTMLTextAreaElement | null>(null);
+	let isIgnored = $state(false);
+
+	onMount(() => {
+		const unsub = ignoredCardsStore.subscribe(() => {
+			if (card) {
+				isIgnored = ignoredCardsStore.isIgnored(card.id);
+			}
+		});
+		return unsub;
+	});
 
 	$effect(() => {
 		const _cardId = card.id;
 		const _subMode = subMode;
 		userInput = '';
 		submitted = false;
+		if (card) {
+			isIgnored = ignoredCardsStore.isIgnored(card.id);
+		}
 		tick().then(() => {
-			// Esegui il focus solo su desktop con tastiera fisica per evitare l'apertura automatica della tastiera su mobile
 			const isTouchDevice =
 				typeof window !== 'undefined' &&
 				(window.matchMedia('(pointer: coarse)').matches || window.innerWidth < 768);
@@ -51,12 +64,23 @@
 	let similarityScore = $derived.by<number>(() => {
 		if (!submitted || !userInput.trim()) return 0;
 		if (subMode === 'title-to-desc') {
-			const scoreDesc = calculateSimilarity(userInput, card.description);
+			const scoreDesc = calculateSimilarity(userInput, card.description || '');
+			return scoreDesc;
+		} else {
+			// desc-to-title or photo-to-title
+			const scoreTitle = calculateSimilarity(userInput, card.title || '');
 			const scoreFull = card.fullName ? calculateSimilarity(userInput, card.fullName) : 0;
-			return Math.max(scoreDesc, scoreFull);
+			return Math.max(scoreTitle, scoreFull);
 		}
-		return calculateSimilarity(userInput, card.title);
 	});
+
+	async function toggleIgnored(e: MouseEvent) {
+		e.stopPropagation();
+		if (card) {
+			await ignoredCardsStore.toggleIgnored(card.id);
+			isIgnored = ignoredCardsStore.isIgnored(card.id);
+		}
+	}
 
 	function handleSubmit(e?: Event) {
 		if (e) e.preventDefault();
@@ -83,14 +107,25 @@
 	<div class="header">
 		<span class="duo-badge">
 			{#if subMode === 'title-to-desc'}
-				Scrivi Descrizione
+				Acronimo ➔ Descrizione
 			{:else if subMode === 'desc-to-title'}
-				Scrivi Acronimo
+				Descrizione ➔ Acronimo
 			{:else}
-				Scrivi da Foto
+				Foto ➔ Scrittura
 			{/if}
 		</span>
-		<span class="counter-text">{currentIndex + 1} / {totalCards}</span>
+
+		<div class="header-right">
+			<span class="counter-text">{currentIndex + 1} / {totalCards}</span>
+			<button
+				class="star-ignored-btn"
+				class:ignored={isIgnored}
+				onclick={toggleIgnored}
+				title={isIgnored ? 'Card ignorata' : 'Ignora card durante il mescolaggio'}
+			>
+				★
+			</button>
+		</div>
 	</div>
 
 	<!-- Duolingo Progress Track -->
@@ -103,12 +138,12 @@
 		{#if subMode === 'title-to-desc'}
 			<span class="label">Acronimo / Titolo:</span>
 			<h2 class="title">
-				{card.title}
-				{#if card.fullName}
+				{card.title || card.fullName}
+				{#if card.title && card.fullName}
 					<span class="sub-title">({card.fullName})</span>
 				{/if}
 			</h2>
-			<p class="instruction">✍️ Scrivi la spiegazione o a cosa serve questo acronimo:</p>
+			<p class="instruction">✍️ Scrivi la descrizione o spiegazione di questa card:</p>
 		{:else if subMode === 'desc-to-title'}
 			<span class="label">Descrizione / Funzione:</span>
 			<p class="desc-text">{card.description}</p>
@@ -118,7 +153,7 @@
 			{#if card.images && card.images.length > 0}
 				<img src={card.images[0]} alt="Foto per esercizio" class="prompt-img" />
 			{/if}
-			<p class="instruction">✍️ Digita cos'è questo elemento ferroviario:</p>
+			<p class="instruction">✍️ Digita l'acronimo o titolo di questo elemento ferroviario:</p>
 		{/if}
 	</div>
 
@@ -128,19 +163,20 @@
 			<textarea
 				bind:this={inputEl}
 				bind:value={userInput}
-				placeholder="Digita qui la spiegazione..."
+				placeholder="Digita qui la descrizione a mano..."
 				rows="4"
 				class="duo-input input-textarea"
 				disabled={submitted}
 				onkeydown={handleKeyDown}
 				autocomplete="off"
-				spellcheck="false"></textarea>
+				spellcheck="false"
+			></textarea>
 		{:else}
 			<input
 				type="text"
 				bind:this={inputEl}
 				bind:value={userInput}
-				placeholder="Digita qui l'acronimo esatto..."
+				placeholder="Digita qui l'acronimo o titolo..."
 				class="duo-input input-field"
 				disabled={submitted}
 				onkeydown={handleKeyDown}
@@ -164,16 +200,16 @@
 				class:score-high={similarityScore >= 70}
 				class:score-med={similarityScore >= 40 && similarityScore < 70}
 			>
-				<span class="score-icon"
-					>{similarityScore >= 70 ? '🎯' : similarityScore >= 40 ? '👍' : '💡'}</span
-				>
+				<span class="score-icon">
+					{similarityScore >= 70 ? '🎯' : similarityScore >= 40 ? '👍' : '💡'}
+				</span>
 				<div class="score-info">
 					<strong>Comprensione: {similarityScore}%</strong>
-					<span
-						>{similarityScore >= 70
+					<span>
+						{similarityScore >= 70
 							? 'Ottima memorizzazione!'
-							: 'Confronta la tua risposta con il testo del database.'}</span
-					>
+							: 'Confronta la tua risposta con il testo del database.'}
+					</span>
 				</div>
 			</div>
 
@@ -186,8 +222,8 @@
 				<div class="exact-answer duo-card">{card.description}</div>
 			{:else}
 				<div class="exact-answer duo-card title-highlight">
-					{card.title}
-					{#if card.fullName}
+					{card.title || card.fullName}
+					{#if card.fullName && card.title}
 						<div class="exact-fullname">- {card.fullName}</div>
 					{/if}
 				</div>
@@ -222,10 +258,32 @@
 		align-items: center;
 	}
 
+	.header-right {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+	}
+
 	.counter-text {
 		font-size: 0.88rem;
 		font-weight: 800;
 		color: var(--text-muted);
+	}
+
+	.star-ignored-btn {
+		background: none;
+		border: none;
+		font-size: 1.6rem;
+		color: var(--text-muted);
+		cursor: pointer;
+		line-height: 1;
+		padding: 0;
+		transition: transform 0.2s ease, color 0.2s ease;
+	}
+
+	.star-ignored-btn.ignored {
+		color: var(--yellow-color);
+		transform: scale(1.25);
 	}
 
 	.duo-progress-track {
@@ -264,6 +322,13 @@
 		font-weight: 900;
 		margin: 0 0 0.6rem 0;
 		color: var(--text-color);
+	}
+
+	.sub-title {
+		font-size: 1.1rem;
+		font-weight: 800;
+		color: var(--text-muted);
+		display: block;
 	}
 
 	.desc-text {
@@ -383,6 +448,12 @@
 		font-size: 1.75rem;
 		font-weight: 900;
 		border-left-color: var(--green-color);
+	}
+
+	.exact-fullname {
+		font-size: 1rem;
+		font-weight: 800;
+		color: var(--accent-color);
 	}
 
 	.exact-sub {

@@ -1,6 +1,8 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import type { Card } from '$lib/types/cards';
 	import { statsStore } from '$lib/stores/statsStore';
+	import { ignoredCardsStore } from '$lib/stores/ignoredCardsStore';
 
 	let { card, onNext, onPrev, currentIndex, totalCards } = $props<{
 		card: Card;
@@ -12,10 +14,19 @@
 
 	let step = $state<0 | 1 | 2>(0);
 	let currentImageIndex = $state(0);
+	let isIgnored = $state(false);
+
+	onMount(() => {
+		const unsub = ignoredCardsStore.subscribe(() => {
+			isIgnored = ignoredCardsStore.isIgnored(card.id);
+		});
+		return unsub;
+	});
 
 	$effect(() => {
 		step = 0;
 		currentImageIndex = 0;
+		isIgnored = ignoredCardsStore.isIgnored(card.id);
 	});
 
 	function advanceStep() {
@@ -29,6 +40,12 @@
 		}
 	}
 
+	async function toggleIgnored(e: MouseEvent) {
+		e.stopPropagation();
+		await ignoredCardsStore.toggleIgnored(card.id);
+		isIgnored = ignoredCardsStore.isIgnored(card.id);
+	}
+
 	function nextImage(e: MouseEvent) {
 		e.stopPropagation();
 		if (card.images && card.images.length > 0) {
@@ -39,8 +56,20 @@
 
 <div class="photo-study-container">
 	<div class="top-bar">
-		<span class="duo-badge">Foto</span>
-		<span class="counter-text">{currentIndex + 1} / {totalCards}</span>
+		<span class="duo-badge">Visivo / Foto</span>
+
+		<div class="top-actions">
+			<span class="counter-text">{currentIndex + 1} / {totalCards}</span>
+			<button
+				class="star-ignored-btn"
+				class:ignored={isIgnored}
+				onclick={toggleIgnored}
+				aria-label={isIgnored ? 'Card ignorata (Clicca per riattivare)' : 'Ignora card'}
+				title={isIgnored ? 'Card ignorata' : 'Ignora card durante il mescolaggio'}
+			>
+				★
+			</button>
+		</div>
 	</div>
 
 	<!-- Duolingo Progress Track -->
@@ -78,7 +107,7 @@
 			<div class="prompt-box step-0">
 				<p class="hint-text">🗣️ Guarda la foto e di' a voce di cosa si tratta.</p>
 				<button class="duo-btn duo-btn-purple action-btn">
-					<span>Tocca 1° volta: Mostra Titolo / Acronimo</span>
+					<span>Tocca 1° volta: Mostra Acronimo & Titolo</span>
 				</button>
 			</div>
 		{/if}
@@ -86,13 +115,13 @@
 		<!-- Step 1: Title Revealed -->
 		{#if step >= 1}
 			<div class="reveal-section duo-card title-reveal">
-				<span class="section-label">Acronimo / Titolo:</span>
+				<span class="section-label">Acronimo & Titolo:</span>
 				<h2 class="card-title">{card.title}</h2>
 				{#if card.fullName}
 					<div class="fullname-text">{card.fullName}</div>
 				{/if}
 				{#if step === 1}
-					<p class="hint-text">Ora tocca di nuovo per vedere a cosa serve.</p>
+					<p class="hint-text">Ora tocca di nuovo per vedere la descrizione completa.</p>
 				{/if}
 			</div>
 		{/if}
@@ -100,7 +129,7 @@
 		<!-- Step 2: Description Revealed -->
 		{#if step === 2}
 			<div class="reveal-section duo-card desc-reveal">
-				<span class="section-label">A cosa serve / Descrizione:</span>
+				<span class="section-label">Descrizione Dettagliata:</span>
 				<p class="card-desc">{card.description}</p>
 			</div>
 		{/if}
@@ -113,7 +142,7 @@
 		</button>
 		<button class="duo-btn duo-btn-green step-btn" onclick={advanceStep}>
 			{#if step === 0}
-				MOSTRA TITOLO (Click 1)
+				MOSTRA ACRONIMO (Click 1)
 			{:else if step === 1}
 				MOSTRA DESCRIZIONE (Click 2)
 			{:else}
@@ -146,11 +175,36 @@
 		align-items: center;
 	}
 
+	.top-actions {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+	}
+
 	.counter-text {
 		font-family: 'Outfit', sans-serif;
 		font-size: 0.9rem;
 		font-weight: 800;
 		color: var(--text-muted);
+	}
+
+	.star-ignored-btn {
+		background: none;
+		border: none;
+		font-size: 1.6rem;
+		color: var(--text-muted);
+		cursor: pointer;
+		transition:
+			color 0.2s ease,
+			transform 0.2s ease;
+		line-height: 1;
+		padding: 0;
+	}
+
+	.star-ignored-btn.ignored {
+		color: var(--yellow-color);
+		transform: scale(1.25);
+		filter: drop-shadow(0 0 6px rgba(250, 204, 21, 0.5));
 	}
 
 	.duo-progress-track {

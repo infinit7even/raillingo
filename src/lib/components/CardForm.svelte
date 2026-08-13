@@ -1,40 +1,104 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import type { Card } from '$lib/types/cards';
+	import { cardsStore } from '$lib/stores/cardsStore';
 
 	let {
 		initialCard = null,
 		onSave,
 		onCancel = undefined,
+		onSelectExistingCard = undefined,
 		submitLabel = 'Salva Scheda'
 	} = $props<{
 		initialCard?: Card | null;
 		onSave: (data: Omit<Card, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void> | void;
 		onCancel?: () => void;
+		onSelectExistingCard?: (card: Card) => void;
 		submitLabel?: string;
 	}>();
 
 	let title = $state('');
 	let fullName = $state('');
 	let description = $state('');
+	let category = $state('');
+	let customCategory = $state('');
 	let images = $state<string[]>([]);
 	let newImageUrl = $state('');
 	let uploading = $state(false);
 	let saving = $state(false);
+	let validationError = $state<string | null>(null);
+
+	// Existing cards and category list for suggestions
+	let allCards = $state<Card[]>([]);
+
+	onMount(() => {
+		const unsub = cardsStore.subscribe((c) => (allCards = c));
+		return unsub;
+	});
+
+	// Derive unique existing categories for quick selection
+	let availableCategories = $derived.by<string[]>(() => {
+		const set = new Set<string>();
+		for (const c of allCards) {
+			if (c.category && c.category.trim()) {
+				set.add(c.category.trim());
+			}
+		}
+		return Array.from(set).sort();
+	});
 
 	$effect(() => {
 		if (initialCard) {
 			title = initialCard.title || '';
 			fullName = initialCard.fullName || '';
 			description = initialCard.description || '';
+			category = initialCard.category || '';
 			images = initialCard.images ? [...initialCard.images] : [];
 		} else {
 			title = '';
 			fullName = '';
 			description = '';
+			category = '';
+			customCategory = '';
 			images = [];
 		}
 		newImageUrl = '';
+		validationError = null;
 	});
+
+	// Suggestions for anti-duplicate
+	let titleSuggestions = $derived.by<Card[]>(() => {
+		const q = title.trim().toLowerCase();
+		if (!q || q.length < 2) return [];
+		return allCards.filter(
+			(c) =>
+				c.id !== initialCard?.id &&
+				(c.title.toLowerCase().includes(q) || (c.fullName && c.fullName.toLowerCase().includes(q)))
+		).slice(0, 5);
+	});
+
+	let fullNameSuggestions = $derived.by<Card[]>(() => {
+		const q = fullName.trim().toLowerCase();
+		if (!q || q.length < 2) return [];
+		return allCards.filter(
+			(c) =>
+				c.id !== initialCard?.id &&
+				((c.fullName && c.fullName.toLowerCase().includes(q)) || c.title.toLowerCase().includes(q))
+		).slice(0, 5);
+	});
+
+	function handleSelectExisting(card: Card) {
+		if (onSelectExistingCard) {
+			onSelectExistingCard(card);
+		} else {
+			// Populate local form in edit mode
+			title = card.title || '';
+			fullName = card.fullName || '';
+			description = card.description || '';
+			category = card.category || '';
+			images = card.images ? [...card.images] : [];
+		}
+	}
 
 	function addImageUrl() {
 		if (newImageUrl.trim()) {
@@ -94,7 +158,30 @@
 
 	async function handleSubmit(e: Event) {
 		e.preventDefault();
-		if (!title.trim() || !description.trim()) return;
+		validationError = null;
+
+		const finalCategory = category === '__NEW__' ? customCategory.trim() : category.trim();
+
+		// Validation rules:
+		// 1. Category is MANDATORY
+		if (!finalCategory) {
+			validationError = '⚠️ La Categoria è un campo obbligatorio!';
+			return;
+		}
+
+		// 2. At least 2 fields filled out among (Acronimo, Titolo, Descrizione, Categoria)
+		const filledFieldsCount = [
+			title.trim(),
+			fullName.trim(),
+			description.trim(),
+			finalCategory
+		].filter(Boolean).length;
+
+		if (filledFieldsCount < 2) {
+			validationError =
+				'⚠️ Devi compilare almeno 2 campi della scheda (es. Categoria + Acronimo, Titolo o Descrizione).';
+			return;
+		}
 
 		saving = true;
 		try {
@@ -102,6 +189,7 @@
 				title: title.trim(),
 				fullName: fullName.trim() || undefined,
 				description: description.trim(),
+				category: finalCategory,
 				images: images.length > 0 ? images : undefined
 			});
 		} catch (err) {
@@ -113,52 +201,127 @@
 </script>
 
 <form class="universal-card-form" onsubmit={handleSubmit}>
+	{#if validationError}
+		<div class="validation-error-box duo-card">
+			{validationError}
+		</div>
+	{/if}
+
 	<div class="form-grid">
-		<!-- Acronimo / Titolo -->
-		<div class="form-group">
-			<label for="card-title-field">Acronimo / Sigla Breve *</label>
+		<!-- Campo Categoria (OBBLIGATORIO) -->
+		<div class="form-group full-width">
+			<label for="card-category-field">Categoria * (Obbligatoria)</label>
+			<div class="category-input-row">
+				<select
+					id="card-category-field"
+					bind:value={category}
+					required
+					class="duo-input select-category"
+				>
+					<option value="" disabled>-- Seleziona una categoria --</option>
+					{#each availableCategories as cat}
+						<option value={cat}>{cat}</option>
+					{/each}
+					<option value="__NEW__">➕ Crea nuova categoria...</option>
+				</select>
+
+				{#if category === '__NEW__'}
+					<input
+						type="text"
+						bind:value={customCategory}
+						placeholder="Inserisci nome nuova categoria..."
+						required
+						class="duo-input new-cat-input"
+					/>
+				{/if}
+			</div>
+		</div>
+
+		<!-- Acronimo / Sigla -->
+		<div class="form-group relative">
+			<label for="card-title-field">Acronimo / Sigla Breve</label>
 			<input
 				id="card-title-field"
 				type="text"
 				bind:value={title}
-				placeholder="es: IF, SCMT, ANSFISA..."
-				required
+				placeholder="es: IF, SCMT, RFI..."
 				class="duo-input"
+				autocomplete="off"
 			/>
+
+			<!-- Dropdown Suggerimenti Anti-Duplicato -->
+			{#if titleSuggestions.length > 0}
+				<div class="suggestions-dropdown duo-card">
+					<div class="suggestion-header">💡 Card esistente trovata! Clicca per modificarla:</div>
+					{#each titleSuggestions as sug}
+						<button
+							type="button"
+							class="suggestion-item"
+							onclick={() => handleSelectExisting(sug)}
+						>
+							<span class="sug-title">{sug.title}</span>
+							{#if sug.fullName}
+								<span class="sug-fullname">({sug.fullName})</span>
+							{/if}
+							<span class="sug-badge">✏️ Apri in modifica</span>
+						</button>
+					{/each}
+				</div>
+			{/if}
 		</div>
 
-		<!-- Significato Esteso / Full Name -->
-		<div class="form-group">
-			<label for="card-fullname-field">Significato Esteso / Acronimo Completo</label>
+		<!-- Titolo / Significato Esteso -->
+		<div class="form-group relative">
+			<label for="card-fullname-field">Titolo / Significato Esteso</label>
 			<input
 				id="card-fullname-field"
 				type="text"
 				bind:value={fullName}
 				placeholder="es: Impresa Ferroviaria"
 				class="duo-input"
+				autocomplete="off"
 			/>
+
+			<!-- Dropdown Suggerimenti Anti-Duplicato per Titolo -->
+			{#if fullNameSuggestions.length > 0}
+				<div class="suggestions-dropdown duo-card">
+					<div class="suggestion-header">💡 Card esistente trovata! Clicca per modificarla:</div>
+					{#each fullNameSuggestions as sug}
+						<button
+							type="button"
+							class="suggestion-item"
+							onclick={() => handleSelectExisting(sug)}
+						>
+							<span class="sug-title">{sug.title}</span>
+							{#if sug.fullName}
+								<span class="sug-fullname">({sug.fullName})</span>
+							{/if}
+							<span class="sug-badge">✏️ Apri in modifica</span>
+						</button>
+					{/each}
+				</div>
+			{/if}
 		</div>
 
-		<!-- Descrizione / Spiegazione -->
+		<!-- Descrizione -->
 		<div class="form-group full-width">
-			<label for="card-desc-field">Spiegazione & Utilizzo Dettagliato *</label>
+			<label for="card-desc-field">Descrizione & Spiegazione</label>
 			<textarea
 				id="card-desc-field"
 				bind:value={description}
-				placeholder="Scrivi qui la definizione completa e l'utilizzo operativo dell'acronimo..."
+				placeholder="Scrivi qui la definizione completa e l'utilizzo operativo dell'acronimo/termine..."
 				rows="3"
-				required
-				class="duo-input form-textarea"></textarea>
+				class="duo-input form-textarea"
+			></textarea>
 		</div>
 
-		<!-- Gestione Immagini -->
+		<!-- Immagini Visive -->
 		<div class="form-group full-width">
 			<label for="card-image-url-field"
 				>Immagini Visive (Carica File, Incolla dagli appunti o inserisci URL)</label
 			>
 
 			<div class="upload-controls-row">
-				<!-- File Upload Input -->
 				<label class="file-upload-btn duo-btn duo-btn-blue">
 					<span>{uploading ? '⏳ Caricamento...' : '📁 Sfoglia Immagine'}</span>
 					<input
@@ -170,7 +333,6 @@
 					/>
 				</label>
 
-				<!-- Paste Hint & URL Input -->
 				<div class="url-input-group">
 					<input
 						id="card-image-url-field"
@@ -190,11 +352,9 @@
 				</div>
 			</div>
 			<p class="paste-hint-text">
-				💡 Puoi anche fare <strong>Incolla (Ctrl+V)</strong> per caricare direttamente uno screenshot
-				copiato negli appunti!
+				💡 Puoi anche fare <strong>Incolla (Ctrl+V)</strong> per caricare direttamente uno screenshot!
 			</p>
 
-			<!-- Gallery Preview Grid -->
 			{#if images.length > 0}
 				<div class="images-preview-grid">
 					{#each images as img, i}
@@ -236,6 +396,16 @@
 		width: 100%;
 	}
 
+	.validation-error-box {
+		background: rgba(239, 68, 68, 0.15);
+		border: 1.5px solid #ef4444;
+		color: #f87171;
+		padding: 0.85rem;
+		border-radius: 14px;
+		font-weight: 800;
+		font-size: 0.88rem;
+	}
+
 	.form-grid {
 		display: grid;
 		grid-template-columns: 1fr 1fr;
@@ -244,6 +414,10 @@
 
 	.full-width {
 		grid-column: 1 / -1;
+	}
+
+	.relative {
+		position: relative;
 	}
 
 	.form-group {
@@ -259,10 +433,86 @@
 		letter-spacing: 0.02em;
 	}
 
+	.category-input-row {
+		display: flex;
+		gap: 0.5rem;
+	}
+
+	.select-category {
+		flex: 1;
+	}
+
+	.new-cat-input {
+		flex: 1;
+	}
+
 	.form-textarea {
 		resize: vertical;
 		font-family: inherit;
 		min-height: 75px;
+	}
+
+	/* Suggestions anti-duplicate dropdown */
+	.suggestions-dropdown {
+		position: absolute;
+		top: calc(100% + 4px);
+		left: 0;
+		right: 0;
+		z-index: 100;
+		background: var(--card-bg);
+		border: 2px solid var(--accent-color);
+		border-radius: 16px;
+		box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+		padding: 0.5rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.35rem;
+	}
+
+	.suggestion-header {
+		font-size: 0.72rem;
+		font-weight: 900;
+		color: var(--accent-color);
+		text-transform: uppercase;
+		padding: 0.25rem 0.5rem;
+	}
+
+	.suggestion-item {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		padding: 0.5rem 0.75rem;
+		border-radius: 10px;
+		background: var(--card-bg-subtle);
+		border: 1px solid var(--border-color);
+		color: var(--text-color);
+		cursor: pointer;
+		text-align: left;
+		transition: background 0.15s ease;
+	}
+
+	.suggestion-item:hover {
+		background: var(--accent-light-bg);
+		border-color: var(--accent-color);
+	}
+
+	.sug-title {
+		font-weight: 900;
+		font-size: 0.95rem;
+
+	}
+
+	.sug-fullname {
+		font-size: 0.8rem;
+		color: var(--text-muted);
+		flex: 1;
+	}
+
+	.sug-badge {
+		font-size: 0.72rem;
+		font-weight: 800;
+		color: var(--accent-color);
+		white-space: nowrap;
 	}
 
 	.upload-controls-row {

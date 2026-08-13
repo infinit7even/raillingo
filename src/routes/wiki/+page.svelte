@@ -1,24 +1,42 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { cardsStore } from '$lib/stores/cardsStore';
+	import { ignoredCardsStore } from '$lib/stores/ignoredCardsStore';
 	import PageHeader from '$lib/components/PageHeader.svelte';
+	import CategoryFilter from '$lib/components/CategoryFilter.svelte';
 	import type { Card } from '$lib/types/cards';
 
 	let cards = $state<Card[]>([]);
+	let ignoredIds = $state<Set<string>>(new Set());
 	let searchQuery = $state('');
+	let selectedCategory = $state('ALL');
 	let selectedLetter = $state<string>('ALL');
 	let expandedCardId = $state<string | null>(null);
 
 	onMount(() => {
-		const unsubscribe = cardsStore.subscribe((c) => (cards = c));
-		return unsubscribe;
+		const unsubCards = cardsStore.subscribe((c) => (cards = c));
+		const unsubIgnored = ignoredCardsStore.subscribe((ids) => (ignoredIds = ids));
+		return () => {
+			unsubCards();
+			unsubIgnored();
+		};
+	});
+
+	let availableCategories = $derived.by<string[]>(() => {
+		const set = new Set<string>();
+		for (const c of cards) {
+			if (c.category && c.category.trim()) {
+				set.add(c.category.trim());
+			}
+		}
+		return Array.from(set).sort();
 	});
 
 	// Get available letters from titles
 	let availableLetters = $derived(() => {
 		const set = new Set<string>();
 		for (const card of cards) {
-			const first = card.title.trim().charAt(0).toUpperCase();
+			const first = card.title ? card.title.trim().charAt(0).toUpperCase() : '#';
 			if (first >= 'A' && first <= 'Z') {
 				set.add(first);
 			} else {
@@ -31,10 +49,14 @@
 	// Sorted alphabetically and filtered
 	let filteredSortedCards = $derived(
 		[...cards]
-			.sort((a, b) => a.title.localeCompare(b.title, 'it', { sensitivity: 'base' }))
+			.sort((a, b) => (a.title || '').localeCompare(b.title || '', 'it', { sensitivity: 'base' }))
 			.filter((c) => {
+				// Category filter
+				const matchesCategory =
+					selectedCategory === 'ALL' || (c.category && c.category.trim() === selectedCategory);
+
 				// Letter filter
-				const firstLetter = c.title.trim().charAt(0).toUpperCase();
+				const firstLetter = c.title ? c.title.trim().charAt(0).toUpperCase() : '#';
 				const matchesLetter =
 					selectedLetter === 'ALL' ||
 					(selectedLetter === '#'
@@ -45,17 +67,22 @@
 				const q = searchQuery.toLowerCase().trim();
 				const matchesSearch =
 					!q ||
-					c.title.toLowerCase().includes(q) ||
+					(c.title && c.title.toLowerCase().includes(q)) ||
 					(c.fullName && c.fullName.toLowerCase().includes(q)) ||
 					c.description.toLowerCase().includes(q) ||
 					(c.tags && c.tags.some((t) => t.toLowerCase().includes(q)));
 
-				return matchesLetter && matchesSearch;
+				return matchesCategory && matchesLetter && matchesSearch;
 			})
 	);
 
 	function toggleCardExpand(id: string) {
 		expandedCardId = expandedCardId === id ? null : id;
+	}
+
+	async function toggleIgnored(e: MouseEvent, cardId: string) {
+		e.stopPropagation();
+		await ignoredCardsStore.toggleIgnored(cardId);
 	}
 </script>
 
@@ -63,7 +90,7 @@
 	<!-- Page Header -->
 	<PageHeader
 		title="Wiki & Dizionario Ferroviario"
-		subtitle="Consultazione rapida di tutti gli acronimi in ordine alfabetico e ricerca globale."
+		subtitle="Consultazione rapida di tutti gli acronimi in ordine alfabetico e gestione card ignorate."
 		icon="/emoji/books_3d.png"
 		variant="blue"
 	/>
@@ -82,6 +109,13 @@
 				<button class="clear-btn" onclick={() => (searchQuery = '')}>✕</button>
 			{/if}
 		</div>
+
+		<!-- Category Filter -->
+		<CategoryFilter
+			categories={availableCategories}
+			{selectedCategory}
+			onSelect={(cat) => (selectedCategory = cat)}
+		/>
 
 		<!-- Alphabet Filter Bar -->
 		<div class="alphabet-bar">
@@ -113,28 +147,58 @@
 		<div class="compact-grid">
 			{#each filteredSortedCards as card}
 				{@const isExpanded = expandedCardId === card.id}
+				{@const isIgnored = ignoredIds.has(card.id)}
 
-				<div class="compact-card" class:expanded={isExpanded}>
-					<button class="compact-card-header" onclick={() => toggleCardExpand(card.id)}>
-						<div class="title-row">
-							<h3 class="card-title">{card.title}</h3>
-							{#if card.fullName}
-								<span class="fullname-pill">{card.fullName}</span>
-							{/if}
-						</div>
+				<div class="compact-card" class:expanded={isExpanded} class:is-ignored-card={isIgnored}>
+					<div class="compact-card-header">
+						<button class="header-main-btn" onclick={() => toggleCardExpand(card.id)}>
+							<div class="title-row">
+								<!-- Mostra SOLO l'acronimo nei titoli della wiki -->
+								<h3 class="card-title">{card.title || card.fullName}</h3>
+								{#if isIgnored}
+									<span class="ignored-pill-badge">⚠️ IGNORATA</span>
+								{/if}
+							</div>
 
-						<div class="meta-row">
-							{#if card.images && card.images.length > 0}
-								<span class="photo-indicator">📷 {card.images.length} foto</span>
-							{/if}
-							<span class="expand-arrow">{isExpanded ? '▲' : '▼'}</span>
-						</div>
-					</button>
+							<div class="meta-row">
+								{#if card.images && card.images.length > 0}
+									<span class="photo-indicator">📷 {card.images.length} foto</span>
+								{/if}
+								<span class="expand-arrow">{isExpanded ? '▲' : '▼'}</span>
+							</div>
+						</button>
 
-					<!-- Expandable Description on Tap -->
+						<!-- Stellina Ignora / Disignora globale -->
+						<button
+							class="star-ignored-btn"
+							class:ignored={isIgnored}
+							onclick={(e) => toggleIgnored(e, card.id)}
+							title={isIgnored
+								? 'Card ignorata dai minigiochi. Clicca per riattivarla'
+								: 'Fai clic sulla stellina per ignorare la card nei minigiochi'}
+							aria-label="Toggle ignorata"
+						>
+							★
+						</button>
+					</div>
+
+					<!-- Expandable Details on Tap -->
 					{#if isExpanded}
 						<div class="expanded-details">
+							{#if card.fullName}
+								<div class="fullname-text-detail">
+									<strong>Titolo completo:</strong> {card.fullName}
+								</div>
+							{/if}
+
 							<p class="description">{card.description}</p>
+
+							{#if card.category}
+								<div class="category-info-row">
+									<span class="cat-label">Categoria:</span>
+									<span class="cat-val">{card.category}</span>
+								</div>
+							{/if}
 
 							{#if card.tags && card.tags.length > 0}
 								<div class="tags-list">
@@ -173,7 +237,7 @@
 	.search-section {
 		display: flex;
 		flex-direction: column;
-		gap: 1rem;
+		gap: 0.85rem;
 		background: var(--card-bg);
 		border: 1px solid var(--border-color);
 		border-radius: 24px;
@@ -265,6 +329,12 @@
 		transition: border-color 0.2s ease;
 	}
 
+	.compact-card.is-ignored-card {
+		opacity: 0.85;
+		border-style: dashed;
+		border-color: var(--yellow-color);
+	}
+
 	.compact-card:hover {
 		border-color: var(--accent-color);
 	}
@@ -274,18 +344,27 @@
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		padding: 1rem 1.25rem;
+		padding: 0.75rem 1rem;
+		gap: 0.5rem;
+	}
+
+	.header-main-btn {
+		flex: 1;
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
 		background: transparent;
 		border: none;
 		color: inherit;
 		cursor: pointer;
 		text-align: left;
+		padding: 0;
 	}
 
 	.title-row {
 		display: flex;
 		align-items: center;
-		gap: 0.75rem;
+		gap: 0.6rem;
 	}
 
 	.card-title {
@@ -295,14 +374,30 @@
 		margin: 0;
 	}
 
-	.fullname-pill {
-		font-size: 0.8rem;
-		font-weight: 800;
-		padding: 0.15rem 0.55rem;
+	.ignored-pill-badge {
+		font-size: 0.68rem;
+		font-weight: 900;
+		padding: 0.15rem 0.45rem;
 		border-radius: 6px;
-		background: rgba(34, 197, 94, 0.15);
-		color: var(--green-color);
-		border: 1px solid var(--green-color);
+		background: rgba(234, 179, 8, 0.15);
+		color: #eab308;
+		border: 1px solid #eab308;
+	}
+
+	.star-ignored-btn {
+		background: none;
+		border: none;
+		font-size: 1.5rem;
+		color: var(--text-muted);
+		cursor: pointer;
+		padding: 0.25rem;
+		line-height: 1;
+		transition: transform 0.2s ease, color 0.2s ease;
+	}
+
+	.star-ignored-btn.ignored {
+		color: var(--yellow-color);
+		transform: scale(1.25);
 	}
 
 	.meta-row {
@@ -323,20 +418,41 @@
 	}
 
 	.expanded-details {
-		padding: 0 1.25rem 1.25rem 1.25rem;
+		padding: 0.85rem 1.25rem 1.25rem 1.25rem;
 		border-top: 1px solid var(--border-color);
 		background: var(--card-bg-subtle);
 		display: flex;
 		flex-direction: column;
-		gap: 0.85rem;
+		gap: 0.75rem;
 		animation: fadeIn 0.25s ease;
+	}
+
+	.fullname-text-detail {
+		font-size: 0.95rem;
+		color: var(--accent-color);
 	}
 
 	.description {
 		font-size: 0.95rem;
 		line-height: 1.6;
 		color: var(--text-color);
-		margin-top: 0.85rem;
+		margin: 0;
+	}
+
+	.category-info-row {
+		font-size: 0.8rem;
+		display: flex;
+		gap: 0.4rem;
+	}
+
+	.cat-label {
+		font-weight: 800;
+		color: var(--text-muted);
+	}
+
+	.cat-val {
+		font-weight: 800;
+		color: var(--green-color);
 	}
 
 	.tags-list {

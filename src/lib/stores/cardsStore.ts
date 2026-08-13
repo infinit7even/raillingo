@@ -148,6 +148,42 @@ class CardsStore {
 		}
 	}
 
+	public async updateCategoryBatch(oldCategory: string, newCategory: string): Promise<number> {
+		let count = 0;
+		const updatedCards: Card[] = [];
+
+		for (const c of this.cards) {
+			if (c.category === oldCategory) {
+				count++;
+				const updated = { ...c, category: newCategory, updatedAt: new Date().toISOString() };
+				updatedCards.push(updated);
+			} else {
+				updatedCards.push(c);
+			}
+		}
+
+		if (count > 0) {
+			this.cards = updatedCards;
+			this.saveToStorage();
+			this.notify();
+
+			// Bulk sync to API if available
+			for (const updated of updatedCards.filter((c) => c.category === newCategory)) {
+				try {
+					await fetch('/api/cards', {
+						method: 'PUT',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify(updated)
+					});
+				} catch (e) {
+					console.warn('Errore sync categoria batch API:', e);
+				}
+			}
+		}
+
+		return count;
+	}
+
 	private saveToStorage() {
 		if (browser) {
 			localStorage.setItem('rf_cards_cache', JSON.stringify(this.cards));
@@ -162,3 +198,4 @@ class CardsStore {
 }
 
 export const cardsStore = new CardsStore();
+

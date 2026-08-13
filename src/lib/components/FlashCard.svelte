@@ -1,7 +1,8 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import type { Card } from '$lib/types/cards';
 	import { statsStore } from '$lib/stores/statsStore';
-	import { tts } from '$lib/utils/tts';
+	import { ignoredCardsStore } from '$lib/stores/ignoredCardsStore';
 
 	let { card, onNext, onPrev, currentIndex, totalCards } = $props<{
 		card: Card;
@@ -13,15 +14,19 @@
 
 	let flipped = $state(false);
 	let currentImageIndex = $state(0);
-	let isFav = $state(false);
-	let isSpeaking = $state(false);
+	let isIgnored = $state(false);
+
+	onMount(() => {
+		const unsub = ignoredCardsStore.subscribe(() => {
+			isIgnored = ignoredCardsStore.isIgnored(card.id);
+		});
+		return unsub;
+	});
 
 	$effect(() => {
 		flipped = false;
 		currentImageIndex = 0;
-		isFav = statsStore.isFavorite(card.id);
-		tts.stop();
-		isSpeaking = false;
+		isIgnored = ignoredCardsStore.isIgnored(card.id);
 	});
 
 	function handleCardClick() {
@@ -31,18 +36,10 @@
 		}
 	}
 
-	function toggleFavorite(e: MouseEvent) {
+	async function toggleIgnored(e: MouseEvent) {
 		e.stopPropagation();
-		statsStore.toggleFavorite(card.id);
-		isFav = !isFav;
-	}
-
-	function speakAudio(e: MouseEvent) {
-		e.stopPropagation();
-		const fullText = card.fullName ? `${card.title}, ${card.fullName}` : card.title;
-		const textToRead = flipped ? `${fullText}. ${card.description}` : fullText;
-		tts.speak(textToRead);
-		isSpeaking = true;
+		await ignoredCardsStore.toggleIgnored(card.id);
+		isIgnored = ignoredCardsStore.isIgnored(card.id);
 	}
 
 	function nextImage(e: MouseEvent) {
@@ -75,17 +72,14 @@
 		<span class="duo-badge">{card.category || 'Generale'}</span>
 
 		<div class="top-actions">
-			<button
-				class="duo-btn duo-btn-gray audio-btn"
-				class:speaking={isSpeaking}
-				onclick={speakAudio}
-				aria-label="Ascolta pronuncia audio"
-				title="Ascolta pronuncia"
-			>
-				🔊 Ascolta
-			</button>
 			<span class="counter-text">{currentIndex + 1} / {totalCards}</span>
-			<button class="fav-btn" class:active={isFav} onclick={toggleFavorite} aria-label="Preferito">
+			<button
+				class="star-ignored-btn"
+				class:ignored={isIgnored}
+				onclick={toggleIgnored}
+				aria-label={isIgnored ? 'Card ignorata (Fai clic per riattivarla)' : 'Ignora questa card'}
+				title={isIgnored ? 'Card ignorata (Clicca per riattivare)' : 'Ignora card durante il mescolaggio'}
+			>
 				★
 			</button>
 		</div>
@@ -105,11 +99,17 @@
 		tabindex="0"
 	>
 		<div class="card" class:is-flipped={flipped}>
-			<!-- FRONT (Acronym / Title) -->
+			<!-- FRONT (Acronimo se presente, altrimenti Titolo. MAI solo descrizione!) -->
 			<div class="card-face front duo-card">
 				<div class="face-content">
-					<span class="title-badge">ACRONIMO / TERMINE</span>
-					<h2 class="card-title">{card.title}</h2>
+					<span class="title-badge">
+						{card.title ? 'ACRONIMO / SIGLA' : 'TITOLO ESTESO'}
+					</span>
+
+					<h2 class="card-title">
+						{card.title || card.fullName}
+					</h2>
+
 					<p class="instruction">
 						🗣️ Pronuncia a voce la definizione, poi <strong>tocca per verificare</strong>
 					</p>
@@ -128,25 +128,23 @@
 				</div>
 			</div>
 
-			<!-- BACK (Description + Photos) -->
+			<!-- BACK (Mostra il resto + Descrizione) -->
 			<div class="card-face back duo-card">
 				<div class="face-content">
 					<div class="back-header">
-						<h3 class="card-title-small">{card.title}</h3>
-						{#if card.fullName}
-							<div class="fullname-banner">{card.fullName}</div>
-						{/if}
-						{#if card.tags && card.tags.length > 0}
-							<div class="tags">
-								{#each card.tags as tag}
-									<span class="tag">#{tag}</span>
-								{/each}
-							</div>
+						<!-- Se il fronte mostrava l'acronimo, qui mostriamo il Titolo esteso se c'è, e viceversa -->
+						{#if card.title}
+							<h3 class="card-title-small">{card.title}</h3>
+							{#if card.fullName}
+								<div class="fullname-banner">{card.fullName}</div>
+							{/if}
+						{:else if card.fullName}
+							<h3 class="card-title-small">{card.fullName}</h3>
 						{/if}
 					</div>
 
 					<div class="description-box duo-card">
-						<p>{card.description}</p>
+						<p>{card.description || '(Nessuna descrizione specificata)'}</p>
 					</div>
 
 					<!-- Image Section -->
@@ -214,11 +212,6 @@
 		gap: 0.75rem;
 	}
 
-	.audio-btn {
-		padding: 0.4rem 0.75rem;
-		font-size: 0.75rem;
-	}
-
 	.counter-text {
 		font-family: 'Outfit', sans-serif;
 		font-size: 0.9rem;
@@ -226,20 +219,23 @@
 		color: var(--text-muted);
 	}
 
-	.fav-btn {
+	.star-ignored-btn {
 		background: none;
 		border: none;
-		font-size: 1.5rem;
+		font-size: 1.6rem;
 		color: var(--text-muted);
 		cursor: pointer;
 		transition:
 			color 0.2s ease,
 			transform 0.2s ease;
+		line-height: 1;
+		padding: 0;
 	}
 
-	.fav-btn.active {
+	.star-ignored-btn.ignored {
 		color: var(--yellow-color);
-		transform: scale(1.2);
+		transform: scale(1.25);
+		filter: drop-shadow(0 0 6px rgba(250, 204, 21, 0.5));
 	}
 
 	.duo-progress-track {
@@ -356,23 +352,6 @@
 		text-align: left;
 		width: 100%;
 		box-sizing: border-box;
-	}
-
-	.tags {
-		display: flex;
-		gap: 0.4rem;
-		flex-wrap: wrap;
-		justify-content: center;
-	}
-
-	.tag {
-		font-size: 0.75rem;
-		font-weight: 800;
-		color: var(--text-muted);
-		background-color: var(--badge-bg);
-		padding: 0.2rem 0.5rem;
-		border-radius: 6px;
-		border: 1px solid var(--border-color);
 	}
 
 	.image-gallery {
