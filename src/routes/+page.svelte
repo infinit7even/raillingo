@@ -142,12 +142,6 @@
 						</div>
 
 						<p class="wod-desc">{wordOfTheDay.description}</p>
-
-						{#if wordOfTheDay.images && wordOfTheDay.images.length > 0}
-							<div class="wod-img-container">
-								<img src={wordOfTheDay.images[0]} alt={wordOfTheDay.title} class="wod-img" />
-							</div>
-						{/if}
 					</div>
 				</div>
 			</section>
@@ -485,20 +479,7 @@
 		margin: 0;
 	}
 
-	.wod-img-container {
-		margin-top: 0.4rem;
-		max-height: 200px;
-		border-radius: 14px;
-		overflow: hidden;
-		border: 2px solid var(--border-color);
-	}
 
-	.wod-img {
-		width: 100%;
-		height: 100%;
-		max-height: 200px;
-		object-fit: cover;
-	}
 
 	/* 📊 RIGHT SIDEBAR (Desktop Only >= 1024px) */
 	.duo-right-sidebar {
