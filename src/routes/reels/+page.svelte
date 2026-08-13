@@ -210,6 +210,34 @@
 		scrollbar-width: none;
 	}
 
+	@media (max-width: 1023px) {
+		.reels-clean-container {
+			gap: 0.5rem;
+		}
+
+		.reels-viewport {
+			border-radius: 16px;
+		}
+
+		.reels-scroll-feed {
+			height: calc(100vh - 135px);
+			max-height: none;
+			min-height: 440px;
+		}
+
+		.reel-card-slide {
+			padding: 0.75rem;
+		}
+
+		.reel-title {
+			font-size: 2.5rem;
+		}
+
+		.back-preview-img {
+			max-height: 180px;
+		}
+	}
+
 	.reels-scroll-feed::-webkit-scrollbar {
 		display: none;
 	}
