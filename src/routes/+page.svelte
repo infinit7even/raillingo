@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { cardsStore } from '$lib/stores/cardsStore';
 	import { statsStore, type StatsData } from '$lib/stores/statsStore';
+	import PageHeader from '$lib/components/PageHeader.svelte';
 	import QuickAddCardModal from '$lib/components/QuickAddCardModal.svelte';
 	import type { Card } from '$lib/types/cards';
 
@@ -112,6 +113,14 @@
 <div class="duo-page-grid">
 	<!-- 📍 MAIN CENTRAL COLUMN -->
 	<div class="duo-main-column">
+		<!-- Page Header per uniformare la spaziatura ed il layout della Home con tutte le altre sezioni -->
+		<PageHeader
+			title="Rail Focus"
+			subtitle="Impara e memorizza gli acronimi ed i concetti del settore ferroviario"
+			icon="/emoji/fire_3d.png"
+			variant="green"
+		/>
+
 		<!--  Parola del Giorno Card -->
 		{#if wordOfTheDay}
 			<section class="word-of-day-section">
