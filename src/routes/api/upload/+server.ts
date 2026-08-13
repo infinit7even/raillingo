@@ -43,7 +43,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 		// Genera nome file sicuro (senza usare il nome originale)
 		const safeExtension = extension || '.jpg';
 		const filename = `img-${Date.now()}-${Math.random().toString(36).substring(2, 7)}${safeExtension}`;
-		const uploadDir = path.resolve('static/uploads');
+		const uploadDir = path.resolve('data/uploads');
 
 		await fs.mkdir(uploadDir, { recursive: true });
 		await fs.writeFile(path.join(uploadDir, filename), buffer);

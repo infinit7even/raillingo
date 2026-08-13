@@ -26,6 +26,20 @@ async function writeCardsToFile(cards: Card[]): Promise<boolean> {
 	}
 }
 
+async function deleteMediaFile(imgUrl: string) {
+	if (!imgUrl || typeof imgUrl !== 'string') return;
+	const filename = path.basename(imgUrl.split('?')[0]);
+	if (!filename || filename.includes('..')) return;
+
+	const dataPath = path.resolve('data/uploads', filename);
+	const staticPath = path.resolve('static/uploads', filename);
+
+	await Promise.all([
+		fs.unlink(dataPath).catch(() => {}),
+		fs.unlink(staticPath).catch(() => {})
+	]);
+}
+
 export const GET: RequestHandler = async () => {
 	const cards = await readCardsFromFile();
 	return json(cards);
@@ -81,6 +95,14 @@ export const PUT: RequestHandler = async ({ request, cookies }) => {
 		return json({ error: 'Card non trovata' }, { status: 404 });
 	}
 
+	const oldCard = cards[index];
+	const oldImages = oldCard.images || [];
+	const newImages = updatedCard.images || [];
+	const removedImages = oldImages.filter((img) => !newImages.includes(img));
+	for (const imgUrl of removedImages) {
+		await deleteMediaFile(imgUrl);
+	}
+
 	cards[index] = {
 		...cards[index],
 		...updatedCard,
@@ -108,6 +130,14 @@ export const DELETE: RequestHandler = async ({ url, cookies }) => {
 	}
 
 	const cards = await readCardsFromFile();
+	const cardToDelete = cards.find((c) => c.id === id);
+
+	if (cardToDelete && cardToDelete.images && Array.isArray(cardToDelete.images)) {
+		for (const imgUrl of cardToDelete.images) {
+			await deleteMediaFile(imgUrl);
+		}
+	}
+
 	const filtered = cards.filter((c) => c.id !== id);
 	await writeCardsToFile(filtered);
 

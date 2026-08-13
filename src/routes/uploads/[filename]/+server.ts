@@ -18,20 +18,27 @@ export const GET: RequestHandler = async ({ params }) => {
 		throw error(400, 'Nome file non valido');
 	}
 
-	const filePath = path.resolve('static/uploads', filename);
+	const dataFilePath = path.resolve('data/uploads', filename);
+	const staticFilePath = path.resolve('static/uploads', filename);
 
+	let fileData: Buffer | null = null;
 	try {
-		const data = await fs.readFile(filePath);
-		const ext = path.extname(filename).toLowerCase();
-		const contentType = MIME_TYPES[ext] || 'application/octet-stream';
-
-		return new Response(data, {
-			headers: {
-				'Content-Type': contentType,
-				'Cache-Control': 'public, max-age=31536000, immutable'
-			}
-		});
+		fileData = await fs.readFile(dataFilePath);
 	} catch (err) {
-		throw error(404, 'Immagine non trovata');
+		try {
+			fileData = await fs.readFile(staticFilePath);
+		} catch (e) {
+			throw error(404, 'Immagine non trovata');
+		}
 	}
+
+	const ext = path.extname(filename).toLowerCase();
+	const contentType = MIME_TYPES[ext] || 'application/octet-stream';
+
+	return new Response(new Uint8Array(fileData), {
+		headers: {
+			'Content-Type': contentType,
+			'Cache-Control': 'public, max-age=31536000, immutable'
+		}
+	});
 };
