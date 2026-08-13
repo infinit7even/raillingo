@@ -126,6 +126,14 @@
 		variant="green"
 	/>
 
+	<!-- Unified Category Filter & Rimescola Bar -->
+	<CategoryFilter
+		categories={availableCategories}
+		{selectedCategory}
+		onSelect={(cat) => (selectedCategory = cat)}
+		onRefresh={refreshCards}
+	/>
+
 	<!-- Sub-mode Selector Bar -->
 	<ModeTabs
 		tabs={flashcardTabs}
@@ -135,14 +143,6 @@
 			currentIndex = 0;
 			refreshCards();
 		}}
-	/>
-
-	<!-- Unified Category Filter & Rimescola Bar -->
-	<CategoryFilter
-		categories={availableCategories}
-		{selectedCategory}
-		onSelect={(cat) => (selectedCategory = cat)}
-		onRefresh={refreshCards}
 	/>
 
 	{#if subMode === 'standard'}

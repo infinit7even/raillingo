@@ -110,6 +110,14 @@
 		variant="red"
 	/>
 
+	<!-- Single Unified Category Filter & Rimescola Bar -->
+	<CategoryFilter
+		categories={availableCategories}
+		{selectedCategory}
+		onSelect={(cat) => (selectedCategory = cat)}
+		onRefresh={refreshDeck}
+	/>
+
 	<ModeTabs
 		tabs={writingTabs}
 		activeTab={selectedSubMode}
@@ -118,14 +126,6 @@
 			currentIndex = 0;
 			refreshDeck();
 		}}
-	/>
-
-	<!-- Single Unified Category Filter & Rimescola Bar -->
-	<CategoryFilter
-		categories={availableCategories}
-		{selectedCategory}
-		onSelect={(cat) => (selectedCategory = cat)}
-		onRefresh={refreshDeck}
 	/>
 
 	{#if activeCards.length > 0}
