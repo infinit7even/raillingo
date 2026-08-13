@@ -392,7 +392,8 @@
 	.word-of-day-card {
 		display: flex;
 		flex-direction: column;
-		gap: 1rem;
+		gap: 0.85rem;
+		padding: 0.75rem 1rem;
 	}
 
 	.wod-header {
