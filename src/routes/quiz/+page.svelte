@@ -72,7 +72,6 @@
 		if (currentIndex < shuffledDeck.length - 1) {
 			currentIndex++;
 		} else {
-			// Re-shuffle when reaching end of quiz
 			refreshQuiz();
 		}
 	}
@@ -86,17 +85,13 @@
 		variant="purple"
 	/>
 
-	<div class="top-controls-row">
-		<CategoryFilter
-			categories={availableCategories}
-			{selectedCategory}
-			onSelect={(cat) => (selectedCategory = cat)}
-		/>
-
-		<button class="duo-btn duo-btn-purple refresh-btn" onclick={refreshQuiz} title="Rimescola Quiz">
-			🔄 Rimescola
-		</button>
-	</div>
+	<!-- Single Unified Category & Shuffle Bar -->
+	<CategoryFilter
+		categories={availableCategories}
+		{selectedCategory}
+		onSelect={(cat) => (selectedCategory = cat)}
+		onRefresh={refreshQuiz}
+	/>
 
 	{#if shuffledDeck.length >= 5}
 		<MultipleChoiceQuiz
@@ -122,20 +117,6 @@
 		display: flex;
 		flex-direction: column;
 		gap: 1rem;
-	}
-
-	.top-controls-row {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		gap: 0.5rem;
-	}
-
-	.refresh-btn {
-		font-size: 0.8rem;
-		padding: 0.55rem 0.85rem;
-		white-space: nowrap;
-		margin-bottom: 0.5rem;
 	}
 
 	.empty-box {

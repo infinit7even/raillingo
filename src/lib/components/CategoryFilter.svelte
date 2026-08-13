@@ -2,37 +2,55 @@
 	let {
 		categories = [],
 		selectedCategory = 'ALL',
-		onSelect
+		onSelect,
+		onRefresh = undefined
 	} = $props<{
 		categories: string[];
 		selectedCategory: string;
 		onSelect: (category: string) => void;
+		onRefresh?: () => void;
 	}>();
 </script>
 
-{#if categories.length > 0}
+{#if categories.length > 0 || onRefresh}
 	<div class="category-filter-container duo-card">
-		<span class="filter-label">🏷️ Filtra Categoria:</span>
-		<div class="categories-scroll">
+		<div class="filter-left-section">
+			{#if categories.length > 0}
+				<span class="filter-label">🏷️ Categorie:</span>
+				<div class="categories-scroll">
+					<button
+						type="button"
+						class="category-chip"
+						class:active={selectedCategory === 'ALL'}
+						onclick={() => onSelect('ALL')}
+					>
+						Tutte ({categories.length})
+					</button>
+					{#each categories as cat}
+						<button
+							type="button"
+							class="category-chip"
+							class:active={selectedCategory === cat}
+							onclick={() => onSelect(cat)}
+						>
+							{cat}
+						</button>
+					{/each}
+				</div>
+			{/if}
+		</div>
+
+		{#if onRefresh}
 			<button
 				type="button"
-				class="category-chip"
-				class:active={selectedCategory === 'ALL'}
-				onclick={() => onSelect('ALL')}
+				class="duo-btn duo-btn-purple compact-shuffle-btn"
+				onclick={onRefresh}
+				title="Rimescola le card"
 			>
-				Tutte ({categories.length})
+				<span class="shuffle-icon">🔄</span>
+				<span class="shuffle-text">Rimescola</span>
 			</button>
-			{#each categories as cat}
-				<button
-					type="button"
-					class="category-chip"
-					class:active={selectedCategory === cat}
-					onclick={() => onSelect(cat)}
-				>
-					{cat}
-				</button>
-			{/each}
-		</div>
+		{/if}
 	</div>
 {/if}
 
@@ -40,29 +58,43 @@
 	.category-filter-container {
 		display: flex;
 		align-items: center;
+		justify-content: space-between;
 		gap: 0.75rem;
-		padding: 0.65rem 1rem;
+		padding: 0.5rem 0.85rem;
 		background: var(--card-bg);
-		border-radius: 16px;
-		border: 1px solid var(--border-color);
-		margin-bottom: 0.5rem;
+		border-radius: 18px;
+		border: 2px solid var(--border-color);
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+		width: 100%;
+		box-sizing: border-box;
+	}
+
+	.filter-left-section {
+		display: flex;
+		align-items: center;
+		gap: 0.6rem;
+		flex: 1;
+		min-width: 0;
+		overflow: hidden;
 	}
 
 	.filter-label {
-		font-size: 0.78rem;
+		font-size: 0.75rem;
 		font-weight: 900;
 		color: var(--text-muted);
 		white-space: nowrap;
 		text-transform: uppercase;
-		letter-spacing: 0.03em;
+		letter-spacing: 0.04em;
+		flex-shrink: 0;
 	}
 
 	.categories-scroll {
 		display: flex;
-		gap: 0.4rem;
+		gap: 0.35rem;
 		overflow-x: auto;
 		scrollbar-width: none;
 		padding: 0.1rem 0;
+		align-items: center;
 	}
 
 	.categories-scroll::-webkit-scrollbar {
@@ -80,6 +112,7 @@
 		cursor: pointer;
 		white-space: nowrap;
 		transition: all 0.15s ease;
+		font-family: inherit;
 	}
 
 	.category-chip:hover {
@@ -94,16 +127,35 @@
 		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 	}
 
-	@media (max-width: 600px) {
+	.compact-shuffle-btn {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.4rem;
+		padding: 0.4rem 0.85rem;
+		font-size: 0.78rem;
+		font-weight: 800;
+		border-radius: 12px;
+		white-space: nowrap;
+		flex-shrink: 0;
+	}
+
+	.shuffle-icon {
+		font-size: 0.9rem;
+	}
+
+	@media (max-width: 540px) {
 		.category-filter-container {
-			flex-direction: column;
-			align-items: flex-start;
-			gap: 0.4rem;
-			padding: 0.6rem 0.85rem;
+			flex-wrap: nowrap;
+			gap: 0.5rem;
+			padding: 0.45rem 0.65rem;
 		}
 
-		.categories-scroll {
-			width: 100%;
+		.filter-label {
+			display: none; /* Hide 'CATEGORIE:' text on mobile to save space */
+		}
+
+		.shuffle-text {
+			display: inline;
 		}
 	}
 </style>

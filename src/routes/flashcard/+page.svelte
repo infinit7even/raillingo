@@ -74,7 +74,6 @@
 	}
 
 	$effect(() => {
-		// When validCards change or selectedCategory change, re-shuffle deck
 		const _cat = selectedCategory;
 		const _mode = subMode;
 		refreshCards();
@@ -128,32 +127,22 @@
 	/>
 
 	<!-- Sub-mode Selector Bar -->
-	<div class="top-controls-row">
-		<ModeTabs
-			tabs={flashcardTabs}
-			activeTab={subMode}
-			onSelect={(id) => {
-				subMode = id as 'standard' | 'foto' | 'inverso';
-				currentIndex = 0;
-				refreshCards();
-			}}
-		/>
+	<ModeTabs
+		tabs={flashcardTabs}
+		activeTab={subMode}
+		onSelect={(id) => {
+			subMode = id as 'standard' | 'foto' | 'inverso';
+			currentIndex = 0;
+			refreshCards();
+		}}
+	/>
 
-		<!-- Refresh / Rimescola Button -->
-		<button
-			class="duo-btn duo-btn-purple refresh-btn"
-			onclick={refreshCards}
-			title="Rimescola tutte le card"
-		>
-			🔄 Rimescola
-		</button>
-	</div>
-
-	<!-- Category Filter -->
+	<!-- Unified Category Filter & Rimescola Bar -->
 	<CategoryFilter
 		categories={availableCategories}
 		{selectedCategory}
 		onSelect={(cat) => (selectedCategory = cat)}
+		onRefresh={refreshCards}
 	/>
 
 	{#if subMode === 'standard'}
@@ -262,20 +251,6 @@
 		display: flex;
 		flex-direction: column;
 		gap: 1rem;
-	}
-
-	.top-controls-row {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		gap: 0.5rem;
-		flex-wrap: wrap;
-	}
-
-	.refresh-btn {
-		font-size: 0.8rem;
-		padding: 0.55rem 0.85rem;
-		white-space: nowrap;
 	}
 
 	.reverse-container {

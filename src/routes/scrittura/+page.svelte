@@ -110,27 +110,22 @@
 		variant="red"
 	/>
 
-	<div class="top-controls-row">
-		<ModeTabs
-			tabs={writingTabs}
-			activeTab={selectedSubMode}
-			onSelect={(id) => {
-				selectedSubMode = id as WritingSubMode;
-				currentIndex = 0;
-				refreshDeck();
-			}}
-		/>
+	<ModeTabs
+		tabs={writingTabs}
+		activeTab={selectedSubMode}
+		onSelect={(id) => {
+			selectedSubMode = id as WritingSubMode;
+			currentIndex = 0;
+			refreshDeck();
+		}}
+	/>
 
-		<button class="duo-btn duo-btn-purple refresh-btn" onclick={refreshDeck} title="Rimescola schede">
-			🔄 Rimescola
-		</button>
-	</div>
-
-	<!-- Category Filter -->
+	<!-- Single Unified Category Filter & Rimescola Bar -->
 	<CategoryFilter
 		categories={availableCategories}
 		{selectedCategory}
 		onSelect={(cat) => (selectedCategory = cat)}
+		onRefresh={refreshDeck}
 	/>
 
 	{#if activeCards.length > 0}
@@ -159,20 +154,6 @@
 		display: flex;
 		flex-direction: column;
 		gap: 1rem;
-	}
-
-	.top-controls-row {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		gap: 0.5rem;
-		flex-wrap: wrap;
-	}
-
-	.refresh-btn {
-		font-size: 0.8rem;
-		padding: 0.55rem 0.85rem;
-		white-space: nowrap;
 	}
 
 	.empty-box {
