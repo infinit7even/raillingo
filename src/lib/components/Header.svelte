@@ -162,7 +162,7 @@
 		z-index: 150;
 		width: 100%;
 		max-width: 600px;
-		margin: 0.5rem auto 0 auto;
+		margin: 0.5rem auto 0.75rem auto;
 		padding: 0 0.85rem;
 		box-sizing: border-box;
 		display: flex;

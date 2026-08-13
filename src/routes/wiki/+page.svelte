@@ -229,7 +229,7 @@
 	.wiki-container {
 		display: flex;
 		flex-direction: column;
-		gap: 1rem;
+		gap: 0.75rem;
 		max-width: 600px;
 		margin: 0 auto;
 	}
