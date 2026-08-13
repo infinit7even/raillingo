@@ -166,21 +166,16 @@
 		box-sizing: border-box;
 		display: flex;
 		align-items: center;
+		gap: 0.5rem;
 	}
 
 	.menu-toggle-btn {
-		position: fixed;
-		top: 0.65rem;
-		left: 0.85rem;
-		z-index: 200;
 		padding: 0.55rem 0.65rem;
 		height: 48px;
-		width: 48px;
 		display: flex;
 		align-items: center;
 		justify-content: center;
 		flex-shrink: 0;
-		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 	}
 
 	.hamburger-icon {
@@ -220,7 +215,6 @@
 		height: 48px;
 		display: flex;
 		align-items: center;
-		margin-left: 56px;
 	}
 
 	.header-stats {
