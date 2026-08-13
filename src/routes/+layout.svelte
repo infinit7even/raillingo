@@ -224,6 +224,7 @@
 		}
 
 		.main-content {
+			max-width: 1200px;
 			padding: 1.5rem 2rem 2.5rem 2rem;
 		}
 
