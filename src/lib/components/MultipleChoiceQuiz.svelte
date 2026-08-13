@@ -141,6 +141,7 @@
 			★
 		</button>
 
+		<span class="question-badge-label">Domanda:</span>
 		<h2 class="question-title">{questionTitle}</h2>
 	</div>
 
@@ -221,11 +222,21 @@
 		filter: drop-shadow(0 0 6px rgba(250, 204, 21, 0.5));
 	}
 
+	.question-badge-label {
+		font-size: 0.78rem;
+		font-weight: 900;
+		text-transform: uppercase;
+		color: var(--accent-color);
+		letter-spacing: 0.06em;
+		display: block;
+		margin-bottom: 0.3rem;
+	}
+
 	.question-title {
 		font-size: 1.6rem;
 		font-weight: 900;
 		margin: 0;
-		color: var(--accent-color);
+		color: var(--text-color);
 	}
 
 	.options-list {
