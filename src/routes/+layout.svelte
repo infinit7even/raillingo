@@ -2,6 +2,7 @@
 	import '../app.css';
 	import Header from '$lib/components/Header.svelte';
 	import Navbar from '$lib/components/Navbar.svelte';
+	import Toast from '$lib/components/Toast.svelte';
 	import { goto, onNavigate } from '$app/navigation';
 	import { page } from '$app/state';
 	import { fade } from 'svelte/transition';
@@ -151,6 +152,7 @@
 	{/if}
 
 	<Navbar {user} />
+	<Toast />
 </div>
 
 <style>

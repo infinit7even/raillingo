@@ -3,6 +3,7 @@
 	import type { Card, WritingSubMode } from '$lib/types/cards';
 	import { statsStore } from '$lib/stores/statsStore';
 	import { ignoredCardsStore } from '$lib/stores/ignoredCardsStore';
+	import { toastStore } from '$lib/stores/toastStore';
 
 	let { card, subMode, onNext, currentIndex, totalCards } = $props<{
 		card: Card;
@@ -75,10 +76,22 @@
 
 	async function toggleIgnored(e: MouseEvent) {
 		e.stopPropagation();
-		if (card) {
-			await ignoredCardsStore.toggleIgnored(card.id);
-			isIgnored = ignoredCardsStore.isIgnored(card.id);
-		}
+		if (!card) return;
+
+		const cardToToggle = card;
+		await ignoredCardsStore.toggleIgnored(cardToToggle.id);
+		isIgnored = ignoredCardsStore.isIgnored(cardToToggle.id);
+
+		toastStore.show({
+			message: isIgnored ? '⭐ Scheda ignorata dal ripasso' : '✨ Scheda riattivata nel ripasso',
+			actionLabel: 'Annulla',
+			onAction: async () => {
+				await ignoredCardsStore.toggleIgnored(cardToToggle.id);
+				if (card && card.id === cardToToggle.id) {
+					isIgnored = ignoredCardsStore.isIgnored(cardToToggle.id);
+				}
+			}
+		});
 	}
 
 	function handleSubmit(e?: Event) {
