@@ -240,7 +240,7 @@
 	/* 3D Scene */
 	.scene {
 		width: 100%;
-		min-height: 420px;
+		min-height: clamp(280px, 42vh, 400px);
 		perspective: 1200px;
 		cursor: pointer;
 	}
@@ -248,7 +248,7 @@
 	.card {
 		width: 100%;
 		height: 100%;
-		min-height: 420px;
+		min-height: clamp(280px, 42vh, 400px);
 		position: relative;
 		transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
 		transform-style: preserve-3d;

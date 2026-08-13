@@ -165,7 +165,7 @@
 		width: 100%;
 		max-width: 600px;
 		margin: 0 auto;
-		padding: 0.85rem 0.85rem 2.8rem 0.85rem;
+		padding: 0.6rem 0.85rem 1.5rem 0.85rem;
 		box-sizing: border-box;
 		contain: layout style;
 	}
@@ -225,7 +225,7 @@
 
 		.main-content {
 			max-width: 1200px;
-			padding: 1.5rem 2rem 2.5rem 2rem;
+			padding: 1rem 1.5rem 1.5rem 1.5rem;
 		}
 
 		.mobile-swipe-indicator {

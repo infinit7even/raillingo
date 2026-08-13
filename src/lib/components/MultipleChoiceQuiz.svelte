@@ -299,4 +299,34 @@
 	.status-icon.wrong {
 		color: var(--pink-color);
 	}
+
+	@media (max-height: 850px) {
+		.quiz-container {
+			gap: 0.75rem;
+		}
+
+		.question-card {
+			padding: 0.75rem 3rem 0.75rem 1rem;
+		}
+
+		.question-title {
+			font-size: 1.3rem;
+		}
+
+		.options-list {
+			gap: 0.45rem;
+		}
+
+		.duo-option-btn {
+			padding: 0.6rem 0.9rem;
+			font-size: 0.88rem;
+			border-radius: 14px;
+		}
+
+		.option-index {
+			width: 26px;
+			height: 26px;
+			font-size: 0.8rem;
+		}
+	}
 </style>

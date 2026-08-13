@@ -202,9 +202,9 @@
 
 	.reels-scroll-feed {
 		width: 100%;
-		height: 490px;
-		max-height: calc(100vh - 300px);
-		min-height: 350px;
+		height: calc(100vh - 210px);
+		min-height: 320px;
+		max-height: 560px;
 		overflow-y: scroll;
 		scroll-snap-type: y mandatory;
 		scrollbar-width: none;

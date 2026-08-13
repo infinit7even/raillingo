@@ -221,7 +221,7 @@
 		border-radius: 16px;
 		overflow: hidden;
 		background-color: #000;
-		min-height: 240px;
+		min-height: clamp(160px, 28vh, 240px);
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -230,7 +230,7 @@
 
 	.photo-main {
 		width: 100%;
-		max-height: 320px;
+		max-height: clamp(160px, 28vh, 260px);
 		object-fit: cover;
 		display: block;
 	}

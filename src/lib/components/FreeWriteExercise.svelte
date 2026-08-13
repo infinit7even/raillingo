@@ -471,4 +471,42 @@
 			transform: translateY(0);
 		}
 	}
+
+	@media (max-height: 850px) {
+		.freewrite-container {
+			gap: 0.65rem;
+		}
+
+		.prompt-card {
+			padding: 0.85rem;
+			padding-right: 3rem;
+		}
+
+		.title {
+			font-size: 1.6rem;
+			margin-bottom: 0.3rem;
+		}
+
+		.desc-text {
+			font-size: 0.95rem;
+			line-height: 1.45;
+			margin-bottom: 0.35rem;
+		}
+
+		.input-textarea,
+		.input-field {
+			padding: 0.65rem 0.85rem;
+			font-size: 0.95rem;
+		}
+
+		.submit-btn {
+			padding: 0.65rem;
+			font-size: 0.88rem;
+		}
+
+		.comparison-card {
+			padding: 0.85rem;
+			gap: 0.65rem;
+		}
+	}
 </style>
