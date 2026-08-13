@@ -93,6 +93,16 @@
 		onRefresh={refreshQuiz}
 	/>
 
+	<!-- Duolingo Progress Track -->
+	{#if shuffledDeck.length > 0}
+		<div class="duo-progress-track">
+			<div
+				class="duo-progress-fill"
+				style="width: {((currentIndex + 1) / shuffledDeck.length) * 100}%"
+			></div>
+		</div>
+	{/if}
+
 	{#if shuffledDeck.length >= 5}
 		<MultipleChoiceQuiz
 			targetCard={shuffledDeck[currentIndex]}

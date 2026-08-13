@@ -124,10 +124,6 @@
 </script>
 
 <div class="quiz-container">
-	<!-- Duolingo Progress Track -->
-	<div class="duo-progress-track">
-		<div class="duo-progress-fill" style="width: {((currentIndex + 1) / totalCards) * 100}%"></div>
-	</div>
 
 	<!-- Question Box with Star Ignored Button -->
 	<div class="question-card duo-card">
@@ -180,21 +176,7 @@
 		gap: 1rem;
 	}
 
-	.duo-progress-track {
-		width: 100%;
-		height: 12px;
-		background: var(--card-bg-subtle);
-		border-radius: 9999px;
-		overflow: hidden;
-		border: 1.5px solid var(--border-color);
-	}
 
-	.duo-progress-fill {
-		height: 100%;
-		background: var(--green-color);
-		border-radius: 9999px;
-		transition: width 0.3s ease;
-	}
 
 	.question-card {
 		background: var(--card-bg);

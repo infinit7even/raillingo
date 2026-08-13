@@ -118,6 +118,16 @@
 		onRefresh={refreshDeck}
 	/>
 
+	<!-- Duolingo Progress Track -->
+	{#if activeCards.length > 0}
+		<div class="duo-progress-track">
+			<div
+				class="duo-progress-fill"
+				style="width: {((currentIndex + 1) / activeCards.length) * 100}%"
+			></div>
+		</div>
+	{/if}
+
 	<ModeTabs
 		tabs={writingTabs}
 		activeTab={selectedSubMode}

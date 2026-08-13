@@ -85,10 +85,6 @@
 <svelte:window onkeydown={handleKeyDown} />
 
 <div class="flashcard-container">
-	<!-- Progress Track -->
-	<div class="duo-progress-track">
-		<div class="duo-progress-fill" style="width: {((currentIndex + 1) / totalCards) * 100}%"></div>
-	</div>
 
 	<!-- 3D Flip Card Scene -->
 	<div
@@ -264,21 +260,7 @@
 		filter: drop-shadow(0 0 6px rgba(250, 204, 21, 0.5));
 	}
 
-	.duo-progress-track {
-		width: 100%;
-		height: 12px;
-		background: var(--card-bg-subtle);
-		border-radius: 9999px;
-		overflow: hidden;
-		border: 1.5px solid var(--border-color);
-	}
 
-	.duo-progress-fill {
-		height: 100%;
-		background: var(--green-color);
-		border-radius: 9999px;
-		transition: width 0.3s ease;
-	}
 
 	/* 3D Scene */
 	.scene {

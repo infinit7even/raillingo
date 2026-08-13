@@ -134,6 +134,16 @@
 		onRefresh={refreshCards}
 	/>
 
+	<!-- Duolingo Progress Track -->
+	{#if activeCards.length > 0}
+		<div class="duo-progress-track">
+			<div
+				class="duo-progress-fill"
+				style="width: {((currentIndex + 1) / activeCards.length) * 100}%"
+			></div>
+		</div>
+	{/if}
+
 	<!-- Sub-mode Selector Bar -->
 	<ModeTabs
 		tabs={flashcardTabs}

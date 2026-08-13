@@ -109,10 +109,6 @@
 </script>
 
 <div class="freewrite-container">
-	<!-- Duolingo Progress Track -->
-	<div class="duo-progress-track">
-		<div class="duo-progress-fill" style="width: {((currentIndex + 1) / totalCards) * 100}%"></div>
-	</div>
 
 	<!-- Prompt Card with Star Ignored Button -->
 	<div class="prompt-card duo-card">
@@ -240,21 +236,7 @@
 		gap: 1rem;
 	}
 
-	.duo-progress-track {
-		width: 100%;
-		height: 12px;
-		background: var(--card-bg-subtle);
-		border-radius: 9999px;
-		overflow: hidden;
-		border: 1.5px solid var(--border-color);
-	}
 
-	.duo-progress-fill {
-		height: 100%;
-		background: var(--green-color);
-		border-radius: 9999px;
-		transition: width 0.3s ease;
-	}
 
 	.prompt-card {
 		background: var(--card-bg);
