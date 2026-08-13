@@ -113,14 +113,6 @@
 <div class="duo-page-grid">
 	<!-- 📍 MAIN CENTRAL COLUMN -->
 	<div class="duo-main-column">
-		<!-- Page Header per uniformare la spaziatura ed il layout della Home con tutte le altre sezioni -->
-		<PageHeader
-			title="Rail Focus"
-			subtitle="Impara e memorizza gli acronimi ed i concetti del settore ferroviario"
-			icon="/emoji/fire_3d.png"
-			variant="green"
-		/>
-
 		<!--  Parola del Giorno Card -->
 		{#if wordOfTheDay}
 			<section class="word-of-day-section">
