@@ -55,23 +55,6 @@
 </script>
 
 <div class="photo-study-container">
-	<div class="top-bar">
-		<span class="duo-badge">Visivo / Foto</span>
-
-		<div class="top-actions">
-			<span class="counter-text">{currentIndex + 1} / {totalCards}</span>
-			<button
-				class="star-ignored-btn"
-				class:ignored={isIgnored}
-				onclick={toggleIgnored}
-				aria-label={isIgnored ? 'Card ignorata (Clicca per riattivare)' : 'Ignora card'}
-				title={isIgnored ? 'Card ignorata' : 'Ignora card durante il mescolaggio'}
-			>
-				★
-			</button>
-		</div>
-	</div>
-
 	<!-- Duolingo Progress Track -->
 	<div class="duo-progress-track">
 		<div class="duo-progress-fill" style="width: {((currentIndex + 1) / totalCards) * 100}%"></div>
@@ -86,6 +69,16 @@
 	>
 		<!-- Main Photo -->
 		<div class="photo-wrapper">
+			<button
+				class="photo-star-btn"
+				class:ignored={isIgnored}
+				onclick={toggleIgnored}
+				aria-label={isIgnored ? 'Card ignorata' : 'Ignora card'}
+				title={isIgnored ? 'Card ignorata (Clicca per riattivare)' : 'Ignora card durante il mescolaggio'}
+			>
+				★
+			</button>
+
 			{#if card.images && card.images.length > 0}
 				<img
 					src={card.images[currentImageIndex]}
@@ -169,42 +162,32 @@
 		gap: 1rem;
 	}
 
-	.top-bar {
+	.photo-star-btn {
+		position: absolute;
+		top: 10px;
+		right: 10px;
+		z-index: 10;
+		background: rgba(0, 0, 0, 0.45);
+		backdrop-filter: blur(4px);
+		border: 1px solid rgba(255, 255, 255, 0.2);
+		border-radius: 50%;
+		width: 34px;
+		height: 34px;
 		display: flex;
-		justify-content: space-between;
 		align-items: center;
-	}
-
-	.top-actions {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-	}
-
-	.counter-text {
-		font-family: 'Outfit', sans-serif;
-		font-size: 0.9rem;
-		font-weight: 800;
-		color: var(--text-muted);
-	}
-
-	.star-ignored-btn {
-		background: none;
-		border: none;
-		font-size: 1.6rem;
-		color: var(--text-muted);
+		justify-content: center;
+		font-size: 1.3rem;
+		color: rgba(255, 255, 255, 0.7);
 		cursor: pointer;
-		transition:
-			color 0.2s ease,
-			transform 0.2s ease;
 		line-height: 1;
-		padding: 0;
+		transition: transform 0.2s ease, color 0.2s ease;
 	}
 
-	.star-ignored-btn.ignored {
+	.photo-star-btn.ignored {
 		color: var(--yellow-color);
-		transform: scale(1.25);
-		filter: drop-shadow(0 0 6px rgba(250, 204, 21, 0.5));
+		transform: scale(1.15);
+		background: rgba(0, 0, 0, 0.7);
+		border-color: var(--yellow-color);
 	}
 
 	.duo-progress-track {
@@ -229,6 +212,7 @@
 		flex-direction: column;
 		gap: 1.25rem;
 		cursor: pointer;
+		position: relative;
 	}
 
 	.photo-wrapper {

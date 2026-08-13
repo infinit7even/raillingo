@@ -67,24 +67,6 @@
 <svelte:window onkeydown={handleKeyDown} />
 
 <div class="flashcard-container">
-	<!-- Top Progress / Bar Header -->
-	<div class="card-top-bar">
-		<span class="duo-badge">{card.category || 'Generale'}</span>
-
-		<div class="top-actions">
-			<span class="counter-text">{currentIndex + 1} / {totalCards}</span>
-			<button
-				class="star-ignored-btn"
-				class:ignored={isIgnored}
-				onclick={toggleIgnored}
-				aria-label={isIgnored ? 'Card ignorata (Fai clic per riattivarla)' : 'Ignora questa card'}
-				title={isIgnored ? 'Card ignorata (Clicca per riattivare)' : 'Ignora card durante il mescolaggio'}
-			>
-				★
-			</button>
-		</div>
-	</div>
-
 	<!-- Progress Track -->
 	<div class="duo-progress-track">
 		<div class="duo-progress-fill" style="width: {((currentIndex + 1) / totalCards) * 100}%"></div>
@@ -101,6 +83,17 @@
 		<div class="card" class:is-flipped={flipped}>
 			<!-- FRONT (Acronimo se presente, altrimenti Titolo. MAI solo descrizione!) -->
 			<div class="card-face front duo-card">
+				<!-- Star Ignored Button in Top Right of Card -->
+				<button
+					class="card-star-btn"
+					class:ignored={isIgnored}
+					onclick={toggleIgnored}
+					aria-label={isIgnored ? 'Card ignorata (Clicca per riattivare)' : 'Ignora questa card'}
+					title={isIgnored ? 'Card ignorata (Clicca per riattivare)' : 'Ignora card durante il mescolaggio'}
+				>
+					★
+				</button>
+
 				<div class="face-content">
 					<span class="title-badge">
 						{card.title ? 'ACRONIMO / SIGLA' : 'TITOLO ESTESO'}
@@ -130,9 +123,17 @@
 
 			<!-- BACK (Mostra il resto + Descrizione) -->
 			<div class="card-face back duo-card">
+				<button
+					class="card-star-btn"
+					class:ignored={isIgnored}
+					onclick={toggleIgnored}
+					title={isIgnored ? 'Card ignorata (Clicca per riattivare)' : 'Ignora card'}
+				>
+					★
+				</button>
+
 				<div class="face-content">
 					<div class="back-header">
-						<!-- Se il fronte mostrava l'acronimo, qui mostriamo il Titolo esteso se c'è, e viceversa -->
 						{#if card.title}
 							<h3 class="card-title-small">{card.title}</h3>
 							{#if card.fullName}
@@ -199,40 +200,22 @@
 		gap: 1rem;
 	}
 
-	.card-top-bar {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		padding: 0 0.25rem;
-	}
-
-	.top-actions {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-	}
-
-	.counter-text {
-		font-family: 'Outfit', sans-serif;
-		font-size: 0.9rem;
-		font-weight: 800;
-		color: var(--text-muted);
-	}
-
-	.star-ignored-btn {
+	.card-star-btn {
+		position: absolute;
+		top: 1rem;
+		right: 1rem;
+		z-index: 10;
 		background: none;
 		border: none;
 		font-size: 1.6rem;
 		color: var(--text-muted);
 		cursor: pointer;
-		transition:
-			color 0.2s ease,
-			transform 0.2s ease;
 		line-height: 1;
-		padding: 0;
+		padding: 0.25rem;
+		transition: transform 0.2s ease, color 0.2s ease;
 	}
 
-	.star-ignored-btn.ignored {
+	.card-star-btn.ignored {
 		color: var(--yellow-color);
 		transform: scale(1.25);
 		filter: drop-shadow(0 0 6px rgba(250, 204, 21, 0.5));

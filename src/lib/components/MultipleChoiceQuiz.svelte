@@ -108,28 +108,23 @@
 </script>
 
 <div class="quiz-container">
-	<div class="quiz-header">
-		<span class="duo-badge">Quiz Scelta Multipla</span>
-		<div class="header-right">
-			<span class="counter-text">Domanda {currentIndex + 1} / {totalCards}</span>
-			<button
-				class="star-ignored-btn"
-				class:ignored={isIgnored}
-				onclick={toggleIgnored}
-				title={isIgnored ? 'Card ignorata' : 'Ignora card durante il mescolaggio'}
-			>
-				★
-			</button>
-		</div>
-	</div>
-
 	<!-- Duolingo Progress Track -->
 	<div class="duo-progress-track">
 		<div class="duo-progress-fill" style="width: {((currentIndex + 1) / totalCards) * 100}%"></div>
 	</div>
 
-	<!-- Question Box -->
+	<!-- Question Box with Star Ignored Button -->
 	<div class="question-card duo-card">
+		<button
+			class="question-star-btn"
+			class:ignored={isIgnored}
+			onclick={toggleIgnored}
+			title={isIgnored ? 'Card ignorata (Clicca per riattivare)' : 'Ignora card durante il mescolaggio'}
+			aria-label="Ignora card"
+		>
+			★
+		</button>
+
 		<span class="question-label">Domanda:</span>
 		<h2 class="question-title">{questionTitle}</h2>
 	</div>
@@ -166,42 +161,7 @@
 		margin: 0 auto;
 		display: flex;
 		flex-direction: column;
-		gap: 1.25rem;
-	}
-
-	.quiz-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-	}
-
-	.header-right {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-	}
-
-	.counter-text {
-		font-family: 'Outfit', sans-serif;
-		font-size: 0.9rem;
-		font-weight: 800;
-		color: var(--text-muted);
-	}
-
-	.star-ignored-btn {
-		background: none;
-		border: none;
-		font-size: 1.6rem;
-		color: var(--text-muted);
-		cursor: pointer;
-		line-height: 1;
-		padding: 0;
-		transition: transform 0.2s ease, color 0.2s ease;
-	}
-
-	.star-ignored-btn.ignored {
-		color: var(--yellow-color);
-		transform: scale(1.25);
+		gap: 1rem;
 	}
 
 	.duo-progress-track {
@@ -222,6 +182,28 @@
 
 	.question-card {
 		background: var(--card-bg);
+		position: relative;
+		padding-right: 3rem;
+	}
+
+	.question-star-btn {
+		position: absolute;
+		top: 1rem;
+		right: 1rem;
+		background: none;
+		border: none;
+		font-size: 1.6rem;
+		color: var(--text-muted);
+		cursor: pointer;
+		line-height: 1;
+		padding: 0.25rem;
+		transition: transform 0.2s ease, color 0.2s ease;
+	}
+
+	.question-star-btn.ignored {
+		color: var(--yellow-color);
+		transform: scale(1.25);
+		filter: drop-shadow(0 0 6px rgba(250, 204, 21, 0.5));
 	}
 
 	.question-label {

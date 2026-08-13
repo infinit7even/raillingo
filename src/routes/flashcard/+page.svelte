@@ -177,20 +177,13 @@
 			{@const currentCard = activeCards[currentIndex]}
 			{@const isCurrentIgnored = ignoredCardsStore.isIgnored(currentCard.id)}
 
-			<div class="reverse-container duo-card">
-				<div class="top-bar">
-					<span class="duo-badge">Modalità Inversa</span>
-					<div class="top-actions">
-						<span class="counter">{currentIndex + 1} / {activeCards.length}</span>
-						<button
-							class="star-ignored-btn"
-							class:ignored={isCurrentIgnored}
-							onclick={toggleIgnoredCurrentCard}
-							title="Ignora card"
-						>
-							★
-						</button>
-					</div>
+			<div class="reverse-container">
+				<!-- Progress Track -->
+				<div class="duo-progress-track">
+					<div
+						class="duo-progress-fill"
+						style="width: {((currentIndex + 1) / activeCards.length) * 100}%"
+					></div>
 				</div>
 
 				<div
@@ -200,6 +193,16 @@
 					tabindex="0"
 					onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && toggleReveal()}
 				>
+					<button
+						class="study-star-btn"
+						class:ignored={isCurrentIgnored}
+						onclick={toggleIgnoredCurrentCard}
+						title={isCurrentIgnored ? 'Card ignorata (Clicca per riattivare)' : 'Ignora card durante il mescolaggio'}
+						aria-label="Ignora card"
+					>
+						★
+					</button>
+
 					<span class="label">Come si chiama:</span>
 					<p class="description-text">{currentCard.description}</p>
 
@@ -259,38 +262,20 @@
 		gap: 1.25rem;
 	}
 
-	.top-bar {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
+	.duo-progress-track {
+		width: 100%;
+		height: 12px;
+		background: var(--card-bg-subtle);
+		border-radius: 9999px;
+		overflow: hidden;
+		border: 1.5px solid var(--border-color);
 	}
 
-	.top-actions {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-	}
-
-	.counter {
-		font-size: 0.85rem;
-		font-weight: 800;
-		color: var(--text-muted);
-	}
-
-	.star-ignored-btn {
-		background: none;
-		border: none;
-		font-size: 1.6rem;
-		color: var(--text-muted);
-		cursor: pointer;
-		line-height: 1;
-		padding: 0;
-		transition: transform 0.2s ease, color 0.2s ease;
-	}
-
-	.star-ignored-btn.ignored {
-		color: var(--yellow-color);
-		transform: scale(1.25);
+	.duo-progress-fill {
+		height: 100%;
+		background: var(--green-color);
+		border-radius: 9999px;
+		transition: width 0.3s ease;
 	}
 
 	.study-box {
@@ -302,6 +287,27 @@
 		cursor: pointer;
 		min-height: 260px;
 		justify-content: space-between;
+		position: relative;
+	}
+
+	.study-star-btn {
+		position: absolute;
+		top: 1rem;
+		right: 1rem;
+		background: none;
+		border: none;
+		font-size: 1.6rem;
+		color: var(--text-muted);
+		cursor: pointer;
+		line-height: 1;
+		padding: 0.25rem;
+		transition: transform 0.2s ease, color 0.2s ease;
+	}
+
+	.study-star-btn.ignored {
+		color: var(--yellow-color);
+		transform: scale(1.25);
+		filter: drop-shadow(0 0 6px rgba(250, 204, 21, 0.5));
 	}
 
 	.label {

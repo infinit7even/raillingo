@@ -67,7 +67,6 @@
 			const scoreDesc = calculateSimilarity(userInput, card.description || '');
 			return scoreDesc;
 		} else {
-			// desc-to-title or photo-to-title
 			const scoreTitle = calculateSimilarity(userInput, card.title || '');
 			const scoreFull = card.fullName ? calculateSimilarity(userInput, card.fullName) : 0;
 			return Math.max(scoreTitle, scoreFull);
@@ -104,37 +103,23 @@
 </script>
 
 <div class="freewrite-container">
-	<div class="header">
-		<span class="duo-badge">
-			{#if subMode === 'title-to-desc'}
-				Acronimo ➔ Descrizione
-			{:else if subMode === 'desc-to-title'}
-				Descrizione ➔ Acronimo
-			{:else}
-				Foto ➔ Scrittura
-			{/if}
-		</span>
-
-		<div class="header-right">
-			<span class="counter-text">{currentIndex + 1} / {totalCards}</span>
-			<button
-				class="star-ignored-btn"
-				class:ignored={isIgnored}
-				onclick={toggleIgnored}
-				title={isIgnored ? 'Card ignorata' : 'Ignora card durante il mescolaggio'}
-			>
-				★
-			</button>
-		</div>
-	</div>
-
 	<!-- Duolingo Progress Track -->
 	<div class="duo-progress-track">
 		<div class="duo-progress-fill" style="width: {((currentIndex + 1) / totalCards) * 100}%"></div>
 	</div>
 
-	<!-- Prompt Card -->
+	<!-- Prompt Card with Star Ignored Button -->
 	<div class="prompt-card duo-card">
+		<button
+			class="prompt-star-btn"
+			class:ignored={isIgnored}
+			onclick={toggleIgnored}
+			title={isIgnored ? 'Card ignorata (Clicca per riattivare)' : 'Ignora card durante il mescolaggio'}
+			aria-label="Ignora card"
+		>
+			★
+		</button>
+
 		{#if subMode === 'title-to-desc'}
 			<span class="label">Acronimo / Titolo:</span>
 			<h2 class="title">
@@ -249,41 +234,7 @@
 		margin: 0 auto;
 		display: flex;
 		flex-direction: column;
-		gap: 1.15rem;
-	}
-
-	.header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-	}
-
-	.header-right {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-	}
-
-	.counter-text {
-		font-size: 0.88rem;
-		font-weight: 800;
-		color: var(--text-muted);
-	}
-
-	.star-ignored-btn {
-		background: none;
-		border: none;
-		font-size: 1.6rem;
-		color: var(--text-muted);
-		cursor: pointer;
-		line-height: 1;
-		padding: 0;
-		transition: transform 0.2s ease, color 0.2s ease;
-	}
-
-	.star-ignored-btn.ignored {
-		color: var(--yellow-color);
-		transform: scale(1.25);
+		gap: 1rem;
 	}
 
 	.duo-progress-track {
@@ -306,6 +257,28 @@
 		background: var(--card-bg);
 		border-radius: 20px;
 		padding: 1.25rem;
+		position: relative;
+		padding-right: 3rem;
+	}
+
+	.prompt-star-btn {
+		position: absolute;
+		top: 1rem;
+		right: 1rem;
+		background: none;
+		border: none;
+		font-size: 1.6rem;
+		color: var(--text-muted);
+		cursor: pointer;
+		line-height: 1;
+		padding: 0.25rem;
+		transition: transform 0.2s ease, color 0.2s ease;
+	}
+
+	.prompt-star-btn.ignored {
+		color: var(--yellow-color);
+		transform: scale(1.25);
+		filter: drop-shadow(0 0 6px rgba(250, 204, 21, 0.5));
 	}
 
 	.label {
