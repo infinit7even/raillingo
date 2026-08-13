@@ -23,19 +23,20 @@
 
 	let flipped = $state(false);
 	let currentImageIndex = $state(0);
-	let isIgnored = $state(false);
+	let ignoredIds = $state<Set<string>>(new Set());
 
 	onMount(() => {
-		const unsub = ignoredCardsStore.subscribe(() => {
-			isIgnored = ignoredCardsStore.isIgnored(card.id);
+		const unsub = ignoredCardsStore.subscribe((ids) => {
+			ignoredIds = ids;
 		});
 		return unsub;
 	});
 
+	let isIgnored = $derived(card ? ignoredIds.has(card.id) : false);
+
 	$effect(() => {
 		flipped = false;
 		currentImageIndex = 0;
-		isIgnored = ignoredCardsStore.isIgnored(card.id);
 	});
 
 	function handleCardClick() {
@@ -48,17 +49,13 @@
 	async function toggleIgnored(e: MouseEvent) {
 		e.stopPropagation();
 		const cardToToggle = card;
-		await ignoredCardsStore.toggleIgnored(cardToToggle.id);
-		isIgnored = ignoredCardsStore.isIgnored(cardToToggle.id);
+		const isNowIgnored = await ignoredCardsStore.toggleIgnored(cardToToggle.id);
 
 		toastStore.show({
-			message: isIgnored ? '⭐ Scheda ignorata dal ripasso' : '✨ Scheda riattivata nel ripasso',
+			message: isNowIgnored ? '⭐ Scheda ignorata dal ripasso' : '✨ Scheda riattivata nel ripasso',
 			actionLabel: 'Annulla',
 			onAction: async () => {
 				await ignoredCardsStore.toggleIgnored(cardToToggle.id);
-				if (card && card.id === cardToToggle.id) {
-					isIgnored = ignoredCardsStore.isIgnored(cardToToggle.id);
-				}
 			}
 		});
 	}

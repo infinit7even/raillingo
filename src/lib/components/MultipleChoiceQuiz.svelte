@@ -24,16 +24,16 @@
 	let wrongAttempts = $state<Set<string>>(new Set());
 	let isSolved = $state(false);
 	let questionTitle = $state('');
-	let isIgnored = $state(false);
+	let ignoredIds = $state<Set<string>>(new Set());
 
 	onMount(() => {
-		const unsub = ignoredCardsStore.subscribe(() => {
-			if (targetCard) {
-				isIgnored = ignoredCardsStore.isIgnored(targetCard.id);
-			}
+		const unsub = ignoredCardsStore.subscribe((ids) => {
+			ignoredIds = ids;
 		});
 		return unsub;
 	});
+
+	let isIgnored = $derived(targetCard ? ignoredIds.has(targetCard.id) : false);
 
 	$effect(() => {
 		if (targetCard) {
@@ -41,7 +41,6 @@
 			selectedOptionId = null;
 			wrongAttempts = new Set();
 			isSolved = false;
-			isIgnored = ignoredCardsStore.isIgnored(targetCard.id);
 		}
 	});
 
@@ -85,21 +84,17 @@
 		if (!targetCard) return;
 
 		const cardToToggle = targetCard;
-		await ignoredCardsStore.toggleIgnored(cardToToggle.id);
-		isIgnored = ignoredCardsStore.isIgnored(cardToToggle.id);
+		const isNowIgnored = await ignoredCardsStore.toggleIgnored(cardToToggle.id);
 
 		toastStore.show({
-			message: isIgnored ? '⭐ Scheda ignorata dal ripasso' : '✨ Scheda riattivata nel ripasso',
+			message: isNowIgnored ? '⭐ Scheda ignorata dal ripasso' : '✨ Scheda riattivata nel ripasso',
 			actionLabel: 'Annulla',
 			onAction: async () => {
 				await ignoredCardsStore.toggleIgnored(cardToToggle.id);
-				if (targetCard && targetCard.id === cardToToggle.id) {
-					isIgnored = ignoredCardsStore.isIgnored(cardToToggle.id);
-				}
 			}
 		});
 
-		if (isIgnored) {
+		if (isNowIgnored) {
 			setTimeout(() => {
 				if (targetCard && targetCard.id === cardToToggle.id && ignoredCardsStore.isIgnored(cardToToggle.id)) {
 					onNext();

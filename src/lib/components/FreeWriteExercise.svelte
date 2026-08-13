@@ -16,25 +16,22 @@
 	let userInput = $state('');
 	let submitted = $state(false);
 	let inputEl = $state<HTMLInputElement | HTMLTextAreaElement | null>(null);
-	let isIgnored = $state(false);
+	let ignoredIds = $state<Set<string>>(new Set());
 
 	onMount(() => {
-		const unsub = ignoredCardsStore.subscribe(() => {
-			if (card) {
-				isIgnored = ignoredCardsStore.isIgnored(card.id);
-			}
+		const unsub = ignoredCardsStore.subscribe((ids) => {
+			ignoredIds = ids;
 		});
 		return unsub;
 	});
+
+	let isIgnored = $derived(card ? ignoredIds.has(card.id) : false);
 
 	$effect(() => {
 		const _cardId = card.id;
 		const _subMode = subMode;
 		userInput = '';
 		submitted = false;
-		if (card) {
-			isIgnored = ignoredCardsStore.isIgnored(card.id);
-		}
 		tick().then(() => {
 			const isTouchDevice =
 				typeof window !== 'undefined' &&
@@ -79,17 +76,13 @@
 		if (!card) return;
 
 		const cardToToggle = card;
-		await ignoredCardsStore.toggleIgnored(cardToToggle.id);
-		isIgnored = ignoredCardsStore.isIgnored(cardToToggle.id);
+		const isNowIgnored = await ignoredCardsStore.toggleIgnored(cardToToggle.id);
 
 		toastStore.show({
-			message: isIgnored ? '⭐ Scheda ignorata dal ripasso' : '✨ Scheda riattivata nel ripasso',
+			message: isNowIgnored ? '⭐ Scheda ignorata dal ripasso' : '✨ Scheda riattivata nel ripasso',
 			actionLabel: 'Annulla',
 			onAction: async () => {
 				await ignoredCardsStore.toggleIgnored(cardToToggle.id);
-				if (card && card.id === cardToToggle.id) {
-					isIgnored = ignoredCardsStore.isIgnored(cardToToggle.id);
-				}
 			}
 		});
 	}
