@@ -7,10 +7,16 @@
 	import { page } from '$app/state';
 	import { fade } from 'svelte/transition';
 	import { navStore } from '$lib/stores/navStore';
+	import { cardsStore } from '$lib/stores/cardsStore';
+	import { onMount } from 'svelte';
 
 	let { data, children } = $props();
 
 	let user = $derived(data?.user);
+
+	onMount(() => {
+		cardsStore.hydrate(data?.initialCards);
+	});
 
 	// Chiudi la tendina mobile ad ogni navigazione
 	onNavigate(() => {
@@ -95,8 +101,8 @@
 
 <svelte:head>
 	<title>Raillingo</title>
-	<meta name="robots" content="noindex, nofollow" />
-	<meta name="googlebot" content="noindex, nofollow" />
+	<meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex" />
+	<meta name="googlebot" content="noindex, nofollow, noarchive, nosnippet, noimageindex" />
 	<meta
 		name="description"
 		content="Raillingo - PWA in stile Duolingo per imparare e memorizzare gli acronimi e i concetti del corso ferroviario RFI."

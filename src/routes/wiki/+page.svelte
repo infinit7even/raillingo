@@ -171,7 +171,10 @@
 			{/if}
 
 			{#if !user}
-				<a href="/api/auth/login" class="duo-btn duo-btn-blue login-save-ignored-btn discord-wiki-login-btn">
+				<a
+					href="/api/auth/login"
+					class="duo-btn duo-btn-blue login-save-ignored-btn discord-wiki-login-btn"
+				>
 					<svg
 						class="discord-icon-mini"
 						xmlns="http://www.w3.org/2000/svg"
@@ -257,7 +260,8 @@
 						<div class="expanded-details">
 							{#if card.fullName}
 								<div class="fullname-text-detail">
-									<strong>Titolo completo:</strong> {card.fullName}
+									<strong>Titolo completo:</strong>
+									{card.fullName}
 								</div>
 							{/if}
 
@@ -281,7 +285,13 @@
 							{#if card.images && card.images.length > 0}
 								<div class="gallery">
 									{#each card.images as imgUrl}
-										<img src={imgUrl} alt={card.title} class="gallery-thumb" />
+										<img
+											src={imgUrl}
+											alt={card.title}
+											class="gallery-thumb"
+											loading="lazy"
+											decoding="async"
+										/>
 									{/each}
 								</div>
 							{/if}
@@ -462,7 +472,9 @@
 		cursor: pointer;
 		padding: 0.25rem;
 		line-height: 1;
-		transition: transform 0.2s ease, color 0.2s ease;
+		transition:
+			transform 0.2s ease,
+			color 0.2s ease;
 	}
 
 	.star-ignored-btn.ignored {
@@ -575,13 +587,11 @@
 		box-sizing: border-box;
 		text-decoration: none;
 		line-height: 1;
-		box-shadow: none !important;
-		transform: none !important;
 	}
 
 	.filter-ignored-chip {
 		background: var(--card-bg-subtle);
-		border: 1.5px solid var(--border-color) !important;
+		border: 1.5px solid var(--border-color);
 		color: var(--text-color);
 		cursor: pointer;
 		transition: all 0.15s ease;
@@ -589,19 +599,14 @@
 
 	.filter-ignored-chip.active-filter {
 		background: rgba(250, 204, 21, 0.18);
-		border-color: var(--yellow-color) !important;
+		border-color: var(--yellow-color);
 		color: var(--yellow-color);
-	}
-
-	.clear-all-ignored-btn {
-		background-color: var(--purple-color);
-		border: 1.5px solid var(--purple-depth) !important;
-		color: #ffffff;
+		box-shadow: 0 2px 8px rgba(250, 204, 21, 0.2);
 	}
 
 	.discord-wiki-login-btn {
 		background-color: #5865f2;
-		border: 1.5px solid #4752c4 !important;
+		border: 1.5px solid #4752c4;
 		color: #ffffff;
 	}
 

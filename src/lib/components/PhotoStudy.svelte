@@ -74,7 +74,9 @@
 				class:ignored={isIgnored}
 				onclick={toggleIgnored}
 				aria-label={isIgnored ? 'Card ignorata' : 'Ignora card'}
-				title={isIgnored ? 'Card ignorata (Clicca per riattivare)' : 'Ignora card durante il mescolaggio'}
+				title={isIgnored
+					? 'Card ignorata (Clicca per riattivare)'
+					: 'Ignora card durante il mescolaggio'}
 			>
 				★
 			</button>
@@ -84,6 +86,8 @@
 					src={card.images[currentImageIndex]}
 					alt="Foto di studio per {card.title}"
 					class="photo-main"
+					loading="lazy"
+					decoding="async"
 				/>
 				{#if card.images.length > 1}
 					<button class="duo-btn duo-btn-gray img-badge" onclick={nextImage}>
@@ -180,7 +184,9 @@
 		color: rgba(255, 255, 255, 0.7);
 		cursor: pointer;
 		line-height: 1;
-		transition: transform 0.2s ease, color 0.2s ease;
+		transition:
+			transform 0.2s ease,
+			color 0.2s ease;
 	}
 
 	.photo-star-btn.ignored {

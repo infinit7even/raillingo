@@ -85,7 +85,6 @@
 <svelte:window onkeydown={handleKeyDown} />
 
 <div class="flashcard-container">
-
 	<!-- 3D Flip Card Scene -->
 	<div
 		class="scene"
@@ -102,7 +101,9 @@
 					class:ignored={isIgnored}
 					onclick={toggleIgnored}
 					aria-label={isIgnored ? 'Card ignorata' : 'Ignora card'}
-					title={isIgnored ? 'Card ignorata (Clicca per riattivare)' : 'Ignora card durante il mescolaggio'}
+					title={isIgnored
+						? 'Card ignorata (Clicca per riattivare)'
+						: 'Ignora card durante il mescolaggio'}
 				>
 					★
 				</button>
@@ -123,6 +124,8 @@
 									src={card.images[currentImageIndex]}
 									alt="Foto di studio"
 									class="front-photo-img"
+									loading="lazy"
+									decoding="async"
 								/>
 								{#if card.images.length > 1}
 									<button class="duo-btn duo-btn-gray photo-count-btn" onclick={nextImage}>
@@ -182,6 +185,8 @@
 								src={card.images[currentImageIndex]}
 								alt="Foto card {card.title}"
 								class="card-img"
+								loading="lazy"
+								decoding="async"
 							/>
 							{#if card.images.length > 1}
 								<button class="duo-btn duo-btn-purple next-img-btn" onclick={nextImage}>
@@ -239,7 +244,9 @@
 		cursor: pointer;
 		line-height: 1;
 		padding: 0.25rem;
-		transition: transform 0.2s ease, color 0.2s ease;
+		transition:
+			transform 0.2s ease,
+			color 0.2s ease;
 	}
 
 	.card-star-btn.ignored {
@@ -247,8 +254,6 @@
 		transform: scale(1.25);
 		filter: drop-shadow(0 0 6px rgba(250, 204, 21, 0.5));
 	}
-
-
 
 	/* 3D Scene */
 	.scene {
@@ -325,8 +330,6 @@
 		border: 1.5px solid var(--green-color);
 		margin-top: 0.2rem;
 	}
-
-
 
 	.description-box {
 		padding: 1.1rem;

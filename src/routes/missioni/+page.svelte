@@ -61,6 +61,11 @@
 	let { data } = $props<{ data?: { user?: { username: string; email?: string } | null } }>();
 	let user = $derived(data?.user || null);
 
+	async function logout() {
+		await fetch('/api/auth/logout', { method: 'POST' });
+		window.location.href = '/';
+	}
+
 	function claimReward(missionId: string) {
 		claimedMissions[missionId] = true;
 	}
@@ -89,7 +94,7 @@
 						dispositivi.</span
 					>
 				</div>
-				<a href="/api/auth/logout" class="duo-btn duo-btn-gray sync-btn"> DISCONNETTI </a>
+				<button class="duo-btn duo-btn-gray sync-btn" onclick={logout}> DISCONNETTI </button>
 			</div>
 		{:else}
 			<div class="sync-info-row">

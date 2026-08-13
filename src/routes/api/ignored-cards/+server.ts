@@ -1,23 +1,18 @@
 import { json, type RequestHandler } from '@sveltejs/kit';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { readSession } from '$lib/server/auth';
+import { isSameOriginRequest } from '$lib/server/csrf';
+import { invalidateUsers, readUsers } from '$lib/server/dataCache';
 
 const USERS_FILE_PATH = path.resolve('data/users.json');
-
-async function readUsers(): Promise<any[]> {
-	try {
-		const raw = await fs.readFile(USERS_FILE_PATH, 'utf-8');
-		return JSON.parse(raw);
-	} catch {
-		return [];
-	}
-}
 
 async function writeUsers(users: any[]): Promise<boolean> {
 	try {
 		const dir = path.dirname(USERS_FILE_PATH);
 		await fs.mkdir(dir, { recursive: true });
 		await fs.writeFile(USERS_FILE_PATH, JSON.stringify(users, null, 2), 'utf-8');
+		invalidateUsers();
 		return true;
 	} catch {
 		return false;
@@ -36,18 +31,15 @@ export const GET: RequestHandler = async ({ cookies }) => {
 		}
 	}
 
-	const userSession = cookies.get('user_session') || cookies.get('admin_session');
-	if (userSession) {
+	const session = readSession(cookies);
+	if (session && session.userId) {
 		try {
-			const parsed = JSON.parse(userSession);
-			if (parsed && parsed.userId) {
-				const users = await readUsers();
-				const user = users.find((u) => String(u.discordId).trim() === String(parsed.userId).trim());
-				if (user && Array.isArray(user.ignoredCardIds)) {
-					// Merge user saved ignored cards with cookie
-					const merged = Array.from(new Set([...ignoredCardIds, ...user.ignoredCardIds]));
-					ignoredCardIds = merged;
-				}
+			const users = await readUsers<any[]>();
+			const user = users.find((u) => String(u.discordId).trim() === String(session.userId).trim());
+			if (user && Array.isArray(user.ignoredCardIds)) {
+				// Merge user saved ignored cards with cookie
+				const merged = Array.from(new Set([...ignoredCardIds, ...user.ignoredCardIds]));
+				ignoredCardIds = merged;
 			}
 		} catch {
 			// Cookie invalid or unreadable
@@ -57,7 +49,13 @@ export const GET: RequestHandler = async ({ cookies }) => {
 	return json({ ignoredCardIds });
 };
 
-export const POST: RequestHandler = async ({ request, cookies }) => {
+export const POST: RequestHandler = async (event) => {
+	const { request, cookies } = event;
+
+	if (!isSameOriginRequest(event)) {
+		return json({ error: 'Origine non consentita' }, { status: 403 });
+	}
+
 	const { ignoredCardIds } = await request.json();
 
 	if (!Array.isArray(ignoredCardIds)) {
@@ -73,19 +71,16 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 	});
 
 	// If logged in, associate with user object in data/users.json
-	const userSession = cookies.get('user_session') || cookies.get('admin_session');
-	if (userSession) {
+	const session = readSession(cookies);
+	if (session && session.userId) {
 		try {
-			const parsed = JSON.parse(userSession);
-			if (parsed && parsed.userId) {
-				const users = await readUsers();
-				const userIndex = users.findIndex(
-					(u) => String(u.discordId).trim() === String(parsed.userId).trim()
-				);
-				if (userIndex >= 0) {
-					users[userIndex].ignoredCardIds = ignoredCardIds;
-					await writeUsers(users);
-				}
+			const users = await readUsers<any[]>();
+			const userIndex = users.findIndex(
+				(u) => String(u.discordId).trim() === String(session.userId).trim()
+			);
+			if (userIndex >= 0) {
+				users[userIndex].ignoredCardIds = ignoredCardIds;
+				await writeUsers(users);
 			}
 		} catch (e) {
 			console.error('Errore salvataggio card ignorate utente:', e);

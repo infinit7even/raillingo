@@ -118,7 +118,13 @@
 							<div class="flip-card-inner" class:is-flipped={isFlipped}>
 								<!-- FRONT FACE (Visual Image + Text Overlay: Acronimo + Titolo/Descrizione breve) -->
 								<div class="face front-face">
-									<img src={card.images![imgIdx]} alt={card.title} class="front-bg-img" />
+									<img
+										src={card.images![imgIdx]}
+										alt={card.title}
+										class="front-bg-img"
+										loading="lazy"
+										decoding="async"
+									/>
 									<div class="front-img-overlay"></div>
 
 									<div class="front-body">
@@ -148,7 +154,13 @@
 										</div>
 
 										<div class="back-media-box">
-											<img src={card.images![imgIdx]} alt={card.title} class="back-preview-img" />
+											<img
+												src={card.images![imgIdx]}
+												alt={card.title}
+												class="back-preview-img"
+												loading="lazy"
+												decoding="async"
+											/>
 											{#if card.images!.length > 1}
 												<button class="next-photo-btn" onclick={(e) => nextImage(e, card)}>
 													Foto successiva ({imgIdx + 1}/{card.images!.length})
@@ -281,7 +293,9 @@
 		cursor: pointer;
 		line-height: 1;
 		padding: 0;
-		transition: transform 0.2s ease, color 0.2s ease;
+		transition:
+			transform 0.2s ease,
+			color 0.2s ease;
 	}
 
 	.star-ignored-btn.ignored {

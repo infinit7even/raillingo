@@ -2,11 +2,18 @@ import { json, type RequestHandler } from '@sveltejs/kit';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { isAuthorizedAdmin } from '$lib/server/auth';
+import { isSameOriginRequest } from '$lib/server/csrf';
 
 const ALLOWED_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif']);
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
-export const POST: RequestHandler = async ({ request, cookies }) => {
+export const POST: RequestHandler = async (event) => {
+	const { request, cookies } = event;
+
+	if (!isSameOriginRequest(event)) {
+		return json({ error: 'Origine non consentita' }, { status: 403 });
+	}
+
 	// Verifica autorizzazione admin prima dell'upload
 	if (!isAuthorizedAdmin(cookies)) {
 		return json(

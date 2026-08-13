@@ -1,6 +1,7 @@
 import { redirect, type RequestHandler } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
-import { getAdminIds, sessionCookieOptions } from '$lib/server/auth';
+import { getAdminIds, sessionCookieOptions, signSession } from '$lib/server/auth';
+import { invalidateUsers, readUsers } from '$lib/server/dataCache';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
@@ -30,12 +31,7 @@ interface StoredUser {
 }
 
 async function readUsersFromFile(): Promise<StoredUser[]> {
-	try {
-		const data = await fs.readFile(USERS_FILE_PATH, 'utf-8');
-		return JSON.parse(data);
-	} catch {
-		return [];
-	}
+	return readUsers<StoredUser[]>();
 }
 
 async function writeUsersToFile(users: StoredUser[]): Promise<boolean> {
@@ -43,6 +39,7 @@ async function writeUsersToFile(users: StoredUser[]): Promise<boolean> {
 		const dir = path.dirname(USERS_FILE_PATH);
 		await fs.mkdir(dir, { recursive: true });
 		await fs.writeFile(USERS_FILE_PATH, JSON.stringify(users, null, 2), 'utf-8');
+		invalidateUsers();
 		return true;
 	} catch {
 		return false;
@@ -60,6 +57,15 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 	const code = url.searchParams.get('code');
 	if (!code) {
 		throw redirect(302, '/admin?error=nocode');
+	}
+
+	// Verifica anti CSRF: il parametro `state` deve corrispondere al cookie.
+	const state = url.searchParams.get('state');
+	const storedState = cookies.get('oauth_state');
+	cookies.delete('oauth_state', { path: '/', secure: url.protocol === 'https:' });
+	if (!state || !storedState || state !== storedState) {
+		console.warn('Stato OAuth non valido o mancante.');
+		throw redirect(302, '/admin?error=invalid_state');
 	}
 
 	const redirectUri = `${url.origin}/api/auth/callback`;
@@ -161,7 +167,7 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 
 		cookies.set(
 			'admin_session',
-			JSON.stringify(sessionData),
+			signSession(sessionData),
 			sessionCookieOptions(url.protocol === 'https:')
 		);
 

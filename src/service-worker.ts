@@ -8,8 +8,7 @@ const DATA_CACHE = `rf-data-v${version}`;
 const PRECACHE_ASSETS = [...build, ...files];
 
 // Risorse critiche da cachare esplicitamente anche se non nel build
-const CRITICAL_PATHS = ['/data/cards.json', '/manifest.webmanifest'];
-
+const CRITICAL_PATHS = ['/manifest.webmanifest'];
 // ─── INSTALL: pre-cache tutti gli asset e le risorse critiche ──────────────
 self.addEventListener('install', (event: any) => {
 	event.waitUntil(
@@ -61,7 +60,13 @@ self.addEventListener('fetch', (event: any) => {
 	const url = new URL(request.url);
 	if (url.origin !== self.location.origin) return;
 
-	// API routes: Network-First, fallback solo per /api/cards (i dati)
+	// /api/cards (i dati): Stale-While-Revalidate per risposte rapide offline
+	if (url.pathname === '/api/cards') {
+		event.respondWith(staleWhileRevalidate(request, DATA_CACHE));
+		return;
+	}
+
+	// Altre API routes: Network-First
 	if (url.pathname.startsWith('/api/')) {
 		event.respondWith(networkFirst(request));
 		return;

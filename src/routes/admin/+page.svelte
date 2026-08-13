@@ -12,6 +12,11 @@
 	let user = $derived(data.user);
 	let error = $derived(data.error);
 
+	async function logout() {
+		await fetch('/api/auth/logout', { method: 'POST' });
+		window.location.href = '/';
+	}
+
 	// Form state for creating / editing card
 	let editingCard = $state<Card | null>(null);
 	let searchQuery = $state('');
@@ -160,7 +165,7 @@
 					<button class="duo-btn duo-btn-blue export-btn" onclick={exportJSON}>
 						📥 ESPORTA DATI JSON
 					</button>
-					<a href="/api/auth/logout" class="duo-btn duo-btn-gray logout-btn"> Esci </a>
+					<button class="duo-btn duo-btn-gray logout-btn" onclick={logout}> Esci </button>
 				</div>
 			</div>
 

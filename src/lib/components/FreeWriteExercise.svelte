@@ -109,14 +109,15 @@
 </script>
 
 <div class="freewrite-container">
-
 	<!-- Prompt Card with Star Ignored Button -->
 	<div class="prompt-card duo-card">
 		<button
 			class="prompt-star-btn"
 			class:ignored={isIgnored}
 			onclick={toggleIgnored}
-			title={isIgnored ? 'Card ignorata (Clicca per riattivare)' : 'Ignora card durante il mescolaggio'}
+			title={isIgnored
+				? 'Card ignorata (Clicca per riattivare)'
+				: 'Ignora card durante il mescolaggio'}
 			aria-label="Ignora card"
 		>
 			★
@@ -125,7 +126,13 @@
 		{#if subMode === 'photo-to-title'}
 			<span class="prompt-badge-label">Descrivi l'immagine:</span>
 			{#if card.images && card.images.length > 0}
-				<img src={card.images[0]} alt="Foto per esercizio" class="prompt-img" />
+				<img
+					src={card.images[0]}
+					alt="Foto per esercizio"
+					class="prompt-img"
+					loading="lazy"
+					decoding="async"
+				/>
 			{/if}
 		{:else}
 			<span class="prompt-badge-label">Domanda:</span>
@@ -155,8 +162,7 @@
 				disabled={submitted}
 				onkeydown={handleKeyDown}
 				autocomplete="off"
-				spellcheck="false"
-			></textarea>
+				spellcheck="false"></textarea>
 		{:else}
 			<input
 				type="text"
@@ -223,9 +229,7 @@
 				<p class="user-text">{userInput || '(Nessun testo digitato)'}</p>
 			</div>
 
-			<button class="duo-btn duo-btn-green next-btn" onclick={onNext}>
-				PROSSIMA SCHEDA
-			</button>
+			<button class="duo-btn duo-btn-green next-btn" onclick={onNext}> PROSSIMA SCHEDA </button>
 		</div>
 	{/if}
 </div>
@@ -239,8 +243,6 @@
 		flex-direction: column;
 		gap: 1rem;
 	}
-
-
 
 	.prompt-card {
 		background: var(--card-bg);
@@ -261,7 +263,9 @@
 		cursor: pointer;
 		line-height: 1;
 		padding: 0.25rem;
-		transition: transform 0.2s ease, color 0.2s ease;
+		transition:
+			transform 0.2s ease,
+			color 0.2s ease;
 	}
 
 	.prompt-star-btn.ignored {

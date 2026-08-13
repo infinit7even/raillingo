@@ -1,14 +1,32 @@
 import { redirect, type RequestHandler } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
+import crypto from 'node:crypto';
 
-const CLIENT_ID = env.DISCORD_CLIENT_ID || process.env.DISCORD_CLIENT_ID || '1533519975476629564';
+const CLIENT_ID = env.DISCORD_CLIENT_ID || process.env.DISCORD_CLIENT_ID;
 
-export const GET: RequestHandler = async ({ url }) => {
+export const GET: RequestHandler = async ({ url, cookies }) => {
+	if (!CLIENT_ID) {
+		console.error('DISCORD_CLIENT_ID non configurato!');
+		throw redirect(302, '/admin?error=config_error');
+	}
+
+	const secure = url.protocol === 'https:';
 	const redirectUri = `${url.origin}/api/auth/callback`;
 	const scope = encodeURIComponent('identify');
+
+	// Anti login-CSRF: `state` casuale salvato in un cookie di breve durata.
+	const state = crypto.randomBytes(16).toString('hex');
+	cookies.set('oauth_state', state, {
+		path: '/',
+		httpOnly: true,
+		sameSite: 'lax',
+		secure,
+		maxAge: 60 * 10 // 10 minuti
+	});
+
 	const discordAuthUrl = `https://discord.com/api/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(
 		redirectUri
-	)}&response_type=code&scope=${scope}`;
+	)}&response_type=code&scope=${scope}&state=${encodeURIComponent(state)}`;
 
 	throw redirect(302, discordAuthUrl);
 };

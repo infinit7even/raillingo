@@ -6,10 +6,26 @@ class CardsStore {
 	private loading = false;
 	private listeners = new Set<(cards: Card[]) => void>();
 
+	private hydrated = false;
+
 	constructor() {
-		if (browser) {
-			this.loadFromStorageOrApi();
+		// L'inizializzazione avviene tramite hydrate() con i dati SSR,
+		// evitando un secondo fetch di /api/cards al primo caricamento.
+	}
+
+	/** Inizializza lo store con i dati provenienti dal server (SSR). */
+	public hydrate(initialCards: Card[] | null | undefined) {
+		if (this.hydrated) return;
+		this.hydrated = true;
+
+		if (initialCards && initialCards.length > 0) {
+			this.cards = initialCards;
+			this.notify();
+			return;
 		}
+
+		// Fallback: cache locale + API (accesso senza dati SSR)
+		this.loadFromStorageOrApi();
 	}
 
 	public subscribe(run: (cards: Card[]) => void): () => void {
@@ -198,4 +214,3 @@ class CardsStore {
 }
 
 export const cardsStore = new CardsStore();
-
