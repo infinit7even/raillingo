@@ -157,7 +157,7 @@
 				class:active-filter={showOnlyIgnored}
 				onclick={() => (showOnlyIgnored = !showOnlyIgnored)}
 			>
-				⭐ Solo Ignorate ({ignoredCount})
+				⭐ Ignorate ({ignoredCount})
 			</button>
 
 			{#if ignoredIds.size > 0}
@@ -575,11 +575,13 @@
 		box-sizing: border-box;
 		text-decoration: none;
 		line-height: 1;
+		box-shadow: none !important;
+		transform: none !important;
 	}
 
 	.filter-ignored-chip {
 		background: var(--card-bg-subtle);
-		border: 1.5px solid var(--border-color);
+		border: 1.5px solid var(--border-color) !important;
 		color: var(--text-color);
 		cursor: pointer;
 		transition: all 0.15s ease;
@@ -587,14 +589,19 @@
 
 	.filter-ignored-chip.active-filter {
 		background: rgba(250, 204, 21, 0.18);
-		border-color: var(--yellow-color);
+		border-color: var(--yellow-color) !important;
 		color: var(--yellow-color);
-		box-shadow: 0 2px 8px rgba(250, 204, 21, 0.2);
+	}
+
+	.clear-all-ignored-btn {
+		background-color: var(--purple-color);
+		border: 1.5px solid var(--purple-depth) !important;
+		color: #ffffff;
 	}
 
 	.discord-wiki-login-btn {
 		background-color: #5865f2;
-		border: 1.5px solid #4752c4;
+		border: 1.5px solid #4752c4 !important;
 		color: #ffffff;
 	}
 
