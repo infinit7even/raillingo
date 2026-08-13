@@ -163,7 +163,7 @@
 	.main-content {
 		flex: 1;
 		width: 100%;
-		max-width: 1200px;
+		max-width: 600px;
 		margin: 0 auto;
 		padding: 0.85rem 0.85rem 2.8rem 0.85rem;
 		box-sizing: border-box;

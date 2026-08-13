@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { page } from '$app/state';
+	import { fly, fade } from 'svelte/transition';
 	import { navStore } from '$lib/stores/navStore';
 	import { statsStore, type StatsData } from '$lib/stores/statsStore';
 
@@ -15,6 +17,64 @@
 
 	let totalXP = $derived(stats.quizCorrect * 15 + stats.cardsStudied * 5);
 	let gems = $derived(stats.quizCorrect * 10 + 100);
+
+	let currentPath = $derived(page.url.pathname);
+
+	const pageHeaders: Record<
+		string,
+		{ title: string; subtitle?: string; icon: string; variant: 'green' | 'blue' | 'purple' | 'orange' | 'red' }
+	> = {
+		'/flashcard': {
+			title: 'Ripasso & Flashcard',
+			subtitle: 'Memoria visiva e concetti',
+			icon: '/emoji/open_book_3d.png',
+			variant: 'green'
+		},
+		'/quiz': {
+			title: 'Quiz Scelta Multipla',
+			subtitle: 'Metti alla prova la memoria',
+			icon: '/emoji/star_3d.png',
+			variant: 'purple'
+		},
+		'/reels': {
+			title: 'Reels Ferroviari',
+			subtitle: 'Feed dinamico schede visive',
+			icon: '/emoji/camera_3d.png',
+			variant: 'orange'
+		},
+		'/scrittura': {
+			title: 'Scrittura Libera',
+			subtitle: 'Digitazione e memorizzazione',
+			icon: '/emoji/writing_hand_3d_default.png',
+			variant: 'red'
+		},
+		'/wiki': {
+			title: 'Wiki & Dizionario',
+			subtitle: 'Consultazione acronimi',
+			icon: '/emoji/books_3d.png',
+			variant: 'blue'
+		},
+		'/missioni': {
+			title: 'Missioni & Sfide',
+			subtitle: 'Traguardi giornalieri',
+			icon: '/emoji/bullseye_3d.png',
+			variant: 'green'
+		},
+		'/admin': {
+			title: 'Pannello Admin',
+			subtitle: 'Gestione schede',
+			icon: '/emoji/star_3d.png',
+			variant: 'blue'
+		},
+		'/privacy': {
+			title: 'Privacy Policy',
+			subtitle: 'Informazioni legali',
+			icon: '/emoji/books_3d.png',
+			variant: 'blue'
+		}
+	};
+
+	let activeHeader = $derived(pageHeaders[currentPath] || null);
 
 	onMount(() => {
 		const unNav = navStore.subscribe((o) => (isNavOpen = o));
@@ -43,30 +103,56 @@
 		</div>
 	</button>
 
-	<!-- Statistiche (Serie, Gemme, XP) -->
-	<a href="/missioni" class="header-stats" title="Clicca per aprire le Missioni ed i Dettagli">
-		<div class="hstat-item streak">
-			<img src="/emoji/fire_3d.png" alt="Serie" class="hstat-emoji" />
-			<div class="hstat-text">
-				<span class="hstat-lbl">Serie</span>
-				<span class="hstat-val">{stats.streakDays}</span>
-			</div>
-		</div>
-		<div class="hstat-item gems">
-			<img src="/emoji/gem_stone_3d.png" alt="Gemme" class="hstat-emoji" />
-			<div class="hstat-text">
-				<span class="hstat-lbl">Gemme</span>
-				<span class="hstat-val">{gems}</span>
-			</div>
-		</div>
-		<div class="hstat-item hearts">
-			<img src="/emoji/high_voltage_3d.png" alt="XP" class="hstat-emoji" />
-			<div class="hstat-text">
-				<span class="hstat-lbl">XP</span>
-				<span class="hstat-val">{totalXP}</span>
-			</div>
-		</div>
-	</a>
+	<!-- Content Area in Header: Stats on Home ('/'), Colored Banner on Inner Pages -->
+	<div class="header-dynamic-slot">
+		{#key currentPath}
+			{#if currentPath === '/'}
+				<a
+					href="/missioni"
+					class="header-stats"
+					title="Clicca per aprire le Missioni ed i Dettagli"
+					in:fly={{ y: -10, duration: 250, delay: 50 }}
+					out:fade={{ duration: 100 }}
+				>
+					<div class="hstat-item streak">
+						<img src="/emoji/fire_3d.png" alt="Serie" class="hstat-emoji" />
+						<div class="hstat-text">
+							<span class="hstat-lbl">Serie</span>
+							<span class="hstat-val">{stats.streakDays}</span>
+						</div>
+					</div>
+					<div class="hstat-item gems">
+						<img src="/emoji/gem_stone_3d.png" alt="Gemme" class="hstat-emoji" />
+						<div class="hstat-text">
+							<span class="hstat-lbl">Gemme</span>
+							<span class="hstat-val">{gems}</span>
+						</div>
+					</div>
+					<div class="hstat-item hearts">
+						<img src="/emoji/high_voltage_3d.png" alt="XP" class="hstat-emoji" />
+						<div class="hstat-text">
+							<span class="hstat-lbl">XP</span>
+							<span class="hstat-val">{totalXP}</span>
+						</div>
+					</div>
+				</a>
+			{:else if activeHeader}
+				<div
+					class="header-page-banner duo-banner-{activeHeader.variant}"
+					in:fly={{ y: 10, duration: 250, delay: 50 }}
+					out:fade={{ duration: 100 }}
+				>
+					<img src={activeHeader.icon} alt="" class="banner-icon" />
+					<div class="banner-text">
+						<h1 class="banner-title">{activeHeader.title}</h1>
+						{#if activeHeader.subtitle}
+							<span class="banner-subtitle">{activeHeader.subtitle}</span>
+						{/if}
+					</div>
+				</div>
+			{/if}
+		{/key}
+	</div>
 </header>
 
 <style>
@@ -74,16 +160,23 @@
 		position: sticky;
 		top: 0.65rem;
 		z-index: 150;
-		width: calc(100% - 1.25rem);
-		max-width: 1200px;
+		width: 100%;
+		max-width: 600px;
 		margin: 0.5rem auto 0 auto;
+		padding: 0 0.85rem;
+		box-sizing: border-box;
 		display: flex;
-		align-items: stretch;
-		gap: 0.6rem;
+		align-items: center;
+		gap: 0.5rem;
 	}
 
 	.menu-toggle-btn {
-		padding: 0.45rem 0.55rem;
+		padding: 0.55rem 0.65rem;
+		height: 48px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		flex-shrink: 0;
 	}
 
 	.hamburger-icon {
@@ -117,35 +210,51 @@
 		transform: translateY(-6px) rotate(-45deg);
 	}
 
-	.header-stats {
+	.header-dynamic-slot {
 		flex: 1;
+		position: relative;
+		height: 48px;
+		display: flex;
+		align-items: center;
+	}
+
+	.header-stats {
+		width: 100%;
+		height: 100%;
 		display: flex;
 		align-items: center;
 		justify-content: space-around;
-		gap: 0.5rem;
+		gap: 0.4rem;
 		text-decoration: none;
 		background: var(--card-bg);
 		border: 2px solid var(--border-color);
 		border-bottom: 4px solid var(--border-depth-color);
-		border-radius: 20px;
-		padding: 0.6rem 0.75rem;
+		border-radius: 18px;
+		padding: 0.35rem 0.6rem;
+		box-sizing: border-box;
 	}
 
 	.hstat-item {
 		display: flex;
 		align-items: center;
-		gap: 0.45rem;
+		gap: 0.35rem;
 		font-weight: 900;
-		font-size: 0.95rem;
+		font-size: 0.9rem;
 	}
 
-	.hstat-item.streak { color: var(--orange-color); }
-	.hstat-item.gems { color: var(--accent-color); }
-	.hstat-item.hearts { color: var(--pink-color); }
+	.hstat-item.streak {
+		color: var(--orange-color);
+	}
+	.hstat-item.gems {
+		color: var(--accent-color);
+	}
+	.hstat-item.hearts {
+		color: var(--pink-color);
+	}
 
 	.hstat-emoji {
-		width: 24px;
-		height: 24px;
+		width: 22px;
+		height: 22px;
 		object-fit: contain;
 	}
 
@@ -156,22 +265,103 @@
 	}
 
 	.hstat-lbl {
-		font-size: 0.65rem;
+		font-size: 0.6rem;
 		font-weight: 800;
 		text-transform: uppercase;
 		opacity: 0.8;
 	}
 
 	.hstat-val {
-		font-size: 1.05rem;
+		font-size: 1rem;
 		font-weight: 900;
+	}
+
+	/* Banner Colorati in Top Bar Header su Mobile */
+	.header-page-banner {
+		width: 100%;
+		height: 100%;
+		display: flex;
+		align-items: center;
+		gap: 0.65rem;
+		padding: 0.35rem 0.85rem;
+		border-radius: 18px;
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+		box-sizing: border-box;
+	}
+
+	.duo-banner-green {
+		background-color: var(--green-color);
+		border: 2px solid var(--green-depth);
+		border-bottom: 4px solid var(--green-depth);
+		color: #ffffff;
+	}
+
+	.duo-banner-blue {
+		background-color: var(--accent-color);
+		border: 2px solid var(--accent-depth);
+		border-bottom: 4px solid var(--accent-depth);
+		color: #ffffff;
+	}
+
+	.duo-banner-purple {
+		background-color: var(--purple-color);
+		border: 2px solid var(--purple-depth);
+		border-bottom: 4px solid var(--purple-depth);
+		color: #ffffff;
+	}
+
+	.duo-banner-orange {
+		background-color: var(--orange-color);
+		border: 2px solid var(--orange-depth);
+		border-bottom: 4px solid var(--orange-depth);
+		color: #ffffff;
+	}
+
+	.duo-banner-red {
+		background-color: #ff5e5b;
+		border: 2px solid #d9423f;
+		border-bottom: 4px solid #d9423f;
+		color: #ffffff;
+	}
+
+	.banner-icon {
+		width: 26px;
+		height: 26px;
+		object-fit: contain;
+		flex-shrink: 0;
+	}
+
+	.banner-text {
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+		line-height: 1.1;
+		min-width: 0;
+	}
+
+	.banner-title {
+		font-size: 0.95rem;
+		font-weight: 900;
+		color: inherit;
+		margin: 0;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.banner-subtitle {
+		font-size: 0.68rem;
+		font-weight: 700;
+		opacity: 0.9;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 
 	.duo-header-btn {
 		display: inline-flex;
 		align-items: center;
 		gap: 0.35rem;
-		padding: 0.45rem 0.75rem;
 		border-radius: 14px;
 		background-color: var(--card-bg-subtle);
 		border: 2px solid var(--border-color);
@@ -196,32 +386,6 @@
 	@media (min-width: 1024px) {
 		.app-header {
 			display: none;
-		}
-	}
-
-	@media (max-width: 640px) {
-		.app-header {
-			gap: 0.5rem;
-		}
-		.duo-header-btn {
-			padding: 0.4rem 0.6rem;
-			font-size: 0.78rem;
-		}
-		.header-stats {
-			padding: 0.5rem 0.5rem;
-			gap: 0.25rem;
-			border-radius: 16px;
-		}
-		.hstat-emoji {
-			width: 20px;
-			height: 20px;
-		}
-		.hstat-item {
-			gap: 0.3rem;
-			font-size: 0.9rem;
-		}
-		.hstat-lbl {
-			font-size: 0.58rem;
 		}
 	}
 </style>
