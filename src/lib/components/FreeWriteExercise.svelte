@@ -122,22 +122,21 @@
 			★
 		</button>
 
+		<span class="prompt-badge-label">Domanda:</span>
+
 		{#if subMode === 'title-to-desc'}
-			<h2 class="title">
-				{card.title || card.fullName}
+			<h2 class="prompt-title">
+				Che cos'è: <span class="prompt-term">{card.title || card.fullName}</span>
 				{#if card.title && card.fullName}
-					<span class="sub-title">({card.fullName})</span>
+					<span class="prompt-fullname">({card.fullName})</span>
 				{/if}
 			</h2>
-			<p class="instruction">✍️ Scrivi la descrizione o spiegazione di questa card:</p>
 		{:else if subMode === 'desc-to-title'}
-			<p class="desc-text">{card.description}</p>
-			<p class="instruction">✍️ Digita l'acronimo o titolo corrispondente:</p>
+			<p class="prompt-desc-text">{card.description}</p>
 		{:else if subMode === 'photo-to-title'}
 			{#if card.images && card.images.length > 0}
 				<img src={card.images[0]} alt="Foto per esercizio" class="prompt-img" />
 			{/if}
-			<p class="instruction">✍️ Digita l'acronimo o titolo di questo elemento ferroviario:</p>
 		{/if}
 	</div>
 
@@ -147,7 +146,7 @@
 			<textarea
 				bind:this={inputEl}
 				bind:value={userInput}
-				placeholder="Digita qui la descrizione a mano..."
+				placeholder="✍️ Digita qui la descrizione o spiegazione..."
 				rows="4"
 				class="duo-input input-textarea"
 				disabled={submitted}
@@ -160,7 +159,9 @@
 				type="text"
 				bind:this={inputEl}
 				bind:value={userInput}
-				placeholder="Digita qui l'acronimo o titolo..."
+				placeholder={subMode === 'photo-to-title'
+					? "✍️ Digita l'acronimo o titolo di questo elemento..."
+					: "✍️ Digita l'acronimo o titolo corrispondente..."}
 				class="duo-input input-field"
 				disabled={submitted}
 				onkeydown={handleKeyDown}
@@ -266,25 +267,42 @@
 		filter: drop-shadow(0 0 6px rgba(250, 204, 21, 0.5));
 	}
 
-	.title {
-		font-size: 2.3rem;
+	.prompt-badge-label {
+		font-size: 0.78rem;
 		font-weight: 900;
-		margin: 0 0 0.6rem 0;
+		text-transform: uppercase;
 		color: var(--accent-color);
-	}
-
-	.sub-title {
-		font-size: 1.1rem;
-		font-weight: 800;
-		color: var(--text-muted);
+		letter-spacing: 0.06em;
 		display: block;
+		margin-bottom: 0.35rem;
 	}
 
-	.desc-text {
-		font-size: 1.05rem;
-		line-height: 1.6;
+	.prompt-title {
+		font-size: 1.5rem;
+		font-weight: 900;
+		margin: 0;
 		color: var(--text-color);
-		margin: 0 0 0.65rem 0;
+		line-height: 1.25;
+	}
+
+	.prompt-term {
+		color: var(--accent-color);
+		font-weight: 900;
+	}
+
+	.prompt-fullname {
+		font-size: 1rem;
+		font-weight: 700;
+		color: var(--text-muted);
+		margin-left: 0.25rem;
+	}
+
+	.prompt-desc-text {
+		font-size: 1.1rem;
+		line-height: 1.45;
+		font-weight: 700;
+		color: var(--text-color);
+		margin: 0;
 	}
 
 	.prompt-img {
@@ -292,15 +310,8 @@
 		max-height: 220px;
 		object-fit: cover;
 		border-radius: 14px;
-		margin-bottom: 0.75rem;
+		margin-top: 0.35rem;
 		border: 2px solid var(--border-color);
-	}
-
-	.instruction {
-		font-size: 0.88rem;
-		font-weight: 700;
-		color: var(--text-muted);
-		margin: 0;
 	}
 
 	.write-form {
@@ -458,15 +469,13 @@
 			padding-right: 3rem;
 		}
 
-		.title {
-			font-size: 1.6rem;
-			margin-bottom: 0.3rem;
+		.prompt-title {
+			font-size: 1.3rem;
 		}
 
-		.desc-text {
+		.prompt-desc-text {
 			font-size: 0.95rem;
 			line-height: 1.45;
-			margin-bottom: 0.35rem;
 		}
 
 		.input-textarea,
