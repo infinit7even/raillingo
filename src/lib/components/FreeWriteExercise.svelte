@@ -187,7 +187,7 @@
 
 		{#if !submitted}
 			<button type="submit" class="duo-btn duo-btn-blue submit-btn" disabled={!userInput.trim()}>
-				⚡ VERIFICA RISPOSTA (Invio ↵)
+				⚡ VERIFICA RISPOSTA
 			</button>
 		{/if}
 	</form>
@@ -236,7 +236,7 @@
 			</div>
 
 			<button class="duo-btn duo-btn-green next-btn" onclick={onNext}>
-				PROSSIMA SCHEDA → (Premi Invio ↵)
+				PROSSIMA SCHEDA
 			</button>
 		</div>
 	{/if}
