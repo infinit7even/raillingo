@@ -2,10 +2,10 @@
 
 :root,
 [data-theme='dark'] {
-	/* 🦉 Duolingo Dark (Default) */
-	--bg-color: #131f24;
-	--header-bg: #131f24;
-	--nav-bg: #131f24;
+	/* 🦉 Dark Theme Background (#171f23) */
+	--bg-color: #171f23;
+	--header-bg: #171f23;
+	--nav-bg: #171f23;
 	--active-nav-bg: rgba(28, 176, 246, 0.15);
 	--card-bg: #18252d;
 	--card-bg-subtle: #202f36;
