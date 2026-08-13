@@ -112,18 +112,10 @@
 						<h2 class="card-title">
 							{card.title || card.fullName}
 						</h2>
-
-						<p class="instruction">
-							🗣️ Pronuncia a voce la definizione, poi <strong>tocca per verificare</strong>
-						</p>
 					{:else if mode === 'inverso'}
 						<div class="description-box duo-card front-desc-box">
 							<p>{card.description || '(Nessuna descrizione specificata)'}</p>
 						</div>
-
-						<p class="instruction">
-							🗣️ Di' a voce l'acronimo o titolo, poi <strong>tocca per verificare</strong>
-						</p>
 					{:else if mode === 'foto'}
 						{#if card.images && card.images.length > 0}
 							<div class="front-photo-wrapper">
@@ -139,10 +131,6 @@
 								{/if}
 							</div>
 						{/if}
-
-						<p class="instruction">
-							🗣️ Guarda la foto e di' a voce il concetto, poi <strong>tocca per verificare</strong>
-						</p>
 					{/if}
 				</div>
 
@@ -338,11 +326,7 @@
 		margin-top: 0.2rem;
 	}
 
-	.instruction {
-		font-size: 0.9rem;
-		color: var(--text-muted);
-		line-height: 1.4;
-	}
+
 
 	.description-box {
 		padding: 1.1rem;
