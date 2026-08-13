@@ -8,6 +8,9 @@
 
 	import { toastStore } from '$lib/stores/toastStore';
 
+	let { data } = $props();
+	let user = $derived(data?.user);
+
 	let cards = $state<Card[]>([]);
 	let ignoredIds = $state<Set<string>>(new Set());
 	let searchQuery = $state('');
@@ -165,6 +168,12 @@
 				>
 					✨ Riattiva tutte ({ignoredIds.size})
 				</button>
+			{/if}
+
+			{#if !user}
+				<a href="/api/auth/login" class="duo-btn duo-btn-blue login-save-ignored-btn">
+					🔑 Accedi per salvare sul cloud
+				</a>
 			{/if}
 		</div>
 
@@ -561,11 +570,13 @@
 		box-shadow: 0 2px 8px rgba(250, 204, 21, 0.2);
 	}
 
-	.clear-all-ignored-btn {
+	.clear-all-ignored-btn,
+	.login-save-ignored-btn {
 		padding: 0.35rem 0.75rem;
 		font-size: 0.78rem;
 		font-weight: 800;
 		border-radius: 12px;
+		text-decoration: none;
 	}
 
 	.empty-wiki {
