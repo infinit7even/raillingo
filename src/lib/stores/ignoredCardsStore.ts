@@ -101,6 +101,22 @@ class IgnoredCardsStore {
 		return Array.from(this.ignoredIds);
 	}
 
+	public async clearAll(): Promise<void> {
+		this.ignoredIds.clear();
+		this.saveToStorage();
+		this.notify();
+
+		try {
+			await fetch('/api/ignored-cards', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ ignoredCardIds: [] })
+			});
+		} catch (e) {
+			console.warn('Errore reset API card ignorate:', e);
+		}
+	}
+
 	private saveToStorage() {
 		const arr = Array.from(this.ignoredIds);
 		this.setCookie('rf_ignored_cards', JSON.stringify(arr));

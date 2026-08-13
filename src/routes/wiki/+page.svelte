@@ -6,11 +6,14 @@
 	import CategoryFilter from '$lib/components/CategoryFilter.svelte';
 	import type { Card } from '$lib/types/cards';
 
+	import { toastStore } from '$lib/stores/toastStore';
+
 	let cards = $state<Card[]>([]);
 	let ignoredIds = $state<Set<string>>(new Set());
 	let searchQuery = $state('');
 	let selectedCategory = $state('ALL');
 	let selectedLetter = $state<string>('ALL');
+	let showOnlyIgnored = $state(false);
 	let expandedCardId = $state<string | null>(null);
 
 	onMount(() => {
@@ -21,6 +24,8 @@
 			unsubIgnored();
 		};
 	});
+
+	let ignoredCount = $derived(ignoredIds.size);
 
 	let availableCategories = $derived.by<string[]>(() => {
 		const set = new Set<string>();
@@ -63,6 +68,9 @@
 						? !(firstLetter >= 'A' && firstLetter <= 'Z')
 						: firstLetter === selectedLetter);
 
+				// Ignored filter
+				const matchesIgnored = !showOnlyIgnored || ignoredIds.has(c.id);
+
 				// Search query
 				const q = searchQuery.toLowerCase().trim();
 				const matchesSearch =
@@ -72,7 +80,7 @@
 					c.description.toLowerCase().includes(q) ||
 					(c.tags && c.tags.some((t) => t.toLowerCase().includes(q)));
 
-				return matchesCategory && matchesLetter && matchesSearch;
+				return matchesCategory && matchesLetter && matchesIgnored && matchesSearch;
 			})
 	);
 
@@ -82,7 +90,22 @@
 
 	async function toggleIgnored(e: MouseEvent, cardId: string) {
 		e.stopPropagation();
-		await ignoredCardsStore.toggleIgnored(cardId);
+		const isNowIgnored = await ignoredCardsStore.toggleIgnored(cardId);
+		toastStore.show({
+			message: isNowIgnored ? '⭐ Scheda ignorata dal ripasso' : '✨ Scheda riattivata nel ripasso',
+			actionLabel: 'Annulla',
+			onAction: async () => {
+				await ignoredCardsStore.toggleIgnored(cardId);
+			}
+		});
+	}
+
+	async function handleClearAllIgnored() {
+		await ignoredCardsStore.clearAll();
+		showOnlyIgnored = false;
+		toastStore.show({
+			message: '✨ Tutte le schede sono state riattivate nel ripasso!'
+		});
 	}
 </script>
 
@@ -116,6 +139,28 @@
 			{selectedCategory}
 			onSelect={(cat) => (selectedCategory = cat)}
 		/>
+
+		<!-- Ignored Filter & Reset Toolbar -->
+		<div class="ignored-toolbar">
+			<button
+				type="button"
+				class="duo-btn filter-ignored-chip"
+				class:active-filter={showOnlyIgnored}
+				onclick={() => (showOnlyIgnored = !showOnlyIgnored)}
+			>
+				⭐ Solo Ignorate ({ignoredCount})
+			</button>
+
+			{#if ignoredIds.size > 0}
+				<button
+					type="button"
+					class="duo-btn duo-btn-purple clear-all-ignored-btn"
+					onclick={handleClearAllIgnored}
+				>
+					✨ Riattiva tutte ({ignoredIds.size})
+				</button>
+			{/if}
+		</div>
 
 		<!-- Alphabet Filter Bar -->
 		<div class="alphabet-bar">
@@ -482,6 +527,39 @@
 		object-fit: cover;
 		border-radius: 8px;
 		border: 1px solid var(--border-color);
+	}
+
+	.ignored-toolbar {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		flex-wrap: wrap;
+	}
+
+	.filter-ignored-chip {
+		padding: 0.35rem 0.75rem;
+		font-size: 0.78rem;
+		font-weight: 800;
+		border-radius: 12px;
+		background: var(--card-bg-subtle);
+		border: 1.5px solid var(--border-color);
+		color: var(--text-color);
+		cursor: pointer;
+		transition: all 0.15s ease;
+	}
+
+	.filter-ignored-chip.active-filter {
+		background: rgba(250, 204, 21, 0.18);
+		border-color: var(--yellow-color);
+		color: var(--yellow-color);
+		box-shadow: 0 2px 8px rgba(250, 204, 21, 0.2);
+	}
+
+	.clear-all-ignored-btn {
+		padding: 0.35rem 0.75rem;
+		font-size: 0.78rem;
+		font-weight: 800;
+		border-radius: 12px;
 	}
 
 	.empty-wiki {
