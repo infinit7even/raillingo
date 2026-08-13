@@ -228,17 +228,11 @@
 
 		.main-content {
 			max-width: 1200px;
-			padding: 0.85rem 1.5rem 1rem 1.5rem;
+			padding: 1.5rem 1.75rem 2rem 1.75rem;
 		}
 
 		.mobile-swipe-indicator {
 			display: none !important;
-		}
-	}
-
-	@media (min-width: 1024px) and (max-height: 820px) {
-		.main-content {
-			padding: 0.65rem 1.25rem 0.85rem 1.25rem;
 		}
 	}
 </style>
