@@ -51,9 +51,15 @@
 		}
 	}
 
-	function toggleShowImage(e: MouseEvent) {
-		e.stopPropagation();
+	function toggleShowImage(e?: MouseEvent) {
+		if (e) e.stopPropagation();
 		showImage = !showImage;
+	}
+
+	function handleBackdropClick(e: MouseEvent) {
+		if (e.target === e.currentTarget) {
+			toggleShowImage(e);
+		}
 	}
 
 	async function toggleIgnored(e: MouseEvent) {
@@ -191,31 +197,9 @@
 
 					{#if mode !== 'foto' && card.images && card.images.length > 0}
 						<div class="image-gallery">
-							{#if !showImage}
-								<button class="duo-btn duo-btn-gray show-img-btn" onclick={toggleShowImage}>
-									🖼️ Mostra immagine {#if card.images.length > 1}({card.images.length}){/if}
-								</button>
-							{:else}
-								<div class="image-gallery-content">
-									<img
-										src={card.images[currentImageIndex]}
-										alt="Foto card {card.title}"
-										class="card-img"
-										loading="lazy"
-										decoding="async"
-									/>
-									<div class="img-actions">
-										{#if card.images.length > 1}
-											<button class="duo-btn duo-btn-purple next-img-btn" onclick={nextImage}>
-												Foto {currentImageIndex + 1}/{card.images.length} 🔄
-											</button>
-										{/if}
-										<button class="duo-btn duo-btn-gray hide-img-btn" onclick={toggleShowImage}>
-											Nascondi
-										</button>
-									</div>
-								</div>
-							{/if}
+							<button class="duo-btn duo-btn-gray show-img-btn" onclick={toggleShowImage}>
+								🖼️ Mostra immagine {#if card.images.length > 1}({card.images.length}){/if}
+							</button>
 						</div>
 					{/if}
 				</div>
@@ -226,6 +210,37 @@
 			</div>
 		</div>
 	</div>
+
+	<!-- IMAGE MODAL POPUP -->
+	{#if showImage && card.images && card.images.length > 0}
+		<div
+			class="image-modal-backdrop"
+			onclick={handleBackdropClick}
+			onkeydown={(e) => e.key === 'Escape' && toggleShowImage(e as any)}
+			role="button"
+			tabindex="0"
+		>
+			<div class="image-modal-content duo-card">
+				<button class="modal-close-btn" onclick={toggleShowImage} aria-label="Chiudi popup">
+					✕
+				</button>
+
+				<img
+					src={card.images[currentImageIndex]}
+					alt="Foto card {card.title}"
+					class="modal-card-img"
+				/>
+
+				{#if card.images.length > 1}
+					<div class="modal-nav-bar">
+						<button class="duo-btn duo-btn-purple next-img-btn" onclick={nextImage}>
+							Foto {currentImageIndex + 1}/{card.images.length} 🔄
+						</button>
+					</div>
+				{/if}
+			</div>
+		</div>
+	{/if}
 
 	<!-- Controls Footer -->
 	<div class="card-controls">
@@ -415,34 +430,76 @@
 		padding: 0.45rem 0.9rem;
 	}
 
-	.image-gallery-content {
-		width: 100%;
+	/* Image Modal Popup */
+	.image-modal-backdrop {
+		position: fixed;
+		inset: 0;
+		z-index: 9999;
+		background: rgba(0, 0, 0, 0.75);
+		backdrop-filter: blur(8px);
 		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
 		align-items: center;
+		justify-content: center;
+		padding: 1rem;
+		animation: fadeIn 0.2s ease;
 	}
 
-	.img-actions {
+	.image-modal-content {
+		position: relative;
+		max-width: 90vw;
+		max-height: 85vh;
 		display: flex;
-		gap: 0.5rem;
+		flex-direction: column;
 		align-items: center;
+		gap: 0.75rem;
+		padding: 1rem;
+		background: var(--card-bg);
+		border-radius: 20px;
+		box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+		border: 2px solid var(--border-color);
+	}
+
+	.modal-close-btn {
+		position: absolute;
+		top: -12px;
+		right: -12px;
+		width: 36px;
+		height: 36px;
+		border-radius: 50%;
+		background: var(--red-color, #ff4b4b);
+		color: #ffffff;
+		border: 2px solid #ffffff;
+		font-size: 1.1rem;
+		font-weight: 900;
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+		z-index: 10;
+		transition: transform 0.2s ease;
+	}
+
+	.modal-close-btn:hover {
+		transform: scale(1.15);
+	}
+
+	.modal-card-img {
+		max-width: 100%;
+		max-height: 70vh;
+		object-fit: contain;
+		border-radius: 12px;
+	}
+
+	.modal-nav-bar {
+		display: flex;
 		justify-content: center;
 		width: 100%;
 	}
 
-	.card-img {
-		width: 100%;
-		max-height: 180px;
-		object-fit: cover;
-		border-radius: 14px;
-		border: 2px solid var(--border-color);
-	}
-
-	.next-img-btn,
-	.hide-img-btn {
-		font-size: 0.75rem;
-		padding: 0.35rem 0.75rem;
+	.next-img-btn {
+		font-size: 0.8rem;
+		padding: 0.4rem 0.85rem;
 	}
 
 	.tap-hint {
@@ -549,10 +606,6 @@
 		.description-box {
 			padding: 0.75rem 0.85rem;
 			font-size: 0.92rem;
-		}
-
-		.card-img {
-			max-height: 140px;
 		}
 	}
 </style>
