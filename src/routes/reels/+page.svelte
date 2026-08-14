@@ -92,11 +92,6 @@
 					<div class="reel-card-slide">
 						<!-- Top Action Bar -->
 						<div class="reel-header-bar">
-							{#if card.category}
-								<span class="category-badge">{card.category}</span>
-							{:else}
-								<div></div>
-							{/if}
 							<button
 								class="star-ignored-btn"
 								class:ignored={isIgnoredCard}
@@ -150,9 +145,6 @@
 								<div class="face back-face">
 									<div class="back-body">
 										<div class="back-top">
-											{#if card.category}
-												<span class="back-category-pill">{card.category}</span>
-											{/if}
 											<h3 class="back-title">{card.title}</h3>
 											{#if card.fullName}
 												<span class="back-fullname-badge">{card.fullName}</span>
@@ -261,19 +253,9 @@
 	.reel-header-bar {
 		display: flex;
 		align-items: center;
-		justify-content: space-between;
+		justify-content: flex-end;
 		z-index: 10;
 		gap: 0.5rem;
-	}
-
-	.category-badge {
-		font-size: 0.75rem;
-		font-weight: 800;
-		color: #ffffff;
-		background: rgba(0, 0, 0, 0.6);
-		padding: 0.2rem 0.6rem;
-		border-radius: 12px;
-		backdrop-filter: blur(4px);
 	}
 
 	.star-ignored-btn {
@@ -441,18 +423,6 @@
 		flex-direction: column;
 		align-items: flex-start;
 		gap: 0.35rem;
-	}
-
-	.back-category-pill {
-		font-size: 0.7rem;
-		font-weight: 800;
-		text-transform: uppercase;
-		letter-spacing: 0.04em;
-		color: var(--accent-color);
-		background: rgba(88, 204, 2, 0.12);
-		padding: 0.2rem 0.6rem;
-		border-radius: 8px;
-		border: 1px solid var(--accent-color);
 	}
 
 	.back-title {
