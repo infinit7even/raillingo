@@ -140,9 +140,6 @@
 			{#if subMode === 'title-to-desc'}
 				<h2 class="prompt-title">
 					Che cos'è: <span class="prompt-term">{card.title || card.fullName}</span>
-					{#if card.title && card.fullName}
-						<span class="prompt-fullname">({card.fullName})</span>
-					{/if}
 				</h2>
 			{:else if subMode === 'desc-to-title'}
 				<p class="prompt-desc-text">{card.description}</p>
@@ -295,13 +292,6 @@
 	.prompt-term {
 		color: var(--accent-color);
 		font-weight: 900;
-	}
-
-	.prompt-fullname {
-		font-size: 1rem;
-		font-weight: 700;
-		color: var(--text-muted);
-		margin-left: 0.25rem;
 	}
 
 	.prompt-desc-text {
