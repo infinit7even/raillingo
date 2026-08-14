@@ -116,7 +116,7 @@
 							onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && toggleFlip(card.id)}
 						>
 							<div class="flip-card-inner" class:is-flipped={isFlipped}>
-								<!-- FRONT FACE (Visual Image + Text Overlay: Acronimo + Titolo/Descrizione breve) -->
+								<!-- FRONT FACE (Visual Image + Text Overlay) -->
 								<div class="face front-face">
 									<img
 										src={card.images![imgIdx]}
@@ -127,6 +127,13 @@
 									/>
 									<div class="front-img-overlay"></div>
 
+									<!-- Multi-photo switcher pill on front -->
+									{#if card.images!.length > 1}
+										<button class="reel-photo-btn" onclick={(e) => nextImage(e, card)}>
+											📷 Foto {imgIdx + 1}/{card.images!.length} 🔄
+										</button>
+									{/if}
+
 									<div class="front-body">
 										<h2 class="reel-title">{card.title}</h2>
 										{#if card.fullName}
@@ -134,42 +141,30 @@
 										{/if}
 
 										<div class="tap-hint-pill">
-											<span>👇 Tocca la foto per leggere la descrizione</span>
+											<span>👇 Tocca per leggere la descrizione</span>
 										</div>
 									</div>
 								</div>
 
-								<!-- BACK FACE (Full Description Revealed) -->
+								<!-- BACK FACE (Full Description Revealed - No Image) -->
 								<div class="face back-face">
 									<div class="back-body">
 										<div class="back-top">
+											{#if card.category}
+												<span class="back-category-pill">{card.category}</span>
+											{/if}
 											<h3 class="back-title">{card.title}</h3>
 											{#if card.fullName}
 												<span class="back-fullname-badge">{card.fullName}</span>
 											{/if}
 										</div>
 
-										<div class="back-desc-container">
+										<div class="back-desc-container duo-card">
 											<p class="back-desc-text">{card.description}</p>
 										</div>
 
-										<div class="back-media-box">
-											<img
-												src={card.images![imgIdx]}
-												alt={card.title}
-												class="back-preview-img"
-												loading="lazy"
-												decoding="async"
-											/>
-											{#if card.images!.length > 1}
-												<button class="next-photo-btn" onclick={(e) => nextImage(e, card)}>
-													Foto successiva ({imgIdx + 1}/{card.images!.length})
-												</button>
-											{/if}
-										</div>
-
 										<div class="tap-hint-pill back-hint">
-											<span>Tocca per rigirare la scheda</span>
+											<span>🔄 Tocca per tornare alla foto</span>
 										</div>
 									</div>
 								</div>
@@ -243,10 +238,6 @@
 
 		.reel-title {
 			font-size: 2.5rem;
-		}
-
-		.back-preview-img {
-			max-height: 180px;
 		}
 	}
 
@@ -406,6 +397,28 @@
 		font-weight: 800;
 	}
 
+	.reel-photo-btn {
+		position: absolute;
+		top: 12px;
+		right: 12px;
+		z-index: 4;
+		background: rgba(0, 0, 0, 0.65);
+		color: #ffffff;
+		border: 1px solid rgba(255, 255, 255, 0.25);
+		font-size: 0.78rem;
+		font-weight: 800;
+		padding: 0.35rem 0.75rem;
+		border-radius: 20px;
+		backdrop-filter: blur(8px);
+		cursor: pointer;
+		transition: transform 0.15 ease, background 0.2s ease;
+	}
+
+	.reel-photo-btn:hover {
+		background: rgba(0, 0, 0, 0.85);
+		transform: scale(1.05);
+	}
+
 	/* BACK FACE */
 	.back-face {
 		background: var(--card-bg-subtle);
@@ -420,66 +433,68 @@
 		display: flex;
 		flex-direction: column;
 		justify-content: space-between;
-		gap: 0.5rem;
+		gap: 0.75rem;
 	}
 
 	.back-top {
 		display: flex;
 		flex-direction: column;
-		gap: 0.2rem;
+		align-items: flex-start;
+		gap: 0.35rem;
+	}
+
+	.back-category-pill {
+		font-size: 0.7rem;
+		font-weight: 800;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+		color: var(--accent-color);
+		background: rgba(88, 204, 2, 0.12);
+		padding: 0.2rem 0.6rem;
+		border-radius: 8px;
+		border: 1px solid var(--accent-color);
 	}
 
 	.back-title {
-		font-size: 1.4rem;
+		font-size: 1.8rem;
 		font-weight: 900;
 		color: var(--text-color);
 		margin: 0;
+		line-height: 1.15;
 	}
 
 	.back-fullname-badge {
-		font-size: 0.8rem;
+		font-size: 0.95rem;
 		font-weight: 800;
-		color: var(--accent-color);
+		color: var(--green-color);
 	}
 
 	.back-desc-container {
 		flex: 1;
 		overflow-y: auto;
-		padding: 0.4rem 0;
-	}
-
-	.back-desc-text {
-		font-size: 0.92rem;
-		line-height: 1.45;
-		color: var(--text-color);
-		margin: 0;
-		font-weight: 600;
-	}
-
-	.back-media-box {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: 0.35rem;
-	}
-
-	.back-preview-img {
-		max-height: 110px;
-		width: 100%;
-		object-fit: cover;
-		border-radius: 10px;
+		padding: 1.1rem;
+		border-radius: 16px;
+		box-sizing: border-box;
+		margin: 0.25rem 0;
+		background: var(--card-bg);
 		border: 1.5px solid var(--border-color);
 	}
 
-	.next-photo-btn {
-		background: var(--card-bg);
-		border: 1px solid var(--border-color);
+	.back-desc-text {
+		font-size: 1.05rem;
+		line-height: 1.6;
 		color: var(--text-color);
-		font-size: 0.7rem;
-		font-weight: 800;
-		padding: 0.25rem 0.6rem;
-		border-radius: 8px;
-		cursor: pointer;
+		margin: 0;
+		font-weight: 600;
+		white-space: pre-line;
+	}
+
+	.back-hint {
+		align-self: center;
+		margin-top: 0;
+		background: var(--card-bg);
+		border: 1.5px solid var(--border-color);
+		color: var(--text-muted);
 	}
 
 	.scroll-down-notice {
