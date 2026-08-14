@@ -277,8 +277,7 @@
 		overflow-y: auto;
 		overflow-x: hidden;
 		scrollbar-width: none;
-		padding: 0.5rem 0.6rem;
-		box-sizing: border-box;
+		padding: 0.35rem 0;
 	}
 
 	.nav-container::-webkit-scrollbar {
@@ -290,8 +289,7 @@
 		flex-direction: column;
 		gap: 0.45rem;
 		width: 100%;
-		padding: 0.2rem 0.2rem 0.4rem 0.2rem;
-		box-sizing: border-box;
+		padding: 0.25rem 0 0.5rem 0;
 	}
 
 	.nav-item {
@@ -300,7 +298,7 @@
 		align-items: center;
 		gap: 0.75rem;
 		width: 100%;
-		padding: 0.65rem 0.85rem;
+		padding: 0.7rem 0.95rem;
 		color: var(--text-muted);
 		text-decoration: none;
 		font-size: 0.88rem;
@@ -316,12 +314,16 @@
 		-webkit-tap-highlight-color: transparent;
 	}
 
+	.nav-item:active {
+		transform: scale(0.97);
+	}
+
 	.nav-item.active {
 		border: 2px solid var(--accent-color);
 		border-bottom: 4px solid var(--accent-color);
 		background-color: var(--accent-light-bg);
 		color: var(--accent-color);
-		animation: duoPop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+		animation: duoPop 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
 		font-weight: 900;
 	}
 
