@@ -269,6 +269,7 @@
 		color: var(--yellow-color);
 		transform: scale(1.25);
 		filter: drop-shadow(0 0 6px rgba(250, 204, 21, 0.5));
+		animation: starPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 	}
 
 	.prompt-badge-label {
@@ -364,6 +365,7 @@
 		background: rgba(168, 85, 247, 0.15);
 		border: 1.5px solid var(--accent-color);
 		color: var(--text-color);
+		animation: successBounce 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 	}
 
 	.score-banner.score-high {
@@ -373,6 +375,7 @@
 
 	.score-icon {
 		font-size: 1.5rem;
+		animation: duoPop 0.4s ease;
 	}
 
 	.score-info strong {

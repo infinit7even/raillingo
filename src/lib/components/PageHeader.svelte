@@ -56,6 +56,7 @@
 		width: 100%;
 		margin-top: 0;
 		margin-bottom: 0.75rem;
+		animation: slideUpFade 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
 	}
 
 	.duo-banner-green {
@@ -104,6 +105,7 @@
 		height: 36px;
 		object-fit: contain;
 		flex-shrink: 0;
+		animation: gentleWobble 0.6s ease;
 	}
 
 	.header-text-box {

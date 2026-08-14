@@ -318,7 +318,12 @@
 		border-bottom: 4px solid var(--accent-color);
 		background-color: var(--accent-light-bg);
 		color: var(--accent-color);
+		animation: duoPop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 		font-weight: 900;
+	}
+
+	.nav-item.active .nav-emoji-img {
+		animation: gentleWobble 0.5s ease;
 	}
 
 	.icon-wrapper {

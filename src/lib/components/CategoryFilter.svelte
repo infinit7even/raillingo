@@ -117,6 +117,12 @@
 
 	.shuffle-icon {
 		font-size: 0.85rem;
+		display: inline-block;
+		transition: transform 0.4s ease;
+	}
+
+	.compact-shuffle-btn:active .shuffle-icon {
+		transform: rotate(360deg);
 	}
 
 	@media (max-width: 480px) {

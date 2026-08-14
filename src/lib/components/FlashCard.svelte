@@ -291,6 +291,7 @@
 		color: var(--yellow-color);
 		transform: scale(1.25);
 		filter: drop-shadow(0 0 6px rgba(250, 204, 21, 0.5));
+		animation: starPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 	}
 
 	/* 3D Scene */

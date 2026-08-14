@@ -80,6 +80,7 @@
 		border-color: var(--accent-color);
 		border-bottom-width: 3px;
 		box-shadow: 0 4px 14px var(--shadow-color);
+		animation: duoPop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 	}
 
 	.tab-emoji {
@@ -87,6 +88,11 @@
 		height: 20px;
 		object-fit: contain;
 		flex-shrink: 0;
+		transition: transform 0.2s ease;
+	}
+
+	.duo-tab-btn.active .tab-emoji {
+		animation: gentleWobble 0.5s ease;
 	}
 
 	@media (max-width: 480px) {

@@ -421,6 +421,7 @@
 		border-radius: 16px;
 		overflow: hidden;
 		transition: border-color 0.2s ease;
+		animation: slideUpFade 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 	}
 
 	.compact-card.is-ignored-card {
@@ -494,6 +495,7 @@
 	.star-ignored-btn.ignored {
 		color: var(--yellow-color);
 		transform: scale(1.25);
+		animation: starPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 	}
 
 	.meta-row {

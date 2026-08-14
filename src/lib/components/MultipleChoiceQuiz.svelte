@@ -202,6 +202,7 @@
 		color: var(--yellow-color);
 		transform: scale(1.25);
 		filter: drop-shadow(0 0 6px rgba(250, 204, 21, 0.5));
+		animation: starPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 	}
 
 	.question-badge-label {
@@ -276,6 +277,7 @@
 		border-color: var(--green-color);
 		border-bottom-color: var(--green-depth);
 		color: var(--green-color);
+		animation: successBounce 0.4s ease;
 	}
 
 	.duo-option-btn.wrong {
@@ -284,6 +286,7 @@
 		border-bottom-color: var(--pink-depth);
 		color: var(--pink-color);
 		opacity: 0.85;
+		animation: shakeError 0.4s ease;
 	}
 
 	.status-icon {
