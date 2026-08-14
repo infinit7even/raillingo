@@ -277,7 +277,8 @@
 		overflow-y: auto;
 		overflow-x: hidden;
 		scrollbar-width: none;
-		padding: 0.5rem 0;
+		padding: 0.5rem 0.6rem;
+		box-sizing: border-box;
 	}
 
 	.nav-container::-webkit-scrollbar {
@@ -287,8 +288,10 @@
 	.nav-scroll-wrapper {
 		display: flex;
 		flex-direction: column;
-		gap: 0.4rem;
+		gap: 0.45rem;
 		width: 100%;
+		padding: 0.2rem 0.2rem 0.4rem 0.2rem;
+		box-sizing: border-box;
 	}
 
 	.nav-item {
