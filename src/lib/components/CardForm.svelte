@@ -348,7 +348,7 @@
 							}
 						}}
 					/>
-					<button type="button" class="duo-btn duo-btn-gray" onclick={addImageUrl}> + URL </button>
+					<button type="button" class="duo-btn duo-btn-gray" onclick={addImageUrl}> URL </button>
 				</div>
 			</div>
 			<p class="paste-hint-text">

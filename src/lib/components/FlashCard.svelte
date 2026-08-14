@@ -35,6 +35,9 @@
 	let isIgnored = $derived(card ? ignoredIds.has(card.id) : false);
 
 	$effect(() => {
+		// Track card and mode so effect runs whenever card or mode changes
+		const _id = card?.id;
+		const _mode = mode;
 		flipped = false;
 		currentImageIndex = 0;
 	});
