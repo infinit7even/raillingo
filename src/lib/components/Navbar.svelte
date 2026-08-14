@@ -277,7 +277,7 @@
 		overflow-y: auto;
 		overflow-x: hidden;
 		scrollbar-width: none;
-		padding: 0.25rem 0;
+		padding: 0.5rem 0;
 	}
 
 	.nav-container::-webkit-scrollbar {
@@ -287,10 +287,8 @@
 	.nav-scroll-wrapper {
 		display: flex;
 		flex-direction: column;
-		gap: 0.45rem;
+		gap: 0.4rem;
 		width: 100%;
-		padding: 4px 6px;
-		box-sizing: border-box;
 	}
 
 	.nav-item {
@@ -299,7 +297,7 @@
 		align-items: center;
 		gap: 0.75rem;
 		width: 100%;
-		padding: 0.7rem 0.95rem;
+		padding: 0.65rem 0.85rem;
 		color: var(--text-muted);
 		text-decoration: none;
 		font-size: 0.88rem;
@@ -308,7 +306,7 @@
 			background-color 0.15s ease,
 			border-color 0.15s ease,
 			color 0.15s ease,
-			transform 0.12s ease;
+			transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1);
 		background: none;
 		border: 2px solid transparent;
 		border-bottom: 4px solid transparent;
@@ -326,8 +324,10 @@
 
 	.nav-item.active {
 		border-color: var(--accent-color);
+		border-bottom-color: var(--accent-color);
 		background-color: var(--accent-light-bg);
 		color: var(--accent-color);
+		animation: duoPop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 		font-weight: 900;
 	}
 
