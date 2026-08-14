@@ -22,6 +22,7 @@
 	}>();
 
 	let flipped = $state(false);
+	let showImage = $state(false);
 	let currentImageIndex = $state(0);
 	let ignoredIds = $state<Set<string>>(new Set());
 
@@ -39,6 +40,7 @@
 		const _id = card?.id;
 		const _mode = mode;
 		flipped = false;
+		showImage = false;
 		currentImageIndex = 0;
 	});
 
@@ -47,6 +49,11 @@
 		if (flipped) {
 			statsStore.recordStudySession();
 		}
+	}
+
+	function toggleShowImage(e: MouseEvent) {
+		e.stopPropagation();
+		showImage = !showImage;
 	}
 
 	async function toggleIgnored(e: MouseEvent) {
@@ -184,17 +191,30 @@
 
 					{#if mode !== 'foto' && card.images && card.images.length > 0}
 						<div class="image-gallery">
-							<img
-								src={card.images[currentImageIndex]}
-								alt="Foto card {card.title}"
-								class="card-img"
-								loading="lazy"
-								decoding="async"
-							/>
-							{#if card.images.length > 1}
-								<button class="duo-btn duo-btn-purple next-img-btn" onclick={nextImage}>
-									Foto successiva ({currentImageIndex + 1}/{card.images.length})
+							{#if !showImage}
+								<button class="duo-btn duo-btn-gray show-img-btn" onclick={toggleShowImage}>
+									🖼️ Mostra immagine {#if card.images.length > 1}({card.images.length}){/if}
 								</button>
+							{:else}
+								<div class="image-gallery-content">
+									<img
+										src={card.images[currentImageIndex]}
+										alt="Foto card {card.title}"
+										class="card-img"
+										loading="lazy"
+										decoding="async"
+									/>
+									<div class="img-actions">
+										{#if card.images.length > 1}
+											<button class="duo-btn duo-btn-purple next-img-btn" onclick={nextImage}>
+												Foto {currentImageIndex + 1}/{card.images.length} 🔄
+											</button>
+										{/if}
+										<button class="duo-btn duo-btn-gray hide-img-btn" onclick={toggleShowImage}>
+											Nascondi
+										</button>
+									</div>
+								</div>
 							{/if}
 						</div>
 					{/if}
@@ -387,6 +407,28 @@
 		flex-direction: column;
 		gap: 0.5rem;
 		align-items: center;
+		margin-top: 0.25rem;
+	}
+
+	.show-img-btn {
+		font-size: 0.82rem;
+		padding: 0.45rem 0.9rem;
+	}
+
+	.image-gallery-content {
+		width: 100%;
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+		align-items: center;
+	}
+
+	.img-actions {
+		display: flex;
+		gap: 0.5rem;
+		align-items: center;
+		justify-content: center;
+		width: 100%;
 	}
 
 	.card-img {
@@ -397,9 +439,10 @@
 		border: 2px solid var(--border-color);
 	}
 
-	.next-img-btn {
+	.next-img-btn,
+	.hide-img-btn {
 		font-size: 0.75rem;
-		padding: 0.4rem 0.8rem;
+		padding: 0.35rem 0.75rem;
 	}
 
 	.tap-hint {
