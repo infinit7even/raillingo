@@ -277,7 +277,7 @@
 		overflow-y: auto;
 		overflow-x: hidden;
 		scrollbar-width: none;
-		padding: 0.35rem 0;
+		padding: 0.25rem 0;
 	}
 
 	.nav-container::-webkit-scrollbar {
@@ -289,7 +289,8 @@
 		flex-direction: column;
 		gap: 0.45rem;
 		width: 100%;
-		padding: 0.25rem 0 0.5rem 0;
+		padding: 4px 6px;
+		box-sizing: border-box;
 	}
 
 	.nav-item {
@@ -303,9 +304,14 @@
 		text-decoration: none;
 		font-size: 0.88rem;
 		font-weight: 800;
-		transition: all 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
+		transition:
+			background-color 0.15s ease,
+			border-color 0.15s ease,
+			color 0.15s ease,
+			transform 0.12s ease;
 		background: none;
 		border: 2px solid transparent;
+		border-bottom: 4px solid transparent;
 		cursor: pointer;
 		user-select: none;
 		border-radius: 16px;
@@ -315,15 +321,13 @@
 	}
 
 	.nav-item:active {
-		transform: scale(0.97);
+		transform: scale(0.97) translateY(1px);
 	}
 
 	.nav-item.active {
-		border: 2px solid var(--accent-color);
-		border-bottom: 4px solid var(--accent-color);
+		border-color: var(--accent-color);
 		background-color: var(--accent-light-bg);
 		color: var(--accent-color);
-		animation: duoPop 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
 		font-weight: 900;
 	}
 
