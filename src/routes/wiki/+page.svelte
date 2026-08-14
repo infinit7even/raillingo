@@ -30,9 +30,17 @@
 
 	let ignoredCount = $derived(ignoredIds.size);
 
+	// Wiki only includes cards with a title/acronym (excludes image-only cards)
+	let wikiCards = $derived(
+		cards.filter((c) => {
+			const hasTitle = Boolean((c.title && c.title.trim()) || (c.fullName && c.fullName.trim()));
+			return hasTitle;
+		})
+	);
+
 	let availableCategories = $derived.by<string[]>(() => {
 		const set = new Set<string>();
-		for (const c of cards) {
+		for (const c of wikiCards) {
 			if (c.category && c.category.trim()) {
 				set.add(c.category.trim());
 			}
@@ -43,8 +51,9 @@
 	// Get available letters from titles
 	let availableLetters = $derived(() => {
 		const set = new Set<string>();
-		for (const card of cards) {
-			const first = card.title ? card.title.trim().charAt(0).toUpperCase() : '#';
+		for (const card of wikiCards) {
+			const titleText = card.title?.trim() || card.fullName?.trim() || '';
+			const first = titleText ? titleText.charAt(0).toUpperCase() : '#';
 			if (first >= 'A' && first <= 'Z') {
 				set.add(first);
 			} else {
@@ -56,15 +65,20 @@
 
 	// Sorted alphabetically and filtered
 	let filteredSortedCards = $derived(
-		[...cards]
-			.sort((a, b) => (a.title || '').localeCompare(b.title || '', 'it', { sensitivity: 'base' }))
+		[...wikiCards]
+			.sort((a, b) =>
+				(a.title || a.fullName || '').localeCompare(b.title || b.fullName || '', 'it', {
+					sensitivity: 'base'
+				})
+			)
 			.filter((c) => {
 				// Category filter
 				const matchesCategory =
 					selectedCategory === 'ALL' || (c.category && c.category.trim() === selectedCategory);
 
 				// Letter filter
-				const firstLetter = c.title ? c.title.trim().charAt(0).toUpperCase() : '#';
+				const titleText = c.title?.trim() || c.fullName?.trim() || '';
+				const firstLetter = titleText ? titleText.charAt(0).toUpperCase() : '#';
 				const matchesLetter =
 					selectedLetter === 'ALL' ||
 					(selectedLetter === '#'
@@ -80,7 +94,7 @@
 					!q ||
 					(c.title && c.title.toLowerCase().includes(q)) ||
 					(c.fullName && c.fullName.toLowerCase().includes(q)) ||
-					c.description.toLowerCase().includes(q) ||
+					(c.description && c.description.toLowerCase().includes(q)) ||
 					(c.tags && c.tags.some((t) => t.toLowerCase().includes(q)));
 
 				return matchesCategory && matchesLetter && matchesIgnored && matchesSearch;
