@@ -730,12 +730,11 @@
 		role="presentation"
 	>
 	<!-- 🗂️ 1. LEFT VAULT EXPLORER -->
-	{#if !isVaultCollapsed}
-		<aside
-			class="vault-sidebar duo-card"
-			class:mobile-hidden={!isSidebarOpenMobile && selectedNoteId !== null}
-			transition:fade={{ duration: 120 }}
-		>
+	<aside
+		class="vault-sidebar duo-card"
+		class:collapsed={isVaultCollapsed}
+		class:mobile-hidden={!isSidebarOpenMobile && selectedNoteId !== null}
+	>
 			<!-- Vault Explorer Header -->
 			<div class="vault-header">
 				<div class="vault-title-group">
@@ -851,7 +850,6 @@
 				{/if}
 			</div>
 		</aside>
-	{/if}
 
 	<!-- 📝 2. CENTER MAIN WORKSPACE (EDITOR VISUALE WORD-STYLE CON IMMAGINI INTEGRATE NEL TESTO) -->
 	<main
@@ -1345,10 +1343,11 @@
 {/if}
 
 <style>
-	/* 📐 Main Obsidian Workspace Grid */
+	/* 📐 Main Obsidian Workspace Flex Container */
 	.obsidian-workspace {
-		display: grid;
-		grid-template-columns: 1fr;
+		display: flex;
+		flex-direction: row;
+		align-items: stretch;
 		gap: 0.75rem;
 		height: calc(100vh - 110px);
 		min-height: 520px;
@@ -1357,21 +1356,16 @@
 		max-width: 1320px;
 		margin: 0 auto;
 		box-sizing: border-box;
-		transition: all 0.2s ease;
-	}
-
-	@media (min-width: 1024px) {
-		.obsidian-workspace {
-			grid-template-columns: 330px 1fr;
-		}
-
-		.obsidian-workspace.vault-collapsed {
-			grid-template-columns: 1fr;
-		}
+		overflow: hidden;
+		position: relative;
 	}
 
 	/* 🗂️ Vault Left Sidebar */
 	.vault-sidebar {
+		width: 330px;
+		min-width: 330px;
+		max-width: 330px;
+		flex-shrink: 0;
 		display: flex;
 		flex-direction: column;
 		gap: 0.55rem;
@@ -1383,6 +1377,27 @@
 		box-sizing: border-box;
 		border: 2px solid var(--border-color);
 		border-bottom: 4px solid var(--border-depth-color);
+		transition:
+			width 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+			min-width 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+			max-width 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+			padding 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+			opacity 0.22s ease,
+			transform 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+			border-width 0.28s ease;
+	}
+
+	@media (min-width: 1024px) {
+		.vault-sidebar.collapsed {
+			width: 0 !important;
+			min-width: 0 !important;
+			max-width: 0 !important;
+			padding: 0 !important;
+			border-width: 0 !important;
+			opacity: 0 !important;
+			pointer-events: none !important;
+			transform: translateX(-16px);
+		}
 	}
 
 	.vault-header {
@@ -2696,7 +2711,14 @@
 		}
 
 		.obsidian-workspace {
+			flex-direction: column;
 			height: calc(100vh - 100px);
+		}
+
+		.vault-sidebar {
+			width: 100% !important;
+			min-width: 100% !important;
+			max-width: 100% !important;
 		}
 	}
 
