@@ -34,10 +34,35 @@
 
 	let ignoredCount = $derived(ignoredIds.size);
 
-	// La Wiki mostra rigorosamente solo le card che possiedono un acronimo (title)
-	let wikiCards = $derived(
-		cards.filter((c) => Boolean(c.title && c.title.trim() !== ''))
-	);
+	function isAcronymCard(c: Card): boolean {
+		if (!c.title || !c.title.trim()) return false;
+		const title = c.title.trim();
+		const fullName = c.fullName?.trim() || '';
+
+		// Se fullName esiste ed è diverso dal titolo, è un acronimo con espansione (es. BEM -> Blocco Elettrico Manuale)
+		if (fullName && fullName.toLowerCase() !== title.toLowerCase()) {
+			return true;
+		}
+
+		// Se il titolo è lungo o contiene descrizioni di segnali visivi ("fisso", "lampeggiante", "spenta", "temporanea"), non è un acronimo
+		if (title.length > 12) return false;
+		const lower = title.toLowerCase();
+		if (
+			lower.includes('fisso') ||
+			lower.includes('lampeggiante') ||
+			lower.includes('alternat') ||
+			lower.includes('spenta') ||
+			lower.includes('temporanea') ||
+			lower.includes('permanente')
+		) {
+			return false;
+		}
+
+		return true;
+	}
+
+	// La Wiki mostra rigorosamente solo le card che possiedono un acronimo reale
+	let wikiCards = $derived(cards.filter(isAcronymCard));
 
 	let availableCategories = $derived.by<string[]>(() => {
 		const set = new Set<string>();
