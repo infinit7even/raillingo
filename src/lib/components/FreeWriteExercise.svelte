@@ -253,24 +253,36 @@
 
 	.prompt-star-btn {
 		position: absolute;
-		top: 1rem;
-		right: 1rem;
-		background: none;
-		border: none;
-		font-size: 1.6rem;
+		top: 0.9rem;
+		right: 0.9rem;
+		width: 36px;
+		height: 36px;
+		border-radius: 50%;
+		background: var(--card-bg-subtle);
+		border: 1.5px solid var(--border-color);
+		box-shadow: 0 3px 10px rgba(0, 0, 0, 0.25);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 1.25rem;
 		color: var(--text-muted);
 		cursor: pointer;
 		line-height: 1;
-		padding: 0.25rem;
-		transition:
-			transform 0.2s ease,
-			color 0.2s ease;
+		padding: 0;
+		transition: all 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+	}
+
+	.prompt-star-btn:hover {
+		transform: scale(1.1);
+		border-color: var(--yellow-color);
+		color: var(--yellow-color);
 	}
 
 	.prompt-star-btn.ignored {
+		background: rgba(250, 204, 21, 0.15);
+		border-color: var(--yellow-color);
 		color: var(--yellow-color);
-		transform: scale(1.25);
-		filter: drop-shadow(0 0 6px rgba(250, 204, 21, 0.5));
+		filter: drop-shadow(0 0 6px rgba(250, 204, 21, 0.4));
 		animation: starPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 	}
 
