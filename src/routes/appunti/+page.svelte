@@ -1,15 +1,16 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import { notesStore } from '$lib/stores/notesStore';
-	import {
-		getMarkdownStats,
-		extractHeadings,
-		type HeadingItem
-	} from '$lib/utils/markdown';
+	import { getMarkdownStats, extractHeadings, type HeadingItem } from '$lib/utils/markdown';
 	import { DEFAULT_NOTE_CATEGORIES, type Note, type NoteSortOption } from '$lib/types/notes';
 	import { toastStore } from '$lib/stores/toastStore';
 	import { fade } from 'svelte/transition';
 	import { compressImage } from '$lib/utils/imageCompressor';
+	import {
+		markdownToDocHtml,
+		docHtmlToMarkdown,
+		createInlineImageFigureHtml
+	} from '$lib/utils/docConverter';
 
 	let { data } = $props();
 
@@ -26,8 +27,8 @@
 
 	// Workspace UI states
 	let isOutlineOpen = $state(false);
-	let isSidebarOpenMobile = $state(true); // Su mobile: true = mostra lista file, false = mostra editor
-	let isVaultCollapsed = $state(false); // Su desktop: comprime la sidebar sinistra a 0
+	let isSidebarOpenMobile = $state(true);
+	let isVaultCollapsed = $state(false);
 	let isAutoSaving = $state(false);
 	let isUploadingImage = $state(false);
 	let lastSavedTime = $state<string>('');
@@ -38,8 +39,10 @@
 	let currentCategory = $state('Normativa RFI');
 	let currentImages = $state<string[]>([]);
 	let currentIsPinned = $state(false);
-	let textareaEl = $state<HTMLTextAreaElement | null>(null);
+
+	let editorEl = $state<HTMLDivElement | null>(null);
 	let fileInputEl = $state<HTMLInputElement | null>(null);
+	let savedRange: Range | null = null;
 
 	let saveDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -61,7 +64,7 @@
 				isVaultCollapsed = true;
 			}
 
-			// Intercetta incolla (Ctrl+V) a livello globale sulla pagina
+			// Intercetta paste globale
 			window.addEventListener('paste', handleGlobalPaste);
 		}
 
@@ -81,7 +84,7 @@
 		}
 	}
 
-	function selectNote(note: Note) {
+	async function selectNote(note: Note) {
 		selectedNoteId = note.id;
 		currentTitle = note.title;
 		currentContent = note.content || '';
@@ -89,6 +92,11 @@
 		currentImages = note.images ? [...note.images] : [];
 		currentIsPinned = Boolean(note.isPinned);
 		isSidebarOpenMobile = false;
+
+		await tick();
+		if (editorEl) {
+			editorEl.innerHTML = markdownToDocHtml(currentContent);
+		}
 	}
 
 	let activeNote = $derived(notes.find((n) => n.id === selectedNoteId) || null);
@@ -161,6 +169,20 @@
 	let docStats = $derived(getMarkdownStats(currentContent));
 	let headingsOutline = $derived<HeadingItem[]>(extractHeadings(currentContent));
 
+	function syncContentFromEditor() {
+		if (!editorEl) return;
+		currentContent = docHtmlToMarkdown(editorEl);
+
+		// Estrai tutte le immagini presenti nel documento
+		const imgEls = editorEl.querySelectorAll('figure.doc-inline-image, img.doc-img-element');
+		const foundUrls: string[] = [];
+		imgEls.forEach((el) => {
+			const u = el.getAttribute('data-url') || el.getAttribute('src');
+			if (u && !foundUrls.includes(u)) foundUrls.push(u);
+		});
+		currentImages = foundUrls;
+	}
+
 	function triggerAutoSave() {
 		if (!selectedNoteId) return;
 		isAutoSaving = true;
@@ -168,6 +190,7 @@
 		if (saveDebounceTimer) clearTimeout(saveDebounceTimer);
 		saveDebounceTimer = setTimeout(async () => {
 			if (!selectedNoteId) return;
+			syncContentFromEditor();
 			await notesStore.updateNote({
 				id: selectedNoteId,
 				title: currentTitle.trim() || 'Appunto senza titolo',
@@ -182,6 +205,11 @@
 		}, 500);
 	}
 
+	function handleEditorInput() {
+		syncContentFromEditor();
+		triggerAutoSave();
+	}
+
 	async function handleCreateNewNote() {
 		const newNote = await notesStore.createNote({
 			title: 'Nuovo Appunto',
@@ -194,9 +222,10 @@
 		if (newNote) {
 			selectNote(newNote);
 			isSidebarOpenMobile = false;
-			setTimeout(() => {
-				if (textareaEl) textareaEl.focus();
-			}, 50);
+			await tick();
+			if (editorEl) {
+				editorEl.focus();
+			}
 		}
 	}
 
@@ -213,6 +242,7 @@
 				currentTitle = '';
 				currentContent = '';
 				currentImages = [];
+				if (editorEl) editorEl.innerHTML = '';
 			}
 		}
 	}
@@ -222,29 +252,28 @@
 		triggerAutoSave();
 	}
 
-	function insertFormatting(prefix: string, suffix = '', placeholder = '') {
-		if (!textareaEl) return;
-		const start = textareaEl.selectionStart;
-		const end = textareaEl.selectionEnd;
-		const selected = currentContent.substring(start, end) || placeholder;
-		const replacement = prefix + selected + suffix;
-
-		currentContent =
-			currentContent.substring(0, start) + replacement + currentContent.substring(end);
-
-		triggerAutoSave();
-
-		setTimeout(() => {
-			if (!textareaEl) return;
-			textareaEl.focus();
-			textareaEl.setSelectionRange(
-				start + prefix.length,
-				start + prefix.length + selected.length
-			);
-		}, 10);
+	function saveCurrentSelection() {
+		const sel = window.getSelection();
+		if (sel && sel.rangeCount > 0) {
+			savedRange = sel.getRangeAt(0).cloneRange();
+		}
 	}
 
-	// Funzione unificata per comprimere e caricare immagini incollate o selezionate
+	function applyFormat(command: string, value: string | undefined = undefined) {
+		if (!editorEl) return;
+		editorEl.focus();
+		document.execCommand(command, false, value);
+		handleEditorInput();
+	}
+
+	function applyBlockFormat(tag: string) {
+		if (!editorEl) return;
+		editorEl.focus();
+		document.execCommand('formatBlock', false, `<${tag}>`);
+		handleEditorInput();
+	}
+
+	// Funzione unificata per caricare e inserire immagini visivamente nel flusso del testo (Word-style)
 	async function uploadAndInsertImage(rawFile: File | Blob) {
 		if (!selectedNoteId) {
 			toastStore.show({ message: '⚠️ Seleziona prima un appunto in cui incollare l\'immagine.' });
@@ -253,10 +282,10 @@
 
 		if (isUploadingImage) return;
 		isUploadingImage = true;
-		toastStore.show({ message: '⏳ Compressione e caricamento immagine in corso...' });
+		toastStore.show({ message: '⏳ Compressione e inserimento immagine nel testo...' });
 
 		try {
-			// Comprimi l'immagine in WebP ottimizzato (massimo 1MB)
+			// Comprimi e converti in WebP ottimizzato (massimo 1MB)
 			const compressedFile = await compressImage(rawFile, {
 				maxSizeMB: 1,
 				maxWidth: 1920,
@@ -281,32 +310,9 @@
 			const data = await res.json();
 			const imageUrl = data.url;
 
-			// Inserisci tag Markdown nella posizione del cursore con larghezza standard 400px (ridimensionabile)
-			const imageTag = `\n![immagine|400](${imageUrl})\n`;
-
-			if (textareaEl) {
-				const start = textareaEl.selectionStart || currentContent.length;
-				const end = textareaEl.selectionEnd || currentContent.length;
-
-				currentContent =
-					currentContent.substring(0, start) + imageTag + currentContent.substring(end);
-
-				setTimeout(() => {
-					if (!textareaEl) return;
-					textareaEl.focus();
-					textareaEl.setSelectionRange(start + imageTag.length, start + imageTag.length);
-				}, 20);
-			} else {
-				currentContent += imageTag;
-			}
-
-			// Aggiungi l'URL all'array images della nota
-			if (!currentImages.includes(imageUrl)) {
-				currentImages = [...currentImages, imageUrl];
-			}
-
-			triggerAutoSave();
-			toastStore.show({ message: '🖼️ Immagine incollata e inserita nella nota!' });
+			// Inserisci il blocco immagine direttamente nel documento visuale (Word-style)
+			insertImageBlockAtCursor(imageUrl, '400');
+			toastStore.show({ message: '🖼️ Immagine inserita nel testo!' });
 		} catch (err) {
 			console.error('Errore compressione/upload immagine:', err);
 			toastStore.show({ message: '⚠️ Impossibile caricare l\'immagine' });
@@ -315,36 +321,93 @@
 		}
 	}
 
-	function escapeRegex(str: string): string {
-		return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-	}
+	function insertImageBlockAtCursor(imageUrl: string, defaultWidth = '400') {
+		if (!editorEl) return;
+		editorEl.focus();
 
-	// Ottieni la larghezza impostata per una determinata immagine
-	function getImageWidthInNote(imgUrl: string): string {
-		const regex = new RegExp(`!\\[[^\\]]*\\|([^\\]]+)\\]\\(${escapeRegex(imgUrl)}\\)`);
-		const match = currentContent.match(regex);
-		return match ? match[1].trim() : '';
-	}
+		const figureHtml = createInlineImageFigureHtml(imageUrl, defaultWidth);
+		const tempDiv = document.createElement('div');
+		tempDiv.innerHTML = figureHtml;
+		const figureNode = tempDiv.firstElementChild as HTMLElement;
 
-	// Ridimensiona un'immagine all'interno del Markdown della nota
-	function resizeImageInNote(imgUrl: string, newWidth: string) {
-		const regex = new RegExp(`!\\[([^\\]|]*)(\\|[^\\]]+)?\\]\\(${escapeRegex(imgUrl)}\\)`, 'g');
-		if (regex.test(currentContent)) {
-			currentContent = currentContent.replace(regex, `![$1|${newWidth}](${imgUrl})`);
-		} else {
-			currentContent += `\n![immagine|${newWidth}](${imgUrl})\n`;
+		const trailingParagraph = document.createElement('p');
+		trailingParagraph.innerHTML = '<br>';
+
+		const sel = window.getSelection();
+		let inserted = false;
+
+		if (sel && sel.rangeCount > 0) {
+			let range = sel.getRangeAt(0);
+			// Verifica che la selezione sia dentro l'editor
+			if (editorEl.contains(range.commonAncestorContainer)) {
+				range.deleteContents();
+				range.insertNode(trailingParagraph);
+				range.insertNode(figureNode);
+
+				// Sposta il cursore nel paragrafo successivo per continuare a scrivere
+				const newRange = document.createRange();
+				newRange.setStart(trailingParagraph, 0);
+				newRange.collapse(true);
+				sel.removeAllRanges();
+				sel.addRange(newRange);
+				inserted = true;
+			}
 		}
-		triggerAutoSave();
-		toastStore.show({ message: `📏 Dimensione immagine: ${newWidth}` });
+
+		if (!inserted) {
+			editorEl.appendChild(figureNode);
+			editorEl.appendChild(trailingParagraph);
+		}
+
+		handleEditorInput();
 	}
 
-	// Rimuovi un'immagine dalla nota e dal disco
-	function removeImageFromNote(imgUrl: string) {
-		const regex = new RegExp(`!\\[[^\\]]*\\]\\(${escapeRegex(imgUrl)}\\)\\n?`, 'g');
-		currentContent = currentContent.replace(regex, '');
-		currentImages = currentImages.filter((u) => u !== imgUrl);
-		triggerAutoSave();
-		toastStore.show({ message: '🗑️ Immagine rimossa dalla nota' });
+	// Gestione dei click sui controlli di ridimensionamento / cancellazione dell'immagine inline
+	function handleEditorClick(e: MouseEvent) {
+		const target = e.target as HTMLElement;
+		if (!target) return;
+
+		// 1. Click pulsante ridimensionamento
+		if (target.classList.contains('img-btn-size')) {
+			e.preventDefault();
+			e.stopPropagation();
+			const newSize = target.getAttribute('data-size') || '400';
+			const figure = target.closest('figure.doc-inline-image') as HTMLElement;
+			if (figure) {
+				const wrapper = figure.querySelector('.doc-image-wrapper') as HTMLElement;
+				const rawW = newSize.replace(/px/g, '').trim();
+				const cssW = rawW.includes('%') ? rawW : `${rawW}px`;
+
+				figure.setAttribute('data-width', rawW);
+				if (wrapper) wrapper.style.maxWidth = cssW;
+
+				// Aggiorna classe active sui pulsanti del gruppo
+				figure.querySelectorAll('.img-btn-size').forEach((btn) => {
+					if (btn.getAttribute('data-size') === newSize) {
+						btn.classList.add('active');
+					} else {
+						btn.classList.remove('active');
+					}
+				});
+
+				handleEditorInput();
+				toastStore.show({ message: `📏 Dimensione immagine: ${newSize}` });
+			}
+			return;
+		}
+
+		// 2. Click pulsante eliminazione immagine
+		if (target.classList.contains('img-btn-del')) {
+			e.preventDefault();
+			e.stopPropagation();
+			const figure = target.closest('figure.doc-inline-image');
+			if (figure) {
+				figure.remove();
+				handleEditorInput();
+				toastStore.show({ message: '🗑️ Immagine rimossa dal testo' });
+			}
+			return;
+		}
 	}
 
 	// Gestione globale dell'evento Incolla (Ctrl+V)
@@ -357,6 +420,7 @@
 			if (item.type.startsWith('image/')) {
 				e.preventDefault();
 				e.stopPropagation();
+				saveCurrentSelection();
 				const file = item.getAsFile();
 				if (file && file.size > 0) {
 					uploadAndInsertImage(file);
@@ -375,6 +439,7 @@
 			const file = files[i];
 			if (file.type.startsWith('image/')) {
 				e.preventDefault();
+				saveCurrentSelection();
 				uploadAndInsertImage(file);
 				break;
 			}
@@ -390,12 +455,14 @@
 	}
 
 	function copyMarkdown() {
+		syncContentFromEditor();
 		if (!currentContent) return;
 		navigator.clipboard.writeText(`# ${currentTitle}\n\n${currentContent}`);
 		toastStore.show({ message: '📋 Testo copiato negli appunti!' });
 	}
 
 	function downloadFile() {
+		syncContentFromEditor();
 		const filename = `${currentTitle.replace(/[^a-zA-Z0-9_-]/g, '_').toLowerCase() || 'appunto'}.md`;
 		const fullText = `# ${currentTitle}\n\n**Categoria**: ${currentCategory}\n---\n\n${currentContent}`;
 		const blob = new Blob([fullText], { type: 'text/markdown;charset=utf-8;' });
@@ -452,7 +519,7 @@
 						type="button"
 						class="collapse-vault-btn"
 						onclick={toggleVaultCollapse}
-						title="Comprimi Vault (nascondi elenco)"
+						title="Comprimi Vault"
 					>
 						◀
 					</button>
@@ -495,7 +562,7 @@
 				{/each}
 			</div>
 
-			<!-- Notes List Explorer (SENZA ANTEPRIME DI TESTO) -->
+			<!-- Notes List Explorer -->
 			<div class="vault-files-list">
 				{#if filteredNotes.length === 0}
 					<div class="vault-empty-state">
@@ -541,7 +608,7 @@
 		</aside>
 	{/if}
 
-	<!-- 📝 2. CENTER MAIN WORKSPACE (SCRITTURA DIRETTA CON IMMAGINI RIDIMENSIONABILI) -->
+	<!-- 📝 2. CENTER MAIN WORKSPACE (EDITOR VISUALE WORD-STYLE CON IMMAGINI INTEGRATE NEL TESTO) -->
 	<main
 		class="note-workspace-pane duo-card"
 		class:mobile-hidden={isSidebarOpenMobile && selectedNoteId !== null}
@@ -550,7 +617,6 @@
 			<!-- Workspace Top Header Bar -->
 			<div class="workspace-header">
 				<div class="workspace-header-left">
-					<!-- Expand Vault button when collapsed -->
 					{#if isVaultCollapsed}
 						<button
 							type="button"
@@ -562,7 +628,6 @@
 						</button>
 					{/if}
 
-					<!-- Mobile Back to Vault button -->
 					<button
 						type="button"
 						class="mobile-back-btn"
@@ -572,7 +637,6 @@
 						← Vault
 					</button>
 
-					<!-- Breadcrumb & Category selector -->
 					<div class="workspace-breadcrumb">
 						<span class="folder-ico">📁</span>
 						<select
@@ -587,7 +651,6 @@
 					</div>
 				</div>
 
-				<!-- Save Status Pill -->
 				<div class="save-status-pill">
 					{#if isAutoSaving}
 						<span class="saving-txt">⏳ Salvataggio...</span>
@@ -596,7 +659,6 @@
 					{/if}
 				</div>
 
-				<!-- Header Quick Actions -->
 				<div class="workspace-quick-actions">
 					<button
 						type="button"
@@ -646,12 +708,12 @@
 				</div>
 			</div>
 
-			<!-- Obsidian Formatting Ribbon Bar -->
+			<!-- Word/Notion Formatting Toolbar -->
 			<div class="obsidian-ribbon-bar">
 				<button
 					type="button"
 					class="ribbon-btn"
-					onclick={() => insertFormatting('**', '**', 'grassetto')}
+					onclick={() => applyFormat('bold')}
 					title="Grassetto (Ctrl+B)"
 				>
 					<strong>B</strong>
@@ -659,7 +721,7 @@
 				<button
 					type="button"
 					class="ribbon-btn"
-					onclick={() => insertFormatting('*', '*', 'corsivo')}
+					onclick={() => applyFormat('italic')}
 					title="Corsivo (Ctrl+I)"
 				>
 					<em>I</em>
@@ -667,16 +729,32 @@
 				<button
 					type="button"
 					class="ribbon-btn"
-					onclick={() => insertFormatting('### ', '', 'Intestazione')}
-					title="Titolo H3"
+					onclick={() => applyBlockFormat('h1')}
+					title="Titolo Principale (H1)"
 				>
-					<strong>H</strong>
+					<strong>H1</strong>
+				</button>
+				<button
+					type="button"
+					class="ribbon-btn"
+					onclick={() => applyBlockFormat('h2')}
+					title="Titolo Sezione (H2)"
+				>
+					<strong>H2</strong>
+				</button>
+				<button
+					type="button"
+					class="ribbon-btn"
+					onclick={() => applyBlockFormat('h3')}
+					title="Sotto-titolo (H3)"
+				>
+					<strong>H3</strong>
 				</button>
 				<span class="ribbon-sep"></span>
 				<button
 					type="button"
 					class="ribbon-btn"
-					onclick={() => insertFormatting('- ', '', 'Punto')}
+					onclick={() => applyFormat('insertUnorderedList')}
 					title="Elenco puntato"
 				>
 					• Lista
@@ -684,7 +762,7 @@
 				<button
 					type="button"
 					class="ribbon-btn"
-					onclick={() => insertFormatting('1. ', '', 'Passo')}
+					onclick={() => applyFormat('insertOrderedList')}
 					title="Elenco numerato"
 				>
 					1. Num
@@ -692,35 +770,10 @@
 				<button
 					type="button"
 					class="ribbon-btn"
-					onclick={() => insertFormatting('- [ ] ', '', 'Attività')}
-					title="Checklist"
+					onclick={() => applyBlockFormat('blockquote')}
+					title="Citazione / Box Evidenza"
 				>
-					☑️ Check
-				</button>
-				<span class="ribbon-sep"></span>
-				<button
-					type="button"
-					class="ribbon-btn"
-					onclick={() => insertFormatting('> [!TIP]\n> ', '', 'Suggerimento')}
-					title="Callout Tip"
-				>
-					💡 Tip
-				</button>
-				<button
-					type="button"
-					class="ribbon-btn"
-					onclick={() => insertFormatting('> [!WARNING]\n> ', '', 'Avviso')}
-					title="Callout Warning"
-				>
-					⚠️ Warning
-				</button>
-				<button
-					type="button"
-					class="ribbon-btn"
-					onclick={() => insertFormatting('```\n', '\n```', 'codice/schema')}
-					title="Blocco di codice"
-				>
-					💻 Codice
+					💡 Box
 				</button>
 				<span class="ribbon-sep"></span>
 				<button
@@ -728,9 +781,9 @@
 					class="ribbon-btn image-ribbon-btn"
 					onclick={() => fileInputEl?.click()}
 					disabled={isUploadingImage}
-					title="Incolla (Ctrl+V) o carica un'immagine (PNG, JPG, WebP - max 1MB)"
+					title="Incolla (Ctrl+V) o allega immagine (PNG, JPG, WebP - max 1MB)"
 				>
-					{isUploadingImage ? '⏳ Caricamento...' : '🖼️ Incolla / Allega'}
+					{isUploadingImage ? '⏳ Caricamento...' : '🖼️ Inserisci Immagine'}
 				</button>
 				<input
 					bind:this={fileInputEl}
@@ -752,89 +805,26 @@
 				/>
 			</div>
 
-			<!-- Attached Images Tray con controlli di Ridimensionamento -->
-			{#if currentImages && currentImages.length > 0}
-				<div class="attached-images-tray">
-					<div class="images-tray-header">
-						<span class="images-tray-lbl">🖼️ Immagini nella nota ({currentImages.length}) - Ridimensiona:</span>
-					</div>
-					<div class="images-tray-list">
-						{#each currentImages as imgUrl}
-							{@const currentW = getImageWidthInNote(imgUrl)}
-							<div class="image-thumb-pill">
-								<img src={imgUrl} alt="" class="thumb-preview" />
-								<div class="resize-buttons-group">
-									<button
-										type="button"
-										class="size-btn"
-										class:active={currentW === '200'}
-										onclick={() => resizeImageInNote(imgUrl, '200')}
-										title="Piccola (200px)"
-									>
-										200px
-									</button>
-									<button
-										type="button"
-										class="size-btn"
-										class:active={currentW === '400' || currentW === ''}
-										onclick={() => resizeImageInNote(imgUrl, '400')}
-										title="Media (400px)"
-									>
-										400px
-									</button>
-									<button
-										type="button"
-										class="size-btn"
-										class:active={currentW === '650'}
-										onclick={() => resizeImageInNote(imgUrl, '650')}
-										title="Grande (650px)"
-									>
-										650px
-									</button>
-									<button
-										type="button"
-										class="size-btn"
-										class:active={currentW === '100%'}
-										onclick={() => resizeImageInNote(imgUrl, '100%')}
-										title="Piena larghezza (100%)"
-									>
-										100%
-									</button>
-								</div>
-								<a href={imgUrl} target="_blank" rel="noopener noreferrer" class="thumb-link" title="Apri dimensione intera">
-									🔍
-								</a>
-								<button
-									type="button"
-									class="thumb-delete-btn"
-									onclick={() => removeImageFromNote(imgUrl)}
-									title="Rimuovi immagine dalla nota"
-								>
-									✕
-								</button>
-							</div>
-						{/each}
-					</div>
-				</div>
-			{/if}
-
-			<!-- Pure Writing Textarea Canvas con supporto Incolla (Ctrl+V) & Drag-and-Drop -->
+			<!-- Word-style Live Document Canvas with Inline Images -->
 			<div
 				class="document-canvas-container"
 				ondrop={handleDrop}
 				ondragover={(e) => e.preventDefault()}
 				role="region"
-				aria-label="Area di scrittura"
+				aria-label="Area di scrittura stile Word"
 			>
-				<textarea
-					bind:this={textareaEl}
-					bind:value={currentContent}
-					oninput={triggerAutoSave}
-					onpaste={handleGlobalPaste}
-					ondrop={handleDrop}
-					placeholder="Scrivi qui i tuoi appunti... (Incolla qualsiasi immagine direttamente con Ctrl+V per inserirla nel testo)"
-					class="obsidian-editor-textarea"
-				></textarea>
+				<div
+					bind:this={editorEl}
+					contenteditable="true"
+					class="word-document-editor"
+					oninput={handleEditorInput}
+					onclick={handleEditorClick}
+					onkeyup={saveCurrentSelection}
+					onmouseup={saveCurrentSelection}
+					role="textbox"
+					aria-multiline="true"
+					tabindex="0"
+				></div>
 			</div>
 
 			<!-- Workspace Footer Status Info -->
@@ -847,7 +837,7 @@
 					<span>🔤 {docStats.charCount} caratteri</span>
 				</div>
 				<div class="doc-stats-right">
-					<span>Ctrl+V per incollare immagini • Ctrl+S per salvare</span>
+					<span>Incolla con <strong>Ctrl+V</strong> per inserire immagini nel testo</span>
 				</div>
 			</div>
 		{:else}
@@ -1362,120 +1352,6 @@
 		cursor: wait;
 	}
 
-	/* Attached Images Tray & Resizing */
-	.attached-images-tray {
-		display: flex;
-		flex-direction: column;
-		gap: 0.4rem;
-		padding: 0.45rem 0.7rem;
-		background: var(--card-bg-subtle);
-		border: 1.5px solid var(--border-color);
-		border-radius: 12px;
-		flex-shrink: 0;
-	}
-
-	.images-tray-header {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-	}
-
-	.images-tray-lbl {
-		font-size: 0.7rem;
-		font-weight: 800;
-		color: var(--text-muted);
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
-	}
-
-	.images-tray-list {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		overflow-x: auto;
-		scrollbar-width: none;
-		padding-bottom: 0.15rem;
-	}
-
-	.images-tray-list::-webkit-scrollbar {
-		display: none;
-	}
-
-	.image-thumb-pill {
-		display: flex;
-		align-items: center;
-		gap: 0.45rem;
-		background: var(--card-bg);
-		border: 1.5px solid var(--border-color);
-		border-radius: 10px;
-		padding: 0.25rem 0.5rem;
-		flex-shrink: 0;
-	}
-
-	.thumb-preview {
-		width: 32px;
-		height: 32px;
-		object-fit: cover;
-		border-radius: 6px;
-		border: 1px solid var(--border-color);
-	}
-
-	.resize-buttons-group {
-		display: flex;
-		align-items: center;
-		gap: 0.2rem;
-		background: var(--card-bg-subtle);
-		border-radius: 6px;
-		padding: 0.1rem;
-	}
-
-	.size-btn {
-		background: transparent;
-		border: 1px solid transparent;
-		border-radius: 4px;
-		padding: 0.15rem 0.35rem;
-		font-size: 0.65rem;
-		font-weight: 800;
-		color: var(--text-muted);
-		cursor: pointer;
-		transition: all 0.15s ease;
-	}
-
-	.size-btn:hover {
-		color: var(--text-color);
-	}
-
-	.size-btn.active {
-		background: var(--accent-light-bg);
-		color: var(--accent-color);
-		border-color: var(--accent-color);
-	}
-
-	.thumb-link {
-		font-size: 0.8rem;
-		text-decoration: none;
-		opacity: 0.8;
-		transition: opacity 0.15s;
-	}
-
-	.thumb-link:hover {
-		opacity: 1;
-	}
-
-	.thumb-delete-btn {
-		background: transparent;
-		border: none;
-		color: #ff5e5b;
-		font-size: 0.8rem;
-		font-weight: 900;
-		cursor: pointer;
-		padding: 0 0.15rem;
-	}
-
-	.thumb-delete-btn:hover {
-		transform: scale(1.2);
-	}
-
 	/* Seamless Title Input */
 	.note-document-title-box {
 		padding: 0.25rem 0 0.15rem 0;
@@ -1499,33 +1375,182 @@
 		border-bottom: 2px solid var(--accent-color);
 	}
 
-	/* Pure Textarea Document Canvas */
+	/* 📄 Word-Style Document Canvas */
 	.document-canvas-container {
 		flex: 1;
 		min-height: 200px;
 		display: flex;
-		overflow: hidden;
-	}
-
-	.obsidian-editor-textarea {
-		width: 100%;
-		height: 100%;
+		overflow-y: auto;
 		background: var(--card-bg-subtle);
 		border: 1.5px solid var(--border-color);
 		border-radius: 12px;
-		padding: 0.85rem;
+		padding: 1.25rem;
 		box-sizing: border-box;
-		color: var(--text-color);
-		font-family: 'Outfit', 'Plus Jakarta Sans', monospace;
-		font-size: 0.95rem;
-		line-height: 1.6;
-		resize: none;
-		outline: none;
-		transition: border-color 0.2s ease;
 	}
 
-	.obsidian-editor-textarea:focus {
+	.word-document-editor {
+		width: 100%;
+		min-height: 100%;
+		outline: none;
+		color: var(--text-color);
+		font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+		font-size: 1rem;
+		line-height: 1.7;
+		word-break: break-word;
+	}
+
+	.word-document-editor :global(p) {
+		margin: 0.4rem 0;
+		min-height: 1.4em;
+	}
+
+	.word-document-editor :global(h1) {
+		font-size: 1.55rem;
+		font-weight: 900;
+		color: var(--accent-color);
+		margin: 1.1rem 0 0.4rem 0;
+	}
+
+	.word-document-editor :global(h2) {
+		font-size: 1.35rem;
+		font-weight: 900;
+		color: var(--text-color);
+		margin: 0.9rem 0 0.35rem 0;
+	}
+
+	.word-document-editor :global(h3) {
+		font-size: 1.15rem;
+		font-weight: 800;
+		color: var(--text-color);
+		margin: 0.75rem 0 0.3rem 0;
+	}
+
+	.word-document-editor :global(ul),
+	.word-document-editor :global(ol) {
+		margin: 0.4rem 0;
+		padding-left: 1.5rem;
+	}
+
+	.word-document-editor :global(li) {
+		margin: 0.2rem 0;
+	}
+
+	.word-document-editor :global(blockquote) {
+		margin: 0.6rem 0;
+		padding: 0.6rem 1rem;
+		border-left: 4px solid var(--accent-color);
+		background: var(--accent-light-bg);
+		border-radius: 0 10px 10px 0;
+		font-style: italic;
+	}
+
+	.word-document-editor :global(code) {
+		background: var(--card-bg);
+		padding: 0.15rem 0.35rem;
+		border-radius: 4px;
+		font-family: monospace;
+		font-size: 0.9em;
+	}
+
+	.word-document-editor :global(mark) {
+		background: rgba(255, 230, 0, 0.3);
+		padding: 0 0.2rem;
+		border-radius: 3px;
+	}
+
+	/* 🖼️ INLINE IMAGE FIGURE IN MEZZO AL TESTO (Word-Style) */
+	.word-document-editor :global(figure.doc-inline-image) {
+		margin: 0.85rem auto;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		user-select: none;
+	}
+
+	.word-document-editor :global(.doc-image-wrapper) {
+		position: relative;
+		display: inline-block;
+		width: 100%;
+		border-radius: 12px;
+		overflow: hidden;
+		border: 2px solid var(--border-color);
+		box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+		background: #000;
+		transition: all 0.2s ease;
+	}
+
+	.word-document-editor :global(.doc-img-element) {
+		display: block;
+		width: 100%;
+		height: auto;
+		object-fit: contain;
+	}
+
+	.word-document-editor :global(.doc-image-toolbar) {
+		position: absolute;
+		bottom: 8px;
+		left: 50%;
+		transform: translateX(-50%);
+		background: rgba(20, 20, 25, 0.88);
+		backdrop-filter: blur(8px);
+		border: 1px solid rgba(255, 255, 255, 0.2);
+		border-radius: 8px;
+		padding: 0.25rem 0.45rem;
+		display: flex;
+		align-items: center;
+		gap: 0.3rem;
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+		z-index: 10;
+		opacity: 0.92;
+		transition: opacity 0.15s ease;
+	}
+
+	.word-document-editor :global(.doc-image-wrapper:hover .doc-image-toolbar) {
+		opacity: 1;
+	}
+
+	.word-document-editor :global(.img-btn-size) {
+		background: transparent;
+		border: 1px solid transparent;
+		border-radius: 4px;
+		padding: 0.15rem 0.35rem;
+		font-size: 0.65rem;
+		font-weight: 800;
+		color: #e5e7eb;
+		cursor: pointer;
+		transition: all 0.15s ease;
+	}
+
+	.word-document-editor :global(.img-btn-size:hover) {
+		background: rgba(255, 255, 255, 0.15);
+		color: #fff;
+	}
+
+	.word-document-editor :global(.img-btn-size.active) {
+		background: var(--accent-color);
+		color: #fff;
 		border-color: var(--accent-color);
+	}
+
+	.word-document-editor :global(.img-btn-view) {
+		font-size: 0.75rem;
+		text-decoration: none;
+		color: #e5e7eb;
+		padding: 0 0.2rem;
+	}
+
+	.word-document-editor :global(.img-btn-del) {
+		background: transparent;
+		border: none;
+		color: #ff5e5b;
+		font-size: 0.8rem;
+		font-weight: 900;
+		cursor: pointer;
+		padding: 0 0.2rem;
+	}
+
+	.word-document-editor :global(.img-btn-del:hover) {
+		transform: scale(1.25);
 	}
 
 	.workspace-footer {
