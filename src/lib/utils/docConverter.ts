@@ -26,13 +26,19 @@ function parseInlineMd(text: string): string {
 	return out;
 }
 
-export function createInlineImageFigureHtml(url: string, width = '400', alt = 'immagine'): string {
+export function createInlineImageFigureHtml(
+	url: string,
+	width = '400',
+	align = 'center',
+	alt = 'immagine'
+): string {
 	const safeUrl = url.trim();
 	const safeAlt = escapeHtml(alt);
 	const rawW = width ? width.replace(/px/g, '').trim() : '400';
 	const cssW = rawW.includes('%') ? rawW : `${rawW}px`;
+	const safeAlign = ['left', 'center', 'right'].includes(align) ? align : 'center';
 
-	return `<figure class="doc-inline-image" contenteditable="false" data-url="${safeUrl}" data-width="${rawW}"><div class="doc-image-wrapper" style="max-width: ${cssW};"><img src="${safeUrl}" alt="${safeAlt}" class="doc-img-element" loading="lazy" /><div class="doc-image-toolbar"><button type="button" class="img-btn-size ${rawW === '200' ? 'active' : ''}" data-size="200">200px</button><button type="button" class="img-btn-size ${rawW === '400' ? 'active' : ''}" data-size="400">400px</button><button type="button" class="img-btn-size ${rawW === '650' ? 'active' : ''}" data-size="650">650px</button><button type="button" class="img-btn-size ${rawW === '100%' ? 'active' : ''}" data-size="100%">100%</button><a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="img-btn-view" title="Apri a dimensione intera">🔍</a><button type="button" class="img-btn-del" title="Rimuovi immagine">✕</button></div></div></figure>`;
+	return `<figure class="doc-inline-image" contenteditable="false" draggable="true" data-url="${safeUrl}" data-width="${rawW}" data-align="${safeAlign}"><div class="doc-image-wrapper align-${safeAlign}" style="max-width: ${cssW};"><img src="${safeUrl}" alt="${safeAlt}" class="doc-img-element" loading="lazy" /><div class="resize-handle handle-se" title="Trascina per ridimensionare"></div><div class="resize-handle handle-sw" title="Trascina per ridimensionare"></div><div class="doc-image-toolbar"><span class="img-tool-drag" title="Trascina nel testo per spostare">⠿</span><button type="button" class="img-btn-move" data-move="up" title="Sposta prima del paragrafo precedente">▲</button><button type="button" class="img-btn-move" data-move="down" title="Sposta dopo il paragrafo successivo">▼</button><span class="img-tool-sep"></span><button type="button" class="img-btn-align ${safeAlign === 'left' ? 'active' : ''}" data-align="left" title="Allinea a Sinistra">⬅️</button><button type="button" class="img-btn-align ${safeAlign === 'center' ? 'active' : ''}" data-align="center" title="Centra">⏺️</button><button type="button" class="img-btn-align ${safeAlign === 'right' ? 'active' : ''}" data-align="right" title="Allinea a Destra">➡️</button><span class="img-tool-sep"></span><button type="button" class="img-btn-size ${rawW === '250' ? 'active' : ''}" data-size="250">250px</button><button type="button" class="img-btn-size ${rawW === '450' ? 'active' : ''}" data-size="450">450px</button><button type="button" class="img-btn-size ${rawW === '100%' ? 'active' : ''}" data-size="100%">100%</button><span class="img-tool-sep"></span><a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="img-btn-view" title="Apri a dimensione intera">🔍</a><button type="button" class="img-btn-del" title="Rimuovi immagine">✕</button></div></div></figure>`;
 }
 
 /**
@@ -49,13 +55,14 @@ export function markdownToDocHtml(md: string): string {
 		const trimmed = block.trim();
 		if (!trimmed) continue;
 
-		// 1. Immagine Markdown: ![alt|width](url) o ![alt](url)
-		const imgMatch = trimmed.match(/^!\[([^\]|]*)(\|([^\]]+))?\]\(([^)]+)\)$/);
+		// 1. Immagine Markdown: ![alt|width|align](url) o ![alt|width](url) o ![alt](url)
+		const imgMatch = trimmed.match(/^!\[([^\]|]*)(\|([^\]|]+))?(\|([^\]]+))?\]\(([^)]+)\)$/);
 		if (imgMatch) {
 			const alt = imgMatch[1] || 'immagine';
 			const width = imgMatch[3] ? imgMatch[3].trim() : '400';
-			const url = imgMatch[4].trim();
-			htmlParts.push(createInlineImageFigureHtml(url, width, alt));
+			const align = imgMatch[5] ? imgMatch[5].trim() : 'center';
+			const url = imgMatch[6].trim();
+			htmlParts.push(createInlineImageFigureHtml(url, width, align, alt));
 			continue;
 		}
 
@@ -174,9 +181,14 @@ export function docHtmlToMarkdown(rootEl: HTMLElement): string {
 		if (el.classList.contains('doc-inline-image') || tag === 'figure') {
 			const url = el.getAttribute('data-url') || el.querySelector('img')?.getAttribute('src') || '';
 			const width = el.getAttribute('data-width') || '400';
+			const align = el.getAttribute('data-align') || 'center';
 			const alt = el.querySelector('img')?.getAttribute('alt') || 'immagine';
 			if (url) {
-				blocks.push(`![${alt}|${width}](${url})`);
+				if (align && align !== 'center') {
+					blocks.push(`![${alt}|${width}|${align}](${url})`);
+				} else {
+					blocks.push(`![${alt}|${width}](${url})`);
+				}
 			}
 			continue;
 		}

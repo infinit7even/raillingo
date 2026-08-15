@@ -417,12 +417,14 @@
 		handleEditorInput();
 	}
 
-	// Gestione dei click sui controlli di ridimensionamento / cancellazione dell'immagine inline
+	let draggedFigure = $state<HTMLElement | null>(null);
+
+	// Gestione dei click sui controlli di ridimensionamento / allineamento / spostamento / cancellazione dell'immagine inline
 	function handleEditorClick(e: MouseEvent) {
 		const target = e.target as HTMLElement;
 		if (!target) return;
 
-		// 1. Click pulsante ridimensionamento
+		// 1. Click pulsante preset dimensione
 		if (target.classList.contains('img-btn-size')) {
 			e.preventDefault();
 			e.stopPropagation();
@@ -451,7 +453,62 @@
 			return;
 		}
 
-		// 2. Click pulsante eliminazione immagine
+		// 2. Click pulsante allineamento
+		if (target.classList.contains('img-btn-align')) {
+			e.preventDefault();
+			e.stopPropagation();
+			const newAlign = target.getAttribute('data-align') || 'center';
+			const figure = target.closest('figure.doc-inline-image') as HTMLElement;
+			if (figure) {
+				const wrapper = figure.querySelector('.doc-image-wrapper') as HTMLElement;
+				figure.setAttribute('data-align', newAlign);
+				if (wrapper) {
+					wrapper.classList.remove('align-left', 'align-center', 'align-right');
+					wrapper.classList.add(`align-${newAlign}`);
+				}
+
+				figure.querySelectorAll('.img-btn-align').forEach((btn) => {
+					if (btn.getAttribute('data-align') === newAlign) {
+						btn.classList.add('active');
+					} else {
+						btn.classList.remove('active');
+					}
+				});
+
+				handleEditorInput();
+				const alignLabel = newAlign === 'left' ? 'Sinistra' : newAlign === 'right' ? 'Destra' : 'Centro';
+				toastStore.show({ message: `📐 Allineamento: ${alignLabel}` });
+			}
+			return;
+		}
+
+		// 3. Click pulsante Sposta Su / Sposta Giù
+		if (target.classList.contains('img-btn-move')) {
+			e.preventDefault();
+			e.stopPropagation();
+			const dir = target.getAttribute('data-move');
+			const figure = target.closest('figure.doc-inline-image') as HTMLElement;
+			if (figure && editorEl) {
+				if (dir === 'up') {
+					const prev = figure.previousElementSibling;
+					if (prev) {
+						editorEl.insertBefore(figure, prev);
+						handleEditorInput();
+						toastStore.show({ message: '⬆️ Immagine spostata sopra' });
+					}
+				} else if (dir === 'down') {
+					const next = figure.nextElementSibling;
+					if (next) {
+						editorEl.insertBefore(figure, next.nextElementSibling);
+						handleEditorInput();
+						toastStore.show({ message: '⬇️ Immagine spostata sotto' });
+					}
+				}
+			}
+			return;
+		}
+
+		// 4. Click pulsante eliminazione immagine
 		if (target.classList.contains('img-btn-del')) {
 			e.preventDefault();
 			e.stopPropagation();
@@ -463,6 +520,127 @@
 			}
 			return;
 		}
+	}
+
+	// Gestione interattiva maniglie di ridimensionamento drag stile Word
+	function handleEditorMouseDown(e: MouseEvent) {
+		const target = e.target as HTMLElement;
+		if (!target || !target.classList.contains('resize-handle')) return;
+
+		e.preventDefault();
+		e.stopPropagation();
+
+		const figure = target.closest('figure.doc-inline-image') as HTMLElement;
+		if (!figure) return;
+		const wrapper = figure.querySelector('.doc-image-wrapper') as HTMLElement;
+		if (!wrapper) return;
+
+		const startX = e.clientX;
+		const startWidth = wrapper.offsetWidth;
+		const isSouthWest = target.classList.contains('handle-sw');
+
+		function onMouseMove(moveEvent: MouseEvent) {
+			const delta = isSouthWest ? startX - moveEvent.clientX : moveEvent.clientX - startX;
+			const maxContainerWidth = (editorEl?.clientWidth || 700) - 20;
+			const newWidth = Math.max(120, Math.min(maxContainerWidth, Math.round(startWidth + delta)));
+
+			wrapper.style.maxWidth = `${newWidth}px`;
+			figure.setAttribute('data-width', String(newWidth));
+		}
+
+		function onMouseUp() {
+			window.removeEventListener('mousemove', onMouseMove);
+			window.removeEventListener('mouseup', onMouseUp);
+			handleEditorInput();
+		}
+
+		window.addEventListener('mousemove', onMouseMove);
+		window.addEventListener('mouseup', onMouseUp);
+	}
+
+	function handleEditorTouchStart(e: TouchEvent) {
+		const target = e.target as HTMLElement;
+		if (!target || !target.classList.contains('resize-handle')) return;
+
+		const touch = e.touches[0];
+		if (!touch) return;
+
+		e.stopPropagation();
+
+		const figure = target.closest('figure.doc-inline-image') as HTMLElement;
+		if (!figure) return;
+		const wrapper = figure.querySelector('.doc-image-wrapper') as HTMLElement;
+		if (!wrapper) return;
+
+		const startX = touch.clientX;
+		const startWidth = wrapper.offsetWidth;
+		const isSouthWest = target.classList.contains('handle-sw');
+
+		function onTouchMove(moveEvent: TouchEvent) {
+			const moveTouch = moveEvent.touches[0];
+			if (!moveTouch) return;
+			const delta = isSouthWest ? startX - moveTouch.clientX : moveTouch.clientX - startX;
+			const maxContainerWidth = (editorEl?.clientWidth || 360) - 20;
+			const newWidth = Math.max(120, Math.min(maxContainerWidth, Math.round(startWidth + delta)));
+
+			wrapper.style.maxWidth = `${newWidth}px`;
+			figure.setAttribute('data-width', String(newWidth));
+		}
+
+		function onTouchEnd() {
+			window.removeEventListener('touchmove', onTouchMove);
+			window.removeEventListener('touchend', onTouchEnd);
+			handleEditorInput();
+		}
+
+		window.addEventListener('touchmove', onTouchMove, { passive: true });
+		window.addEventListener('touchend', onTouchEnd);
+	}
+
+	// Gestione Drag & Drop reordering delle immagini nel testo
+	function handleFigureDragStart(e: DragEvent) {
+		const target = e.target as HTMLElement;
+		const figure = target?.closest('figure.doc-inline-image') as HTMLElement;
+		if (figure && e.dataTransfer) {
+			draggedFigure = figure;
+			figure.classList.add('is-dragging');
+			e.dataTransfer.effectAllowed = 'move';
+			e.dataTransfer.setData('text/plain', figure.getAttribute('data-url') || '');
+		}
+	}
+
+	function handleFigureDragOver(e: DragEvent) {
+		if (!draggedFigure) return;
+		e.preventDefault();
+		if (e.dataTransfer) {
+			e.dataTransfer.dropEffect = 'move';
+		}
+	}
+
+	function handleFigureDrop(e: DragEvent) {
+		if (!draggedFigure || !editorEl) return;
+		e.preventDefault();
+		e.stopPropagation();
+
+		const target = e.target as HTMLElement;
+		const dropBlock = target.closest('p, h1, h2, h3, blockquote, figure, ul, ol, div') as HTMLElement;
+
+		if (dropBlock && dropBlock !== draggedFigure && dropBlock.parentNode === editorEl) {
+			const rect = dropBlock.getBoundingClientRect();
+			const isAfter = e.clientY > rect.top + rect.height / 2;
+			if (isAfter) {
+				editorEl.insertBefore(draggedFigure, dropBlock.nextSibling);
+			} else {
+				editorEl.insertBefore(draggedFigure, dropBlock);
+			}
+		} else {
+			editorEl.appendChild(draggedFigure);
+		}
+
+		draggedFigure.classList.remove('is-dragging');
+		draggedFigure = null;
+		handleEditorInput();
+		toastStore.show({ message: '📍 Immagine riposizionata' });
 	}
 
 	// Gestione globale dell'evento Incolla (Ctrl+V)
@@ -485,8 +663,13 @@
 		}
 	}
 
-	// Gestione evento Drag & Drop
+	// Gestione evento Drag & Drop di file esterni dall'OS
 	function handleDrop(e: DragEvent) {
+		if (draggedFigure) {
+			handleFigureDrop(e);
+			return;
+		}
+
 		const files = e.dataTransfer?.files;
 		if (!files || files.length === 0) return;
 
@@ -921,6 +1104,11 @@
 					class="word-document-editor"
 					oninput={handleEditorInput}
 					onclick={handleEditorClick}
+					onmousedown={handleEditorMouseDown}
+					ontouchstart={handleEditorTouchStart}
+					ondragstart={handleFigureDragStart}
+					ondragover={handleFigureDragOver}
+					ondrop={handleDrop}
 					onkeyup={saveCurrentSelection}
 					onmouseup={saveCurrentSelection}
 					role="textbox"
@@ -2211,11 +2399,19 @@
 
 	/* 🖼️ INLINE IMAGE FIGURE IN MEZZO AL TESTO (Word-Style) */
 	.word-document-editor :global(figure.doc-inline-image) {
-		margin: 0.75rem auto;
+		margin: 0.65rem 0;
 		display: flex;
 		flex-direction: column;
-		align-items: center;
+		width: 100%;
 		user-select: none;
+		transition: opacity 0.15s ease;
+	}
+
+	.word-document-editor :global(figure.doc-inline-image.is-dragging) {
+		opacity: 0.4;
+		outline: 2px dashed var(--accent-color);
+		outline-offset: 4px;
+		border-radius: 12px;
 	}
 
 	.word-document-editor :global(.doc-image-wrapper) {
@@ -2223,36 +2419,93 @@
 		display: inline-block;
 		width: 100%;
 		border-radius: 12px;
-		overflow: hidden;
 		border: 2px solid var(--border-color);
-		box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+		box-shadow: 0 6px 18px rgba(0, 0, 0, 0.22);
 		background: #000;
-		transition: all 0.2s ease;
+		transition: max-width 0.1s ease-out, border-color 0.15s ease;
+	}
+
+	.word-document-editor :global(.doc-image-wrapper:hover) {
+		border-color: var(--accent-color);
+	}
+
+	.word-document-editor :global(.doc-image-wrapper.align-center) {
+		margin: 0 auto;
+	}
+
+	.word-document-editor :global(.doc-image-wrapper.align-left) {
+		margin: 0 auto 0 0;
+	}
+
+	.word-document-editor :global(.doc-image-wrapper.align-right) {
+		margin: 0 0 0 auto;
 	}
 
 	.word-document-editor :global(.doc-img-element) {
 		display: block;
 		width: 100%;
 		height: auto;
+		border-radius: 10px;
 		object-fit: contain;
+		pointer-events: none;
 	}
 
+	/* Maniglie di Ridimensionamento Interattive Stile Word */
+	.word-document-editor :global(.resize-handle) {
+		position: absolute;
+		width: 14px;
+		height: 14px;
+		background: var(--accent-color);
+		border: 2.5px solid #ffffff;
+		border-radius: 4px;
+		box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+		z-index: 20;
+		opacity: 0;
+		transition: opacity 0.15s ease, transform 0.1s ease;
+	}
+
+	.word-document-editor :global(.doc-image-wrapper:hover .resize-handle),
+	.word-document-editor :global(.resize-handle:hover) {
+		opacity: 1;
+	}
+
+	.word-document-editor :global(.resize-handle.handle-se) {
+		bottom: -6px;
+		right: -6px;
+		cursor: nwse-resize;
+	}
+
+	.word-document-editor :global(.resize-handle.handle-sw) {
+		bottom: -6px;
+		left: -6px;
+		cursor: nesw-resize;
+	}
+
+	.word-document-editor :global(.resize-handle:hover) {
+		transform: scale(1.25);
+	}
+
+	/* Toolbar Fluttuante Word-Style */
 	.word-document-editor :global(.doc-image-toolbar) {
 		position: absolute;
-		bottom: 8px;
+		bottom: 10px;
 		left: 50%;
 		transform: translateX(-50%);
-		background: rgba(20, 20, 25, 0.88);
-		backdrop-filter: blur(8px);
+		background: rgba(18, 22, 28, 0.92);
+		backdrop-filter: blur(10px);
+		-webkit-backdrop-filter: blur(10px);
 		border: 1px solid rgba(255, 255, 255, 0.2);
-		border-radius: 8px;
-		padding: 0.2rem 0.4rem;
+		border-radius: 10px;
+		padding: 0.25rem 0.5rem;
 		display: flex;
 		align-items: center;
-		gap: 0.3rem;
-		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-		z-index: 10;
-		opacity: 0.92;
+		gap: 0.35rem;
+		box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+		z-index: 15;
+		opacity: 0.95;
+		max-width: 95%;
+		flex-wrap: wrap;
+		justify-content: center;
 		transition: opacity 0.15s ease;
 	}
 
@@ -2260,16 +2513,70 @@
 		opacity: 1;
 	}
 
+	.word-document-editor :global(.img-tool-drag) {
+		cursor: grab;
+		font-size: 0.85rem;
+		color: #9ca3af;
+		padding: 0 0.2rem;
+		user-select: none;
+	}
+
+	.word-document-editor :global(.img-tool-drag:active) {
+		cursor: grabbing;
+	}
+
+	.word-document-editor :global(.img-btn-move) {
+		background: rgba(255, 255, 255, 0.08);
+		border: 1px solid rgba(255, 255, 255, 0.15);
+		border-radius: 5px;
+		color: #e5e7eb;
+		font-size: 0.7rem;
+		padding: 0.15rem 0.35rem;
+		cursor: pointer;
+		transition: all 0.12s ease;
+	}
+
+	.word-document-editor :global(.img-btn-move:hover) {
+		background: rgba(255, 255, 255, 0.22);
+		color: #fff;
+	}
+
+	.word-document-editor :global(.img-tool-sep) {
+		width: 1px;
+		height: 14px;
+		background: rgba(255, 255, 255, 0.25);
+		margin: 0 0.1rem;
+	}
+
+	.word-document-editor :global(.img-btn-align) {
+		background: transparent;
+		border: 1px solid transparent;
+		border-radius: 5px;
+		font-size: 0.75rem;
+		padding: 0.15rem 0.3rem;
+		cursor: pointer;
+		transition: all 0.12s ease;
+	}
+
+	.word-document-editor :global(.img-btn-align:hover) {
+		background: rgba(255, 255, 255, 0.15);
+	}
+
+	.word-document-editor :global(.img-btn-align.active) {
+		background: var(--accent-color);
+		border-color: var(--accent-color);
+	}
+
 	.word-document-editor :global(.img-btn-size) {
 		background: transparent;
 		border: 1px solid transparent;
-		border-radius: 4px;
-		padding: 0.15rem 0.35rem;
-		font-size: 0.65rem;
+		border-radius: 5px;
+		padding: 0.15rem 0.4rem;
+		font-size: 0.68rem;
 		font-weight: 800;
 		color: #e5e7eb;
 		cursor: pointer;
-		transition: all 0.15s ease;
+		transition: all 0.12s ease;
 	}
 
 	.word-document-editor :global(.img-btn-size:hover) {
@@ -2284,7 +2591,7 @@
 	}
 
 	.word-document-editor :global(.img-btn-view) {
-		font-size: 0.75rem;
+		font-size: 0.78rem;
 		text-decoration: none;
 		color: #e5e7eb;
 		padding: 0 0.2rem;
@@ -2294,7 +2601,7 @@
 		background: transparent;
 		border: none;
 		color: #ff5e5b;
-		font-size: 0.8rem;
+		font-size: 0.85rem;
 		font-weight: 900;
 		cursor: pointer;
 		padding: 0 0.2rem;
