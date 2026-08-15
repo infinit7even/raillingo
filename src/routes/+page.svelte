@@ -99,7 +99,7 @@
 		{
 			id: 5,
 			title: 'APPUNTI',
-			href: '/appunti',
+			href: '/notes',
 			icon: '/emoji/clipboard_3d.png',
 			state: 'unlocked',
 			offset: 0

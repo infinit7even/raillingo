@@ -60,7 +60,7 @@
 			icon: '/emoji/star_3d.png',
 			variant: 'blue'
 		},
-		'/appunti': {
+		'/notes': {
 			title: 'Appunti di Studio',
 			subtitle: 'Quaderno digitale e sintesi concetti',
 			icon: '/emoji/clipboard_3d.png',

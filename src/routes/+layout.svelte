@@ -24,14 +24,14 @@
 	});
 
 	// Route sequence for lateral swipe navigation
-	const routeOrder = ['/', '/flashcard', '/quiz', '/reels', '/wiki', '/appunti'];
+	const routeOrder = ['/', '/flashcard', '/quiz', '/reels', '/wiki', '/notes'];
 	const swipeRoutes = [
 		{ href: '/', label: 'Home', color: 'var(--accent-color)' },
 		{ href: '/flashcard', label: 'Flashcard', color: 'var(--green-color)' },
 		{ href: '/quiz', label: 'Quiz', color: 'var(--purple-color)' },
 		{ href: '/reels', label: 'Reels', color: 'var(--orange-color)' },
 		{ href: '/wiki', label: 'Wiki', color: 'var(--accent-color)' },
-		{ href: '/appunti', label: 'Appunti', color: 'var(--orange-color)' }
+		{ href: '/notes', label: 'Notes', color: 'var(--orange-color)' }
 	];
 
 	let activeSwipeIndex = $derived(routeOrder.indexOf(page.url.pathname));
