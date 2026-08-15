@@ -191,29 +191,24 @@
 
 		<div class="bar-divider"></div>
 
-		<div class="method-toggle-inline">
-			<button
-				type="button"
-				class="method-btn-mini"
-				class:active={!isWritingMode}
-				onclick={() => setWritingMode(false)}
-				title="Modalità Gira Card (3D Flip)"
-			>
-				<span>🃏</span>
-				<span class="method-label">Gira</span>
-			</button>
-			<button
-				type="button"
-				class="method-btn-mini"
-				class:active={isWritingMode}
-				class:writing-active={isWritingMode}
-				onclick={() => setWritingMode(true)}
-				title="Modalità Digitazione/Scrittura"
-			>
-				<span>✍️</span>
-				<span class="method-label">Scrivi</span>
-			</button>
-		</div>
+		<!-- Spunta Semplice "Scrivi" -->
+		<label class="scrivi-check-toggle" title="Spunta per attivare la digitazione della risposta">
+			<input
+				type="checkbox"
+				checked={isWritingMode}
+				onchange={(e) => setWritingMode(e.currentTarget.checked)}
+				class="scrivi-hidden-input"
+			/>
+			<div class="scrivi-custom-box" class:checked={isWritingMode}>
+				{#if isWritingMode}
+					<span class="scrivi-tick">✓</span>
+				{/if}
+			</div>
+			<span class="scrivi-label-text">
+				<span class="scrivi-icon">✍️</span>
+				<span>Scrivi</span>
+			</span>
+		</label>
 	</div>
 
 	<!-- Main Exercise / FlashCard Display -->
@@ -386,46 +381,70 @@
 		margin: 0 0.15rem;
 	}
 
-	.method-toggle-inline {
-		display: flex;
+	.scrivi-check-toggle {
+		display: inline-flex;
 		align-items: center;
+		gap: 0.45rem;
+		padding: 0.35rem 0.65rem;
 		background: var(--card-bg-subtle);
 		border: 1.5px solid var(--border-color);
 		border-radius: 12px;
-		padding: 2px;
-		gap: 2px;
+		cursor: pointer;
+		user-select: none;
 		flex-shrink: 0;
+		transition: all 0.15s ease;
 	}
 
-	.method-btn-mini {
+	.scrivi-check-toggle:hover {
+		border-color: var(--accent-color);
+		background: var(--hover-bg);
+	}
+
+	.scrivi-hidden-input {
+		position: absolute;
+		opacity: 0;
+		width: 0;
+		height: 0;
+		pointer-events: none;
+	}
+
+	.scrivi-custom-box {
+		width: 18px;
+		height: 18px;
+		border-radius: 6px;
+		border: 2px solid var(--border-color);
+		background: var(--card-bg);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 0.72rem;
+		font-weight: 900;
+		color: #ffffff;
+		flex-shrink: 0;
+		transition: all 0.15s ease;
+	}
+
+	.scrivi-custom-box.checked {
+		background: var(--purple-color);
+		border-color: var(--purple-color);
+	}
+
+	.scrivi-tick {
+		line-height: 1;
+	}
+
+	.scrivi-label-text {
 		display: inline-flex;
 		align-items: center;
 		gap: 0.25rem;
-		padding: 0.35rem 0.55rem;
-		border-radius: 10px;
-		border: none;
-		background: transparent;
-		color: var(--text-muted);
-		font-size: 0.72rem;
+		font-family: 'Outfit', sans-serif;
+		font-size: 0.76rem;
 		font-weight: 800;
-		cursor: pointer;
-		transition: all 0.15s ease;
-		user-select: none;
-	}
-
-	.method-btn-mini:hover {
 		color: var(--text-color);
 	}
 
-	.method-btn-mini.active {
-		background: var(--green-color);
-		color: #ffffff;
-		box-shadow: 0 2px 6px rgba(34, 197, 94, 0.3);
-	}
-
-	.method-btn-mini.active.writing-active {
-		background: var(--purple-color);
-		box-shadow: 0 2px 6px rgba(168, 85, 247, 0.3);
+	.scrivi-icon {
+		font-size: 0.85rem;
 	}
 
 	@media (max-width: 480px) {
@@ -433,13 +452,12 @@
 			font-size: 0.65rem;
 		}
 
-		.method-label {
-			display: none;
+		.scrivi-check-toggle {
+			padding: 0.35rem 0.5rem;
 		}
 
-		.method-btn-mini {
-			padding: 0.35rem 0.45rem;
-			font-size: 0.85rem;
+		.scrivi-label-text {
+			font-size: 0.72rem;
 		}
 
 		.submode-tab-btn {
