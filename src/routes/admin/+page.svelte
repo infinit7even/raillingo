@@ -396,7 +396,7 @@
 							<div class="card-main-info">
 								<div class="item-title-row">
 									<h3 class="card-item-title">{card.title}</h3>
-									{#if card.fullName}
+									{#if card.fullName && card.fullName.trim().toLowerCase() !== card.title.trim().toLowerCase()}
 										<span class="fullname-badge">{card.fullName}</span>
 									{/if}
 									{#if card.category}

@@ -230,7 +230,7 @@
 										<div class="browse-card-details">
 											<div class="card-title-line">
 												<span class="bcard-title">{card.title}</span>
-												{#if card.fullName}
+												{#if card.fullName && card.fullName.trim().toLowerCase() !== card.title.trim().toLowerCase()}
 													<span class="bcard-fullname">({card.fullName})</span>
 												{/if}
 												{#if card.category}

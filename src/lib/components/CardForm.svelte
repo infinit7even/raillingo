@@ -311,7 +311,7 @@
 								title="Copia tutti i dati di questa card nel form"
 							>
 								<span class="chip-title">{c.title}</span>
-								{#if c.fullName}<span class="chip-fn">({c.fullName})</span>{/if}
+								{#if c.fullName && c.fullName.trim().toLowerCase() !== c.title.trim().toLowerCase()}<span class="chip-fn">({c.fullName})</span>{/if}
 								{#if c.category}<span class="chip-cat">{c.category}</span>{/if}
 								<span class="chip-action">📋 Clona</span>
 							</button>
@@ -372,7 +372,7 @@
 						<div class="suggestion-item">
 							<div class="sug-info">
 								<span class="sug-title">{sug.title}</span>
-								{#if sug.fullName}
+								{#if sug.fullName && sug.fullName.trim().toLowerCase() !== sug.title.trim().toLowerCase()}
 									<span class="sug-fullname">({sug.fullName})</span>
 								{/if}
 							</div>
@@ -410,7 +410,7 @@
 						<div class="suggestion-item">
 							<div class="sug-info">
 								<span class="sug-title">{sug.title}</span>
-								{#if sug.fullName}
+								{#if sug.fullName && sug.fullName.trim().toLowerCase() !== sug.title.trim().toLowerCase()}
 									<span class="sug-fullname">({sug.fullName})</span>
 								{/if}
 							</div>

@@ -160,7 +160,7 @@
 					<div class="wod-content" class:wod-pop={isChangingWord}>
 						<div class="wod-title-row">
 							<h2 class="wod-title">{wordOfTheDay.title}</h2>
-							{#if wordOfTheDay.fullName}
+							{#if wordOfTheDay.fullName && wordOfTheDay.fullName.trim().toLowerCase() !== wordOfTheDay.title.trim().toLowerCase()}
 								<span class="wod-fullname">{wordOfTheDay.fullName}</span>
 							{/if}
 						</div>

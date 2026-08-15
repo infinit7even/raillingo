@@ -114,7 +114,7 @@
 			<div class="reveal-section duo-card title-reveal">
 				<span class="section-label">Acronimo & Titolo:</span>
 				<h2 class="card-title">{card.title}</h2>
-				{#if card.fullName}
+				{#if card.fullName && card.fullName.trim().toLowerCase() !== card.title.trim().toLowerCase()}
 					<div class="fullname-text">{card.fullName}</div>
 				{/if}
 				{#if step === 1}

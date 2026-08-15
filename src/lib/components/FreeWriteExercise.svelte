@@ -209,14 +209,14 @@
 			<div class="result-header">🎯 Risposta Ufficiale:</div>
 
 			{#if subMode === 'title-to-desc'}
-				{#if card.fullName}
+				{#if card.fullName && card.fullName.trim().toLowerCase() !== card.title.trim().toLowerCase()}
 					<div class="fullname-badge">{card.fullName}</div>
 				{/if}
 				<div class="exact-answer duo-card">{card.description}</div>
 			{:else}
 				<div class="exact-answer duo-card title-highlight">
 					{card.title || card.fullName}
-					{#if card.fullName && card.title}
+					{#if card.fullName && card.title && card.fullName.trim().toLowerCase() !== card.title.trim().toLowerCase()}
 						<div class="exact-fullname">- {card.fullName}</div>
 					{/if}
 				</div>
