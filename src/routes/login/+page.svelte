@@ -103,12 +103,12 @@
 
 <style>
 	.login-page-container {
-		max-width: 580px;
+		width: 100%;
+		max-width: 600px;
 		margin: 0 auto;
 		display: flex;
 		flex-direction: column;
-		gap: 1.25rem;
-		padding: 0 0.5rem;
+		gap: 1rem;
 		box-sizing: border-box;
 	}
 
