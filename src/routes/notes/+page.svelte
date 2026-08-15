@@ -934,14 +934,14 @@
 							{/each}
 						</select>
 					</div>
-				</div>
 
-				<div class="save-status-pill">
-					{#if isAutoSaving}
-						<span class="saving-txt">⏳ Salvataggio...</span>
-					{:else}
-						<span class="saved-txt">💾 {lastSavedTime ? `Salvato ${lastSavedTime}` : 'Salvato'}</span>
-					{/if}
+					<div class="save-status-pill">
+						{#if isAutoSaving}
+							<span class="saving-txt">⏳ Salvataggio...</span>
+						{:else}
+							<span class="saved-txt">💾 {lastSavedTime ? `Salvato ${lastSavedTime}` : 'Salvato'}</span>
+						{/if}
+					</div>
 				</div>
 
 				<div class="workspace-quick-actions">
@@ -1402,7 +1402,7 @@
 
 	@media (min-width: 1024px) {
 		.obsidian-workspace {
-			grid-template-columns: 310px 1fr;
+			grid-template-columns: 330px 1fr;
 		}
 
 		.obsidian-workspace.vault-collapsed {
@@ -1432,28 +1432,30 @@
 		padding-bottom: 0.45rem;
 		border-bottom: 1.5px solid var(--border-color);
 		flex-shrink: 0;
-		gap: 0.4rem;
+		gap: 0.5rem;
 	}
 
 	.vault-title-group {
 		display: flex;
 		align-items: center;
-		gap: 0.4rem;
+		gap: 0.35rem;
 		min-width: 0;
+		flex: 1;
 	}
 
 	.vault-icon {
-		font-size: 1rem;
+		font-size: 0.95rem;
 		flex-shrink: 0;
 	}
 
 	.vault-name {
 		font-family: 'Outfit', sans-serif;
-		font-size: 0.82rem;
+		font-size: 0.78rem;
 		font-weight: 900;
-		letter-spacing: 0.04em;
+		letter-spacing: 0.03em;
 		color: var(--text-color);
 		white-space: nowrap;
+		flex-shrink: 0;
 	}
 
 	.vault-badge {
@@ -1465,12 +1467,13 @@
 		font-weight: 800;
 		color: var(--accent-color);
 		flex-shrink: 0;
+		margin-left: 0.15rem;
 	}
 
 	.vault-header-actions {
 		display: flex;
 		align-items: center;
-		gap: 0.35rem;
+		gap: 0.3rem;
 		flex-shrink: 0;
 	}
 
@@ -1478,14 +1481,14 @@
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
-		gap: 0.3rem;
-		height: 30px;
-		padding: 0 0.65rem;
-		font-size: 0.74rem;
+		gap: 0.25rem;
+		height: 28px;
+		padding: 0 0.55rem;
+		font-size: 0.72rem;
 		font-weight: 800;
 		font-family: 'Outfit', sans-serif;
 		letter-spacing: 0.02em;
-		border-radius: 9px;
+		border-radius: 8px;
 		background: var(--green-color);
 		border: 1.5px solid var(--green-depth);
 		border-bottom: 2.5px solid var(--green-depth);
@@ -1509,14 +1512,14 @@
 		background: var(--card-bg-subtle);
 		border: 1.5px solid var(--border-color);
 		border-bottom: 2.5px solid var(--border-depth-color);
-		border-radius: 9px;
-		width: 30px;
-		height: 30px;
+		border-radius: 8px;
+		width: 28px;
+		height: 28px;
 		display: flex;
 		align-items: center;
 		justify-content: center;
 		color: var(--text-muted);
-		font-size: 0.72rem;
+		font-size: 0.68rem;
 		font-weight: 900;
 		cursor: pointer;
 		transition: all 0.12s ease;
@@ -2157,8 +2160,14 @@
 		font-size: 0.72rem;
 		font-weight: 700;
 		white-space: nowrap;
-		display: flex;
+		display: inline-flex;
 		align-items: center;
+		padding: 0.15rem 0.55rem;
+		background: var(--card-bg-subtle);
+		border: 1px solid var(--border-color);
+		border-radius: 8px;
+		height: 32px;
+		box-sizing: border-box;
 	}
 
 	.saving-txt {
