@@ -93,7 +93,6 @@
 	<PageHeader
 		title="Missioni Giornaliere"
 		subtitle="Sfide e traguardi per guadagnare XP e mantenere la serie attiva"
-		badge="🎯 OBIETTIVI"
 		icon="/emoji/package_3d.png"
 		variant="green"
 	/>
