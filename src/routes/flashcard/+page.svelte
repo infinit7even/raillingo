@@ -169,39 +169,50 @@
 		</div>
 	{/if}
 
-	<!-- Sub-mode Selector Bar -->
-	<ModeTabs
-		tabs={flashcardTabs}
-		activeTab={subMode}
-		onSelect={(id) => {
-			subMode = id as 'standard' | 'foto' | 'inverso';
-			currentIndex = 0;
-			refreshCards();
-		}}
-	/>
+	<!-- 🎛️ Unified Bar: SubModes (TESTUALE, VISIVO, INVERSO) + Method Switch (🃏 Gira vs ✍️ Scrivi) -->
+	<div class="flashcard-nav-bar duo-card">
+		<div class="submode-tabs-group">
+			{#each flashcardTabs as tab}
+				{@const isActive = subMode === tab.id}
+				<button
+					type="button"
+					class="submode-tab-btn"
+					class:active={isActive}
+					onclick={() => {
+						subMode = tab.id as 'standard' | 'foto' | 'inverso';
+						currentIndex = 0;
+						refreshCards();
+					}}
+				>
+					<img src={tab.emoji} alt="" class="tab-emoji-mini" />
+					<span class="tab-lbl-text">{tab.label}</span>
+				</button>
+			{/each}
+		</div>
 
-	<!-- 🎛️ Compact Segmented Switch: Gira Card vs Digitazione -->
-	<div class="method-switch-box">
-		<div class="method-toggle-group">
+		<div class="bar-divider"></div>
+
+		<div class="method-toggle-inline">
 			<button
 				type="button"
-				class="method-pill-btn"
-				class:active-pill={!isWritingMode}
+				class="method-btn-mini"
+				class:active={!isWritingMode}
 				onclick={() => setWritingMode(false)}
+				title="Modalità Gira Card (3D Flip)"
 			>
 				<span>🃏</span>
-				<span>Gira Card</span>
+				<span class="method-label">Gira</span>
 			</button>
-
 			<button
 				type="button"
-				class="method-pill-btn"
-				class:active-pill={isWritingMode}
+				class="method-btn-mini"
+				class:active={isWritingMode}
 				class:writing-active={isWritingMode}
 				onclick={() => setWritingMode(true)}
+				title="Modalità Digitazione/Scrittura"
 			>
 				<span>✍️</span>
-				<span>Digitazione</span>
+				<span class="method-label">Scrivi</span>
 			</button>
 		</div>
 	</div>
@@ -306,55 +317,135 @@
 		gap: 0.75rem;
 	}
 
-	/* 🎛️ Compact Segmented Pill Control */
-	.method-switch-box {
+	/* 🎛️ Unified Flashcard Navigation Bar */
+	.flashcard-nav-bar {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.4rem;
+		padding: 0.35rem 0.45rem;
+		background: var(--card-bg);
+		border: 2px solid var(--border-color);
+		border-bottom: 4px solid var(--border-depth-color);
+		border-radius: 18px;
+		width: 100%;
+		box-sizing: border-box;
+	}
+
+	.submode-tabs-group {
+		display: flex;
+		align-items: center;
+		gap: 0.25rem;
+		flex: 1;
+		min-width: 0;
+	}
+
+	.submode-tab-btn {
+		flex: 1;
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		width: 100%;
-		margin: 0.15rem 0;
-	}
-
-	.method-toggle-group {
-		display: inline-flex;
-		align-items: center;
-		background: var(--card-bg);
-		border: 1.5px solid var(--border-color);
-		border-radius: 9999px;
-		padding: 3px;
-		gap: 3px;
-		box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.08);
-	}
-
-	.method-pill-btn {
-		display: inline-flex;
-		align-items: center;
 		gap: 0.35rem;
-		padding: 0.35rem 0.9rem;
-		border-radius: 9999px;
-		border: none;
+		padding: 0.55rem 0.4rem;
+		border-radius: 12px;
+		border: 1.5px solid transparent;
 		background: transparent;
 		color: var(--text-muted);
-		font-size: 0.82rem;
+		font-family: 'Outfit', sans-serif;
 		font-weight: 800;
+		font-size: 0.72rem;
+		letter-spacing: 0.02em;
 		cursor: pointer;
-		transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
 		user-select: none;
+		transition: all 0.15s ease;
+		min-width: 0;
 	}
 
-	.method-pill-btn:hover {
+	.submode-tab-btn:hover {
 		color: var(--text-color);
 	}
 
-	.method-pill-btn.active-pill {
-		background: var(--green-color);
-		color: #ffffff;
-		box-shadow: 0 2px 8px rgba(34, 197, 94, 0.35);
+	.submode-tab-btn.active {
+		background: var(--card-bg-subtle);
+		color: var(--accent-color);
+		border-color: var(--accent-color);
+		box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
 	}
 
-	.method-pill-btn.active-pill.writing-active {
+	.tab-emoji-mini {
+		width: 18px;
+		height: 18px;
+		object-fit: contain;
+		flex-shrink: 0;
+	}
+
+	.bar-divider {
+		width: 1.5px;
+		height: 24px;
+		background: var(--border-color);
+		flex-shrink: 0;
+		margin: 0 0.15rem;
+	}
+
+	.method-toggle-inline {
+		display: flex;
+		align-items: center;
+		background: var(--card-bg-subtle);
+		border: 1.5px solid var(--border-color);
+		border-radius: 12px;
+		padding: 2px;
+		gap: 2px;
+		flex-shrink: 0;
+	}
+
+	.method-btn-mini {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.25rem;
+		padding: 0.35rem 0.55rem;
+		border-radius: 10px;
+		border: none;
+		background: transparent;
+		color: var(--text-muted);
+		font-size: 0.72rem;
+		font-weight: 800;
+		cursor: pointer;
+		transition: all 0.15s ease;
+		user-select: none;
+	}
+
+	.method-btn-mini:hover {
+		color: var(--text-color);
+	}
+
+	.method-btn-mini.active {
+		background: var(--green-color);
+		color: #ffffff;
+		box-shadow: 0 2px 6px rgba(34, 197, 94, 0.3);
+	}
+
+	.method-btn-mini.active.writing-active {
 		background: var(--purple-color);
-		box-shadow: 0 2px 8px rgba(168, 85, 247, 0.35);
+		box-shadow: 0 2px 6px rgba(168, 85, 247, 0.3);
+	}
+
+	@media (max-width: 480px) {
+		.tab-lbl-text {
+			font-size: 0.65rem;
+		}
+
+		.method-label {
+			display: none;
+		}
+
+		.method-btn-mini {
+			padding: 0.35rem 0.45rem;
+			font-size: 0.85rem;
+		}
+
+		.submode-tab-btn {
+			padding: 0.5rem 0.25rem;
+		}
 	}
 
 	.duo-progress-track {
