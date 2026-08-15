@@ -74,11 +74,15 @@
 		};
 	});
 
-	function toggleWritingMode() {
-		isWritingMode = !isWritingMode;
+	function setWritingMode(val: boolean) {
+		isWritingMode = val;
 		if (browser) {
 			localStorage.setItem('rf_flashcard_writing', String(isWritingMode));
 		}
+	}
+
+	function toggleWritingMode() {
+		setWritingMode(!isWritingMode);
 	}
 
 	// Derive unique categories from available non-ignored cards
@@ -176,23 +180,30 @@
 		}}
 	/>
 
-	<!-- ✍️ Opzione Modalità Scrittura Toggle -->
-	<div class="options-bar">
-		<button
-			type="button"
-			class="duo-btn writing-mode-toggle"
-			class:active-writing={isWritingMode}
-			onclick={toggleWritingMode}
-			aria-pressed={isWritingMode}
-		>
-			<span class="toggle-icon">{isWritingMode ? '✍️' : '🗣️'}</span>
-			<span class="toggle-text">
-				Esercizio di Scrittura: <strong>{isWritingMode ? 'ATTIVO (Digitazione)' : 'DISATTIVATO (Gira Card)'}</strong>
-			</span>
-			<span class="toggle-pill" class:pill-on={isWritingMode}>
-				{isWritingMode ? 'ON' : 'OFF'}
-			</span>
-		</button>
+	<!-- 🎛️ Compact Segmented Switch: Gira Card vs Digitazione -->
+	<div class="method-switch-box">
+		<div class="method-toggle-group">
+			<button
+				type="button"
+				class="method-pill-btn"
+				class:active-pill={!isWritingMode}
+				onclick={() => setWritingMode(false)}
+			>
+				<span>🃏</span>
+				<span>Gira Card</span>
+			</button>
+
+			<button
+				type="button"
+				class="method-pill-btn"
+				class:active-pill={isWritingMode}
+				class:writing-active={isWritingMode}
+				onclick={() => setWritingMode(true)}
+			>
+				<span>✍️</span>
+				<span>Digitazione</span>
+			</button>
+		</div>
 	</div>
 
 	<!-- Main Exercise / FlashCard Display -->
@@ -295,73 +306,55 @@
 		gap: 0.75rem;
 	}
 
-	.options-bar {
-		display: flex;
-		justify-content: center;
-		width: 100%;
-	}
-
-	.writing-mode-toggle {
-		width: 100%;
+	/* 🎛️ Compact Segmented Pill Control */
+	.method-switch-box {
 		display: flex;
 		align-items: center;
-		justify-content: space-between;
-		padding: 0.65rem 1rem;
+		justify-content: center;
+		width: 100%;
+		margin: 0.15rem 0;
+	}
+
+	.method-toggle-group {
+		display: inline-flex;
+		align-items: center;
 		background: var(--card-bg);
 		border: 1.5px solid var(--border-color);
-		border-radius: 16px;
-		color: var(--text-color);
-		font-size: 0.88rem;
-		cursor: pointer;
-		transition: all 0.2s ease;
-	}
-
-	.writing-mode-toggle:hover {
-		border-color: var(--accent-color);
-		background: var(--card-bg-subtle);
-	}
-
-	.writing-mode-toggle.active-writing {
-		background: rgba(168, 85, 247, 0.12);
-		border-color: var(--purple-color);
-		color: var(--text-color);
-	}
-
-	.toggle-icon {
-		font-size: 1.15rem;
-	}
-
-	.toggle-text {
-		flex: 1;
-		text-align: left;
-		margin: 0 0.75rem;
-		font-size: 0.85rem;
-	}
-
-	.toggle-text strong {
-		color: var(--accent-color);
-	}
-
-	.active-writing .toggle-text strong {
-		color: var(--purple-color);
-	}
-
-	.toggle-pill {
-		font-size: 0.75rem;
-		font-weight: 900;
-		padding: 0.2rem 0.6rem;
 		border-radius: 9999px;
-		background: var(--card-bg-subtle);
-		color: var(--text-muted);
-		border: 1px solid var(--border-color);
-		transition: all 0.2s ease;
+		padding: 3px;
+		gap: 3px;
+		box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.08);
 	}
 
-	.toggle-pill.pill-on {
-		background: var(--purple-color);
+	.method-pill-btn {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.35rem;
+		padding: 0.35rem 0.9rem;
+		border-radius: 9999px;
+		border: none;
+		background: transparent;
+		color: var(--text-muted);
+		font-size: 0.82rem;
+		font-weight: 800;
+		cursor: pointer;
+		transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+		user-select: none;
+	}
+
+	.method-pill-btn:hover {
+		color: var(--text-color);
+	}
+
+	.method-pill-btn.active-pill {
+		background: var(--green-color);
 		color: #ffffff;
-		border-color: var(--purple-color);
-		box-shadow: 0 2px 8px rgba(168, 85, 247, 0.4);
+		box-shadow: 0 2px 8px rgba(34, 197, 94, 0.35);
+	}
+
+	.method-pill-btn.active-pill.writing-active {
+		background: var(--purple-color);
+		box-shadow: 0 2px 8px rgba(168, 85, 247, 0.35);
 	}
 
 	.duo-progress-track {
