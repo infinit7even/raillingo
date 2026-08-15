@@ -277,8 +277,18 @@
 						🚪 LOGOUT ({user.username})
 					</button>
 				{:else}
-					<a href="/api/auth/login" class="duo-btn flex-btn home-discord-login-btn">
-						🔑 LOGIN
+					<a href="/api/auth/login" class="duo-btn sync-btn discord-sync-btn flex-btn">
+						<svg
+							class="discord-icon-mini"
+							xmlns="http://www.w3.org/2000/svg"
+							viewBox="0 0 127.14 96.36"
+							fill="currentColor"
+						>
+							<path
+								d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.7,77.7,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1A105.25,105.25,0,0,0,126.6,80.22h0C129.24,52.84,122.09,29.11,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,45.92,53.87,53,48.8,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.25,60,73.25,53s5-12.74,11.44-12.74S96.23,45.92,96.1,53,91,65.69,84.69,65.69Z"
+							/>
+						</svg>
+						<span>ACCEDI CON DISCORD</span>
 					</a>
 				{/if}
 				<a
@@ -748,18 +758,32 @@
 		padding: 0.8rem 0 1rem 0;
 	}
 
-	.home-discord-login-btn {
+	.discord-sync-btn {
 		background-color: #5865f2 !important;
 		color: #ffffff !important;
 		border: none !important;
 		border-bottom: 4px solid #4752c4 !important;
-		transition: background-color 0.15s ease, filter 0.15s ease, transform 0.1s ease;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.5rem;
+		text-decoration: none;
+		transition: filter 0.15s ease, transform 0.1s ease;
 	}
 
-	.home-discord-login-btn:hover {
-		background-color: #4752c4 !important;
-		color: #ffffff !important;
-		filter: brightness(1.08);
+	.discord-sync-btn:hover {
+		filter: brightness(1.1);
+	}
+
+	.discord-sync-btn:active {
+		transform: translateY(2px);
+		border-bottom-width: 2px;
+	}
+
+	.discord-icon-mini {
+		width: 18px;
+		height: 18px;
+		flex-shrink: 0;
 	}
 
 	@media (max-width: 1023px) {
