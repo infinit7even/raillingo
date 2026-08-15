@@ -71,56 +71,57 @@
 	}
 </script>
 
-{#if categories.length > 0}
-	<div class="category-filter-bar duo-card">
-		<!-- Trigger button to open the Category Picker -->
-		<button
-			type="button"
-			class="cat-picker-trigger-btn"
-			class:active={isFiltered}
-			onclick={() => (isModalOpen = true)}
-			title="Apri selettore avanzato categorie con ricerca"
-		>
-			<div class="trigger-left">
-				<span class="trigger-ico">🏷️</span>
-				<span class="trigger-label">Categorie</span>
-			</div>
-			<div class="trigger-right">
-				<span class="trigger-badge">
-					{#if !isFiltered}
-						Tutte ({categories.length})
-					{:else}
-						{selectedList.length} attive
-					{/if}
-				</span>
-				<span class="trigger-arrow">▾</span>
-			</div>
-		</button>
-
-		{#if isFiltered}
+{#if categories.length > 0 || onRefresh}
+	<div class="filter-row">
+		{#if categories.length > 0}
 			<button
 				type="button"
-				class="clear-category-btn"
-				onclick={handleResetAll}
-				title="Azzera tutti i filtri categoria (✕)"
-				aria-label="Azzera filtri categoria"
+				class="cat-picker-trigger-btn"
+				class:active={isFiltered}
+				onclick={() => (isModalOpen = true)}
+				title="Apri selettore avanzato categorie con ricerca"
 			>
-				✕
+				<div class="trigger-left">
+					<span class="trigger-ico">🏷️</span>
+					<span class="trigger-label">Categorie</span>
+				</div>
+				<div class="trigger-right">
+					<span class="trigger-badge">
+						{#if !isFiltered}
+							Tutte ({categories.length})
+						{:else}
+							{selectedList.length} attive
+						{/if}
+					</span>
+					<span class="trigger-arrow">▾</span>
+				</div>
+			</button>
+
+			{#if isFiltered}
+				<button
+					type="button"
+					class="clear-category-btn"
+					onclick={handleResetAll}
+					title="Azzera tutti i filtri categoria (✕)"
+					aria-label="Azzera filtri categoria"
+				>
+					✕
+				</button>
+			{/if}
+		{/if}
+
+		{#if onRefresh}
+			<button
+				type="button"
+				class="duo-btn duo-btn-purple compact-shuffle-btn"
+				onclick={onRefresh}
+				title="Rimescola le card"
+			>
+				<span class="shuffle-icon">🔄</span>
+				<span class="shuffle-text">Rimescola</span>
 			</button>
 		{/if}
 	</div>
-{/if}
-
-{#if onRefresh}
-	<button
-		type="button"
-		class="duo-btn duo-btn-purple compact-shuffle-btn"
-		onclick={onRefresh}
-		title="Rimescola le card"
-	>
-		<span class="shuffle-icon">🔄</span>
-		<span class="shuffle-text">Rimescola</span>
-	</button>
 {/if}
 
 <!-- 🎛️ Category Multi-Select Search Modal / Sheet -->
@@ -240,18 +241,11 @@
 {/if}
 
 <style>
-	.category-filter-bar {
+	.filter-row {
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
-		padding: 0.4rem 0.65rem;
-		background: var(--card-bg);
-		border-radius: 18px;
-		border: 2px solid var(--border-color);
-		border-bottom: 4px solid var(--border-depth-color);
-		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 		width: 100%;
-		box-sizing: border-box;
 	}
 
 	/* Main Category Trigger Button */
