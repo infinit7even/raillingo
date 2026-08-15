@@ -153,13 +153,14 @@
 		downloadAnchor.remove();
 	}
 
+	import { matchesCategory } from '$lib/stores/globalCategoryStore';
+
 	let filteredCards = $derived(
 		cards.filter((c) => {
 			const matchesCat =
-				selectedCategoryFilter === 'ALL' ||
-				(selectedCategoryFilter === 'Senza Categoria'
+				selectedCategoryFilter === 'Senza Categoria'
 					? !c.category || !c.category.trim()
-					: c.category === selectedCategoryFilter);
+					: matchesCategory(c.category, selectedCategoryFilter);
 
 			const q = searchQuery.toLowerCase().trim();
 			const matchesQuery =

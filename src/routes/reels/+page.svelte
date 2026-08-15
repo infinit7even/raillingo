@@ -3,7 +3,7 @@
 	import { cardsStore } from '$lib/stores/cardsStore';
 	import { ignoredCardsStore } from '$lib/stores/ignoredCardsStore';
 	import { statsStore } from '$lib/stores/statsStore';
-	import { globalCategoryStore } from '$lib/stores/globalCategoryStore';
+	import { globalCategoryStore, matchesCategory } from '$lib/stores/globalCategoryStore';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import CategoryFilter from '$lib/components/CategoryFilter.svelte';
 	import type { Card } from '$lib/types/cards';
@@ -62,9 +62,8 @@
 		rawCards.filter((c) => {
 			const hasImg = c.images && c.images.length > 0;
 			const notIgnored = !ignoredIds.has(c.id);
-			const matchesCategory =
-				selectedCategory === 'ALL' || (c.category && c.category.trim() === selectedCategory);
-			return hasImg && notIgnored && matchesCategory;
+			const matchesCat = matchesCategory(c.category, selectedCategory);
+			return hasImg && notIgnored && matchesCat;
 		})
 	);
 

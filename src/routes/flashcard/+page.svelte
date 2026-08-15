@@ -11,7 +11,7 @@
 	import CategoryFilter from '$lib/components/CategoryFilter.svelte';
 	import type { Card } from '$lib/types/cards';
 
-	import { globalCategoryStore } from '$lib/stores/globalCategoryStore';
+	import { globalCategoryStore, matchesCategory } from '$lib/stores/globalCategoryStore';
 
 	let rawCards = $state<Card[]>([]);
 	let ignoredIds = $state<Set<string>>(new Set());
@@ -100,9 +100,8 @@
 	let validCards = $derived(
 		rawCards.filter((c) => {
 			const notIgnored = !ignoredIds.has(c.id);
-			const matchesCategory =
-				selectedCategory === 'ALL' || (c.category && c.category.trim() === selectedCategory);
-			return notIgnored && matchesCategory;
+			const matchesCat = matchesCategory(c.category, selectedCategory);
+			return notIgnored && matchesCat;
 		})
 	);
 

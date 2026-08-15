@@ -12,7 +12,7 @@
 	let user = $derived(data?.user);
 
 	let cards = $state<Card[]>([]);
-	import { globalCategoryStore } from '$lib/stores/globalCategoryStore';
+	import { globalCategoryStore, matchesCategory } from '$lib/stores/globalCategoryStore';
 
 	let ignoredIds = $state<Set<string>>(new Set());
 	let searchQuery = $state('');
@@ -99,8 +99,7 @@
 			)
 			.filter((c) => {
 				// Category filter
-				const matchesCategory =
-					selectedCategory === 'ALL' || (c.category && c.category.trim() === selectedCategory);
+				const matchesCat = matchesCategory(c.category, selectedCategory);
 
 				// Letter filter
 				const titleText = c.title?.trim() || c.fullName?.trim() || '';
@@ -123,7 +122,7 @@
 					(c.description && c.description.toLowerCase().includes(q)) ||
 					(c.tags && c.tags.some((t) => t.toLowerCase().includes(q)));
 
-				return matchesCategory && matchesLetter && matchesIgnored && matchesSearch;
+				return matchesCat && matchesLetter && matchesIgnored && matchesSearch;
 			})
 	);
 
