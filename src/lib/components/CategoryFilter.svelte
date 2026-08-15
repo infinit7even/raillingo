@@ -72,7 +72,7 @@
 </script>
 
 {#if categories.length > 0 || onRefresh}
-	<div class="category-filter-bar duo-card" class:is-active-filter={isFiltered}>
+	<div class="category-filter-bar duo-card">
 		<!-- Trigger button to open the Category Picker -->
 		<button
 			type="button"
@@ -81,16 +81,20 @@
 			onclick={() => (isModalOpen = true)}
 			title="Apri selettore avanzato categorie con ricerca"
 		>
-			<span class="trigger-ico">🏷️</span>
-			<span class="trigger-label">Categorie</span>
-			<span class="trigger-badge">
-				{#if !isFiltered}
-					Tutte ({categories.length})
-				{:else}
-					{selectedList.length} attive
-				{/if}
-			</span>
-			<span class="trigger-arrow">▾</span>
+			<div class="trigger-left">
+				<span class="trigger-ico">🏷️</span>
+				<span class="trigger-label">Categorie</span>
+			</div>
+			<div class="trigger-right">
+				<span class="trigger-badge">
+					{#if !isFiltered}
+						Tutte ({categories.length})
+					{:else}
+						{selectedList.length} attive
+					{/if}
+				</span>
+				<span class="trigger-arrow">▾</span>
+			</div>
 		</button>
 
 
@@ -254,30 +258,28 @@
 		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 		width: 100%;
 		box-sizing: border-box;
-		transition: border-color 0.2s ease;
-	}
-
-	.category-filter-bar.is-active-filter {
-		border-color: var(--accent-color);
 	}
 
 	/* Main Category Trigger Button */
 	.cat-picker-trigger-btn {
+		flex: 1;
 		display: inline-flex;
 		align-items: center;
-		gap: 0.35rem;
-		padding: 0.4rem 0.7rem;
+		justify-content: space-between;
+		gap: 0.5rem;
+		padding: 0.42rem 0.8rem;
 		border-radius: 12px;
 		background: var(--card-bg-subtle);
 		border: 1.5px solid var(--border-color);
 		border-bottom: 2.5px solid var(--border-depth-color);
 		color: var(--text-color);
 		font-family: 'Outfit', sans-serif;
-		font-size: 0.78rem;
+		font-size: 0.8rem;
 		font-weight: 800;
 		cursor: pointer;
 		white-space: nowrap;
-		flex-shrink: 0;
+		min-width: 0;
+		box-sizing: border-box;
 		transition: all 0.12s ease;
 	}
 
@@ -295,6 +297,18 @@
 		background: var(--accent-light-bg);
 		border-color: var(--accent-color);
 		color: var(--accent-color);
+	}
+
+	.trigger-left {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+	}
+
+	.trigger-right {
+		display: flex;
+		align-items: center;
+		gap: 0.35rem;
 	}
 
 	.trigger-ico {
