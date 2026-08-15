@@ -62,9 +62,8 @@ export const POST: RequestHandler = async (event) => {
 		const bytes = await file.arrayBuffer();
 		const buffer = Buffer.from(bytes);
 
-		// Genera nome file sicuro (senza usare il nome originale)
-		const safeExtension = extension || '.jpg';
-		const filename = `img-${Date.now()}-${Math.random().toString(36).substring(2, 7)}${safeExtension}`;
+		// Salva sempre con estensione .webp
+		const filename = `img-${Date.now()}-${Math.random().toString(36).substring(2, 7)}.webp`;
 		const uploadDir = path.resolve('data/uploads');
 
 		await fs.mkdir(uploadDir, { recursive: true });

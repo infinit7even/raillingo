@@ -56,8 +56,8 @@ export const POST: RequestHandler = async (event) => {
 		const bytes = await file.arrayBuffer();
 		const buffer = Buffer.from(bytes);
 
-		const safeExt = extension && ALLOWED_EXTENSIONS.has(extension) ? extension : '.webp';
-		const filename = `note-img-${Date.now()}-${Math.random().toString(36).substring(2, 8)}${safeExt}`;
+		// Salva sempre con estensione .webp
+		const filename = `note-img-${Date.now()}-${Math.random().toString(36).substring(2, 8)}.webp`;
 		const uploadDir = path.resolve('data/uploads');
 
 		await fs.mkdir(uploadDir, { recursive: true });
