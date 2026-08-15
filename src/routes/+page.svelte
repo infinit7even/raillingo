@@ -277,7 +277,7 @@
 						🚪 LOGOUT ({user.username})
 					</button>
 				{:else}
-					<a href="/notes" class="duo-btn flex-btn home-discord-login-btn">
+					<a href="/api/auth/login" class="duo-btn flex-btn home-discord-login-btn">
 						🔑 LOGIN
 					</a>
 				{/if}
