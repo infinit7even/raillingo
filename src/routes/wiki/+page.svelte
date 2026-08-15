@@ -361,11 +361,12 @@
 	.search-section {
 		display: flex;
 		flex-direction: column;
-		gap: 0.85rem;
+		gap: 0.9rem;
 		background: var(--card-bg);
-		border: 1px solid var(--border-color);
+		border: 2px solid var(--border-color);
+		border-bottom: 5px solid var(--border-depth-color);
 		border-radius: 24px;
-		padding: 1rem 1.25rem;
+		padding: 1.15rem;
 		box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
 	}
 
@@ -387,66 +388,106 @@
 	.search-actions-group {
 		display: flex;
 		align-items: center;
-		gap: 0.4rem;
+		gap: 0.45rem;
 		flex-shrink: 0;
 	}
 
 	.search-icon {
 		position: absolute;
 		left: 1rem;
-		font-size: 1.1rem;
+		font-size: 1.15rem;
+		pointer-events: none;
+		z-index: 2;
 	}
 
 	.search-input {
 		width: 100%;
-		padding: 0.9rem 2.5rem 0.9rem 2.8rem;
+		height: 44px;
+		padding: 0 2.5rem 0 2.8rem;
 		border-radius: 16px;
 		background: var(--card-bg-subtle);
 		border: 2px solid var(--border-color);
+		border-bottom: 3.5px solid var(--border-depth-color);
 		color: var(--text-color);
-		font-size: 1rem;
-		transition: border-color 0.2s ease;
+		font-family: 'Outfit', sans-serif;
+		font-size: 0.95rem;
+		font-weight: 700;
+		box-sizing: border-box;
+		transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 	}
 
 	.search-input:focus {
 		outline: none;
 		border-color: var(--accent-color);
+		border-bottom-color: var(--accent-depth);
+		background: var(--card-bg);
+		box-shadow: 0 4px 14px var(--shadow-color);
 	}
 
 	.clear-btn {
 		position: absolute;
-		right: 1rem;
-		background: none;
-		border: none;
+		right: 0.85rem;
+		background: var(--card-bg-subtle);
+		border: 1px solid var(--border-color);
+		border-radius: 50%;
+		width: 24px;
+		height: 24px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
 		color: var(--text-muted);
-		font-size: 1rem;
+		font-size: 0.75rem;
+		font-weight: 900;
 		cursor: pointer;
+		transition: all 0.15s ease;
+	}
+
+	.clear-btn:hover {
+		color: var(--text-color);
+		border-color: var(--accent-color);
 	}
 
 	.alphabet-bar {
 		display: flex;
 		gap: 0.35rem;
 		flex-wrap: wrap;
+		padding-top: 0.25rem;
+		border-top: 1.5px dashed var(--border-color);
 	}
 
 	.letter-btn {
-		min-width: 32px;
-		height: 32px;
-		padding: 0 0.4rem;
-		border-radius: 8px;
+		min-width: 34px;
+		height: 34px;
+		padding: 0 0.5rem;
+		border-radius: 10px;
 		background: var(--card-bg-subtle);
-		border: 1px solid var(--border-color);
+		border: 2px solid var(--border-color);
+		border-bottom: 3px solid var(--border-depth-color);
 		color: var(--text-muted);
+		font-family: 'Outfit', sans-serif;
 		font-size: 0.8rem;
-		font-weight: 800;
+		font-weight: 900;
 		cursor: pointer;
-		transition: all 0.15s ease;
+		user-select: none;
+		transition: all 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+	}
+
+	.letter-btn:hover:not(.active) {
+		color: var(--text-color);
+		border-color: var(--accent-color);
+	}
+
+	.letter-btn:active {
+		transform: translateY(2px);
+		border-bottom-width: 1.5px;
 	}
 
 	.letter-btn.active {
 		background: var(--accent-color);
 		color: white;
-		border-color: var(--accent-color);
+		border-color: var(--accent-depth);
+		border-bottom-color: var(--accent-depth);
+		box-shadow: 0 3px 10px var(--shadow-color);
 	}
 
 	.result-count {
