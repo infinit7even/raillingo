@@ -277,7 +277,8 @@
 		overflow-y: auto;
 		overflow-x: hidden;
 		scrollbar-width: none;
-		padding: 0.5rem 0;
+		padding: 0.5rem 0.25rem;
+		box-sizing: border-box;
 	}
 
 	.nav-container::-webkit-scrollbar {
@@ -289,6 +290,7 @@
 		flex-direction: column;
 		gap: 0.4rem;
 		width: 100%;
+		box-sizing: border-box;
 	}
 
 	.nav-item {
@@ -327,12 +329,39 @@
 		border-bottom-color: var(--accent-color);
 		background-color: var(--accent-light-bg);
 		color: var(--accent-color);
-		animation: duoPop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+		animation: navItemPop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 		font-weight: 900;
 	}
 
 	.nav-item.active .nav-emoji-img {
-		animation: gentleWobble 0.5s ease;
+		animation: navIconBounce 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+	}
+
+	@keyframes navItemPop {
+		0% {
+			transform: scale(0.96);
+		}
+		50% {
+			transform: scale(1.02);
+		}
+		100% {
+			transform: scale(1);
+		}
+	}
+
+	@keyframes navIconBounce {
+		0% {
+			transform: scale(1) rotate(0deg);
+		}
+		40% {
+			transform: scale(1.25) rotate(-8deg);
+		}
+		70% {
+			transform: scale(1.1) rotate(4deg);
+		}
+		100% {
+			transform: scale(1) rotate(0deg);
+		}
 	}
 
 	.icon-wrapper {
