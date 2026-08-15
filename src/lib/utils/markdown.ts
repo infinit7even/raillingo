@@ -49,6 +49,15 @@ function parseInline(text: string): string {
 	// Highlight: ==text==
 	out = out.replace(/==([^=]+)==/g, '<mark class="md-highlight">$1</mark>');
 
+	// Images: ![alt|width](url) or ![alt](url) - supporta es. ![immagine|300](url) o ![immagine|50%](url)
+	out = out.replace(/!\[([^\]|]*)(\|([^\]]+))?\]\(([^)]+)\)/g, (_match, alt, _pipe, width, url) => {
+		const safeUrl = sanitizeUrl(url);
+		const style = width
+			? `style="max-width: ${escapeHtml(width.includes('%') || width.includes('px') ? width : width + 'px')}; width: 100%;"`
+			: '';
+		return `<div class="md-image-container"><img src="${safeUrl}" alt="${escapeHtml(alt)}" ${style} class="md-image" loading="lazy" /></div>`;
+	});
+
 	// Links: [label](url)
 	out = out.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_match, label, url) => {
 		const safeUrl = sanitizeUrl(url);

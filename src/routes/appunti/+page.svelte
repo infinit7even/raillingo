@@ -9,7 +9,6 @@
 	import { DEFAULT_NOTE_CATEGORIES, type Note, type NoteSortOption } from '$lib/types/notes';
 	import { toastStore } from '$lib/stores/toastStore';
 	import { fade } from 'svelte/transition';
-
 	import { compressImage } from '$lib/utils/imageCompressor';
 
 	let { data } = $props();
@@ -28,6 +27,7 @@
 	// Workspace UI states
 	let isOutlineOpen = $state(false);
 	let isSidebarOpenMobile = $state(true); // Su mobile: true = mostra lista file, false = mostra editor
+	let isVaultCollapsed = $state(false); // Su desktop: comprime la sidebar sinistra a 0
 	let isAutoSaving = $state(false);
 	let isUploadingImage = $state(false);
 	let lastSavedTime = $state<string>('');
@@ -52,15 +52,34 @@
 			}
 		});
 
-		if (window.innerWidth >= 1024) {
-			isSidebarOpenMobile = false;
+		if (typeof window !== 'undefined') {
+			if (window.innerWidth >= 1024) {
+				isSidebarOpenMobile = false;
+			}
+			const savedCollapsed = localStorage.getItem('rf_vault_collapsed');
+			if (savedCollapsed === 'true') {
+				isVaultCollapsed = true;
+			}
+
+			// Intercetta incolla (Ctrl+V) a livello globale sulla pagina
+			window.addEventListener('paste', handleGlobalPaste);
 		}
 
 		return () => {
+			if (typeof window !== 'undefined') {
+				window.removeEventListener('paste', handleGlobalPaste);
+			}
 			unsub();
 			if (saveDebounceTimer) clearTimeout(saveDebounceTimer);
 		};
 	});
+
+	function toggleVaultCollapse() {
+		isVaultCollapsed = !isVaultCollapsed;
+		if (typeof localStorage !== 'undefined') {
+			localStorage.setItem('rf_vault_collapsed', String(isVaultCollapsed));
+		}
+	}
 
 	function selectNote(note: Note) {
 		selectedNoteId = note.id;
@@ -261,11 +280,12 @@
 			const data = await res.json();
 			const imageUrl = data.url;
 
-			// Inserisci tag Markdown nella posizione del cursore
+			// Inserisci tag Markdown nella posizione del cursore con larghezza standard 400px (ridimensionabile)
+			const imageTag = `\n![immagine|400](${imageUrl})\n`;
+
 			if (textareaEl) {
 				const start = textareaEl.selectionStart || currentContent.length;
 				const end = textareaEl.selectionEnd || currentContent.length;
-				const imageTag = `\n![immagine](${imageUrl})\n`;
 
 				currentContent =
 					currentContent.substring(0, start) + imageTag + currentContent.substring(end);
@@ -276,7 +296,7 @@
 					textareaEl.setSelectionRange(start + imageTag.length, start + imageTag.length);
 				}, 20);
 			} else {
-				currentContent += `\n![immagine](${imageUrl})\n`;
+				currentContent += imageTag;
 			}
 
 			// Aggiungi l'URL all'array images della nota
@@ -285,7 +305,7 @@
 			}
 
 			triggerAutoSave();
-			toastStore.show({ message: '🖼️ Immagine compressa e incollata con successo!' });
+			toastStore.show({ message: '🖼️ Immagine incollata e inserita nella nota!' });
 		} catch (err) {
 			console.error('Errore compressione/upload immagine:', err);
 			toastStore.show({ message: '⚠️ Impossibile caricare l\'immagine' });
@@ -294,8 +314,40 @@
 		}
 	}
 
-	// Gestione evento incolla (Paste)
-	function handlePaste(e: ClipboardEvent) {
+	function escapeRegex(str: string): string {
+		return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+	}
+
+	// Ottieni la larghezza impostata per una determinata immagine
+	function getImageWidthInNote(imgUrl: string): string {
+		const regex = new RegExp(`!\\[[^\\]]*\\|([^\\]]+)\\]\\(${escapeRegex(imgUrl)}\\)`);
+		const match = currentContent.match(regex);
+		return match ? match[1].trim() : '';
+	}
+
+	// Ridimensiona un'immagine all'interno del Markdown della nota
+	function resizeImageInNote(imgUrl: string, newWidth: string) {
+		const regex = new RegExp(`!\\[([^\\]|]*)(\\|[^\\]]+)?\\]\\(${escapeRegex(imgUrl)}\\)`, 'g');
+		if (regex.test(currentContent)) {
+			currentContent = currentContent.replace(regex, `![$1|${newWidth}](${imgUrl})`);
+		} else {
+			currentContent += `\n![immagine|${newWidth}](${imgUrl})\n`;
+		}
+		triggerAutoSave();
+		toastStore.show({ message: `📏 Dimensione immagine: ${newWidth}` });
+	}
+
+	// Rimuovi un'immagine dalla nota e dal disco
+	function removeImageFromNote(imgUrl: string) {
+		const regex = new RegExp(`!\\[[^\\]]*\\]\\(${escapeRegex(imgUrl)}\\)\\n?`, 'g');
+		currentContent = currentContent.replace(regex, '');
+		currentImages = currentImages.filter((u) => u !== imgUrl);
+		triggerAutoSave();
+		toastStore.show({ message: '🗑️ Immagine rimossa dalla nota' });
+	}
+
+	// Gestione globale dell'evento Incolla (Ctrl+V)
+	function handleGlobalPaste(e: ClipboardEvent) {
 		const items = e.clipboardData?.items;
 		if (!items) return;
 
@@ -363,112 +415,131 @@
 	}
 </script>
 
-<div class="obsidian-workspace" onkeydown={handleKeyDown} role="presentation">
+<div
+	class="obsidian-workspace"
+	class:vault-collapsed={isVaultCollapsed}
+	onkeydown={handleKeyDown}
+	role="presentation"
+>
 	<!-- 🗂️ 1. LEFT VAULT EXPLORER -->
-	<aside
-		class="vault-sidebar duo-card"
-		class:mobile-hidden={!isSidebarOpenMobile && selectedNoteId !== null}
-	>
-		<!-- Vault Explorer Header -->
-		<div class="vault-header">
-			<div class="vault-title-group">
-				<span class="vault-icon">📓</span>
-				<span class="vault-name">VAULT APPUNTI</span>
-				<span class="vault-badge">{notes.length}</span>
+	{#if !isVaultCollapsed}
+		<aside
+			class="vault-sidebar duo-card"
+			class:mobile-hidden={!isSidebarOpenMobile && selectedNoteId !== null}
+			transition:fade={{ duration: 120 }}
+		>
+			<!-- Vault Explorer Header -->
+			<div class="vault-header">
+				<div class="vault-title-group">
+					<span class="vault-icon">📓</span>
+					<span class="vault-name">VAULT APPUNTI</span>
+					<span class="vault-badge">{notes.length}</span>
+				</div>
+
+				<div class="vault-header-actions">
+					<button
+						type="button"
+						class="duo-btn duo-btn-green new-note-btn"
+						onclick={handleCreateNewNote}
+						title="Crea nuova nota"
+					>
+						➕ Nuova
+					</button>
+
+					<button
+						type="button"
+						class="collapse-vault-btn"
+						onclick={toggleVaultCollapse}
+						title="Comprimi Vault (nascondi elenco)"
+					>
+						◀
+					</button>
+				</div>
 			</div>
 
-			<button
-				type="button"
-				class="duo-btn duo-btn-green new-note-btn"
-				onclick={handleCreateNewNote}
-				title="Crea nuova nota"
-			>
-				➕ Nuova
-			</button>
-		</div>
+			<!-- Vault Search Bar -->
+			<div class="vault-search-box">
+				<span class="search-ico">🔍</span>
+				<input
+					type="text"
+					bind:value={searchQuery}
+					placeholder="Cerca nel vault..."
+					class="vault-search-input"
+				/>
+				{#if searchQuery}
+					<button type="button" class="clear-btn" onclick={() => (searchQuery = '')}>✕</button>
+				{/if}
+			</div>
 
-		<!-- Vault Search Bar -->
-		<div class="vault-search-box">
-			<span class="search-ico">🔍</span>
-			<input
-				type="text"
-				bind:value={searchQuery}
-				placeholder="Cerca nel vault..."
-				class="vault-search-input"
-			/>
-			{#if searchQuery}
-				<button type="button" class="clear-btn" onclick={() => (searchQuery = '')}>✕</button>
-			{/if}
-		</div>
-
-		<!-- Folders Chips -->
-		<div class="vault-folders-bar">
-			<button
-				type="button"
-				class="folder-chip"
-				class:active={selectedCategory === 'ALL'}
-				onclick={() => (selectedCategory = 'ALL')}
-			>
-				📁 Tutti ({notes.length})
-			</button>
-			{#each availableCategories as [catName, count]}
+			<!-- Folders Chips -->
+			<div class="vault-folders-bar">
 				<button
 					type="button"
 					class="folder-chip"
-					class:active={selectedCategory === catName}
-					onclick={() => (selectedCategory = catName)}
+					class:active={selectedCategory === 'ALL'}
+					onclick={() => (selectedCategory = 'ALL')}
 				>
-					📁 {catName} ({count})
+					📁 Tutti ({notes.length})
 				</button>
-			{/each}
-		</div>
-
-		<!-- Notes List Explorer (SENZA ANTEPRIME DI TESTO) -->
-		<div class="vault-files-list">
-			{#if filteredNotes.length === 0}
-				<div class="vault-empty-state">
-					<p>Nessun appunto trovato nel Vault.</p>
-					<button type="button" class="create-first-link" onclick={handleCreateNewNote}>
-						+ Crea una nuova nota
-					</button>
-				</div>
-			{:else}
-				{#each filteredNotes as note (note.id)}
-					{@const isSelected = selectedNoteId === note.id}
-					<div
-						class="vault-file-item"
-						class:active={isSelected}
-						onclick={() => selectNote(note)}
-						role="button"
-						tabindex="0"
-						onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && selectNote(note)}
+				{#each availableCategories as [catName, count]}
+					<button
+						type="button"
+						class="folder-chip"
+						class:active={selectedCategory === catName}
+						onclick={() => (selectedCategory = catName)}
 					>
-						<div class="file-item-header">
-							<span class="file-title">
-								{#if note.isPinned}
-									<span class="pin-ico" title="Fissato in evidenza">📌</span>
-								{/if}
-								{note.title || 'Senza titolo'}
-							</span>
-							<span class="file-cat">{note.category}</span>
-						</div>
-
-						<div class="file-item-meta">
-							<span class="file-date">
-								{new Date(note.updatedAt || note.createdAt).toLocaleDateString('it-IT', {
-									day: 'numeric',
-									month: 'short'
-								})}
-							</span>
-							<span class="file-words">{getMarkdownStats(note.content).wordCount} parole</span>
-						</div>
-					</div>
+						📁 {catName} ({count})
+					</button>
 				{/each}
-			{/if}
-		</div>
-	</aside>
+			</div>
 
-	<!-- 📝 2. CENTER MAIN WORKSPACE (SCRITTURA DIRETTA SENZA ANTEPRIMA) -->
+			<!-- Notes List Explorer (SENZA ANTEPRIME DI TESTO) -->
+			<div class="vault-files-list">
+				{#if filteredNotes.length === 0}
+					<div class="vault-empty-state">
+						<p>Nessun appunto trovato nel Vault.</p>
+						<button type="button" class="create-first-link" onclick={handleCreateNewNote}>
+							+ Crea una nuova nota
+						</button>
+					</div>
+				{:else}
+					{#each filteredNotes as note (note.id)}
+						{@const isSelected = selectedNoteId === note.id}
+						<div
+							class="vault-file-item"
+							class:active={isSelected}
+							onclick={() => selectNote(note)}
+							role="button"
+							tabindex="0"
+							onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && selectNote(note)}
+						>
+							<div class="file-item-header">
+								<span class="file-title">
+									{#if note.isPinned}
+										<span class="pin-ico" title="Fissato in evidenza">📌</span>
+									{/if}
+									{note.title || 'Senza titolo'}
+								</span>
+								<span class="file-cat">{note.category}</span>
+							</div>
+
+							<div class="file-item-meta">
+								<span class="file-date">
+									{new Date(note.updatedAt || note.createdAt).toLocaleDateString('it-IT', {
+										day: 'numeric',
+										month: 'short'
+									})}
+								</span>
+								<span class="file-words">{getMarkdownStats(note.content).wordCount} parole</span>
+							</div>
+						</div>
+					{/each}
+				{/if}
+			</div>
+		</aside>
+	{/if}
+
+	<!-- 📝 2. CENTER MAIN WORKSPACE (SCRITTURA DIRETTA CON IMMAGINI RIDIMENSIONABILI) -->
 	<main
 		class="note-workspace-pane duo-card"
 		class:mobile-hidden={isSidebarOpenMobile && selectedNoteId !== null}
@@ -476,28 +547,42 @@
 		{#if selectedNoteId && activeNote}
 			<!-- Workspace Top Header Bar -->
 			<div class="workspace-header">
-				<!-- Mobile Back to Vault button -->
-				<button
-					type="button"
-					class="mobile-back-btn"
-					onclick={() => (isSidebarOpenMobile = true)}
-					title="Torna all'elenco appunti"
-				>
-					← Vault
-				</button>
+				<div class="workspace-header-left">
+					<!-- Expand Vault button when collapsed -->
+					{#if isVaultCollapsed}
+						<button
+							type="button"
+							class="expand-vault-btn"
+							onclick={toggleVaultCollapse}
+							title="Espandi Vault"
+						>
+							▶ Vault ({notes.length})
+						</button>
+					{/if}
 
-				<!-- Breadcrumb & Category selector -->
-				<div class="workspace-breadcrumb">
-					<span class="folder-ico">📁</span>
-					<select
-						bind:value={currentCategory}
-						onchange={triggerAutoSave}
-						class="breadcrumb-category-select"
+					<!-- Mobile Back to Vault button -->
+					<button
+						type="button"
+						class="mobile-back-btn"
+						onclick={() => (isSidebarOpenMobile = true)}
+						title="Torna all'elenco appunti"
 					>
-						{#each DEFAULT_NOTE_CATEGORIES as cat}
-							<option value={cat}>{cat}</option>
-						{/each}
-					</select>
+						← Vault
+					</button>
+
+					<!-- Breadcrumb & Category selector -->
+					<div class="workspace-breadcrumb">
+						<span class="folder-ico">📁</span>
+						<select
+							bind:value={currentCategory}
+							onchange={triggerAutoSave}
+							class="breadcrumb-category-select"
+						>
+							{#each DEFAULT_NOTE_CATEGORIES as cat}
+								<option value={cat}>{cat}</option>
+							{/each}
+						</select>
+					</div>
 				</div>
 
 				<!-- Save Status Pill -->
@@ -641,9 +726,9 @@
 					class="ribbon-btn image-ribbon-btn"
 					onclick={() => fileInputEl?.click()}
 					disabled={isUploadingImage}
-					title="Incolla o carica un'immagine (PNG, JPG, WebP - max 1MB)"
+					title="Incolla (Ctrl+V) o carica un'immagine (PNG, JPG, WebP - max 1MB)"
 				>
-					{isUploadingImage ? '⏳ Caricamento...' : '🖼️ Immagine'}
+					{isUploadingImage ? '⏳ Caricamento...' : '🖼️ Incolla / Allega'}
 				</button>
 				<input
 					bind:this={fileInputEl}
@@ -665,28 +750,63 @@
 				/>
 			</div>
 
-			<!-- Attached Images Tray (se presenti immagini nella nota) -->
+			<!-- Attached Images Tray con controlli di Ridimensionamento -->
 			{#if currentImages && currentImages.length > 0}
 				<div class="attached-images-tray">
-					<span class="images-tray-lbl">Immagini allegate ({currentImages.length}):</span>
+					<div class="images-tray-header">
+						<span class="images-tray-lbl">🖼️ Immagini nella nota ({currentImages.length}) - Ridimensiona:</span>
+					</div>
 					<div class="images-tray-list">
 						{#each currentImages as imgUrl}
+							{@const currentW = getImageWidthInNote(imgUrl)}
 							<div class="image-thumb-pill">
 								<img src={imgUrl} alt="" class="thumb-preview" />
-								<a href={imgUrl} target="_blank" rel="noopener noreferrer" class="thumb-link" title="Apri a dimensione intera">
-									Vedi
+								<div class="resize-buttons-group">
+									<button
+										type="button"
+										class="size-btn"
+										class:active={currentW === '200'}
+										onclick={() => resizeImageInNote(imgUrl, '200')}
+										title="Piccola (200px)"
+									>
+										200px
+									</button>
+									<button
+										type="button"
+										class="size-btn"
+										class:active={currentW === '400' || currentW === ''}
+										onclick={() => resizeImageInNote(imgUrl, '400')}
+										title="Media (400px)"
+									>
+										400px
+									</button>
+									<button
+										type="button"
+										class="size-btn"
+										class:active={currentW === '650'}
+										onclick={() => resizeImageInNote(imgUrl, '650')}
+										title="Grande (650px)"
+									>
+										650px
+									</button>
+									<button
+										type="button"
+										class="size-btn"
+										class:active={currentW === '100%'}
+										onclick={() => resizeImageInNote(imgUrl, '100%')}
+										title="Piena larghezza (100%)"
+									>
+										100%
+									</button>
+								</div>
+								<a href={imgUrl} target="_blank" rel="noopener noreferrer" class="thumb-link" title="Apri dimensione intera">
+									🔍
 								</a>
 								<button
 									type="button"
 									class="thumb-delete-btn"
-									onclick={() => {
-										// Rimuovi l'immagine dal testo e dall'array images
-										currentContent = currentContent.replace(new RegExp(`!\\[.*?\\]\\(${imgUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\)`, 'g'), '');
-										currentImages = currentImages.filter((u) => u !== imgUrl);
-										triggerAutoSave();
-										toastStore.show({ message: '🗑️ Immagine rimossa dalla nota' });
-									}}
-									title="Elimina immagine"
+									onclick={() => removeImageFromNote(imgUrl)}
+									title="Rimuovi immagine dalla nota"
 								>
 									✕
 								</button>
@@ -696,7 +816,7 @@
 				</div>
 			{/if}
 
-			<!-- Pure Writing Textarea Canvas (SENZA ANTEPRIMA) con supporto Paste & Drop -->
+			<!-- Pure Writing Textarea Canvas con supporto Incolla (Ctrl+V) & Drag-and-Drop -->
 			<div
 				class="document-canvas-container"
 				ondrop={handleDrop}
@@ -708,9 +828,9 @@
 					bind:this={textareaEl}
 					bind:value={currentContent}
 					oninput={triggerAutoSave}
-					onpaste={handlePaste}
+					onpaste={handleGlobalPaste}
 					ondrop={handleDrop}
-					placeholder="Scrivi qui i tuoi appunti... (Puoi incollare immagini direttamente con Ctrl+V)"
+					placeholder="Scrivi qui i tuoi appunti... (Incolla qualsiasi immagine direttamente con Ctrl+V per inserirla nel testo)"
 					class="obsidian-editor-textarea"
 				></textarea>
 			</div>
@@ -725,12 +845,22 @@
 					<span>🔤 {docStats.charCount} caratteri</span>
 				</div>
 				<div class="doc-stats-right">
-					<span>Ctrl+S per salvare</span>
+					<span>Ctrl+V per incollare immagini • Ctrl+S per salvare</span>
 				</div>
 			</div>
 		{:else}
 			<!-- Empty State when no note is open -->
 			<div class="workspace-empty-canvas">
+				{#if isVaultCollapsed}
+					<button
+						type="button"
+						class="expand-vault-btn"
+						onclick={toggleVaultCollapse}
+						style="margin-bottom: 1rem;"
+					>
+						▶ Mostra Vault Appunti
+					</button>
+				{/if}
 				<img src="/emoji/owl_3d.png" alt="" class="empty-owl" />
 				<h2>Seleziona una nota dal Vault o creane una nuova</h2>
 				<p>Spazio di scrittura per memorizzare concetti e normative ferroviarie.</p>
@@ -792,11 +922,16 @@
 		max-width: 1300px;
 		margin: 0 auto;
 		box-sizing: border-box;
+		transition: all 0.2s ease;
 	}
 
 	@media (min-width: 1024px) {
 		.obsidian-workspace {
 			grid-template-columns: 300px 1fr;
+		}
+
+		.obsidian-workspace.vault-collapsed {
+			grid-template-columns: 1fr;
 		}
 	}
 
@@ -850,10 +985,58 @@
 		color: var(--accent-color);
 	}
 
+	.vault-header-actions {
+		display: flex;
+		align-items: center;
+		gap: 0.35rem;
+	}
+
 	.new-note-btn {
 		font-size: 0.75rem;
 		padding: 0.35rem 0.7rem;
 		border-radius: 10px;
+	}
+
+	.collapse-vault-btn {
+		background: var(--card-bg-subtle);
+		border: 1.5px solid var(--border-color);
+		border-radius: 8px;
+		width: 28px;
+		height: 28px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		color: var(--text-muted);
+		font-size: 0.75rem;
+		font-weight: 900;
+		cursor: pointer;
+		transition: all 0.15s ease;
+	}
+
+	.collapse-vault-btn:hover {
+		color: var(--text-color);
+		border-color: var(--accent-color);
+		background: var(--hover-bg);
+	}
+
+	.expand-vault-btn {
+		background: var(--card-bg-subtle);
+		border: 1.5px solid var(--border-color);
+		border-radius: 8px;
+		padding: 0.3rem 0.65rem;
+		font-size: 0.78rem;
+		font-weight: 800;
+		color: var(--accent-color);
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		gap: 0.35rem;
+		transition: all 0.15s ease;
+	}
+
+	.expand-vault-btn:hover {
+		background: var(--hover-bg);
+		border-color: var(--accent-color);
 	}
 
 	.vault-search-box {
@@ -1034,6 +1217,13 @@
 		flex-wrap: wrap;
 	}
 
+	.workspace-header-left {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		flex-wrap: wrap;
+	}
+
 	.mobile-back-btn {
 		display: none;
 		background: var(--card-bg-subtle);
@@ -1170,20 +1360,26 @@
 		cursor: wait;
 	}
 
-	/* Attached Images Tray */
+	/* Attached Images Tray & Resizing */
 	.attached-images-tray {
 		display: flex;
 		flex-direction: column;
-		gap: 0.35rem;
-		padding: 0.35rem 0.6rem;
+		gap: 0.4rem;
+		padding: 0.45rem 0.7rem;
 		background: var(--card-bg-subtle);
-		border: 1px solid var(--border-color);
-		border-radius: 10px;
+		border: 1.5px solid var(--border-color);
+		border-radius: 12px;
 		flex-shrink: 0;
 	}
 
+	.images-tray-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+	}
+
 	.images-tray-lbl {
-		font-size: 0.68rem;
+		font-size: 0.7rem;
 		font-weight: 800;
 		color: var(--text-muted);
 		text-transform: uppercase;
@@ -1193,9 +1389,10 @@
 	.images-tray-list {
 		display: flex;
 		align-items: center;
-		gap: 0.4rem;
+		gap: 0.5rem;
 		overflow-x: auto;
 		scrollbar-width: none;
+		padding-bottom: 0.15rem;
 	}
 
 	.images-tray-list::-webkit-scrollbar {
@@ -1205,37 +1402,69 @@
 	.image-thumb-pill {
 		display: flex;
 		align-items: center;
-		gap: 0.35rem;
+		gap: 0.45rem;
 		background: var(--card-bg);
 		border: 1.5px solid var(--border-color);
-		border-radius: 8px;
-		padding: 0.2rem 0.4rem;
+		border-radius: 10px;
+		padding: 0.25rem 0.5rem;
 		flex-shrink: 0;
 	}
 
 	.thumb-preview {
-		width: 24px;
-		height: 24px;
+		width: 32px;
+		height: 32px;
 		object-fit: cover;
+		border-radius: 6px;
+		border: 1px solid var(--border-color);
+	}
+
+	.resize-buttons-group {
+		display: flex;
+		align-items: center;
+		gap: 0.2rem;
+		background: var(--card-bg-subtle);
+		border-radius: 6px;
+		padding: 0.1rem;
+	}
+
+	.size-btn {
+		background: transparent;
+		border: 1px solid transparent;
 		border-radius: 4px;
+		padding: 0.15rem 0.35rem;
+		font-size: 0.65rem;
+		font-weight: 800;
+		color: var(--text-muted);
+		cursor: pointer;
+		transition: all 0.15s ease;
+	}
+
+	.size-btn:hover {
+		color: var(--text-color);
+	}
+
+	.size-btn.active {
+		background: var(--accent-light-bg);
+		color: var(--accent-color);
+		border-color: var(--accent-color);
 	}
 
 	.thumb-link {
-		font-size: 0.72rem;
-		font-weight: 800;
-		color: var(--accent-color);
+		font-size: 0.8rem;
 		text-decoration: none;
+		opacity: 0.8;
+		transition: opacity 0.15s;
 	}
 
 	.thumb-link:hover {
-		text-decoration: underline;
+		opacity: 1;
 	}
 
 	.thumb-delete-btn {
 		background: transparent;
 		border: none;
 		color: #ff5e5b;
-		font-size: 0.75rem;
+		font-size: 0.8rem;
 		font-weight: 900;
 		cursor: pointer;
 		padding: 0 0.15rem;
