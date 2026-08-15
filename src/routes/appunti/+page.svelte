@@ -1,12 +1,15 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { notesStore } from '$lib/stores/notesStore';
-	import { parseMarkdown, getMarkdownStats } from '$lib/utils/markdown';
-	import type { Note, NoteSortOption } from '$lib/types/notes';
-	import PageHeader from '$lib/components/PageHeader.svelte';
-	import NoteEditorModal from '$lib/components/NoteEditorModal.svelte';
-	import NoteFocusModal from '$lib/components/NoteFocusModal.svelte';
+	import {
+		parseMarkdown,
+		getMarkdownStats,
+		extractHeadings,
+		type HeadingItem
+	} from '$lib/utils/markdown';
+	import { DEFAULT_NOTE_CATEGORIES, type Note, type NoteSortOption } from '$lib/types/notes';
 	import { toastStore } from '$lib/stores/toastStore';
+	import { fade } from 'svelte/transition';
 
 	let { data } = $props();
 
@@ -16,51 +19,88 @@
 	})();
 
 	let notes = $state<Note[]>(seed.list);
+	let selectedNoteId = $state<string | null>(seed.list.length > 0 ? seed.list[0].id : null);
 	let searchQuery = $state('');
 	let selectedCategory = $state<string>('ALL');
 	let sortOption = $state<NoteSortOption>('custom');
-	let isReorderMode = $state(false);
 
-	// Modal states
-	let isEditorOpen = $state(false);
-	let editingNote = $state<Note | null>(null);
-	let isFocusOpen = $state(false);
-	let focusingNote = $state<Note | null>(null);
+	// Workspace UI states
+	let viewMode = $state<'edit' | 'preview' | 'split'>('edit');
+	let isOutlineOpen = $state(false);
+	let isSidebarOpenMobile = $state(true); // Su mobile: true = mostra lista file, false = mostra editor
+	let isAutoSaving = $state(false);
+	let lastSavedTime = $state<string>('');
+
+	// Active note local editor state
+	let currentTitle = $state('');
+	let currentContent = $state('');
+	let currentCategory = $state('Normativa RFI');
+	let currentIsPinned = $state(false);
+	let textareaEl = $state<HTMLTextAreaElement | null>(null);
+
+	let saveDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
 	onMount(() => {
 		notesStore.hydrate(data.initialNotes);
 		const unsub = notesStore.subscribe((n) => {
 			notes = n;
+			if (!selectedNoteId && n.length > 0) {
+				selectNote(n[0]);
+			}
 		});
-		return unsub;
+
+		// Su desktop inizializza in modalità split o edit a seconda della larghezza
+		if (window.innerWidth >= 1024) {
+			viewMode = 'split';
+			isSidebarOpenMobile = false;
+		}
+
+		return () => {
+			unsub();
+			if (saveDebounceTimer) clearTimeout(saveDebounceTimer);
+		};
+	});
+
+	// Seleziona una nota e carica i dati nel workspace editor
+	function selectNote(note: Note) {
+		selectedNoteId = note.id;
+		currentTitle = note.title;
+		currentContent = note.content || '';
+		currentCategory = note.category || 'Normativa RFI';
+		currentIsPinned = Boolean(note.isPinned);
+		isSidebarOpenMobile = false; // Su mobile passa alla visualizzazione del file
+	}
+
+	// Trova la nota attiva nello store
+	let activeNote = $derived(notes.find((n) => n.id === selectedNoteId) || null);
+
+	// Se activeNote cambia dall'esterno e non stiamo modificando
+	$effect(() => {
+		if (activeNote && activeNote.id !== selectedNoteId) {
+			selectNote(activeNote);
+		}
 	});
 
 	// Tutte le categorie disponibili con conteggio
 	let availableCategories = $derived.by(() => {
 		const counts = new Map<string, number>();
 		for (const n of notes) {
-			const cat = n.category?.trim() || 'Varie';
+			const cat = n.category?.trim() || 'Generale & Varie';
 			counts.set(cat, (counts.get(cat) || 0) + 1);
 		}
 		return Array.from(counts.entries()).sort((a, b) => a[0].localeCompare(b[0], 'it'));
 	});
 
-	// Statistiche complessive
-	let totalWords = $derived(
-		notes.reduce((acc, n) => acc + getMarkdownStats(n.content).wordCount, 0)
-	);
-	let pinnedCount = $derived(notes.filter((n) => n.isPinned).length);
-
-	// Note filtrate e ordinate
+	// Note filtrate per cartella/categoria e ricerca
 	let filteredNotes = $derived.by(() => {
 		let list = [...notes];
 
-		// 1. Filtro Categoria
+		// Filtro Categoria / Cartella
 		if (selectedCategory !== 'ALL') {
-			list = list.filter((n) => (n.category?.trim() || 'Varie') === selectedCategory);
+			list = list.filter((n) => (n.category?.trim() || 'Generale & Varie') === selectedCategory);
 		}
 
-		// 2. Ricerca
+		// Ricerca
 		const q = searchQuery.toLowerCase().trim();
 		if (q) {
 			list = list.filter(
@@ -72,9 +112,8 @@
 			);
 		}
 
-		// 3. Ordinamento
+		// Ordinamento Obsidian style
 		if (sortOption === 'custom') {
-			// Ordine manuale (le note con isPinned rimangono sempre per prime)
 			list.sort((a, b) => {
 				if (a.isPinned && !b.isPinned) return -1;
 				if (!a.isPinned && b.isPinned) return 1;
@@ -85,12 +124,6 @@
 				if (a.isPinned && !b.isPinned) return -1;
 				if (!a.isPinned && b.isPinned) return 1;
 				return new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime();
-			});
-		} else if (sortOption === 'date-asc') {
-			list.sort((a, b) => {
-				if (a.isPinned && !b.isPinned) return -1;
-				if (!a.isPinned && b.isPinned) return 1;
-				return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
 			});
 		} else if (sortOption === 'title-asc') {
 			list.sort((a, b) => {
@@ -109,789 +142,1221 @@
 		return list;
 	});
 
-	function handleNewNote() {
-		editingNote = null;
-		isEditorOpen = true;
+	// Markdown render e statistiche della nota attiva
+	let renderedMarkdown = $derived(parseMarkdown(currentContent));
+	let docStats = $derived(getMarkdownStats(currentContent));
+	let headingsOutline = $derived<HeadingItem[]>(extractHeadings(currentContent));
+
+	// Auto-save debounced a 600ms
+	function triggerAutoSave() {
+		if (!selectedNoteId) return;
+		isAutoSaving = true;
+
+		if (saveDebounceTimer) clearTimeout(saveDebounceTimer);
+		saveDebounceTimer = setTimeout(async () => {
+			if (!selectedNoteId) return;
+			await notesStore.updateNote({
+				id: selectedNoteId,
+				title: currentTitle.trim() || 'Appunto senza titolo',
+				content: currentContent,
+				category: currentCategory,
+				isPinned: currentIsPinned
+			});
+			isAutoSaving = false;
+			const now = new Date();
+			lastSavedTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+		}, 600);
 	}
 
-	function handleEditNote(note: Note) {
-		editingNote = note;
-		isEditorOpen = true;
-	}
+	async function handleCreateNewNote() {
+		const newNote = await notesStore.createNote({
+			title: 'Nuovo Appunto',
+			content: '### 📌 Obiettivi di Studio\n- [ ] Concetto chiave 1\n- [ ] Concetto chiave 2\n\n> [!TIP]\n> Inserisci qui le tue note di ripasso.\n',
+			category: selectedCategory !== 'ALL' ? selectedCategory : 'Normativa RFI',
+			isPinned: false
+		});
 
-	function handleOpenFocus(note: Note) {
-		focusingNote = note;
-		isFocusOpen = true;
-	}
-
-	async function handleDelete(note: Note) {
-		if (confirm(`Sei sicuro di voler eliminare l'appunto "${note.title}"?`)) {
-			await notesStore.deleteNote(note.id);
+		if (newNote) {
+			selectNote(newNote);
+			viewMode = window.innerWidth >= 1024 ? 'split' : 'edit';
+			isSidebarOpenMobile = false;
+			setTimeout(() => {
+				if (textareaEl) textareaEl.focus();
+			}, 50);
 		}
 	}
 
-	async function handleTogglePin(note: Note) {
-		await notesStore.togglePin(note.id);
+	async function handleDeleteActiveNote() {
+		if (!selectedNoteId || !activeNote) return;
+		if (confirm(`Sei sicuro di voler eliminare "${activeNote.title}"?`)) {
+			const idToDelete = selectedNoteId;
+			await notesStore.deleteNote(idToDelete);
+			const remaining = notes.filter((n) => n.id !== idToDelete);
+			if (remaining.length > 0) {
+				selectNote(remaining[0]);
+			} else {
+				selectedNoteId = null;
+				currentTitle = '';
+				currentContent = '';
+			}
+		}
 	}
 
-	async function handleMove(noteId: string, direction: 'up' | 'down') {
-		await notesStore.moveNote(noteId, direction);
+	async function handleTogglePin() {
+		currentIsPinned = !currentIsPinned;
+		triggerAutoSave();
 	}
 
-	function countChecklist(content: string) {
-		const matches = content.match(/[\*\-]\s+\[([ xX])\]/g);
-		if (!matches) return null;
-		const total = matches.length;
-		const completed = matches.filter((m) => m.toLowerCase().includes('[x]')).length;
-		return { total, completed };
+	// Toolbar formatting helper
+	function insertFormatting(prefix: string, suffix = '', placeholder = '') {
+		if (!textareaEl) return;
+		const start = textareaEl.selectionStart;
+		const end = textareaEl.selectionEnd;
+		const selected = currentContent.substring(start, end) || placeholder;
+		const replacement = prefix + selected + suffix;
+
+		currentContent =
+			currentContent.substring(0, start) + replacement + currentContent.substring(end);
+
+		triggerAutoSave();
+
+		setTimeout(() => {
+			if (!textareaEl) return;
+			textareaEl.focus();
+			textareaEl.setSelectionRange(
+				start + prefix.length,
+				start + prefix.length + selected.length
+			);
+		}, 10);
+	}
+
+	// Obsidian-style checklist interactive toggle
+	function toggleChecklistItem(index: number) {
+		const lines = currentContent.split('\n');
+		let checkCount = 0;
+		for (let i = 0; i < lines.length; i++) {
+			const match = lines[i].match(/^([\*\-]\s+\[)([ xX])(\]\s+.+)$/);
+			if (match) {
+				if (checkCount === index) {
+					const isCurrentlyChecked = match[2].toLowerCase() === 'x';
+					const newChar = isCurrentlyChecked ? ' ' : 'x';
+					lines[i] = `${match[1]}${newChar}${match[3]}`;
+					break;
+				}
+				checkCount++;
+			}
+		}
+		currentContent = lines.join('\n');
+		triggerAutoSave();
+	}
+
+	function copyMarkdown() {
+		if (!currentContent) return;
+		navigator.clipboard.writeText(`# ${currentTitle}\n\n${currentContent}`);
+		toastStore.show({ message: '📋 Testo Markdown copiato!' });
+	}
+
+	function downloadFile() {
+		const filename = `${currentTitle.replace(/[^a-zA-Z0-9_-]/g, '_').toLowerCase() || 'appunto'}.md`;
+		const fullText = `# ${currentTitle}\n\n**Categoria**: ${currentCategory}\n---\n\n${currentContent}`;
+		const blob = new Blob([fullText], { type: 'text/markdown;charset=utf-8;' });
+		const url = URL.createObjectURL(blob);
+		const a = document.createElement('a');
+		a.href = url;
+		a.download = filename;
+		a.click();
+		URL.revokeObjectURL(url);
+		toastStore.show({ message: `📥 "${filename}" scaricato!` });
+	}
+
+	function handleKeyDown(e: KeyboardEvent) {
+		if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+			e.preventDefault();
+			triggerAutoSave();
+			toastStore.show({ message: '💾 Appunto salvato!' });
+		}
 	}
 </script>
 
-<div class="notes-page-container">
-	<!-- Page Header Banner Desktop -->
-	<PageHeader
-		title="Appunti di Studio"
-		subtitle="Quaderno digitale, sintesi normative e schede di ripasso"
-		badge="AREA STUDIO"
-		icon="/emoji/clipboard_3d.png"
-		variant="orange"
+<div class="obsidian-workspace" onkeydown={handleKeyDown} role="presentation">
+	<!-- 🗂️ 1. LEFT VAULT EXPLORER / SIDEBAR -->
+	<aside
+		class="vault-sidebar duo-card"
+		class:mobile-hidden={!isSidebarOpenMobile && selectedNoteId !== null}
 	>
-		<button type="button" class="duo-btn duo-btn-green new-note-header-btn" onclick={handleNewNote}>
-			➕ NUOVO APPUNTO
-		</button>
-	</PageHeader>
-
-	<!-- Statistiche e Sintesi Rapida -->
-	<div class="notes-stats-row duo-card">
-		<div class="stat-box">
-			<span class="stat-number">{notes.length}</span>
-			<span class="stat-label">Appunti Totali</span>
-		</div>
-		<div class="stat-box">
-			<span class="stat-number">{pinnedCount}</span>
-			<span class="stat-label">In Evidenza 📌</span>
-		</div>
-		<div class="stat-box">
-			<span class="stat-number">{availableCategories.length}</span>
-			<span class="stat-label">Categorie</span>
-		</div>
-		<div class="stat-box">
-			<span class="stat-number">{totalWords}</span>
-			<span class="stat-label">Parole Scritte</span>
-		</div>
-	</div>
-
-	<!-- Mobile CTA Button -->
-	<div class="mobile-cta-box">
-		<button type="button" class="duo-btn duo-btn-green mobile-new-btn" onclick={handleNewNote}>
-			<img src="/emoji/writing_hand_3d_default.png" alt="" class="btn-emoji-img" />
-			NUOVO APPUNTO
-		</button>
-	</div>
-
-	<!-- Search & Sort Controls Toolbar -->
-	<div class="controls-toolbar duo-card">
-		<div class="search-box">
-			<span class="search-icon">🔍</span>
-			<input
-				type="text"
-				bind:value={searchQuery}
-				placeholder="Cerca negli appunti, per titolo, testo o tag..."
-				class="search-input"
-			/>
-			{#if searchQuery}
-				<button type="button" class="clear-search-btn" onclick={() => (searchQuery = '')}>✕</button>
-			{/if}
-		</div>
-
-		<div class="sort-actions">
-			<div class="sort-select-wrapper">
-				<span class="sort-lbl">Ordina per:</span>
-				<select bind:value={sortOption} class="sort-select">
-					<option value="custom">📌 Personalizzato</option>
-					<option value="date-desc">🕒 Più Recenti</option>
-					<option value="date-asc">📅 Meno Recenti</option>
-					<option value="title-asc">🔤 Alfabetico (A-Z)</option>
-					<option value="category">🏷️ Per Categoria</option>
-				</select>
+		<!-- Vault Explorer Header -->
+		<div class="vault-header">
+			<div class="vault-title-group">
+				<span class="vault-icon">📓</span>
+				<span class="vault-name">VAULT APPUNTI</span>
+				<span class="vault-badge">{notes.length}</span>
 			</div>
 
 			<button
 				type="button"
-				class="reorder-mode-btn"
-				class:active={isReorderMode}
-				onclick={() => {
-					isReorderMode = !isReorderMode;
-					if (isReorderMode) sortOption = 'custom';
-				}}
-				title="Attiva pulsanti per riordinare manualmente gli appunti"
+				class="duo-btn duo-btn-green new-note-btn"
+				onclick={handleCreateNewNote}
+				title="Crea nuova nota"
 			>
-				↕️ {isReorderMode ? 'Fine Riordino' : 'Riordina'}
+				➕ Nuova
 			</button>
 		</div>
-	</div>
 
-	<!-- Category Filter Bar -->
-	<div class="categories-filter-bar">
-		<button
-			type="button"
-			class="cat-chip"
-			class:active={selectedCategory === 'ALL'}
-			onclick={() => (selectedCategory = 'ALL')}
-		>
-			TUTTI ({notes.length})
-		</button>
+		<!-- Vault Search Bar -->
+		<div class="vault-search-box">
+			<span class="search-ico">🔍</span>
+			<input
+				type="text"
+				bind:value={searchQuery}
+				placeholder="Cerca nel vault..."
+				class="vault-search-input"
+			/>
+			{#if searchQuery}
+				<button type="button" class="clear-btn" onclick={() => (searchQuery = '')}>✕</button>
+			{/if}
+		</div>
 
-		{#each availableCategories as [catName, count]}
+		<!-- Categories / Folders Chips -->
+		<div class="vault-folders-bar">
 			<button
 				type="button"
-				class="cat-chip"
-				class:active={selectedCategory === catName}
-				onclick={() => (selectedCategory = catName)}
+				class="folder-chip"
+				class:active={selectedCategory === 'ALL'}
+				onclick={() => (selectedCategory = 'ALL')}
 			>
-				{catName} ({count})
+				📁 Tutti ({notes.length})
 			</button>
-		{/each}
-	</div>
-
-	<!-- Notes Grid -->
-	{#if filteredNotes.length === 0}
-		<div class="empty-state duo-card">
-			<img src="/emoji/owl_3d.png" alt="Gufo di studio" class="empty-owl-img" />
-			<h3 class="empty-title">
-				{#if searchQuery}
-					Nessun appunto trovato per "{searchQuery}"
-				{:else if selectedCategory !== 'ALL'}
-					Nessun appunto nella categoria "{selectedCategory}"
-				{:else}
-					Nessun appunto presente nel tuo quaderno
-				{/if}
-			</h3>
-			<p class="empty-subtitle">
-				Inizia subito a prendere appunti in Markdown per fissare i concetti delle lezioni ferroviarie!
-			</p>
-			<button type="button" class="duo-btn duo-btn-green" onclick={handleNewNote}>
-				➕ PRENDI IL TUO PRIMO APPUNTO
-			</button>
-		</div>
-	{:else}
-		<div class="notes-grid">
-			{#each filteredNotes as note, i (note.id)}
-				{@const stats = getMarkdownStats(note.content)}
-				{@const checklist = countChecklist(note.content)}
-				<div class="note-card duo-card" class:pinned-card={note.isPinned}>
-					<!-- Top Card Row -->
-					<div class="card-top-row">
-						<span class="note-cat-badge">{note.category}</span>
-
-						<div class="card-badges-right">
-							{#if note.isPinned}
-								<span class="pinned-badge" title="Fissato in evidenza">📌 Fissato</span>
-							{/if}
-
-							<button
-								type="button"
-								class="pin-action-btn"
-								class:pinned={note.isPinned}
-								onclick={() => handleTogglePin(note)}
-								title={note.isPinned ? 'Rimuovi pin' : 'Fissa in cima'}
-							>
-								📌
-							</button>
-						</div>
-					</div>
-
-					<!-- Note Title -->
-					<h2 class="note-card-title">
-						<button
-							type="button"
-							class="note-card-title-btn"
-							onclick={() => handleOpenFocus(note)}
-						>
-							{note.title}
-						</button>
-					</h2>
-
-					<!-- Note Excerpt -->
-					<p class="note-card-excerpt">
-						{note.content.replace(/[#*`_~>[\]()|\\-]/g, ' ').slice(0, 140)}
-						{note.content.length > 140 ? '...' : ''}
-					</p>
-
-					<!-- Tags Row -->
-					{#if note.tags && note.tags.length > 0}
-						<div class="card-tags-row">
-							{#each note.tags as tag}
-								<span class="card-tag">#{tag}</span>
-							{/each}
-						</div>
-					{/if}
-
-					<!-- Checklist / Meta Bar -->
-					<div class="card-meta-bar">
-						{#if checklist}
-							<span class="checklist-pill" class:completed={checklist.completed === checklist.total}>
-								☑️ {checklist.completed}/{checklist.total} completati
-							</span>
-						{/if}
-						<span class="meta-item">⏱️ ~{stats.readingTimeMinutes} min</span>
-						<span class="meta-item">📝 {stats.wordCount} parole</span>
-					</div>
-
-					<!-- Bottom Action Buttons -->
-					<div class="card-actions-row">
-						{#if isReorderMode}
-							<div class="reorder-btns-group">
-								<button
-									type="button"
-									class="reorder-step-btn"
-									onclick={() => handleMove(note.id, 'up')}
-									disabled={i === 0}
-									title="Sposta su"
-								>
-									⬆️
-								</button>
-								<button
-									type="button"
-									class="reorder-step-btn"
-									onclick={() => handleMove(note.id, 'down')}
-									disabled={i === filteredNotes.length - 1}
-									title="Sposta giù"
-								>
-									⬇️
-								</button>
-							</div>
-						{/if}
-
-						<button
-							type="button"
-							class="card-action-btn focus-mode-btn"
-							onclick={() => handleOpenFocus(note)}
-							title="Modalità Studio a Schermo Intero"
-						>
-							📖 Studio
-						</button>
-
-						<button
-							type="button"
-							class="card-action-btn edit-action-btn"
-							onclick={() => handleEditNote(note)}
-							title="Modifica appunto"
-						>
-							✏️ Modifica
-						</button>
-
-						<button
-							type="button"
-							class="card-action-btn delete-action-btn"
-							onclick={() => handleDelete(note)}
-							title="Elimina appunto"
-						>
-							🗑️
-						</button>
-					</div>
-				</div>
+			{#each availableCategories as [catName, count]}
+				<button
+					type="button"
+					class="folder-chip"
+					class:active={selectedCategory === catName}
+					onclick={() => (selectedCategory = catName)}
+				>
+					📁 {catName} ({count})
+				</button>
 			{/each}
 		</div>
+
+		<!-- Notes List Explorer -->
+		<div class="vault-files-list">
+			{#if filteredNotes.length === 0}
+				<div class="vault-empty-state">
+					<p>Nessun appunto trovato nel Vault.</p>
+					<button type="button" class="create-first-link" onclick={handleCreateNewNote}>
+						+ Crea una nuova nota
+					</button>
+				</div>
+			{:else}
+				{#each filteredNotes as note (note.id)}
+					{@const isSelected = selectedNoteId === note.id}
+					<div
+						class="vault-file-item"
+						class:active={isSelected}
+						onclick={() => selectNote(note)}
+						role="button"
+						tabindex="0"
+						onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && selectNote(note)}
+					>
+						<div class="file-item-header">
+							<span class="file-title">
+								{#if note.isPinned}
+									<span class="pin-ico" title="Fissato in evidenza">📌</span>
+								{/if}
+								{note.title || 'Senza titolo'}
+							</span>
+							<span class="file-cat">{note.category}</span>
+						</div>
+
+						<p class="file-snippet">
+							{note.content.replace(/[#*`_~>[\]()|\\-]/g, ' ').slice(0, 75)}
+						</p>
+
+						<div class="file-item-meta">
+							<span class="file-date">
+								{new Date(note.updatedAt || note.createdAt).toLocaleDateString('it-IT', {
+									day: 'numeric',
+									month: 'short'
+								})}
+							</span>
+							<span class="file-words">{getMarkdownStats(note.content).wordCount} parole</span>
+						</div>
+					</div>
+				{/each}
+			{/if}
+		</div>
+	</aside>
+
+	<!-- 📝 2. CENTER MAIN WORKSPACE (NOTE CANVAS & EDITOR) -->
+	<main
+		class="note-workspace-pane duo-card"
+		class:mobile-hidden={isSidebarOpenMobile && selectedNoteId !== null}
+	>
+		{#if selectedNoteId && activeNote}
+			<!-- Workspace Top Header Bar -->
+			<div class="workspace-header">
+				<!-- Mobile Back to Vault button -->
+				<button
+					type="button"
+					class="mobile-back-btn"
+					onclick={() => (isSidebarOpenMobile = true)}
+					title="Torna all'elenco appunti"
+				>
+					← Vault
+				</button>
+
+				<!-- Breadcrumb & Category selector -->
+				<div class="workspace-breadcrumb">
+					<span class="folder-ico">📁</span>
+					<select
+						bind:value={currentCategory}
+						onchange={triggerAutoSave}
+						class="breadcrumb-category-select"
+					>
+						{#each DEFAULT_NOTE_CATEGORIES as cat}
+							<option value={cat}>{cat}</option>
+						{/each}
+					</select>
+				</div>
+
+				<!-- Save Status Pill -->
+				<div class="save-status-pill">
+					{#if isAutoSaving}
+						<span class="saving-txt">⏳ Salvataggio...</span>
+					{:else}
+						<span class="saved-txt">💾 {lastSavedTime ? `Salvato ${lastSavedTime}` : 'Salvato'}</span>
+					{/if}
+				</div>
+
+				<!-- Mode View Switcher: Edit / Read / Split -->
+				<div class="view-mode-tabs">
+					<button
+						type="button"
+						class="mode-tab"
+						class:active={viewMode === 'edit'}
+						onclick={() => (viewMode = 'edit')}
+						title="Modalità Modifica"
+					>
+						✏️ Scrivi
+					</button>
+					<button
+						type="button"
+						class="mode-tab"
+						class:active={viewMode === 'preview'}
+						onclick={() => (viewMode = 'preview')}
+						title="Modalità Lettura"
+					>
+						👁️ Lettura
+					</button>
+					<button
+						type="button"
+						class="mode-tab desktop-only"
+						class:active={viewMode === 'split'}
+						onclick={() => (viewMode = 'split')}
+						title="Affiancato Live"
+					>
+						📑 Split
+					</button>
+				</div>
+
+				<!-- Header Quick Actions -->
+				<div class="workspace-quick-actions">
+					<button
+						type="button"
+						class="action-icon-btn"
+						class:pinned={currentIsPinned}
+						onclick={handleTogglePin}
+						title={currentIsPinned ? 'Rimuovi pin' : 'Fissa in alto'}
+					>
+						📌
+					</button>
+
+					<button
+						type="button"
+						class="action-icon-btn"
+						onclick={() => (isOutlineOpen = !isOutlineOpen)}
+						title="Indice contenuti (TOC)"
+					>
+						📑
+					</button>
+
+					<button
+						type="button"
+						class="action-icon-btn"
+						onclick={copyMarkdown}
+						title="Copia Markdown"
+					>
+						📋
+					</button>
+
+					<button
+						type="button"
+						class="action-icon-btn"
+						onclick={downloadFile}
+						title="Esporta file .md"
+					>
+						📥
+					</button>
+
+					<button
+						type="button"
+						class="action-icon-btn delete-btn"
+						onclick={handleDeleteActiveNote}
+						title="Elimina nota"
+					>
+						🗑️
+					</button>
+				</div>
+			</div>
+
+			<!-- Obsidian Formatting Ribbon Bar (quando in edit o split) -->
+			{#if viewMode === 'edit' || viewMode === 'split'}
+				<div class="obsidian-ribbon-bar">
+					<button
+						type="button"
+						class="ribbon-btn"
+						onclick={() => insertFormatting('**', '**', 'grassetto')}
+						title="Grassetto (Ctrl+B)"
+					>
+						<strong>B</strong>
+					</button>
+					<button
+						type="button"
+						class="ribbon-btn"
+						onclick={() => insertFormatting('*', '*', 'corsivo')}
+						title="Corsivo (Ctrl+I)"
+					>
+						<em>I</em>
+					</button>
+					<button
+						type="button"
+						class="ribbon-btn"
+						onclick={() => insertFormatting('### ', '', 'Intestazione')}
+						title="Titolo H3"
+					>
+						<strong>H</strong>
+					</button>
+					<span class="ribbon-sep"></span>
+					<button
+						type="button"
+						class="ribbon-btn"
+						onclick={() => insertFormatting('- ', '', 'Punto')}
+						title="Elenco puntato"
+					>
+						• Lista
+					</button>
+					<button
+						type="button"
+						class="ribbon-btn"
+						onclick={() => insertFormatting('1. ', '', 'Passo')}
+						title="Elenco numerato"
+					>
+						1. Num
+					</button>
+					<button
+						type="button"
+						class="ribbon-btn"
+						onclick={() => insertFormatting('- [ ] ', '', 'Checklist')}
+						title="Checklist interattiva"
+					>
+						☑️ Check
+					</button>
+					<span class="ribbon-sep"></span>
+					<button
+						type="button"
+						class="ribbon-btn"
+						onclick={() => insertFormatting('> [!TIP]\n> ', '', 'Suggerimento')}
+						title="Callout Tip"
+					>
+						💡 Tip
+					</button>
+					<button
+						type="button"
+						class="ribbon-btn"
+						onclick={() => insertFormatting('> [!WARNING]\n> ', '', 'Avviso')}
+						title="Callout Warning"
+					>
+						⚠️ Warning
+					</button>
+					<button
+						type="button"
+						class="ribbon-btn"
+						onclick={() => insertFormatting('```\n', '\n```', 'codice/schema')}
+						title="Blocco di codice"
+					>
+						💻 Codice
+					</button>
+				</div>
+			{/if}
+
+			<!-- Seamless Note Title Input -->
+			<div class="note-document-title-box">
+				<input
+					type="text"
+					bind:value={currentTitle}
+					oninput={triggerAutoSave}
+					placeholder="Titolo dell'appunto..."
+					class="obsidian-title-input"
+				/>
+			</div>
+
+			<!-- Document Content Area (Edit / Preview / Split) -->
+			<div class="document-canvas-container" class:split-active={viewMode === 'split'}>
+				<!-- Editor Pane -->
+				{#if viewMode === 'edit' || viewMode === 'split'}
+					<div class="canvas-pane editor-pane">
+						<textarea
+							bind:this={textareaEl}
+							bind:value={currentContent}
+							oninput={triggerAutoSave}
+							placeholder="Inizia a scrivere i tuoi appunti in Markdown...
+Usa **grassetto**, liste puntate o checklist `- [ ]` per schematizzare le normative."
+							class="obsidian-editor-textarea"
+						></textarea>
+					</div>
+				{/if}
+
+				<!-- Reading / Rendered Pane -->
+				{#if viewMode === 'preview' || viewMode === 'split'}
+					<div class="canvas-pane reading-pane markdown-rendered-box">
+						{#if currentContent.trim()}
+							{@html renderedMarkdown}
+						{:else}
+							<div class="empty-doc-placeholder">
+								<p>Nessun contenuto. Digita nell'editor per vedere l'anteprima formattata!</p>
+							</div>
+						{/if}
+					</div>
+				{/if}
+			</div>
+
+			<!-- Workspace Footer Status Info -->
+			<div class="workspace-footer">
+				<div class="doc-stats-left">
+					<span>📝 {docStats.wordCount} parole</span>
+					<span>•</span>
+					<span>⏱️ ~{docStats.readingTimeMinutes} min lettura</span>
+					<span>•</span>
+					<span>🔤 {docStats.charCount} caratteri</span>
+				</div>
+				<div class="doc-stats-right">
+					<span>Ctrl+S per salvare</span>
+				</div>
+			</div>
+		{:else}
+			<!-- Empty State when no note is open -->
+			<div class="workspace-empty-canvas">
+				<img src="/emoji/owl_3d.png" alt="" class="empty-owl" />
+				<h2>Seleziona una nota dal Vault o creane una nuova</h2>
+				<p>Il tuo spazio di studio per memorizzare concetti e normative ferroviarie.</p>
+				<button type="button" class="duo-btn duo-btn-green" onclick={handleCreateNewNote}>
+					➕ CREA NUOVA NOTA
+				</button>
+			</div>
+		{/if}
+	</main>
+
+	<!-- 📑 3. RIGHT PANEL (OUTLINE / TOC & METADATA) -->
+	{#if isOutlineOpen && selectedNoteId}
+		<aside class="vault-outline-panel duo-card" transition:fade={{ duration: 150 }}>
+			<div class="outline-header">
+				<span class="outline-title">📑 INDICE (TOC)</span>
+				<button type="button" class="close-outline-btn" onclick={() => (isOutlineOpen = false)}>
+					✕
+				</button>
+			</div>
+
+			<div class="outline-list">
+				{#if headingsOutline.length === 0}
+					<p class="empty-outline-msg">Nessuna intestazione (# Titolo) trovata nella nota.</p>
+				{:else}
+					{#each headingsOutline as h}
+						<div class="outline-item outline-level-{h.level}">
+							<span class="outline-marker">H{h.level}</span>
+							<span class="outline-text">{h.text}</span>
+						</div>
+					{/each}
+				{/if}
+			</div>
+
+			<div class="outline-meta-box">
+				<span class="meta-lbl">METADATI NOTA</span>
+				<div class="meta-row">
+					<span>Categoria:</span>
+					<strong>{currentCategory}</strong>
+				</div>
+				<div class="meta-row">
+					<span>Stato:</span>
+					<strong>{currentIsPinned ? '📌 In evidenza' : 'Ordinario'}</strong>
+				</div>
+			</div>
+		</aside>
 	{/if}
 </div>
 
-<!-- Modal di Modifica / Creazione -->
-<NoteEditorModal
-	isOpen={isEditorOpen}
-	initialNote={editingNote}
-	onClose={() => {
-		isEditorOpen = false;
-		editingNote = null;
-	}}
-/>
-
-<!-- Modal di Studio & Lettura Focus -->
-<NoteFocusModal
-	isOpen={isFocusOpen}
-	note={focusingNote}
-	onClose={() => {
-		isFocusOpen = false;
-		focusingNote = null;
-	}}
-	onEdit={(note) => {
-		isFocusOpen = false;
-		handleEditNote(note);
-	}}
-/>
-
 <style>
-	.notes-page-container {
-		display: flex;
-		flex-direction: column;
-		gap: 1rem;
-		width: 100%;
-		max-width: 1100px;
-		margin: 0 auto;
-	}
-
-	.new-note-header-btn {
-		font-size: 0.85rem;
-		padding: 0.65rem 1.1rem;
-	}
-
-	/* Stats Row */
-	.notes-stats-row {
-		display: grid;
-		grid-template-columns: repeat(2, 1fr);
-		gap: 0.75rem;
-		padding: 1rem;
-	}
-
-	@media (min-width: 640px) {
-		.notes-stats-row {
-			grid-template-columns: repeat(4, 1fr);
-		}
-	}
-
-	.stat-box {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		text-align: center;
-		gap: 0.15rem;
-		padding: 0.35rem 0.5rem;
-		border-radius: 12px;
-		background: var(--card-bg-subtle);
-	}
-
-	.stat-number {
-		font-family: 'Outfit', sans-serif;
-		font-size: 1.5rem;
-		font-weight: 900;
-		color: var(--accent-color);
-		line-height: 1;
-	}
-
-	.stat-label {
-		font-size: 0.72rem;
-		font-weight: 800;
-		color: var(--text-muted);
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
-	}
-
-	/* Mobile CTA */
-	.mobile-cta-box {
-		display: flex;
-	}
-
-	@media (min-width: 1024px) {
-		.mobile-cta-box {
-			display: none;
-		}
-	}
-
-	.mobile-new-btn {
-		width: 100%;
-		padding: 0.85rem;
-		font-size: 0.95rem;
-	}
-
-	.btn-emoji-img {
-		width: 22px;
-		height: 22px;
-		object-fit: contain;
-	}
-
-	/* Controls Toolbar */
-	.controls-toolbar {
-		display: flex;
-		flex-direction: column;
-		gap: 0.75rem;
-		padding: 0.85rem 1.15rem;
-	}
-
-	@media (min-width: 768px) {
-		.controls-toolbar {
-			flex-direction: row;
-			align-items: center;
-			justify-content: space-between;
-		}
-	}
-
-	.search-box {
-		flex: 1;
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		background: var(--card-bg-subtle);
-		border: 1.5px solid var(--border-color);
-		border-radius: 12px;
-		padding: 0.45rem 0.75rem;
-	}
-
-	.search-icon {
-		font-size: 0.95rem;
-		color: var(--text-muted);
-	}
-
-	.search-input {
-		flex: 1;
-		background: transparent;
-		border: none;
-		outline: none;
-		color: var(--text-color);
-		font-family: inherit;
-		font-size: 0.88rem;
-		font-weight: 700;
-	}
-
-	.clear-search-btn {
-		background: transparent;
-		border: none;
-		color: var(--text-muted);
-		font-size: 0.9rem;
-		font-weight: 800;
-		cursor: pointer;
-	}
-
-	.sort-actions {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		flex-wrap: wrap;
-	}
-
-	.sort-select-wrapper {
-		display: flex;
-		align-items: center;
-		gap: 0.4rem;
-	}
-
-	.sort-lbl {
-		font-size: 0.75rem;
-		font-weight: 800;
-		color: var(--text-muted);
-		white-space: nowrap;
-	}
-
-	.sort-select {
-		background: var(--card-bg-subtle);
-		border: 1.5px solid var(--border-color);
-		border-radius: 10px;
-		padding: 0.35rem 0.65rem;
-		color: var(--text-color);
-		font-family: inherit;
-		font-size: 0.8rem;
-		font-weight: 800;
-		outline: none;
-	}
-
-	.reorder-mode-btn {
-		background: var(--card-bg-subtle);
-		border: 1.5px solid var(--border-color);
-		border-radius: 10px;
-		padding: 0.35rem 0.65rem;
-		font-size: 0.8rem;
-		font-weight: 800;
-		color: var(--text-color);
-		cursor: pointer;
-		white-space: nowrap;
-		transition: all 0.15s ease;
-	}
-
-	.reorder-mode-btn.active {
-		background: rgba(255, 150, 0, 0.18);
-		border-color: var(--orange-color);
-		color: var(--orange-color);
-	}
-
-	/* Category Filter Bar */
-	.categories-filter-bar {
-		display: flex;
-		align-items: center;
-		gap: 0.45rem;
-		overflow-x: auto;
-		padding-bottom: 0.3rem;
-		scrollbar-width: none;
-	}
-
-	.categories-filter-bar::-webkit-scrollbar {
-		display: none;
-	}
-
-	.cat-chip {
-		background: var(--card-bg);
-		border: 2px solid var(--border-color);
-		border-bottom: 3.5px solid var(--border-depth-color);
-		border-radius: 9999px;
-		padding: 0.4rem 0.85rem;
-		font-size: 0.76rem;
-		font-weight: 800;
-		color: var(--text-muted);
-		cursor: pointer;
-		white-space: nowrap;
-		user-select: none;
-		transition: all 0.15s ease;
-	}
-
-	.cat-chip.active {
-		background: var(--accent-light-bg);
-		border-color: var(--accent-color);
-		border-bottom-color: var(--accent-depth);
-		color: var(--accent-color);
-		font-weight: 900;
-	}
-
-	/* Notes Grid */
-	.notes-grid {
+	/* 📐 Main Obsidian Workspace Grid */
+	.obsidian-workspace {
 		display: grid;
 		grid-template-columns: 1fr;
 		gap: 0.85rem;
-	}
-
-	@media (min-width: 640px) {
-		.notes-grid {
-			grid-template-columns: repeat(2, 1fr);
-		}
+		height: calc(100vh - 120px);
+		min-height: 600px;
+		max-height: 900px;
+		width: 100%;
+		max-width: 1300px;
+		margin: 0 auto;
+		box-sizing: border-box;
 	}
 
 	@media (min-width: 1024px) {
-		.notes-grid {
-			grid-template-columns: repeat(3, 1fr);
+		.obsidian-workspace {
+			grid-template-columns: 320px 1fr;
 		}
 	}
 
-	.note-card {
+	/* 🗂️ Vault Left Sidebar */
+	.vault-sidebar {
 		display: flex;
 		flex-direction: column;
-		justify-content: space-between;
 		gap: 0.65rem;
-		padding: 1rem 1.15rem;
+		padding: 1rem;
 		background: var(--card-bg);
 		border-radius: 18px;
-		transition:
-			transform 0.15s ease,
-			border-color 0.2s ease;
+		overflow: hidden;
+		height: 100%;
+		box-sizing: border-box;
 	}
 
-	.note-card:hover {
-		transform: translateY(-2px);
-		border-color: var(--accent-color);
-	}
-
-	.pinned-card {
-		border-color: rgba(255, 150, 0, 0.45);
-		background: linear-gradient(180deg, var(--card-bg) 0%, rgba(255, 150, 0, 0.04) 100%);
-	}
-
-	.card-top-row {
+	.vault-header {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		gap: 0.4rem;
+		padding-bottom: 0.5rem;
+		border-bottom: 2px solid var(--border-color);
+		flex-shrink: 0;
 	}
 
-	.note-cat-badge {
-		font-size: 0.68rem;
-		font-weight: 900;
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
-		background: var(--accent-light-bg);
-		color: var(--accent-color);
-		border: 1px solid var(--accent-color);
-		border-radius: 6px;
-		padding: 0.15rem 0.45rem;
-	}
-
-	.card-badges-right {
-		display: flex;
-		align-items: center;
-		gap: 0.35rem;
-	}
-
-	.pinned-badge {
-		font-size: 0.68rem;
-		font-weight: 800;
-		color: var(--orange-color);
-		background: rgba(255, 150, 0, 0.15);
-		border-radius: 6px;
-		padding: 0.15rem 0.4rem;
-	}
-
-	.pin-action-btn {
-		background: transparent;
-		border: none;
-		cursor: pointer;
-		font-size: 0.85rem;
-		opacity: 0.4;
-		transition: opacity 0.15s ease;
-	}
-
-	.pin-action-btn.pinned,
-	.pin-action-btn:hover {
-		opacity: 1;
-	}
-
-	.note-card-title {
-		font-family: 'Outfit', sans-serif;
-		font-size: 1.15rem;
-		font-weight: 900;
-		color: var(--text-color);
-		line-height: 1.25;
-		margin: 0;
-	}
-
-	.note-card-title-btn {
-		background: none;
-		border: none;
-		padding: 0;
-		font: inherit;
-		color: inherit;
-		text-align: left;
-		cursor: pointer;
-		display: inline;
-		transition: color 0.15s ease;
-	}
-
-	.note-card-title-btn:hover {
-		color: var(--accent-color);
-	}
-
-	.note-card-excerpt {
-		font-size: 0.85rem;
-		line-height: 1.45;
-		color: var(--text-muted);
-		margin: 0;
-		flex: 1;
-	}
-
-	.card-tags-row {
-		display: flex;
-		align-items: center;
-		gap: 0.35rem;
-		flex-wrap: wrap;
-	}
-
-	.card-tag {
-		font-size: 0.7rem;
-		font-weight: 700;
-		color: var(--text-muted);
-		background: var(--card-bg-subtle);
-		border-radius: 4px;
-		padding: 0.1rem 0.35rem;
-	}
-
-	.card-meta-bar {
+	.vault-title-group {
 		display: flex;
 		align-items: center;
 		gap: 0.45rem;
-		font-size: 0.72rem;
-		font-weight: 700;
-		color: var(--text-muted);
-		flex-wrap: wrap;
-		padding-top: 0.4rem;
-		border-top: 1px dashed var(--border-color);
 	}
 
-	.checklist-pill {
-		background: rgba(28, 176, 246, 0.12);
-		color: var(--accent-color);
-		padding: 0.1rem 0.4rem;
-		border-radius: 6px;
+	.vault-icon {
+		font-size: 1.15rem;
+	}
+
+	.vault-name {
+		font-family: 'Outfit', sans-serif;
+		font-size: 0.88rem;
+		font-weight: 900;
+		letter-spacing: 0.06em;
+		color: var(--text-color);
+	}
+
+	.vault-badge {
+		background: var(--badge-bg);
+		border: 1px solid var(--border-color);
+		border-radius: 9999px;
+		padding: 0.1rem 0.45rem;
+		font-size: 0.7rem;
 		font-weight: 800;
+		color: var(--accent-color);
 	}
 
-	.checklist-pill.completed {
-		background: rgba(88, 204, 2, 0.15);
-		color: var(--green-color);
+	.new-note-btn {
+		font-size: 0.75rem;
+		padding: 0.4rem 0.75rem;
+		border-radius: 10px;
 	}
 
-	.card-actions-row {
+	.vault-search-box {
 		display: flex;
 		align-items: center;
 		gap: 0.4rem;
-		padding-top: 0.35rem;
-	}
-
-	.reorder-btns-group {
-		display: flex;
-		gap: 0.2rem;
-		margin-right: 0.2rem;
-	}
-
-	.reorder-step-btn {
-		background: var(--card-bg-subtle);
-		border: 1px solid var(--border-color);
-		border-radius: 6px;
-		padding: 0.25rem 0.4rem;
-		font-size: 0.75rem;
-		cursor: pointer;
-	}
-
-	.reorder-step-btn:disabled {
-		opacity: 0.3;
-		cursor: not-allowed;
-	}
-
-	.card-action-btn {
 		background: var(--card-bg-subtle);
 		border: 1.5px solid var(--border-color);
 		border-radius: 10px;
 		padding: 0.4rem 0.65rem;
-		font-size: 0.78rem;
-		font-weight: 800;
+		flex-shrink: 0;
+	}
+
+	.search-ico {
+		font-size: 0.85rem;
+		color: var(--text-muted);
+	}
+
+	.vault-search-input {
+		flex: 1;
+		background: transparent;
+		border: none;
+		outline: none;
 		color: var(--text-color);
+		font-size: 0.82rem;
+		font-weight: 700;
+	}
+
+	.clear-btn {
+		background: transparent;
+		border: none;
+		color: var(--text-muted);
+		font-size: 0.85rem;
 		cursor: pointer;
+	}
+
+	.vault-folders-bar {
+		display: flex;
+		align-items: center;
+		gap: 0.35rem;
+		overflow-x: auto;
+		padding-bottom: 0.2rem;
+		flex-shrink: 0;
+		scrollbar-width: none;
+	}
+
+	.vault-folders-bar::-webkit-scrollbar {
+		display: none;
+	}
+
+	.folder-chip {
+		background: var(--card-bg-subtle);
+		border: 1.5px solid var(--border-color);
+		border-radius: 8px;
+		padding: 0.25rem 0.55rem;
+		font-size: 0.7rem;
+		font-weight: 800;
+		color: var(--text-muted);
+		cursor: pointer;
+		white-space: nowrap;
 		transition: all 0.15s ease;
 	}
 
-	.focus-mode-btn {
-		flex: 1;
+	.folder-chip.active {
 		background: var(--accent-light-bg);
 		border-color: var(--accent-color);
 		color: var(--accent-color);
 	}
 
-	.edit-action-btn:hover {
+	.vault-files-list {
+		flex: 1;
+		overflow-y: auto;
+		display: flex;
+		flex-direction: column;
+		gap: 0.4rem;
+		padding-right: 0.2rem;
+	}
+
+	.vault-file-item {
+		background: var(--card-bg-subtle);
+		border: 1.5px solid transparent;
+		border-left: 3px solid transparent;
+		border-radius: 10px;
+		padding: 0.6rem 0.75rem;
+		cursor: pointer;
+		display: flex;
+		flex-direction: column;
+		gap: 0.25rem;
+		text-align: left;
+		transition: all 0.15s ease;
+	}
+
+	.vault-file-item:hover {
 		background: var(--hover-bg);
 	}
 
-	.delete-action-btn {
-		color: #ff5e5b;
-		padding: 0.4rem 0.55rem;
+	.vault-file-item.active {
+		background: var(--accent-light-bg);
+		border-color: var(--accent-color);
+		border-left: 4px solid var(--accent-color);
 	}
 
-	.delete-action-btn:hover {
-		background: rgba(255, 75, 75, 0.15);
+	.file-item-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.35rem;
+	}
+
+	.file-title {
+		font-family: 'Outfit', sans-serif;
+		font-size: 0.88rem;
+		font-weight: 800;
+		color: var(--text-color);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.file-cat {
+		font-size: 0.65rem;
+		font-weight: 800;
+		text-transform: uppercase;
+		color: var(--accent-color);
+		background: var(--card-bg);
+		border-radius: 4px;
+		padding: 0.1rem 0.35rem;
+		white-space: nowrap;
+	}
+
+	.file-snippet {
+		font-size: 0.75rem;
+		color: var(--text-muted);
+		margin: 0;
+		line-height: 1.35;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.file-item-meta {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		font-size: 0.68rem;
+		font-weight: 700;
+		color: var(--text-muted);
+	}
+
+	.vault-empty-state {
+		padding: 2rem 1rem;
+		text-align: center;
+		color: var(--text-muted);
+		font-size: 0.82rem;
+	}
+
+	.create-first-link {
+		background: none;
+		border: none;
+		color: var(--accent-color);
+		font-weight: 800;
+		cursor: pointer;
+		margin-top: 0.5rem;
+		display: inline-block;
+	}
+
+	/* 📝 Center Main Workspace */
+	.note-workspace-pane {
+		display: flex;
+		flex-direction: column;
+		background: var(--card-bg);
+		border-radius: 18px;
+		padding: 1rem 1.25rem;
+		overflow: hidden;
+		height: 100%;
+		box-sizing: border-box;
+		gap: 0.6rem;
+	}
+
+	.workspace-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.6rem;
+		padding-bottom: 0.5rem;
+		border-bottom: 2px solid var(--border-color);
+		flex-shrink: 0;
+		flex-wrap: wrap;
+	}
+
+	.mobile-back-btn {
+		display: none;
+		background: var(--card-bg-subtle);
+		border: 1.5px solid var(--border-color);
+		border-radius: 8px;
+		padding: 0.3rem 0.6rem;
+		font-size: 0.78rem;
+		font-weight: 800;
+		color: var(--accent-color);
+		cursor: pointer;
+	}
+
+	@media (max-width: 1023px) {
+		.mobile-back-btn {
+			display: block;
+		}
+	}
+
+	.workspace-breadcrumb {
+		display: flex;
+		align-items: center;
+		gap: 0.35rem;
+	}
+
+	.breadcrumb-category-select {
+		background: var(--card-bg-subtle);
+		border: 1.5px solid var(--border-color);
+		border-radius: 8px;
+		padding: 0.25rem 0.55rem;
+		color: var(--text-color);
+		font-family: inherit;
+		font-size: 0.78rem;
+		font-weight: 800;
+		outline: none;
+	}
+
+	.save-status-pill {
+		font-size: 0.72rem;
+		font-weight: 700;
+	}
+
+	.saving-txt {
+		color: var(--orange-color);
+	}
+
+	.saved-txt {
+		color: var(--text-muted);
+	}
+
+	.view-mode-tabs {
+		display: flex;
+		align-items: center;
+		background: var(--card-bg-subtle);
+		border: 1.5px solid var(--border-color);
+		border-radius: 10px;
+		padding: 0.15rem;
+		gap: 0.15rem;
+	}
+
+	.mode-tab {
+		background: transparent;
+		border: none;
+		border-radius: 7px;
+		padding: 0.25rem 0.55rem;
+		font-size: 0.74rem;
+		font-weight: 800;
+		color: var(--text-muted);
+		cursor: pointer;
+		transition: all 0.12s ease;
+	}
+
+	.mode-tab.active {
+		background: var(--accent-color);
+		color: #ffffff;
+	}
+
+	@media (max-width: 1023px) {
+		.desktop-only {
+			display: none;
+		}
+	}
+
+	.workspace-quick-actions {
+		display: flex;
+		align-items: center;
+		gap: 0.3rem;
+	}
+
+	.action-icon-btn {
+		background: var(--card-bg-subtle);
+		border: 1.5px solid var(--border-color);
+		border-radius: 8px;
+		width: 30px;
+		height: 30px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		color: var(--text-color);
+		font-size: 0.85rem;
+		cursor: pointer;
+		transition: all 0.15s ease;
+	}
+
+	.action-icon-btn:hover {
+		background: var(--hover-bg);
+	}
+
+	.action-icon-btn.pinned {
+		background: rgba(255, 150, 0, 0.18);
+		border-color: var(--orange-color);
+	}
+
+	.delete-btn:hover {
+		background: rgba(255, 75, 75, 0.18);
 		border-color: #ff5e5b;
 	}
 
-	/* Empty State */
-	.empty-state {
+	/* Ribbon formatting bar */
+	.obsidian-ribbon-bar {
+		display: flex;
+		align-items: center;
+		gap: 0.25rem;
+		background: var(--card-bg-subtle);
+		border: 1.5px solid var(--border-color);
+		border-radius: 10px;
+		padding: 0.25rem 0.45rem;
+		overflow-x: auto;
+		flex-shrink: 0;
+		scrollbar-width: none;
+	}
+
+	.obsidian-ribbon-bar::-webkit-scrollbar {
+		display: none;
+	}
+
+	.ribbon-btn {
+		background: transparent;
+		border: 1px solid transparent;
+		border-radius: 6px;
+		padding: 0.2rem 0.45rem;
+		font-size: 0.74rem;
+		font-weight: 800;
+		color: var(--text-color);
+		cursor: pointer;
+		white-space: nowrap;
+	}
+
+	.ribbon-btn:hover {
+		background: var(--hover-bg);
+		border-color: var(--border-color);
+	}
+
+	.ribbon-sep {
+		width: 1px;
+		height: 16px;
+		background: var(--border-color);
+		margin: 0 0.1rem;
+	}
+
+	/* Seamless Title Input */
+	.note-document-title-box {
+		padding: 0.25rem 0 0.15rem 0;
+		flex-shrink: 0;
+	}
+
+	.obsidian-title-input {
+		width: 100%;
+		background: transparent;
+		border: none;
+		outline: none;
+		font-family: 'Outfit', sans-serif;
+		font-size: 1.5rem;
+		font-weight: 900;
+		color: var(--text-color);
+		padding: 0;
+		letter-spacing: -0.01em;
+	}
+
+	.obsidian-title-input:focus {
+		border-bottom: 2px solid var(--accent-color);
+	}
+
+	/* Document Canvas */
+	.document-canvas-container {
+		flex: 1;
+		min-height: 200px;
+		display: flex;
+		gap: 0.85rem;
+		overflow: hidden;
+	}
+
+	.split-active {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+	}
+
+	.canvas-pane {
+		height: 100%;
+		overflow-y: auto;
+		box-sizing: border-box;
+	}
+
+	.editor-pane {
+		display: flex;
+	}
+
+	.obsidian-editor-textarea {
+		width: 100%;
+		height: 100%;
+		background: var(--card-bg-subtle);
+		border: 1.5px solid var(--border-color);
+		border-radius: 12px;
+		padding: 0.85rem;
+		box-sizing: border-box;
+		color: var(--text-color);
+		font-family: 'Outfit', 'Plus Jakarta Sans', monospace;
+		font-size: 0.95rem;
+		line-height: 1.6;
+		resize: none;
+		outline: none;
+		transition: border-color 0.2s ease;
+	}
+
+	.obsidian-editor-textarea:focus {
+		border-color: var(--accent-color);
+	}
+
+	.reading-pane {
+		background: var(--card-bg-subtle);
+		border: 1.5px solid var(--border-color);
+		border-radius: 12px;
+		padding: 1rem 1.15rem;
+		font-size: 1rem;
+		line-height: 1.7;
+	}
+
+	.empty-doc-placeholder {
+		color: var(--text-muted);
+		text-align: center;
+		padding: 3rem 1rem;
+		font-style: italic;
+	}
+
+	.workspace-footer {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding-top: 0.35rem;
+		border-top: 1.5px solid var(--border-color);
+		font-size: 0.72rem;
+		font-weight: 700;
+		color: var(--text-muted);
+		flex-shrink: 0;
+	}
+
+	.doc-stats-left {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+	}
+
+	.workspace-empty-canvas {
 		display: flex;
 		flex-direction: column;
 		align-items: center;
+		justify-content: center;
+		height: 100%;
 		text-align: center;
-		padding: 3rem 1.5rem;
-		gap: 0.85rem;
-	}
-
-	.empty-owl-img {
-		width: 80px;
-		height: 80px;
-		object-fit: contain;
-		animation: gentleWobble 2s infinite ease-in-out;
-	}
-
-	.empty-title {
-		font-size: 1.25rem;
-		font-weight: 900;
-		color: var(--text-color);
-		margin: 0;
-	}
-
-	.empty-subtitle {
-		font-size: 0.9rem;
+		gap: 0.75rem;
 		color: var(--text-muted);
-		max-width: 420px;
-		line-height: 1.5;
-		margin: 0;
+		padding: 2rem;
+	}
+
+	.empty-owl {
+		width: 70px;
+		height: 70px;
+		object-fit: contain;
+	}
+
+	/* 📑 3. Right Outline Panel */
+	.vault-outline-panel {
+		position: fixed;
+		top: 80px;
+		right: 20px;
+		width: 280px;
+		max-height: 80vh;
+		background: var(--card-bg);
+		border-radius: 16px;
+		padding: 1rem;
+		z-index: 400;
+		box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+		display: flex;
+		flex-direction: column;
+		gap: 0.65rem;
+	}
+
+	.outline-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding-bottom: 0.4rem;
+		border-bottom: 1.5px solid var(--border-color);
+	}
+
+	.outline-title {
+		font-family: 'Outfit', sans-serif;
+		font-size: 0.78rem;
+		font-weight: 900;
+		color: var(--accent-color);
+		letter-spacing: 0.06em;
+	}
+
+	.close-outline-btn {
+		background: transparent;
+		border: none;
+		color: var(--text-muted);
+		font-size: 0.9rem;
+		cursor: pointer;
+	}
+
+	.outline-list {
+		flex: 1;
+		overflow-y: auto;
+		display: flex;
+		flex-direction: column;
+		gap: 0.35rem;
+		max-height: 250px;
+	}
+
+	.empty-outline-msg {
+		font-size: 0.75rem;
+		color: var(--text-muted);
+		font-style: italic;
+	}
+
+	.outline-item {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+		font-size: 0.78rem;
+		color: var(--text-color);
+		padding: 0.2rem 0;
+	}
+
+	.outline-level-1 {
+		font-weight: 800;
+	}
+	.outline-level-2 {
+		padding-left: 0.6rem;
+	}
+	.outline-level-3 {
+		padding-left: 1.2rem;
+		font-size: 0.74rem;
+	}
+
+	.outline-marker {
+		font-size: 0.65rem;
+		font-weight: 900;
+		color: var(--accent-color);
+		background: var(--card-bg-subtle);
+		padding: 0.05rem 0.3rem;
+		border-radius: 4px;
+	}
+
+	.outline-meta-box {
+		border-top: 1.5px dashed var(--border-color);
+		padding-top: 0.5rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.25rem;
+		font-size: 0.72rem;
+	}
+
+	.meta-lbl {
+		font-weight: 900;
+		color: var(--text-muted);
+		font-size: 0.68rem;
+		text-transform: uppercase;
+	}
+
+	.meta-row {
+		display: flex;
+		justify-content: space-between;
+		color: var(--text-muted);
+	}
+
+	.meta-row strong {
+		color: var(--text-color);
+	}
+
+	/* Responsive mobile view switching */
+	@media (max-width: 1023px) {
+		.mobile-hidden {
+			display: none !important;
+		}
+
+		.obsidian-workspace {
+			height: calc(100vh - 100px);
+		}
 	}
 </style>

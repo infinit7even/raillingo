@@ -299,6 +299,28 @@ export function parseMarkdown(src: string): string {
 	return output.join('\n');
 }
 
+export interface HeadingItem {
+	level: number;
+	text: string;
+	id: string;
+}
+
+export function extractHeadings(markdown: string): HeadingItem[] {
+	if (!markdown || typeof markdown !== 'string') return [];
+	const lines = markdown.split('\n');
+	const headings: HeadingItem[] = [];
+	for (const line of lines) {
+		const match = line.trim().match(/^(#{1,4})\s+(.+)$/);
+		if (match) {
+			const level = match[1].length;
+			const text = match[2].replace(/[#*`_~>[\]()|\\-]/g, '').trim();
+			const id = text.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+			headings.push({ level, text, id });
+		}
+	}
+	return headings;
+}
+
 /** Calcola statistiche rapide: conteggio parole e tempo stimato di lettura */
 export function getMarkdownStats(text: string) {
 	if (!text || typeof text !== 'string') {
