@@ -4,7 +4,7 @@
 	import { getMarkdownStats, extractHeadings, type HeadingItem } from '$lib/utils/markdown';
 	import { DEFAULT_NOTE_CATEGORIES, type Note, type NoteSortOption } from '$lib/types/notes';
 	import { toastStore } from '$lib/stores/toastStore';
-	import { fade } from 'svelte/transition';
+	import { fade, scale } from 'svelte/transition';
 	import { compressImage } from '$lib/utils/imageCompressor';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import {
@@ -13,7 +13,7 @@
 		createInlineImageFigureHtml
 	} from '$lib/utils/docConverter';
 
-	import { globalCategoryStore } from '$lib/stores/globalCategoryStore';
+	import { globalCategoryStore, matchesCategory } from '$lib/stores/globalCategoryStore';
 
 	let { data } = $props();
 	let user = $derived(data.user);
@@ -28,6 +28,10 @@
 	let searchQuery = $state('');
 	let selectedCategory = $state<string>('ALL');
 	let sortOption = $state<NoteSortOption>('custom');
+
+	// Vault category search & picker modal
+	let isVaultCatPickerOpen = $state(false);
+	let vaultCatSearchQuery = $state('');
 
 	// Workspace UI states
 	let isOutlineOpen = $state(false);
@@ -125,7 +129,7 @@
 		}
 	});
 
-	let availableCategories = $derived.by(() => {
+	let availableCategories = $derived.by<[string, number][]>(() => {
 		const counts = new Map<string, number>();
 		for (const n of notes) {
 			const cat = n.category?.trim() || 'Generale & Varie';
@@ -134,11 +138,44 @@
 		return Array.from(counts.entries()).sort((a, b) => a[0].localeCompare(b[0], 'it'));
 	});
 
+	let filteredVaultCategories = $derived.by<[string, number][]>(() => {
+		const q = vaultCatSearchQuery.toLowerCase().trim();
+		if (!q) return availableCategories;
+		return availableCategories.filter(([catName]) => catName.toLowerCase().includes(q));
+	});
+
+	function toggleVaultCategory(cat: string) {
+		if (cat === 'ALL') {
+			selectedCategory = 'ALL';
+			globalCategoryStore.reset();
+			return;
+		}
+
+		let selectedList = selectedCategory === 'ALL' || !selectedCategory
+			? []
+			: selectedCategory.split(',').map((s) => s.trim());
+
+		if (selectedList.includes(cat)) {
+			selectedList = selectedList.filter((c) => c !== cat);
+		} else {
+			selectedList.push(cat);
+		}
+
+		if (selectedList.length === 0 || selectedList.length === availableCategories.length) {
+			selectedCategory = 'ALL';
+			globalCategoryStore.reset();
+		} else {
+			const val = selectedList.join(',');
+			selectedCategory = val;
+			globalCategoryStore.setCategory(val);
+		}
+	}
+
 	let filteredNotes = $derived.by(() => {
 		let list = [...notes];
 
 		if (selectedCategory !== 'ALL') {
-			list = list.filter((n) => (n.category?.trim() || 'Generale & Varie') === selectedCategory);
+			list = list.filter((n) => matchesCategory(n.category?.trim() || 'Generale & Varie', selectedCategory));
 		}
 
 		const q = searchQuery.toLowerCase().trim();
@@ -560,32 +597,71 @@
 				{/if}
 			</div>
 
-			<!-- Folders Chips -->
+			<!-- Folders Chips & Smart Category Selector -->
 			<div class="vault-folders-bar">
+				<!-- Trigger for Category Modal Picker with Search -->
 				<button
 					type="button"
-					class="folder-chip"
-					class:active={selectedCategory === 'ALL'}
-					onclick={() => {
-						selectedCategory = 'ALL';
-						globalCategoryStore.setCategory('ALL');
-					}}
+					class="vault-cat-trigger-btn"
+					class:active={selectedCategory !== 'ALL'}
+					onclick={() => (isVaultCatPickerOpen = true)}
+					title="Apri filtro categorie con ricerca rapida"
 				>
-					📁 Tutti ({notes.length})
+					<span class="vcat-ico">📁</span>
+					<span class="vcat-label">Categorie</span>
+					<span class="vcat-badge">
+						{#if selectedCategory === 'ALL'}
+							Tutti ({notes.length})
+						{:else}
+							{selectedCategory.split(',').length} attive
+						{/if}
+					</span>
+					<span class="vcat-arrow">▾</span>
 				</button>
-				{#each availableCategories as [catName, count]}
+
+				<!-- Quick Chips / Active Tags -->
+				{#if selectedCategory === 'ALL'}
+					{#each availableCategories.slice(0, 3) as [catName, count]}
+						<button
+							type="button"
+							class="folder-chip"
+							onclick={() => toggleVaultCategory(catName)}
+						>
+							{catName} ({count})
+						</button>
+					{/each}
+					{#if availableCategories.length > 3}
+						<button
+							type="button"
+							class="folder-chip more-cat-chip"
+							onclick={() => (isVaultCatPickerOpen = true)}
+						>
+							+{availableCategories.length - 3} altre...
+						</button>
+					{/if}
+				{:else}
+					{#each selectedCategory.split(',').map((s) => s.trim()) as catName}
+						<span class="active-vault-cat-tag">
+							<span>{catName}</span>
+							<button
+								type="button"
+								class="tag-del-btn"
+								onclick={() => toggleVaultCategory(catName)}
+								title="Rimuovi filtro {catName}"
+							>
+								✕
+							</button>
+						</span>
+					{/each}
 					<button
 						type="button"
-						class="folder-chip"
-						class:active={selectedCategory === catName}
-						onclick={() => {
-							selectedCategory = catName;
-							globalCategoryStore.setCategory(catName);
-						}}
+						class="folder-chip clear-cat-chip"
+						onclick={() => toggleVaultCategory('ALL')}
+						title="Azzera filtri categoria"
 					>
-						📁 {catName} ({count})
+						✕ Azzera
 					</button>
-				{/each}
+				{/if}
 			</div>
 
 			<!-- Notes List Explorer -->
@@ -925,6 +1001,124 @@
 			</div>
 		</aside>
 	{/if}
+
+	<!-- 🗂️ Modal / Popover Selettore Categorie per il Vault -->
+	{#if isVaultCatPickerOpen}
+		<div
+			class="vault-cat-backdrop"
+			onclick={() => (isVaultCatPickerOpen = false)}
+			onkeydown={(e) => e.key === 'Escape' && (isVaultCatPickerOpen = false)}
+			role="button"
+			tabindex="0"
+			aria-label="Chiudi selettore categorie"
+			transition:fade={{ duration: 120 }}
+		></div>
+
+		<div
+			class="vault-cat-modal duo-card"
+			transition:scale={{ start: 0.95, duration: 150 }}
+		>
+			<div class="vcat-modal-header">
+				<div class="vcat-modal-title">
+					<span class="vcat-modal-ico">📁</span>
+					<div>
+						<h3 class="vcat-heading">Categorie Appunti</h3>
+						<span class="vcat-sub">
+							{#if selectedCategory === 'ALL'}
+								Tutte le {availableCategories.length} categorie
+							{:else}
+								{selectedCategory.split(',').length} di {availableCategories.length} selezionate
+							{/if}
+						</span>
+					</div>
+				</div>
+				<button
+					type="button"
+					class="vcat-close-btn"
+					onclick={() => (isVaultCatPickerOpen = false)}
+					aria-label="Chiudi"
+				>
+					✕
+				</button>
+			</div>
+
+			<!-- Live Search -->
+			<div class="vcat-search-box">
+				<span class="vsearch-ico">🔍</span>
+				<input
+					type="text"
+					bind:value={vaultCatSearchQuery}
+					placeholder="Cerca tra le {availableCategories.length} categorie..."
+					class="vcat-search-input"
+				/>
+				{#if vaultCatSearchQuery}
+					<button
+						type="button"
+						class="vsearch-clear"
+						onclick={() => (vaultCatSearchQuery = '')}
+					>
+						✕
+					</button>
+				{/if}
+			</div>
+
+			<!-- Quick Batch Actions -->
+			<div class="vcat-batch-row">
+				<button
+					type="button"
+					class="vcat-batch-btn"
+					class:active-batch={selectedCategory === 'ALL'}
+					onclick={() => toggleVaultCategory('ALL')}
+				>
+					📁 Tutte ({notes.length})
+				</button>
+				<button
+					type="button"
+					class="vcat-batch-btn"
+					onclick={() => {
+						selectedCategory = 'ALL';
+						globalCategoryStore.reset();
+					}}
+				>
+					✕ Azzera filtri
+				</button>
+			</div>
+
+			<!-- Category List -->
+			<div class="vcat-list">
+				{#if filteredVaultCategories.length === 0}
+					<p class="vcat-empty">Nessuna categoria trovata per "{vaultCatSearchQuery}"</p>
+				{:else}
+					{#each filteredVaultCategories as [catName, count]}
+						{@const isSelected = selectedCategory !== 'ALL' && selectedCategory.split(',').map((s) => s.trim()).includes(catName)}
+						<button
+							type="button"
+							class="vcat-item-btn"
+							class:checked={isSelected}
+							onclick={() => toggleVaultCategory(catName)}
+						>
+							<div class="vcat-checkbox" class:checked={isSelected}>
+								{#if isSelected}✓{/if}
+							</div>
+							<span class="vcat-item-name">{catName}</span>
+							<span class="vcat-item-count">{count} {count === 1 ? 'nota' : 'note'}</span>
+						</button>
+					{/each}
+				{/if}
+			</div>
+
+			<!-- Footer -->
+			<div class="vcat-modal-footer">
+				<button
+					type="button"
+					class="duo-btn duo-btn-green vcat-apply-btn"
+					onclick={() => (isVaultCatPickerOpen = false)}
+				>
+					✓ CONFERMA ({selectedCategory === 'ALL' ? 'Tutte' : `${selectedCategory.split(',').length} attive`})
+				</button>
+			</div>
+		</div>
+	{/if}
 </div>
 {:else}
 	<div class="login-page-container">
@@ -1233,6 +1427,83 @@
 		display: none;
 	}
 
+	.vault-cat-trigger-btn {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.25rem;
+		padding: 0.25rem 0.55rem;
+		border-radius: 9999px;
+		background: var(--card-bg-subtle);
+		border: 1.5px solid var(--border-color);
+		color: var(--text-color);
+		font-family: 'Outfit', sans-serif;
+		font-size: 0.72rem;
+		font-weight: 800;
+		cursor: pointer;
+		white-space: nowrap;
+		flex-shrink: 0;
+		transition: all 0.12s ease;
+	}
+
+	.vault-cat-trigger-btn:hover {
+		border-color: var(--accent-color);
+		color: var(--accent-color);
+	}
+
+	.vault-cat-trigger-btn.active {
+		background: var(--accent-light-bg);
+		border-color: var(--accent-color);
+		color: var(--accent-color);
+	}
+
+	.vcat-badge {
+		background: var(--card-bg);
+		border: 1px solid var(--border-color);
+		border-radius: 6px;
+		padding: 0.05rem 0.35rem;
+		font-size: 0.65rem;
+		font-weight: 900;
+		color: var(--accent-color);
+	}
+
+	.vcat-arrow {
+		font-size: 0.7rem;
+		opacity: 0.6;
+	}
+
+	.active-vault-cat-tag {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.25rem;
+		padding: 0.2rem 0.5rem;
+		border-radius: 9999px;
+		background: var(--accent-light-bg);
+		border: 1.5px solid var(--accent-color);
+		color: var(--accent-color);
+		font-family: 'Outfit', sans-serif;
+		font-size: 0.72rem;
+		font-weight: 800;
+		white-space: nowrap;
+		flex-shrink: 0;
+	}
+
+	.tag-del-btn {
+		background: none;
+		border: none;
+		color: var(--accent-color);
+		font-size: 0.68rem;
+		font-weight: 900;
+		cursor: pointer;
+		padding: 0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.tag-del-btn:hover {
+		color: #ff5e5b;
+	}
+
 	.folder-chip {
 		background: var(--card-bg-subtle);
 		border: 1.5px solid var(--border-color);
@@ -1257,6 +1528,249 @@
 		border-color: var(--accent-color);
 		color: var(--accent-color);
 		font-weight: 900;
+	}
+
+	.more-cat-chip {
+		border-style: dashed;
+		color: var(--accent-color);
+	}
+
+	.clear-cat-chip {
+		border-color: #ff5e5b;
+		color: #ff5e5b;
+		background: rgba(255, 94, 91, 0.1);
+	}
+
+	/* 🗂️ Vault Category Modal Styles */
+	.vault-cat-backdrop {
+		position: fixed;
+		inset: 0;
+		background: rgba(0, 0, 0, 0.65);
+		backdrop-filter: blur(4px);
+		-webkit-backdrop-filter: blur(4px);
+		z-index: 500;
+	}
+
+	.vault-cat-modal {
+		position: fixed;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+		width: 90vw;
+		max-width: 440px;
+		max-height: 80vh;
+		background: var(--card-bg);
+		border-radius: 22px;
+		border: 2px solid var(--border-color);
+		border-bottom: 6px solid var(--border-depth-color);
+		box-shadow: 0 20px 48px rgba(0, 0, 0, 0.45);
+		z-index: 510;
+		padding: 1.2rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+		box-sizing: border-box;
+	}
+
+	.vcat-modal-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding-bottom: 0.4rem;
+		border-bottom: 2px solid var(--border-color);
+	}
+
+	.vcat-modal-title {
+		display: flex;
+		align-items: center;
+		gap: 0.45rem;
+	}
+
+	.vcat-modal-ico {
+		font-size: 1.2rem;
+	}
+
+	.vcat-heading {
+		font-family: 'Outfit', sans-serif;
+		font-size: 1.05rem;
+		font-weight: 900;
+		margin: 0;
+		color: var(--text-color);
+	}
+
+	.vcat-sub {
+		font-size: 0.72rem;
+		font-weight: 700;
+		color: var(--text-muted);
+	}
+
+	.vcat-close-btn {
+		background: var(--card-bg-subtle);
+		border: 1.5px solid var(--border-color);
+		border-radius: 10px;
+		width: 30px;
+		height: 30px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		color: var(--text-muted);
+		font-size: 0.85rem;
+		font-weight: 900;
+		cursor: pointer;
+	}
+
+	.vcat-search-box {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+		background: var(--card-bg-subtle);
+		border: 2px solid var(--border-color);
+		border-radius: 12px;
+		padding: 0.4rem 0.65rem;
+	}
+
+	.vsearch-ico {
+		font-size: 0.85rem;
+		color: var(--text-muted);
+	}
+
+	.vcat-search-input {
+		flex: 1;
+		background: transparent;
+		border: none;
+		outline: none;
+		color: var(--text-color);
+		font-family: 'Outfit', sans-serif;
+		font-size: 0.85rem;
+		font-weight: 700;
+	}
+
+	.vsearch-clear {
+		background: none;
+		border: none;
+		color: var(--text-muted);
+		font-size: 0.85rem;
+		cursor: pointer;
+	}
+
+	.vcat-batch-row {
+		display: flex;
+		gap: 0.35rem;
+	}
+
+	.vcat-batch-btn {
+		flex: 1;
+		padding: 0.35rem 0.5rem;
+		border-radius: 9px;
+		background: var(--card-bg-subtle);
+		border: 1.5px solid var(--border-color);
+		color: var(--text-muted);
+		font-family: 'Outfit', sans-serif;
+		font-size: 0.72rem;
+		font-weight: 800;
+		cursor: pointer;
+		transition: all 0.12s ease;
+	}
+
+	.vcat-batch-btn:hover {
+		color: var(--text-color);
+		border-color: var(--accent-color);
+	}
+
+	.vcat-batch-btn.active-batch {
+		background: var(--accent-light-bg);
+		color: var(--accent-color);
+		border-color: var(--accent-color);
+	}
+
+	.vcat-list {
+		flex: 1;
+		overflow-y: auto;
+		max-height: 230px;
+		display: flex;
+		flex-direction: column;
+		gap: 0.3rem;
+		padding-right: 0.15rem;
+	}
+
+	.vcat-empty {
+		text-align: center;
+		padding: 1.2rem;
+		font-size: 0.8rem;
+		color: var(--text-muted);
+	}
+
+	.vcat-item-btn {
+		display: flex;
+		align-items: center;
+		gap: 0.55rem;
+		padding: 0.5rem 0.65rem;
+		border-radius: 11px;
+		background: var(--card-bg-subtle);
+		border: 1.5px solid var(--border-color);
+		color: var(--text-color);
+		cursor: pointer;
+		text-align: left;
+		transition: all 0.12s ease;
+		user-select: none;
+	}
+
+	.vcat-item-btn:hover {
+		background: var(--hover-bg);
+		border-color: var(--accent-color);
+	}
+
+	.vcat-item-btn.checked {
+		background: var(--accent-light-bg);
+		border-color: var(--accent-color);
+		color: var(--accent-color);
+	}
+
+	.vcat-checkbox {
+		width: 18px;
+		height: 18px;
+		border-radius: 5px;
+		border: 2px solid var(--border-color);
+		background: var(--card-bg);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 0.7rem;
+		font-weight: 900;
+		color: #ffffff;
+		flex-shrink: 0;
+		transition: all 0.12s ease;
+	}
+
+	.vcat-checkbox.checked {
+		background: var(--accent-color);
+		border-color: var(--accent-color);
+	}
+
+	.vcat-item-name {
+		font-family: 'Outfit', sans-serif;
+		font-size: 0.82rem;
+		font-weight: 800;
+		flex: 1;
+	}
+
+	.vcat-item-count {
+		font-size: 0.68rem;
+		font-weight: 800;
+		color: var(--text-muted);
+	}
+
+	.vcat-modal-footer {
+		padding-top: 0.25rem;
+		border-top: 1.5px solid var(--border-color);
+	}
+
+	.vcat-apply-btn {
+		width: 100%;
+		padding: 0.65rem;
+		font-size: 0.85rem;
+		font-weight: 900;
+		justify-content: center;
 	}
 
 	.vault-files-list {
