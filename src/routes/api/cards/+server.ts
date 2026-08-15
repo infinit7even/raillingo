@@ -5,6 +5,7 @@ import crypto from 'node:crypto';
 import { isAuthorizedAdmin } from '$lib/server/auth';
 import { isSameOriginRequest } from '$lib/server/csrf';
 import { invalidateCards, readCards } from '$lib/server/dataCache';
+import { deleteImagesForCard, cleanupUnusedImagesOnCardUpdate } from '$lib/server/mediaCleanup';
 import type { Card } from '$lib/types/cards';
 
 const CARDS_FILE_PATH = path.resolve('data/cards.json');
@@ -20,17 +21,6 @@ async function writeCardsToFile(cards: Card[]): Promise<boolean> {
 		console.error('Errore durante il salvataggio di data/cards.json:', err);
 		return false;
 	}
-}
-
-async function deleteMediaFile(imgUrl: string) {
-	if (!imgUrl || typeof imgUrl !== 'string') return;
-	const filename = path.basename(imgUrl.split('?')[0]);
-	if (!filename || filename.includes('..')) return;
-
-	const dataPath = path.resolve('data/uploads', filename);
-	const staticPath = path.resolve('static/uploads', filename);
-
-	await Promise.all([fs.unlink(dataPath).catch(() => {}), fs.unlink(staticPath).catch(() => {})]);
 }
 
 export const GET: RequestHandler = async ({ request }) => {
@@ -149,11 +139,6 @@ export const PUT: RequestHandler = async (event) => {
 		? updatedCard.images.filter((img): img is string => typeof img === 'string' && img.trim().length > 0)
 		: [];
 
-	const removedImages = oldImages.filter((img) => !newImages.includes(img));
-	for (const imgUrl of removedImages) {
-		await deleteMediaFile(imgUrl);
-	}
-
 	const title = (updatedCard.title !== undefined ? updatedCard.title : oldCard.title || '').trim();
 	const fullName = (updatedCard.fullName !== undefined ? updatedCard.fullName : oldCard.fullName || '').trim();
 	const description = (updatedCard.description !== undefined ? updatedCard.description : oldCard.description || '').trim();
@@ -170,6 +155,9 @@ export const PUT: RequestHandler = async (event) => {
 		images: newImages.length > 0 ? newImages : undefined,
 		updatedAt: new Date().toISOString()
 	};
+
+	// Cancella le immagini non più usate
+	await cleanupUnusedImagesOnCardUpdate(oldCard, cardToSave);
 
 	cards[index] = cardToSave;
 
@@ -206,10 +194,9 @@ export const DELETE: RequestHandler = async (event) => {
 	const cards = await readCards<Card[]>();
 	const cardToDelete = cards.find((c) => c.id === id);
 
-	if (cardToDelete && cardToDelete.images && Array.isArray(cardToDelete.images)) {
-		for (const imgUrl of cardToDelete.images) {
-			await deleteMediaFile(imgUrl);
-		}
+	if (cardToDelete) {
+		// Elimina fisicamente dal disco tutti i file immagine associati a questa scheda
+		await deleteImagesForCard(cardToDelete);
 	}
 
 	const filtered = cards.filter((c) => c.id !== id);
