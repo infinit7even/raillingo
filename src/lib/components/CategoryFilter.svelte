@@ -71,7 +71,7 @@
 	}
 </script>
 
-{#if categories.length > 0 || onRefresh}
+{#if categories.length > 0}
 	<div class="category-filter-bar duo-card">
 		<!-- Trigger button to open the Category Picker -->
 		<button
@@ -97,158 +97,152 @@
 			</div>
 		</button>
 
+		{#if isFiltered}
+			<button
+				type="button"
+				class="clear-category-btn"
+				onclick={handleResetAll}
+				title="Azzera tutti i filtri categoria (✕)"
+				aria-label="Azzera filtri categoria"
+			>
+				✕
+			</button>
+		{/if}
+	</div>
+{/if}
 
+{#if onRefresh}
+	<button
+		type="button"
+		class="duo-btn duo-btn-purple compact-shuffle-btn"
+		onclick={onRefresh}
+		title="Rimescola le card"
+	>
+		<span class="shuffle-icon">🔄</span>
+		<span class="shuffle-text">Rimescola</span>
+	</button>
+{/if}
 
-		<!-- Right Side Actions: Reset (✕) & Shuffle (🔄) -->
-		<div class="filter-right-actions">
-			{#if isFiltered}
+<!-- 🎛️ Category Multi-Select Search Modal / Sheet -->
+{#if isModalOpen}
+	<div
+		class="modal-backdrop"
+		onclick={() => (isModalOpen = false)}
+		onkeydown={(e) => e.key === 'Escape' && (isModalOpen = false)}
+		role="button"
+		tabindex="0"
+		aria-label="Chiudi selettore categorie"
+		transition:fade={{ duration: 120 }}
+	></div>
+
+	<div
+		class="category-picker-modal duo-card"
+		transition:scale={{ start: 0.95, duration: 150 }}
+	>
+		<div class="modal-header">
+			<div class="modal-title-group">
+				<span class="modal-ico">🏷️</span>
+				<div class="modal-title-text">
+					<h3 class="modal-heading">Filtro Categorie</h3>
+					<span class="modal-sub">
+						{#if !isFiltered}
+							Tutte le {categories.length} categorie attive
+						{:else}
+							{selectedList.length} di {categories.length} selezionate
+						{/if}
+					</span>
+				</div>
+			</div>
+			<button
+				type="button"
+				class="modal-close-btn"
+				onclick={() => (isModalOpen = false)}
+				aria-label="Chiudi"
+			>
+				✕
+			</button>
+		</div>
+
+		<!-- Live Search Filter for Categories -->
+		<div class="modal-search-box">
+			<span class="msearch-ico">🔍</span>
+			<input
+				type="text"
+				bind:value={filterSearch}
+				placeholder="Cerca tra le {categories.length} categorie..."
+				class="msearch-input"
+			/>
+			{#if filterSearch}
 				<button
 					type="button"
-					class="clear-category-btn"
-					onclick={handleResetAll}
-					title="Azzera tutti i filtri categoria (✕)"
-					aria-label="Azzera filtri categoria"
+					class="msearch-clear"
+					onclick={() => (filterSearch = '')}
 				>
 					✕
-				</button>
-			{/if}
-
-			{#if onRefresh}
-				<button
-					type="button"
-					class="duo-btn duo-btn-purple compact-shuffle-btn"
-					onclick={onRefresh}
-					title="Rimescola le card"
-				>
-					<span class="shuffle-icon">🔄</span>
-					<span class="shuffle-text">Rimescola</span>
 				</button>
 			{/if}
 		</div>
-	</div>
 
-	<!-- 🎛️ Category Multi-Select Search Modal / Sheet -->
-	{#if isModalOpen}
-		<div
-			class="modal-backdrop"
-			onclick={() => (isModalOpen = false)}
-			onkeydown={(e) => e.key === 'Escape' && (isModalOpen = false)}
-			role="button"
-			tabindex="0"
-			aria-label="Chiudi selettore categorie"
-			transition:fade={{ duration: 120 }}
-		></div>
+		<!-- Quick Batch Actions -->
+		<div class="modal-batch-actions">
+			<button
+				type="button"
+				class="batch-btn"
+				class:active-batch={!isFiltered}
+				onclick={handleSelectAll}
+			>
+				🏷️ Tutte
+			</button>
+			<button
+				type="button"
+				class="batch-btn"
+				onclick={handleResetAll}
+			>
+				✕ Azzera selezione
+			</button>
+		</div>
 
-		<div
-			class="category-picker-modal duo-card"
-			transition:scale={{ start: 0.95, duration: 150 }}
-		>
-			<div class="modal-header">
-				<div class="modal-title-group">
-					<span class="modal-ico">🏷️</span>
-					<div class="modal-title-text">
-						<h3 class="modal-heading">Filtro Categorie</h3>
-						<span class="modal-sub">
-							{#if !isFiltered}
-								Tutte le {categories.length} categorie attive
-							{:else}
-								{selectedList.length} di {categories.length} selezionate
-							{/if}
-						</span>
-					</div>
+		<!-- Scrollable Category Checkboxes List -->
+		<div class="category-checkbox-list">
+			{#if filteredCategories.length === 0}
+				<div class="empty-cat-search">
+					<p>Nessuna categoria trovata per "{filterSearch}"</p>
 				</div>
-				<button
-					type="button"
-					class="modal-close-btn"
-					onclick={() => (isModalOpen = false)}
-					aria-label="Chiudi"
-				>
-					✕
-				</button>
-			</div>
-
-			<!-- Live Search Filter for Categories -->
-			<div class="modal-search-box">
-				<span class="msearch-ico">🔍</span>
-				<input
-					type="text"
-					bind:value={filterSearch}
-					placeholder="Cerca tra le {categories.length} categorie..."
-					class="msearch-input"
-				/>
-				{#if filterSearch}
+			{:else}
+				{#each filteredCategories as cat}
+					{@const isSelected = selectedList.includes(cat)}
 					<button
 						type="button"
-						class="msearch-clear"
-						onclick={() => (filterSearch = '')}
+						class="cat-check-item"
+						class:checked={isSelected}
+						onclick={() => toggleCategory(cat)}
 					>
-						✕
+						<div class="checkbox-box" class:checked={isSelected}>
+							{#if isSelected}✓{/if}
+						</div>
+						<span class="cat-check-name">{cat}</span>
 					</button>
-				{/if}
-			</div>
-
-			<!-- Quick Batch Actions -->
-			<div class="modal-batch-actions">
-				<button
-					type="button"
-					class="batch-btn"
-					class:active-batch={!isFiltered}
-					onclick={handleSelectAll}
-				>
-					🏷️ Tutte
-				</button>
-				<button
-					type="button"
-					class="batch-btn"
-					onclick={handleResetAll}
-				>
-					✕ Azzera selezione
-				</button>
-			</div>
-
-			<!-- Scrollable Category Checkboxes List -->
-			<div class="category-checkbox-list">
-				{#if filteredCategories.length === 0}
-					<div class="empty-cat-search">
-						<p>Nessuna categoria trovata per "{filterSearch}"</p>
-					</div>
-				{:else}
-					{#each filteredCategories as cat}
-						{@const isSelected = selectedList.includes(cat)}
-						<button
-							type="button"
-							class="cat-check-item"
-							class:checked={isSelected}
-							onclick={() => toggleCategory(cat)}
-						>
-							<div class="checkbox-box" class:checked={isSelected}>
-								{#if isSelected}✓{/if}
-							</div>
-							<span class="cat-check-name">{cat}</span>
-						</button>
-					{/each}
-				{/if}
-			</div>
-
-			<!-- Footer Apply / Close Button -->
-			<div class="modal-footer">
-				<button
-					type="button"
-					class="duo-btn duo-btn-green apply-cat-btn"
-					onclick={() => (isModalOpen = false)}
-				>
-					✓ CONFERMA ({isFiltered ? `${selectedList.length} attive` : 'Tutte'})
-				</button>
-			</div>
+				{/each}
+			{/if}
 		</div>
-	{/if}
+
+		<!-- Footer Apply / Close Button -->
+		<div class="modal-footer">
+			<button
+				type="button"
+				class="duo-btn duo-btn-green apply-cat-btn"
+				onclick={() => (isModalOpen = false)}
+			>
+				✓ CONFERMA ({isFiltered ? `${selectedList.length} attive` : 'Tutte'})
+			</button>
+		</div>
+	</div>
 {/if}
 
 <style>
 	.category-filter-bar {
 		display: flex;
 		align-items: center;
-		justify-content: space-between;
 		gap: 0.5rem;
 		padding: 0.4rem 0.65rem;
 		background: var(--card-bg);
@@ -332,11 +326,26 @@
 
 
 
-	.filter-right-actions {
-		display: flex;
+	.compact-shuffle-btn {
+		display: inline-flex;
 		align-items: center;
-		gap: 0.4rem;
+		gap: 0.35rem;
+		padding: 0.35rem 0.65rem;
+		font-size: 0.76rem;
+		font-weight: 800;
+		border-radius: 10px;
+		white-space: nowrap;
 		flex-shrink: 0;
+	}
+
+	.shuffle-icon {
+		font-size: 0.85rem;
+		display: inline-block;
+		transition: transform 0.4s ease;
+	}
+
+	.compact-shuffle-btn:active .shuffle-icon {
+		transform: rotate(360deg);
 	}
 
 	.clear-category-btn {
