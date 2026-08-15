@@ -177,13 +177,14 @@
 			<div class="card-face back duo-card">
 				<div class="face-content">
 					<div class="back-header">
-						{#if card.title}
-							<h3 class="card-title-small">{card.title}</h3>
-							{#if card.fullName}
-								<div class="fullname-banner">{card.fullName}</div>
-							{/if}
-						{:else if card.fullName}
-							<h3 class="card-title-small">{card.fullName}</h3>
+						{#if card.title && card.fullName && card.title !== card.fullName}
+							<div class="header-inline-row">
+								<h3 class="card-title-small">{card.title}</h3>
+								<span class="inline-dash">-</span>
+								<span class="fullname-inline">{card.fullName}</span>
+							</div>
+						{:else}
+							<h3 class="card-title-small">{card.title || card.fullName}</h3>
 						{/if}
 					</div>
 
@@ -376,13 +377,29 @@
 		word-break: break-word;
 	}
 
-	.fullname-banner {
-		font-size: 0.92rem;
+	.header-inline-row {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		flex-wrap: wrap;
+		gap: 0.25rem 0.45rem;
+		width: 100%;
+		text-align: center;
+	}
+
+	.inline-dash {
+		color: var(--text-muted);
+		font-weight: 900;
+		font-size: 1.1rem;
+	}
+
+	.fullname-inline {
+		font-size: 0.95rem;
 		font-weight: 800;
 		color: var(--green-color);
 		background: rgba(34, 197, 94, 0.12);
-		padding: 0.25rem 0.75rem;
-		border-radius: 12px;
+		padding: 0.15rem 0.55rem;
+		border-radius: 10px;
 		border: 1.5px solid var(--green-color);
 		max-width: 100%;
 		box-sizing: border-box;
