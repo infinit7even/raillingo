@@ -191,17 +191,17 @@
 
 <style>
 	.missions-page-wrapper {
-		max-width: 650px;
+		max-width: 600px;
 		margin: 0 auto;
 		display: flex;
 		flex-direction: column;
-		gap: 1.25rem;
+		gap: 0.75rem;
 	}
 
 	.sync-progress-box {
-		padding: 1.1rem 1.35rem;
+		padding: 1rem 1.25rem;
 		background: var(--card-bg);
-		border-radius: 20px;
+		border-radius: 18px;
 		border: 2px solid var(--border-color);
 		border-bottom: 4px solid var(--border-depth-color);
 	}
@@ -282,7 +282,7 @@
 	.missions-list {
 		display: flex;
 		flex-direction: column;
-		gap: 0.85rem;
+		gap: 0.75rem;
 	}
 
 	.mission-card {
@@ -290,9 +290,9 @@
 		justify-content: space-between;
 		align-items: center;
 		gap: 1rem;
-		padding: 1.15rem 1.35rem;
+		padding: 0.95rem 1.25rem;
 		background: var(--card-bg);
-		border-radius: 20px;
+		border-radius: 18px;
 		border: 2px solid var(--border-color);
 		border-bottom: 4px solid var(--border-depth-color);
 		transition: all 0.15s ease;
