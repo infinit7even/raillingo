@@ -348,42 +348,61 @@
 		overflow: hidden;
 	}
 
+	.back-header {
+		width: 100%;
+		padding: 0 2rem;
+		box-sizing: border-box;
+		flex-shrink: 0;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.25rem;
+	}
+
 	.card-title {
-		font-size: 2.8rem;
+		font-size: 2.5rem;
 		font-weight: 900;
 		letter-spacing: -0.03em;
 		color: var(--accent-color);
 		margin: auto 0;
 		line-height: 1.1;
+		word-break: break-word;
 	}
 
 	.card-title-small {
-		font-size: 1.65rem;
+		font-size: 1.4rem;
 		font-weight: 900;
 		color: var(--accent-color);
 		margin: 0;
+		line-height: 1.25;
+		word-break: break-word;
 	}
 
 	.fullname-banner {
-		font-size: 1.05rem;
+		font-size: 0.92rem;
 		font-weight: 800;
 		color: var(--green-color);
 		background: rgba(34, 197, 94, 0.12);
-		padding: 0.35rem 0.85rem;
+		padding: 0.25rem 0.75rem;
 		border-radius: 12px;
 		border: 1.5px solid var(--green-color);
-		margin-top: 0.2rem;
+		max-width: 100%;
+		box-sizing: border-box;
+		word-break: break-word;
 	}
 
 	.description-box {
-		padding: 1.1rem;
-		border-radius: 18px;
-		font-size: 1rem;
+		padding: 0.85rem 1rem;
+		border-radius: 16px;
+		font-size: 0.95rem;
 		line-height: 1.55;
 		color: var(--text-color);
 		text-align: left;
 		width: 100%;
 		box-sizing: border-box;
+		flex: 1;
+		min-height: 0;
+		overflow-y: auto;
 	}
 
 	.front-desc-box {
@@ -429,14 +448,15 @@
 		width: 100%;
 		display: flex;
 		flex-direction: column;
-		gap: 0.5rem;
+		gap: 0.35rem;
 		align-items: center;
-		margin-top: 0.25rem;
+		flex-shrink: 0;
+		margin-top: 0.2rem;
 	}
 
 	.show-img-btn {
-		font-size: 0.82rem;
-		padding: 0.45rem 0.9rem;
+		font-size: 0.8rem;
+		padding: 0.4rem 0.85rem;
 	}
 
 	/* Image Modal Popup */
