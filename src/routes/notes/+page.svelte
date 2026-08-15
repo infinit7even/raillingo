@@ -995,10 +995,6 @@
 					</svg>
 					<span>ACCEDI CON DISCORD</span>
 				</a>
-
-				<a href="/" class="duo-btn duo-btn-gray back-btn">
-					TORNA ALLA HOME
-				</a>
 			</div>
 		</div>
 	</div>
