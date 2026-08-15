@@ -2138,62 +2138,69 @@
 		outline: none;
 		color: var(--text-color);
 		font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
-		font-size: 0.98rem;
-		line-height: 1.65;
+		font-size: 0.96rem;
+		line-height: 1.48;
 		word-break: break-word;
 	}
 
-	.word-document-editor :global(p) {
-		margin: 0.35rem 0;
-		min-height: 1.4em;
+	.word-document-editor :global(p),
+	.word-document-editor :global(div:not(.doc-image-wrapper):not(.doc-image-toolbar)) {
+		margin: 0.12rem 0;
+		min-height: 1.25em;
+		line-height: 1.48;
 	}
 
 	.word-document-editor :global(h1) {
-		font-size: 1.45rem;
+		font-size: 1.35rem;
 		font-weight: 900;
 		color: var(--accent-color);
-		margin: 1rem 0 0.35rem 0;
+		margin: 0.65rem 0 0.2rem 0;
+		line-height: 1.3;
 	}
 
 	.word-document-editor :global(h2) {
-		font-size: 1.28rem;
+		font-size: 1.2rem;
 		font-weight: 900;
 		color: var(--text-color);
-		margin: 0.85rem 0 0.3rem 0;
+		margin: 0.55rem 0 0.18rem 0;
+		line-height: 1.3;
 	}
 
 	.word-document-editor :global(h3) {
-		font-size: 1.12rem;
+		font-size: 1.08rem;
 		font-weight: 800;
 		color: var(--text-color);
-		margin: 0.7rem 0 0.25rem 0;
+		margin: 0.45rem 0 0.15rem 0;
+		line-height: 1.3;
 	}
 
 	.word-document-editor :global(ul),
 	.word-document-editor :global(ol) {
-		margin: 0.35rem 0;
-		padding-left: 1.4rem;
+		margin: 0.2rem 0;
+		padding-left: 1.3rem;
 	}
 
 	.word-document-editor :global(li) {
-		margin: 0.15rem 0;
+		margin: 0.06rem 0;
+		line-height: 1.45;
 	}
 
 	.word-document-editor :global(blockquote) {
-		margin: 0.5rem 0;
-		padding: 0.5rem 0.85rem;
+		margin: 0.35rem 0;
+		padding: 0.35rem 0.75rem;
 		border-left: 4px solid var(--accent-color);
 		background: var(--accent-light-bg);
-		border-radius: 0 10px 10px 0;
+		border-radius: 0 8px 8px 0;
 		font-style: italic;
+		line-height: 1.45;
 	}
 
 	.word-document-editor :global(code) {
 		background: var(--card-bg);
-		padding: 0.15rem 0.35rem;
+		padding: 0.12rem 0.3rem;
 		border-radius: 4px;
 		font-family: monospace;
-		font-size: 0.9em;
+		font-size: 0.88em;
 	}
 
 	.word-document-editor :global(mark) {
