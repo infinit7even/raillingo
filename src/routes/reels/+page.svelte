@@ -260,9 +260,6 @@
 							</div>
 						</div>
 
-						<div class="scroll-down-notice">
-							<span>Scorri in verticale ⬇️</span>
-						</div>
 					</div>
 				{/each}
 			</div>
@@ -609,16 +606,6 @@
 		background: var(--card-bg);
 		border: 1.5px solid var(--border-color);
 		color: var(--text-muted);
-	}
-
-	.scroll-down-notice {
-		text-align: center;
-		font-size: 0.68rem;
-		font-weight: 800;
-		color: var(--text-muted);
-		opacity: 0.8;
-		height: 18px;
-		flex-shrink: 0;
 	}
 
 	.empty-reels-box {
