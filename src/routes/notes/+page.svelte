@@ -982,7 +982,7 @@
 			</div>
 
 			<div class="login-actions-box">
-				<a href="/api/auth/login?returnUrl=/notes" class="duo-btn duo-btn-green discord-login-btn">
+				<a href="/api/auth/login?returnUrl=/notes" class="duo-btn discord-login-btn">
 					<svg
 						class="discord-svg"
 						xmlns="http://www.w3.org/2000/svg"
@@ -1948,9 +1948,10 @@
 
 	.discord-login-btn {
 		width: 100%;
-		background-color: #5865f2;
-		color: #ffffff;
-		border-bottom: 4px solid #4752c4;
+		background-color: #5865f2 !important;
+		color: #ffffff !important;
+		border: none !important;
+		border-bottom: 4px solid #4752c4 !important;
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
@@ -1961,10 +1962,12 @@
 		border-radius: 16px;
 		text-decoration: none;
 		box-sizing: border-box;
-		transition: filter 0.15s ease, transform 0.1s ease;
+		transition: filter 0.15s ease, transform 0.1s ease, background-color 0.15s ease;
 	}
 
 	.discord-login-btn:hover {
+		background-color: #4752c4 !important;
+		color: #ffffff !important;
 		filter: brightness(1.08);
 	}
 
