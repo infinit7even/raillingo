@@ -93,30 +93,9 @@
 			<span class="trigger-arrow">▾</span>
 		</button>
 
-		<!-- Horizontal preview of active or quick categories -->
-		<div class="cat-tags-preview">
-			{#if !isFiltered}
-				<!-- Quick category shortcuts (first 4) -->
-				{#each categories.slice(0, 4) as cat}
-					<button
-						type="button"
-						class="cat-chip-pill"
-						onclick={() => toggleCategory(cat)}
-					>
-						{cat}
-					</button>
-				{/each}
-				{#if categories.length > 4}
-					<button
-						type="button"
-						class="cat-chip-pill more-pill"
-						onclick={() => (isModalOpen = true)}
-					>
-						+{categories.length - 4} altre...
-					</button>
-				{/if}
-			{:else}
-				<!-- Active Selected Category Badges with removable ✕ -->
+		<!-- Mostra i tag delle categorie solo quando un filtro è attivo -->
+		{#if isFiltered}
+			<div class="cat-tags-preview">
 				{#each selectedList as cat}
 					<span class="active-cat-tag">
 						<span class="active-tag-text">{cat}</span>
@@ -130,15 +109,8 @@
 						</button>
 					</span>
 				{/each}
-				<button
-					type="button"
-					class="cat-chip-pill add-more-pill"
-					onclick={() => (isModalOpen = true)}
-				>
-					➕ Scegli
-				</button>
-			{/if}
-		</div>
+			</div>
+		{/if}
 
 		<!-- Right Side Actions: Reset (✕) & Shuffle (🔄) -->
 		<div class="filter-right-actions">
@@ -378,40 +350,7 @@
 		display: none;
 	}
 
-	.cat-chip-pill {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.25rem;
-		padding: 0.35rem 0.65rem;
-		border-radius: 9999px;
-		border: 1.5px solid var(--border-color);
-		background: var(--card-bg-subtle);
-		color: var(--text-muted);
-		font-family: 'Outfit', sans-serif;
-		font-size: 0.74rem;
-		font-weight: 800;
-		white-space: nowrap;
-		cursor: pointer;
-		user-select: none;
-		transition: all 0.12s ease;
-		flex-shrink: 0;
-	}
 
-	.cat-chip-pill:hover {
-		color: var(--text-color);
-		border-color: var(--accent-color);
-	}
-
-	.more-pill {
-		border-style: dashed;
-		color: var(--accent-color);
-	}
-
-	.add-more-pill {
-		border-color: var(--accent-color);
-		color: var(--accent-color);
-		background: var(--accent-light-bg);
-	}
 
 	.active-cat-tag {
 		display: inline-flex;
