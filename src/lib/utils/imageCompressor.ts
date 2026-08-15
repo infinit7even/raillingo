@@ -14,10 +14,10 @@ export async function compressImage(
 	file: File | Blob,
 	options: CompressionOptions = {}
 ): Promise<File> {
-	const maxSizeMB = options.maxSizeMB ?? 1;
-	const maxWidth = options.maxWidth ?? 1920;
-	const maxHeight = options.maxHeight ?? 1920;
-	const initialQuality = options.quality ?? 0.82;
+	const maxSizeMB = Math.max(0.1, options.maxSizeMB ?? 1);
+	const maxWidth = Math.max(100, options.maxWidth ?? 1920);
+	const maxHeight = Math.max(100, options.maxHeight ?? 1920);
+	const initialQuality = Math.min(1, Math.max(0.1, options.quality ?? 0.82));
 
 	return new Promise((resolve) => {
 		let objectUrl = '';
@@ -40,7 +40,7 @@ export async function compressImage(
 			let width = img.naturalWidth || img.width;
 			let height = img.naturalHeight || img.height;
 
-			if (!width || !height) {
+			if (!width || !height || width <= 0 || height <= 0) {
 				const safeFile =
 					file instanceof File
 						? file
@@ -52,8 +52,8 @@ export async function compressImage(
 			// Scala mantenendo le proporzioni se supera le dimensioni massime
 			if (width > maxWidth || height > maxHeight) {
 				const ratio = Math.min(maxWidth / width, maxHeight / height);
-				width = Math.round(width * ratio);
-				height = Math.round(height * ratio);
+				width = Math.max(1, Math.round(width * ratio));
+				height = Math.max(1, Math.round(height * ratio));
 			}
 
 			const canvas = document.createElement('canvas');
@@ -110,9 +110,10 @@ export async function compressImage(
 						}
 
 						const maxSizeBytes = maxSizeMB * 1024 * 1024;
-						if (blob.size > maxSizeBytes && quality > 0.4) {
-							// Se supera ancora 1MB, riduci progressivamente la qualità
-							attemptBlob(quality - 0.15);
+						if (blob.size > maxSizeBytes && quality > 0.3) {
+							// Se supera ancora il limite, riduci progressivamente la qualità
+							const nextQuality = Math.max(0.15, quality - 0.15);
+							attemptBlob(nextQuality);
 							return;
 						}
 

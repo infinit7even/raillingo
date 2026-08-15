@@ -86,6 +86,59 @@
 		}
 	}
 
+	// Media cleanup state
+	let mediaLoading = $state(false);
+	let mediaInfo = $state<{
+		totalFiles: number;
+		totalBytes: number;
+		referencedFiles: number;
+		orphanedCount: number;
+		orphanedBytes: number;
+	} | null>(null);
+
+	async function scanMedia() {
+		mediaLoading = true;
+		try {
+			const res = await fetch('/api/admin/clean-uploads');
+			if (res.ok) {
+				mediaInfo = await res.json();
+			} else {
+				alert('Impossibile scansionare i file multimediali.');
+			}
+		} catch (err) {
+			console.error('Errore durante scansione media:', err);
+		} finally {
+			mediaLoading = false;
+		}
+	}
+
+	async function cleanOrphanedMedia() {
+		if (!mediaInfo || mediaInfo.orphanedCount === 0) return;
+		if (
+			!confirm(
+				`Vuoi eliminare definitivamente i ${mediaInfo.orphanedCount} file orfani non collegati ad alcuna scheda o appunto?`
+			)
+		) {
+			return;
+		}
+
+		mediaLoading = true;
+		try {
+			const res = await fetch('/api/admin/clean-uploads', { method: 'POST' });
+			if (res.ok) {
+				const result = await res.json();
+				alert(`Pulizia completata! Eliminati ${result.deletedCount} file (${result.freedFormatted} liberati).`);
+				await scanMedia();
+			} else {
+				alert('Errore durante l\'eliminazione dei file orfani.');
+			}
+		} catch (err) {
+			console.error('Errore durante pulizia media:', err);
+		} finally {
+			mediaLoading = false;
+		}
+	}
+
 	function exportJSON() {
 		const dataStr =
 			'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(cards, null, 2));
@@ -238,6 +291,70 @@
 						</div>
 					{/each}
 				</div>
+			</div>
+
+			<!-- Sezione Manutenzione & Pulizia Media -->
+			<div class="categories-admin-card duo-card">
+				<div class="media-header-row">
+					<div>
+						<h2 class="section-title">🧹 Manutenzione & Pulizia Media</h2>
+						<p class="section-subtitle">
+							Scansiona i file multimediali caricati ed elimina quelli non referenziati da alcuna scheda o appunto.
+						</p>
+					</div>
+					<button
+						type="button"
+						class="duo-btn duo-btn-blue scan-btn"
+						disabled={mediaLoading}
+						onclick={scanMedia}
+					>
+						{mediaLoading ? '⏳ Scansione in corso...' : '🔍 Scansiona Media'}
+					</button>
+				</div>
+
+				{#if mediaInfo}
+					<div class="media-stats-grid">
+						<div class="media-stat-box duo-card">
+							<span class="media-stat-val">{mediaInfo.totalFiles}</span>
+							<span class="media-stat-lbl">File Caricati</span>
+						</div>
+						<div class="media-stat-box duo-card">
+							<span class="media-stat-val success-val">{mediaInfo.referencedFiles}</span>
+							<span class="media-stat-lbl">File in Uso</span>
+						</div>
+						<div class="media-stat-box duo-card">
+							<span class="media-stat-val {mediaInfo.orphanedCount > 0 ? 'warning-val' : 'success-val'}">
+								{mediaInfo.orphanedCount}
+							</span>
+							<span class="media-stat-lbl">File Orfani</span>
+						</div>
+						<div class="media-stat-box duo-card">
+							<span class="media-stat-val">
+								{mediaInfo.orphanedBytes > 1024 * 1024
+									? `${(mediaInfo.orphanedBytes / (1024 * 1024)).toFixed(2)} MB`
+									: `${(mediaInfo.orphanedBytes / 1024).toFixed(1)} KB`}
+							</span>
+							<span class="media-stat-lbl">Spazio Recuperabile</span>
+						</div>
+					</div>
+
+					{#if mediaInfo.orphanedCount > 0}
+						<div class="cleanup-action-row">
+							<button
+								type="button"
+								class="duo-btn duo-btn-red"
+								disabled={mediaLoading}
+								onclick={cleanOrphanedMedia}
+							>
+								{mediaLoading
+									? '⏳ Eliminazione...'
+									: `🗑️ Elimina Definitivamente ${mediaInfo.orphanedCount} File Orfani`}
+							</button>
+						</div>
+					{:else}
+						<p class="all-clean-text">✨ Tutti i file multimediali su disco sono collegati e in uso!</p>
+					{/if}
+				{/if}
 			</div>
 
 			<!-- List Sezione Schede Registrate -->
@@ -673,5 +790,71 @@
 		background: rgba(239, 68, 68, 0.1);
 		color: #ef4444;
 		border-color: rgba(239, 68, 68, 0.3);
+	}
+
+	.media-header-row {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		flex-wrap: wrap;
+		gap: 1rem;
+	}
+
+	.scan-btn {
+		white-space: nowrap;
+		font-size: 0.88rem;
+		padding: 0.65rem 1.15rem;
+	}
+
+	.media-stats-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+		gap: 0.75rem;
+		margin-top: 1.25rem;
+	}
+
+	.media-stat-box {
+		padding: 0.85rem;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		text-align: center;
+		gap: 0.25rem;
+		background: var(--card-bg-subtle);
+		border-radius: 14px;
+	}
+
+	.media-stat-val {
+		font-size: 1.4rem;
+		font-weight: 900;
+		color: var(--accent-color);
+	}
+
+	.warning-val {
+		color: #f59e0b !important;
+	}
+
+	.success-val {
+		color: var(--green-color) !important;
+	}
+
+	.media-stat-lbl {
+		font-size: 0.75rem;
+		font-weight: 800;
+		color: var(--text-muted);
+		text-transform: uppercase;
+	}
+
+	.cleanup-action-row {
+		margin-top: 1.25rem;
+		display: flex;
+		justify-content: flex-end;
+	}
+
+	.all-clean-text {
+		margin: 1rem 0 0 0;
+		font-size: 0.88rem;
+		font-weight: 800;
+		color: var(--green-color);
 	}
 </style>

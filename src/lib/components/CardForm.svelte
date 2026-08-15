@@ -193,38 +193,38 @@
 
 		const finalCategory = category === '__NEW__' ? customCategory.trim() : category.trim();
 
-		// Validation rules:
-		// 1. Category is MANDATORY
+		// 1. Categoria obbligatoria
 		if (!finalCategory) {
 			validationError = '⚠️ La Categoria è un campo obbligatorio!';
 			return;
 		}
 
-		// 2. At least 2 fields filled out among (Acronimo, Titolo, Descrizione, Categoria)
-		const filledFieldsCount = [
-			title.trim(),
-			fullName.trim(),
-			description.trim(),
-			finalCategory
-		].filter(Boolean).length;
+		const t = title.trim();
+		const fn = fullName.trim();
+		const desc = description.trim();
+		const validImages = images.filter((img) => typeof img === 'string' && img.trim().length > 0);
 
-		if (filledFieldsCount < 2) {
-			validationError =
-				'⚠️ Devi compilare almeno 2 campi della scheda (es. Categoria + Acronimo, Titolo o Descrizione).';
+		// 2. Almeno un identificatore (Acronimo, Titolo o Immagine)
+		const mainTitle = t || fn;
+		if (!mainTitle && validImages.length === 0) {
+			validationError = '⚠️ Inserisci almeno un acronimo, un titolo o un\'immagine per la scheda.';
 			return;
 		}
 
 		saving = true;
 		try {
 			await onSave({
-				title: title.trim(),
-				fullName: fullName.trim() || undefined,
-				description: description.trim(),
+				title: t || fn || 'Scheda Visiva',
+				fullName: fn || undefined,
+				description: desc,
 				category: finalCategory,
-				images: images.length > 0 ? images : undefined
+				images: validImages.length > 0 ? validImages : undefined
 			});
-		} catch (err) {
+		} catch (err: any) {
 			console.error('Errore nel salvataggio della scheda:', err);
+			const errMsg = err?.message || '⚠️ Errore durante il salvataggio della scheda sul server.';
+			validationError = errMsg;
+			toastStore.show({ message: errMsg });
 		} finally {
 			saving = false;
 		}

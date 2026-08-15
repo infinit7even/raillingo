@@ -82,66 +82,62 @@ class CardsStore {
 
 	public async addCard(
 		newCard: Omit<Card, 'id' | 'createdAt' | 'updatedAt'>
-	): Promise<Card | null> {
+	): Promise<Card> {
 		const now = new Date().toISOString();
-		const card: Card = {
+		const cardPayload: Card = {
 			...newCard,
 			id: 'card-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7),
 			createdAt: now,
 			updatedAt: now
 		};
 
-		try {
-			const res = await fetch('/api/cards', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(card)
-			});
+		const res = await fetch('/api/cards', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(cardPayload)
+		});
 
-			if (res.ok) {
-				const created = await res.json();
-				this.cards = [created, ...this.cards];
-			} else {
-				this.cards = [card, ...this.cards];
-			}
-		} catch (e) {
-			console.warn('Salvataggio locale in seguito a errore API:', e);
-			this.cards = [card, ...this.cards];
+		if (!res.ok) {
+			const errData = await res.json().catch(() => ({ error: 'Errore salvataggio server' }));
+			throw new Error(errData.error || `Errore salvataggio scheda (${res.status})`);
 		}
 
+		const created: Card = await res.json();
+		this.cards = [created, ...this.cards.filter((c) => c.id !== created.id)];
 		this.saveToStorage();
 		this.notify();
-		return card;
+		return created;
 	}
 
-	public async updateCard(updated: Card): Promise<boolean> {
-		updated.updatedAt = new Date().toISOString();
-		try {
-			const res = await fetch('/api/cards', {
-				method: 'PUT',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(updated)
-			});
-			if (res.ok) {
-				const savedCard: Card = await res.json();
-				this.cards = this.cards.map((c) => (c.id === savedCard.id ? savedCard : c));
-			} else {
-				this.cards = this.cards.map((c) => (c.id === updated.id ? updated : c));
-			}
-		} catch (e) {
-			this.cards = this.cards.map((c) => (c.id === updated.id ? updated : c));
+	public async updateCard(updated: Card): Promise<Card> {
+		const payload = {
+			...updated,
+			updatedAt: new Date().toISOString()
+		};
+
+		const res = await fetch('/api/cards', {
+			method: 'PUT',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(payload)
+		});
+
+		if (!res.ok) {
+			const errData = await res.json().catch(() => ({ error: 'Errore modifica server' }));
+			throw new Error(errData.error || `Errore aggiornamento scheda (${res.status})`);
 		}
 
+		const savedCard: Card = await res.json();
+		this.cards = this.cards.map((c) => (c.id === savedCard.id ? savedCard : c));
 		this.saveToStorage();
 		this.notify();
-		return true;
+		return savedCard;
 	}
 
 	public async deleteCard(id: string): Promise<boolean> {
-		try {
-			await fetch(`/api/cards?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
-		} catch (e) {
-			console.warn('Errore eliminazione card da API:', e);
+		const res = await fetch(`/api/cards?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+		if (!res.ok) {
+			const errData = await res.json().catch(() => ({ error: 'Errore eliminazione server' }));
+			throw new Error(errData.error || `Errore eliminazione scheda (${res.status})`);
 		}
 
 		this.cards = this.cards.filter((c) => c.id !== id);

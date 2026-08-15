@@ -60,21 +60,21 @@ self.addEventListener('fetch', (event: any) => {
 	const url = new URL(request.url);
 	if (url.origin !== self.location.origin) return;
 
-	// /api/cards (i dati): Stale-While-Revalidate per risposte rapide offline
-	if (url.pathname === '/api/cards') {
-		event.respondWith(staleWhileRevalidate(request, DATA_CACHE));
+	// /api/cards e /api/notes (i dati dinamici): Network-First con fallback su DATA_CACHE
+	if (url.pathname === '/api/cards' || url.pathname.startsWith('/api/notes')) {
+		event.respondWith(networkFirst(request, DATA_CACHE));
 		return;
 	}
 
 	// Altre API routes: Network-First
 	if (url.pathname.startsWith('/api/')) {
-		event.respondWith(networkFirst(request));
+		event.respondWith(networkFirst(request, CACHE_NAME));
 		return;
 	}
 
-	// cards.json e dati statici: Stale-While-Revalidate
+	// cards.json e dati statici: Network-First con fallback su DATA_CACHE
 	if (url.pathname === '/data/cards.json' || url.pathname.endsWith('.json')) {
-		event.respondWith(staleWhileRevalidate(request, DATA_CACHE));
+		event.respondWith(networkFirst(request, DATA_CACHE));
 		return;
 	}
 
@@ -95,7 +95,7 @@ self.addEventListener('fetch', (event: any) => {
 	}
 
 	// Navigazione (HTML/SvelteKit routes): Network-First con fallback cache
-	event.respondWith(networkFirst(request));
+	event.respondWith(networkFirst(request, CACHE_NAME));
 });
 
 // ─── Strategie di caching ─────────────────────────────────────────────────
@@ -116,8 +116,8 @@ async function cacheFirst(request: Request, cacheName: string): Promise<Response
 }
 
 /** Network-First: tenta la rete, fallback cache. Ideale per contenuto dinamico */
-async function networkFirst(request: Request): Promise<Response> {
-	const cache = await caches.open(CACHE_NAME);
+async function networkFirst(request: Request, cacheName: string = CACHE_NAME): Promise<Response> {
+	const cache = await caches.open(cacheName);
 	try {
 		const response = await fetch(request);
 		if (response.ok) cache.put(request, response.clone());

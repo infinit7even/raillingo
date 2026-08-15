@@ -17,6 +17,7 @@ async function writeCardsToFile(cards: Card[]): Promise<boolean> {
 		invalidateCards();
 		return true;
 	} catch (err) {
+		console.error('Errore durante il salvataggio di data/cards.json:', err);
 		return false;
 	}
 }
@@ -66,21 +67,52 @@ export const POST: RequestHandler = async (event) => {
 		);
 	}
 
-	const newCard: Card = await request.json();
-	if (!newCard.title || !newCard.description) {
-		return json({ error: 'Titolo e descrizione sono obbligatori' }, { status: 400 });
+	const newCard: Partial<Card> = await request.json();
+
+	const title = (newCard.title || '').trim();
+	const fullName = (newCard.fullName || '').trim();
+	const description = (newCard.description || '').trim();
+	const category = (newCard.category || '').trim();
+	const images = Array.isArray(newCard.images)
+		? newCard.images.filter((img): img is string => typeof img === 'string' && img.trim().length > 0)
+		: undefined;
+
+	// Deve avere almeno un identificatore visivo o testuale
+	const mainTitle = title || fullName;
+	if (!mainTitle && (!images || images.length === 0)) {
+		return json(
+			{ error: 'Inserisci almeno un titolo, un acronimo o un\'immagine per la scheda.' },
+			{ status: 400 }
+		);
 	}
+
+	const now = new Date().toISOString();
+	const cardToSave: Card = {
+		id: newCard.id || `card-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+		title: title || fullName || 'Scheda Visiva',
+		fullName: fullName || undefined,
+		description: description,
+		category: category || 'Generale',
+		images: images && images.length > 0 ? images : undefined,
+		tags: Array.isArray(newCard.tags) ? newCard.tags : undefined,
+		createdAt: newCard.createdAt || now,
+		updatedAt: now
+	};
 
 	const cards = await readCards<Card[]>();
-	const existingIndex = cards.findIndex((c) => c.id === newCard.id);
+	const existingIndex = cards.findIndex((c) => c.id === cardToSave.id);
 	if (existingIndex >= 0) {
-		cards[existingIndex] = newCard;
+		cards[existingIndex] = cardToSave;
 	} else {
-		cards.unshift(newCard);
+		cards.unshift(cardToSave);
 	}
 
-	await writeCardsToFile(cards);
-	return json(newCard, { status: 201 });
+	const ok = await writeCardsToFile(cards);
+	if (!ok) {
+		return json({ error: 'Errore durante la scrittura della scheda su disco.' }, { status: 500 });
+	}
+
+	return json(cardToSave, { status: 201 });
 };
 
 export const PUT: RequestHandler = async (event) => {
@@ -100,7 +132,7 @@ export const PUT: RequestHandler = async (event) => {
 		);
 	}
 
-	const updatedCard: Card = await request.json();
+	const updatedCard: Partial<Card> = await request.json();
 	if (!updatedCard.id) {
 		return json({ error: 'ID card mancante' }, { status: 400 });
 	}
@@ -113,19 +145,39 @@ export const PUT: RequestHandler = async (event) => {
 
 	const oldCard = cards[index];
 	const oldImages = oldCard.images || [];
-	const newImages = updatedCard.images || [];
+	const newImages = Array.isArray(updatedCard.images)
+		? updatedCard.images.filter((img): img is string => typeof img === 'string' && img.trim().length > 0)
+		: [];
+
 	const removedImages = oldImages.filter((img) => !newImages.includes(img));
 	for (const imgUrl of removedImages) {
 		await deleteMediaFile(imgUrl);
 	}
 
-	cards[index] = {
-		...cards[index],
+	const title = (updatedCard.title !== undefined ? updatedCard.title : oldCard.title || '').trim();
+	const fullName = (updatedCard.fullName !== undefined ? updatedCard.fullName : oldCard.fullName || '').trim();
+	const description = (updatedCard.description !== undefined ? updatedCard.description : oldCard.description || '').trim();
+	const category = (updatedCard.category !== undefined ? updatedCard.category : oldCard.category || '').trim();
+
+	const cardToSave: Card = {
+		...oldCard,
 		...updatedCard,
+		id: oldCard.id,
+		title: title || fullName || oldCard.title || 'Scheda Visiva',
+		fullName: fullName || undefined,
+		description: description,
+		category: category || oldCard.category || 'Generale',
+		images: newImages.length > 0 ? newImages : undefined,
 		updatedAt: new Date().toISOString()
 	};
 
-	await writeCardsToFile(cards);
+	cards[index] = cardToSave;
+
+	const ok = await writeCardsToFile(cards);
+	if (!ok) {
+		return json({ error: 'Errore durante l\'aggiornamento della scheda su disco.' }, { status: 500 });
+	}
+
 	return json(cards[index]);
 };
 
@@ -161,7 +213,10 @@ export const DELETE: RequestHandler = async (event) => {
 	}
 
 	const filtered = cards.filter((c) => c.id !== id);
-	await writeCardsToFile(filtered);
+	const ok = await writeCardsToFile(filtered);
+	if (!ok) {
+		return json({ error: 'Errore durante l\'eliminazione della scheda dal disco.' }, { status: 500 });
+	}
 
 	return json({ success: true, id });
 };
