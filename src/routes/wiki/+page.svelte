@@ -34,12 +34,9 @@
 
 	let ignoredCount = $derived(ignoredIds.size);
 
-	// Wiki only includes cards with a title/acronym (excludes image-only cards)
+	// La Wiki mostra rigorosamente solo le card che possiedono un acronimo (title)
 	let wikiCards = $derived(
-		cards.filter((c) => {
-			const hasTitle = Boolean((c.title && c.title.trim()) || (c.fullName && c.fullName.trim()));
-			return hasTitle;
-		})
+		cards.filter((c) => Boolean(c.title && c.title.trim() !== ''))
 	);
 
 	let availableCategories = $derived.by<string[]>(() => {
