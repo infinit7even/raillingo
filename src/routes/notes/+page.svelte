@@ -527,11 +527,12 @@
 				<div class="vault-header-actions">
 					<button
 						type="button"
-						class="duo-btn duo-btn-green new-note-btn"
+						class="new-note-btn"
 						onclick={handleCreateNewNote}
 						title="Crea nuova nota"
 					>
-						➕ Nuova
+						<span>➕</span>
+						<span>Nuova</span>
 					</button>
 
 					<button
@@ -808,7 +809,7 @@
 					disabled={isUploadingImage}
 					title="Incolla (Ctrl+V) o allega immagine (PNG, JPG, WebP - max 1MB)"
 				>
-					{isUploadingImage ? '⏳ Caricamento...' : '🖼️ Inserisci Immagine'}
+					{isUploadingImage ? '⏳ Caricamento...' : '🖼️ Immagine'}
 				</button>
 				<input
 					bind:this={fileInputEl}
@@ -1006,12 +1007,12 @@
 	.obsidian-workspace {
 		display: grid;
 		grid-template-columns: 1fr;
-		gap: 0.85rem;
-		height: calc(100vh - 120px);
-		min-height: 560px;
-		max-height: 880px;
+		gap: 0.75rem;
+		height: calc(100vh - 110px);
+		min-height: 520px;
+		max-height: 900px;
 		width: 100%;
-		max-width: 1300px;
+		max-width: 1320px;
 		margin: 0 auto;
 		box-sizing: border-box;
 		transition: all 0.2s ease;
@@ -1019,7 +1020,7 @@
 
 	@media (min-width: 1024px) {
 		.obsidian-workspace {
-			grid-template-columns: 300px 1fr;
+			grid-template-columns: 310px 1fr;
 		}
 
 		.obsidian-workspace.vault-collapsed {
@@ -1031,13 +1032,15 @@
 	.vault-sidebar {
 		display: flex;
 		flex-direction: column;
-		gap: 0.6rem;
-		padding: 1rem;
+		gap: 0.55rem;
+		padding: 0.85rem;
 		background: var(--card-bg);
 		border-radius: 18px;
 		overflow: hidden;
 		height: 100%;
 		box-sizing: border-box;
+		border: 2px solid var(--border-color);
+		border-bottom: 4px solid var(--border-depth-color);
 	}
 
 	.vault-header {
@@ -1045,64 +1048,96 @@
 		align-items: center;
 		justify-content: space-between;
 		padding-bottom: 0.45rem;
-		border-bottom: 2px solid var(--border-color);
+		border-bottom: 1.5px solid var(--border-color);
 		flex-shrink: 0;
+		gap: 0.4rem;
 	}
 
 	.vault-title-group {
 		display: flex;
 		align-items: center;
-		gap: 0.45rem;
+		gap: 0.4rem;
+		min-width: 0;
 	}
 
 	.vault-icon {
-		font-size: 1.1rem;
+		font-size: 1rem;
+		flex-shrink: 0;
 	}
 
 	.vault-name {
 		font-family: 'Outfit', sans-serif;
-		font-size: 0.88rem;
+		font-size: 0.82rem;
 		font-weight: 900;
-		letter-spacing: 0.06em;
+		letter-spacing: 0.04em;
 		color: var(--text-color);
+		white-space: nowrap;
 	}
 
 	.vault-badge {
-		background: var(--badge-bg);
+		background: var(--card-bg-subtle);
 		border: 1px solid var(--border-color);
 		border-radius: 9999px;
 		padding: 0.1rem 0.45rem;
-		font-size: 0.7rem;
+		font-size: 0.68rem;
 		font-weight: 800;
 		color: var(--accent-color);
+		flex-shrink: 0;
 	}
 
 	.vault-header-actions {
 		display: flex;
 		align-items: center;
 		gap: 0.35rem;
+		flex-shrink: 0;
 	}
 
 	.new-note-btn {
-		font-size: 0.75rem;
-		padding: 0.35rem 0.7rem;
-		border-radius: 10px;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.3rem;
+		height: 30px;
+		padding: 0 0.65rem;
+		font-size: 0.74rem;
+		font-weight: 800;
+		font-family: 'Outfit', sans-serif;
+		letter-spacing: 0.02em;
+		border-radius: 9px;
+		background: var(--green-color);
+		border: 1.5px solid var(--green-depth);
+		border-bottom: 2.5px solid var(--green-depth);
+		color: #ffffff;
+		cursor: pointer;
+		user-select: none;
+		white-space: nowrap;
+		transition: all 0.12s ease;
+	}
+
+	.new-note-btn:hover {
+		background: #61df02;
+	}
+
+	.new-note-btn:active {
+		transform: translateY(1.5px);
+		border-bottom-width: 1px;
 	}
 
 	.collapse-vault-btn {
 		background: var(--card-bg-subtle);
 		border: 1.5px solid var(--border-color);
-		border-radius: 8px;
-		width: 28px;
-		height: 28px;
+		border-bottom: 2.5px solid var(--border-depth-color);
+		border-radius: 9px;
+		width: 30px;
+		height: 30px;
 		display: flex;
 		align-items: center;
 		justify-content: center;
 		color: var(--text-muted);
-		font-size: 0.75rem;
+		font-size: 0.72rem;
 		font-weight: 900;
 		cursor: pointer;
-		transition: all 0.15s ease;
+		transition: all 0.12s ease;
 	}
 
 	.collapse-vault-btn:hover {
@@ -1111,24 +1146,38 @@
 		background: var(--hover-bg);
 	}
 
+	.collapse-vault-btn:active {
+		transform: translateY(1.5px);
+		border-bottom-width: 1px;
+	}
+
 	.expand-vault-btn {
 		background: var(--card-bg-subtle);
 		border: 1.5px solid var(--border-color);
-		border-radius: 8px;
+		border-bottom: 2.5px solid var(--border-depth-color);
+		border-radius: 9px;
 		padding: 0.3rem 0.65rem;
-		font-size: 0.78rem;
+		height: 32px;
+		box-sizing: border-box;
+		font-size: 0.76rem;
 		font-weight: 800;
 		color: var(--accent-color);
 		cursor: pointer;
-		display: flex;
+		display: inline-flex;
 		align-items: center;
 		gap: 0.35rem;
-		transition: all 0.15s ease;
+		transition: all 0.12s ease;
+		white-space: nowrap;
 	}
 
 	.expand-vault-btn:hover {
 		background: var(--hover-bg);
 		border-color: var(--accent-color);
+	}
+
+	.expand-vault-btn:active {
+		transform: translateY(1.5px);
+		border-bottom-width: 1px;
 	}
 
 	.vault-search-box {
@@ -1138,12 +1187,14 @@
 		background: var(--card-bg-subtle);
 		border: 1.5px solid var(--border-color);
 		border-radius: 10px;
-		padding: 0.4rem 0.65rem;
+		padding: 0.35rem 0.6rem;
 		flex-shrink: 0;
+		height: 34px;
+		box-sizing: border-box;
 	}
 
 	.search-ico {
-		font-size: 0.85rem;
+		font-size: 0.8rem;
 		color: var(--text-muted);
 	}
 
@@ -1153,26 +1204,29 @@
 		border: none;
 		outline: none;
 		color: var(--text-color);
-		font-size: 0.82rem;
+		font-size: 0.8rem;
 		font-weight: 700;
+		min-width: 0;
 	}
 
 	.clear-btn {
 		background: transparent;
 		border: none;
 		color: var(--text-muted);
-		font-size: 0.85rem;
+		font-size: 0.8rem;
 		cursor: pointer;
+		padding: 0;
 	}
 
 	.vault-folders-bar {
 		display: flex;
 		align-items: center;
-		gap: 0.35rem;
+		gap: 0.3rem;
 		overflow-x: auto;
-		padding-bottom: 0.2rem;
+		padding: 2px 0 4px 0;
 		flex-shrink: 0;
 		scrollbar-width: none;
+		-webkit-overflow-scrolling: touch;
 	}
 
 	.vault-folders-bar::-webkit-scrollbar {
@@ -1182,20 +1236,27 @@
 	.folder-chip {
 		background: var(--card-bg-subtle);
 		border: 1.5px solid var(--border-color);
-		border-radius: 8px;
-		padding: 0.25rem 0.55rem;
-		font-size: 0.7rem;
+		border-radius: 9999px;
+		padding: 0.25rem 0.65rem;
+		font-size: 0.72rem;
 		font-weight: 800;
 		color: var(--text-muted);
 		cursor: pointer;
 		white-space: nowrap;
 		transition: all 0.15s ease;
+		flex-shrink: 0;
+	}
+
+	.folder-chip:hover {
+		color: var(--text-color);
+		border-color: var(--accent-color);
 	}
 
 	.folder-chip.active {
 		background: var(--accent-light-bg);
 		border-color: var(--accent-color);
 		color: var(--accent-color);
+		font-weight: 900;
 	}
 
 	.vault-files-list {
@@ -1204,14 +1265,14 @@
 		display: flex;
 		flex-direction: column;
 		gap: 0.35rem;
-		padding-right: 0.2rem;
+		padding-right: 0.15rem;
 	}
 
 	.vault-file-item {
 		background: var(--card-bg-subtle);
-		border: 1.5px solid transparent;
-		border-left: 3px solid transparent;
-		border-radius: 10px;
+		border: 1.5px solid var(--border-color);
+		border-left: 3.5px solid transparent;
+		border-radius: 12px;
 		padding: 0.55rem 0.7rem;
 		cursor: pointer;
 		display: flex;
@@ -1219,44 +1280,59 @@
 		gap: 0.25rem;
 		text-align: left;
 		transition: all 0.15s ease;
+		box-sizing: border-box;
 	}
 
 	.vault-file-item:hover {
 		background: var(--hover-bg);
+		border-color: var(--accent-color);
 	}
 
 	.vault-file-item.active {
 		background: var(--accent-light-bg);
 		border-color: var(--accent-color);
-		border-left: 4px solid var(--accent-color);
+		border-left-color: var(--accent-color);
+		box-shadow: 0 2px 8px var(--shadow-color);
 	}
 
 	.file-item-header {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		gap: 0.35rem;
+		gap: 0.4rem;
 	}
 
 	.file-title {
 		font-family: 'Outfit', sans-serif;
-		font-size: 0.88rem;
+		font-size: 0.86rem;
 		font-weight: 800;
 		color: var(--text-color);
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
+		display: flex;
+		align-items: center;
+		gap: 0.3rem;
+		flex: 1;
+		min-width: 0;
+	}
+
+	.pin-ico {
+		font-size: 0.75rem;
+		flex-shrink: 0;
 	}
 
 	.file-cat {
-		font-size: 0.65rem;
+		font-size: 0.62rem;
 		font-weight: 800;
 		text-transform: uppercase;
 		color: var(--accent-color);
 		background: var(--card-bg);
-		border-radius: 4px;
+		border: 1px solid var(--border-color);
+		border-radius: 6px;
 		padding: 0.1rem 0.35rem;
 		white-space: nowrap;
+		flex-shrink: 0;
 	}
 
 	.file-item-meta {
@@ -1291,70 +1367,96 @@
 		flex-direction: column;
 		background: var(--card-bg);
 		border-radius: 18px;
-		padding: 1rem 1.25rem;
+		padding: 0.85rem 1.15rem;
 		overflow: hidden;
 		height: 100%;
 		box-sizing: border-box;
-		gap: 0.55rem;
+		gap: 0.5rem;
+		border: 2px solid var(--border-color);
+		border-bottom: 4px solid var(--border-depth-color);
 	}
 
 	.workspace-header {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		gap: 0.6rem;
+		gap: 0.5rem;
 		padding-bottom: 0.45rem;
-		border-bottom: 2px solid var(--border-color);
+		border-bottom: 1.5px solid var(--border-color);
 		flex-shrink: 0;
-		flex-wrap: wrap;
+		min-height: 38px;
 	}
 
 	.workspace-header-left {
 		display: flex;
 		align-items: center;
-		gap: 0.5rem;
-		flex-wrap: wrap;
+		gap: 0.4rem;
+		min-width: 0;
 	}
 
 	.mobile-back-btn {
 		display: none;
 		background: var(--card-bg-subtle);
 		border: 1.5px solid var(--border-color);
+		border-bottom: 2.5px solid var(--border-depth-color);
 		border-radius: 8px;
-		padding: 0.3rem 0.6rem;
-		font-size: 0.78rem;
+		padding: 0 0.6rem;
+		height: 32px;
+		font-size: 0.76rem;
 		font-weight: 800;
 		color: var(--accent-color);
 		cursor: pointer;
+		white-space: nowrap;
+		transition: all 0.12s ease;
 	}
 
 	@media (max-width: 1023px) {
 		.mobile-back-btn {
-			display: block;
+			display: inline-flex;
+			align-items: center;
 		}
 	}
 
 	.workspace-breadcrumb {
 		display: flex;
 		align-items: center;
-		gap: 0.35rem;
-	}
-
-	.breadcrumb-category-select {
+		gap: 0.3rem;
 		background: var(--card-bg-subtle);
 		border: 1.5px solid var(--border-color);
 		border-radius: 8px;
-		padding: 0.25rem 0.55rem;
+		padding: 0 0.5rem;
+		height: 32px;
+		box-sizing: border-box;
+	}
+
+	.folder-ico {
+		font-size: 0.85rem;
+		flex-shrink: 0;
+	}
+
+	.breadcrumb-category-select {
+		background: transparent;
+		border: none;
 		color: var(--text-color);
 		font-family: inherit;
-		font-size: 0.78rem;
+		font-size: 0.76rem;
 		font-weight: 800;
 		outline: none;
+		cursor: pointer;
+		max-width: 140px;
+	}
+
+	.breadcrumb-category-select option {
+		background: var(--card-bg);
+		color: var(--text-color);
 	}
 
 	.save-status-pill {
 		font-size: 0.72rem;
 		font-weight: 700;
+		white-space: nowrap;
+		display: flex;
+		align-items: center;
 	}
 
 	.saving-txt {
@@ -1369,35 +1471,46 @@
 		display: flex;
 		align-items: center;
 		gap: 0.3rem;
+		flex-shrink: 0;
 	}
 
 	.action-icon-btn {
 		background: var(--card-bg-subtle);
 		border: 1.5px solid var(--border-color);
-		border-radius: 8px;
-		width: 30px;
-		height: 30px;
-		display: flex;
+		border-bottom: 2.5px solid var(--border-depth-color);
+		border-radius: 9px;
+		width: 32px;
+		height: 32px;
+		display: inline-flex;
 		align-items: center;
 		justify-content: center;
 		color: var(--text-color);
-		font-size: 0.85rem;
+		font-size: 0.88rem;
 		cursor: pointer;
-		transition: all 0.15s ease;
+		transition: all 0.12s ease;
+		user-select: none;
 	}
 
 	.action-icon-btn:hover {
 		background: var(--hover-bg);
+		border-color: var(--accent-color);
+	}
+
+	.action-icon-btn:active {
+		transform: translateY(1.5px);
+		border-bottom-width: 1px;
 	}
 
 	.action-icon-btn.pinned {
 		background: rgba(255, 150, 0, 0.18);
 		border-color: var(--orange-color);
+		border-bottom-color: var(--orange-depth);
 	}
 
 	.delete-btn:hover {
 		background: rgba(255, 75, 75, 0.18);
 		border-color: #ff5e5b;
+		border-bottom-color: #ea2b2b;
 	}
 
 	/* Ribbon formatting bar */
@@ -1407,11 +1520,14 @@
 		gap: 0.25rem;
 		background: var(--card-bg-subtle);
 		border: 1.5px solid var(--border-color);
-		border-radius: 10px;
-		padding: 0.25rem 0.45rem;
+		border-radius: 12px;
+		padding: 0.25rem 0.4rem;
 		overflow-x: auto;
 		flex-shrink: 0;
 		scrollbar-width: none;
+		-webkit-overflow-scrolling: touch;
+		height: 38px;
+		box-sizing: border-box;
 	}
 
 	.obsidian-ribbon-bar::-webkit-scrollbar {
@@ -1421,18 +1537,29 @@
 	.ribbon-btn {
 		background: transparent;
 		border: 1px solid transparent;
-		border-radius: 6px;
-		padding: 0.2rem 0.45rem;
+		border-radius: 7px;
+		height: 28px;
+		padding: 0 0.55rem;
 		font-size: 0.74rem;
 		font-weight: 800;
 		color: var(--text-color);
 		cursor: pointer;
 		white-space: nowrap;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.25rem;
+		transition: all 0.12s ease;
+		flex-shrink: 0;
 	}
 
 	.ribbon-btn:hover {
-		background: var(--hover-bg);
+		background: var(--card-bg);
 		border-color: var(--border-color);
+	}
+
+	.ribbon-btn:active {
+		transform: scale(0.95);
 	}
 
 	.ribbon-sep {
@@ -1440,6 +1567,7 @@
 		height: 16px;
 		background: var(--border-color);
 		margin: 0 0.1rem;
+		flex-shrink: 0;
 	}
 
 	.image-ribbon-btn {
@@ -1454,7 +1582,7 @@
 
 	/* Seamless Title Input */
 	.note-document-title-box {
-		padding: 0.25rem 0 0.15rem 0;
+		padding: 0.15rem 0 0.1rem 0;
 		flex-shrink: 0;
 	}
 
@@ -1464,15 +1592,17 @@
 		border: none;
 		outline: none;
 		font-family: 'Outfit', sans-serif;
-		font-size: 1.5rem;
+		font-size: 1.4rem;
 		font-weight: 900;
 		color: var(--text-color);
-		padding: 0;
+		padding: 0 0 0.2rem 0;
 		letter-spacing: -0.01em;
+		border-bottom: 2px solid transparent;
+		transition: border-color 0.2s ease;
 	}
 
 	.obsidian-title-input:focus {
-		border-bottom: 2px solid var(--accent-color);
+		border-bottom-color: var(--accent-color);
 	}
 
 	/* 📄 Word-Style Document Canvas */
@@ -1483,8 +1613,8 @@
 		overflow-y: auto;
 		background: var(--card-bg-subtle);
 		border: 1.5px solid var(--border-color);
-		border-radius: 12px;
-		padding: 1.25rem;
+		border-radius: 14px;
+		padding: 1.15rem;
 		box-sizing: border-box;
 	}
 
@@ -1494,50 +1624,50 @@
 		outline: none;
 		color: var(--text-color);
 		font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
-		font-size: 1rem;
-		line-height: 1.7;
+		font-size: 0.98rem;
+		line-height: 1.65;
 		word-break: break-word;
 	}
 
 	.word-document-editor :global(p) {
-		margin: 0.4rem 0;
+		margin: 0.35rem 0;
 		min-height: 1.4em;
 	}
 
 	.word-document-editor :global(h1) {
-		font-size: 1.55rem;
+		font-size: 1.45rem;
 		font-weight: 900;
 		color: var(--accent-color);
-		margin: 1.1rem 0 0.4rem 0;
+		margin: 1rem 0 0.35rem 0;
 	}
 
 	.word-document-editor :global(h2) {
-		font-size: 1.35rem;
+		font-size: 1.28rem;
 		font-weight: 900;
 		color: var(--text-color);
-		margin: 0.9rem 0 0.35rem 0;
+		margin: 0.85rem 0 0.3rem 0;
 	}
 
 	.word-document-editor :global(h3) {
-		font-size: 1.15rem;
+		font-size: 1.12rem;
 		font-weight: 800;
 		color: var(--text-color);
-		margin: 0.75rem 0 0.3rem 0;
+		margin: 0.7rem 0 0.25rem 0;
 	}
 
 	.word-document-editor :global(ul),
 	.word-document-editor :global(ol) {
-		margin: 0.4rem 0;
-		padding-left: 1.5rem;
+		margin: 0.35rem 0;
+		padding-left: 1.4rem;
 	}
 
 	.word-document-editor :global(li) {
-		margin: 0.2rem 0;
+		margin: 0.15rem 0;
 	}
 
 	.word-document-editor :global(blockquote) {
-		margin: 0.6rem 0;
-		padding: 0.6rem 1rem;
+		margin: 0.5rem 0;
+		padding: 0.5rem 0.85rem;
 		border-left: 4px solid var(--accent-color);
 		background: var(--accent-light-bg);
 		border-radius: 0 10px 10px 0;
@@ -1560,7 +1690,7 @@
 
 	/* 🖼️ INLINE IMAGE FIGURE IN MEZZO AL TESTO (Word-Style) */
 	.word-document-editor :global(figure.doc-inline-image) {
-		margin: 0.85rem auto;
+		margin: 0.75rem auto;
 		display: flex;
 		flex-direction: column;
 		align-items: center;
@@ -1595,7 +1725,7 @@
 		backdrop-filter: blur(8px);
 		border: 1px solid rgba(255, 255, 255, 0.2);
 		border-radius: 8px;
-		padding: 0.25rem 0.45rem;
+		padding: 0.2rem 0.4rem;
 		display: flex;
 		align-items: center;
 		gap: 0.3rem;
@@ -1663,12 +1793,28 @@
 		font-weight: 700;
 		color: var(--text-muted);
 		flex-shrink: 0;
+		gap: 0.5rem;
 	}
 
 	.doc-stats-left {
 		display: flex;
 		align-items: center;
-		gap: 0.4rem;
+		gap: 0.35rem;
+		white-space: nowrap;
+		overflow-x: auto;
+		scrollbar-width: none;
+	}
+
+	.doc-stats-right {
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	@media (max-width: 640px) {
+		.doc-stats-right {
+			display: none;
+		}
 	}
 
 	.workspace-empty-canvas {
@@ -1697,6 +1843,7 @@
 		width: 280px;
 		max-height: 80vh;
 		background: var(--card-bg);
+		border: 2px solid var(--border-color);
 		border-radius: 16px;
 		padding: 1rem;
 		z-index: 400;
