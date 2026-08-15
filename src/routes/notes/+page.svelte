@@ -996,7 +996,6 @@
 					</svg>
 					<span>ACCEDI CON DISCORD PER SALVARE GLI APPUNTI</span>
 				</a>
-				<span class="quick-access-hint">⚡ Login rapido in 1 click — Il tuo Vault salvato e sincronizzato</span>
 			</div>
 		</div>
 	</div>
