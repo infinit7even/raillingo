@@ -248,11 +248,6 @@
 					</button>
 				{/if}
 
-				<a href="/appunti" class="duo-btn duo-btn-orange flex-btn">
-					<img src="/emoji/clipboard_3d.png" alt="Appunti" class="btn-emoji-img" />
-					PRENDI APPUNTI
-				</a>
-
 				<a href="/wiki" class="duo-btn duo-btn-blue flex-btn"> 📚 WIKI </a>
 				<a
 					href="https://ko-fi.com/infinit7even"
