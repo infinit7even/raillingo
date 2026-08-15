@@ -282,6 +282,8 @@
 							class="discord-icon-mini"
 							xmlns="http://www.w3.org/2000/svg"
 							viewBox="0 0 127.14 96.36"
+							width="20"
+							height="20"
 							fill="currentColor"
 						>
 							<path
@@ -770,6 +772,14 @@
 		gap: 0.5rem;
 		text-decoration: none;
 		transition: filter 0.15s ease, transform 0.1s ease;
+	}
+
+	.discord-icon-mini {
+		width: 20px;
+		height: 20px;
+		max-width: 20px;
+		max-height: 20px;
+		flex-shrink: 0;
 	}
 
 	.discord-sync-btn:hover {

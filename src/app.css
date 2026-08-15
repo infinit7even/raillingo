@@ -595,6 +595,17 @@ select {
 	border: 1.5px solid var(--border-color);
 }
 
+/* 👾 Icone Discord SVG Globali */
+.discord-icon-mini,
+.discord-svg {
+	width: 20px;
+	height: 20px;
+	max-width: 20px;
+	max-height: 20px;
+	flex-shrink: 0;
+	object-fit: contain;
+}
+
 /* Scrollbar stilizzata */
 ::-webkit-scrollbar {
 	width: 8px;
