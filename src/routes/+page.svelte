@@ -277,7 +277,7 @@
 						🚪 LOGOUT ({user.username})
 					</button>
 				{:else}
-					<a href="/notes" class="duo-btn duo-btn-blue flex-btn">
+					<a href="/notes" class="duo-btn flex-btn home-discord-login-btn">
 						🔑 LOGIN
 					</a>
 				{/if}
@@ -746,6 +746,20 @@
 	.sidebar-privacy-footer {
 		text-align: center;
 		padding: 0.8rem 0 1rem 0;
+	}
+
+	.home-discord-login-btn {
+		background-color: #5865f2 !important;
+		color: #ffffff !important;
+		border: none !important;
+		border-bottom: 4px solid #4752c4 !important;
+		transition: background-color 0.15s ease, filter 0.15s ease, transform 0.1s ease;
+	}
+
+	.home-discord-login-btn:hover {
+		background-color: #4752c4 !important;
+		color: #ffffff !important;
+		filter: brightness(1.08);
 	}
 
 	@media (max-width: 1023px) {
