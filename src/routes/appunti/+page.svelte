@@ -10,6 +10,8 @@
 	import { toastStore } from '$lib/stores/toastStore';
 	import { fade } from 'svelte/transition';
 
+	import { compressImage } from '$lib/utils/imageCompressor';
+
 	let { data } = $props();
 
 	const seed = (() => {
@@ -27,14 +29,17 @@
 	let isOutlineOpen = $state(false);
 	let isSidebarOpenMobile = $state(true); // Su mobile: true = mostra lista file, false = mostra editor
 	let isAutoSaving = $state(false);
+	let isUploadingImage = $state(false);
 	let lastSavedTime = $state<string>('');
 
 	// Active note local editor state
 	let currentTitle = $state('');
 	let currentContent = $state('');
 	let currentCategory = $state('Normativa RFI');
+	let currentImages = $state<string[]>([]);
 	let currentIsPinned = $state(false);
 	let textareaEl = $state<HTMLTextAreaElement | null>(null);
+	let fileInputEl = $state<HTMLInputElement | null>(null);
 
 	let saveDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -62,6 +67,7 @@
 		currentTitle = note.title;
 		currentContent = note.content || '';
 		currentCategory = note.category || 'Normativa RFI';
+		currentImages = note.images ? [...note.images] : [];
 		currentIsPinned = Boolean(note.isPinned);
 		isSidebarOpenMobile = false;
 	}
@@ -148,6 +154,7 @@
 				title: currentTitle.trim() || 'Appunto senza titolo',
 				content: currentContent,
 				category: currentCategory,
+				images: currentImages,
 				isPinned: currentIsPinned
 			});
 			isAutoSaving = false;
@@ -161,6 +168,7 @@
 			title: 'Nuovo Appunto',
 			content: '',
 			category: selectedCategory !== 'ALL' ? selectedCategory : 'Normativa RFI',
+			images: [],
 			isPinned: false
 		});
 
@@ -175,7 +183,7 @@
 
 	async function handleDeleteActiveNote() {
 		if (!selectedNoteId || !activeNote) return;
-		if (confirm(`Sei sicuro di voler eliminare "${activeNote.title}"?`)) {
+		if (confirm(`Sei sicuro di voler eliminare "${activeNote.title}" e le sue immagini allegate?`)) {
 			const idToDelete = selectedNoteId;
 			await notesStore.deleteNote(idToDelete);
 			const remaining = notes.filter((n) => n.id !== idToDelete);
@@ -185,6 +193,7 @@
 				selectedNoteId = null;
 				currentTitle = '';
 				currentContent = '';
+				currentImages = [];
 			}
 		}
 	}
@@ -214,6 +223,116 @@
 				start + prefix.length + selected.length
 			);
 		}, 10);
+	}
+
+	// Funzione unificata per comprimere e caricare immagini incollate o selezionate
+	async function uploadAndInsertImage(rawFile: File | Blob) {
+		if (!selectedNoteId) {
+			toastStore.show({ message: '⚠️ Seleziona prima un appunto in cui incollare l\'immagine.' });
+			return;
+		}
+
+		isUploadingImage = true;
+		toastStore.show({ message: '⏳ Compressione e caricamento immagine in corso...' });
+
+		try {
+			// Comprimi l'immagine in WebP ottimizzato (massimo 1MB)
+			const compressedFile = await compressImage(rawFile, {
+				maxSizeMB: 1,
+				maxWidth: 1920,
+				maxHeight: 1920,
+				quality: 0.82
+			});
+
+			const formData = new FormData();
+			formData.append('file', compressedFile);
+
+			const res = await fetch('/api/notes/upload', {
+				method: 'POST',
+				body: formData
+			});
+
+			if (!res.ok) {
+				const err = await res.json();
+				toastStore.show({ message: `⚠️ ${err.error || 'Errore caricamento immagine'}` });
+				return;
+			}
+
+			const data = await res.json();
+			const imageUrl = data.url;
+
+			// Inserisci tag Markdown nella posizione del cursore
+			if (textareaEl) {
+				const start = textareaEl.selectionStart || currentContent.length;
+				const end = textareaEl.selectionEnd || currentContent.length;
+				const imageTag = `\n![immagine](${imageUrl})\n`;
+
+				currentContent =
+					currentContent.substring(0, start) + imageTag + currentContent.substring(end);
+
+				setTimeout(() => {
+					if (!textareaEl) return;
+					textareaEl.focus();
+					textareaEl.setSelectionRange(start + imageTag.length, start + imageTag.length);
+				}, 20);
+			} else {
+				currentContent += `\n![immagine](${imageUrl})\n`;
+			}
+
+			// Aggiungi l'URL all'array images della nota
+			if (!currentImages.includes(imageUrl)) {
+				currentImages = [...currentImages, imageUrl];
+			}
+
+			triggerAutoSave();
+			toastStore.show({ message: '🖼️ Immagine compressa e incollata con successo!' });
+		} catch (err) {
+			console.error('Errore compressione/upload immagine:', err);
+			toastStore.show({ message: '⚠️ Impossibile caricare l\'immagine' });
+		} finally {
+			isUploadingImage = false;
+		}
+	}
+
+	// Gestione evento incolla (Paste)
+	function handlePaste(e: ClipboardEvent) {
+		const items = e.clipboardData?.items;
+		if (!items) return;
+
+		for (let i = 0; i < items.length; i++) {
+			const item = items[i];
+			if (item.type.startsWith('image/')) {
+				e.preventDefault();
+				const file = item.getAsFile();
+				if (file) {
+					uploadAndInsertImage(file);
+				}
+				break;
+			}
+		}
+	}
+
+	// Gestione evento Drag & Drop
+	function handleDrop(e: DragEvent) {
+		const files = e.dataTransfer?.files;
+		if (!files || files.length === 0) return;
+
+		for (let i = 0; i < files.length; i++) {
+			const file = files[i];
+			if (file.type.startsWith('image/')) {
+				e.preventDefault();
+				uploadAndInsertImage(file);
+				break;
+			}
+		}
+	}
+
+	function handleFileInputChange(e: Event) {
+		const target = e.target as HTMLInputElement;
+		if (target.files && target.files.length > 0) {
+			uploadAndInsertImage(target.files[0]);
+			target.value = '';
+		}
 	}
 
 	function copyMarkdown() {
@@ -516,6 +635,23 @@
 				>
 					💻 Codice
 				</button>
+				<span class="ribbon-sep"></span>
+				<button
+					type="button"
+					class="ribbon-btn image-ribbon-btn"
+					onclick={() => fileInputEl?.click()}
+					disabled={isUploadingImage}
+					title="Incolla o carica un'immagine (PNG, JPG, WebP - max 1MB)"
+				>
+					{isUploadingImage ? '⏳ Caricamento...' : '🖼️ Immagine'}
+				</button>
+				<input
+					bind:this={fileInputEl}
+					type="file"
+					accept="image/png,image/jpeg,image/webp"
+					onchange={handleFileInputChange}
+					style="display: none;"
+				/>
 			</div>
 
 			<!-- Seamless Note Title Input -->
@@ -529,13 +665,52 @@
 				/>
 			</div>
 
-			<!-- Pure Writing Textarea Canvas (SENZA ANTEPRIMA) -->
-			<div class="document-canvas-container">
+			<!-- Attached Images Tray (se presenti immagini nella nota) -->
+			{#if currentImages && currentImages.length > 0}
+				<div class="attached-images-tray">
+					<span class="images-tray-lbl">Immagini allegate ({currentImages.length}):</span>
+					<div class="images-tray-list">
+						{#each currentImages as imgUrl}
+							<div class="image-thumb-pill">
+								<img src={imgUrl} alt="" class="thumb-preview" />
+								<a href={imgUrl} target="_blank" rel="noopener noreferrer" class="thumb-link" title="Apri a dimensione intera">
+									Vedi
+								</a>
+								<button
+									type="button"
+									class="thumb-delete-btn"
+									onclick={() => {
+										// Rimuovi l'immagine dal testo e dall'array images
+										currentContent = currentContent.replace(new RegExp(`!\\[.*?\\]\\(${imgUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\)`, 'g'), '');
+										currentImages = currentImages.filter((u) => u !== imgUrl);
+										triggerAutoSave();
+										toastStore.show({ message: '🗑️ Immagine rimossa dalla nota' });
+									}}
+									title="Elimina immagine"
+								>
+									✕
+								</button>
+							</div>
+						{/each}
+					</div>
+				</div>
+			{/if}
+
+			<!-- Pure Writing Textarea Canvas (SENZA ANTEPRIMA) con supporto Paste & Drop -->
+			<div
+				class="document-canvas-container"
+				ondrop={handleDrop}
+				ondragover={(e) => e.preventDefault()}
+				role="region"
+				aria-label="Area di scrittura"
+			>
 				<textarea
 					bind:this={textareaEl}
 					bind:value={currentContent}
 					oninput={triggerAutoSave}
-					placeholder="Scrivi qui i tuoi appunti..."
+					onpaste={handlePaste}
+					ondrop={handleDrop}
+					placeholder="Scrivi qui i tuoi appunti... (Puoi incollare immagini direttamente con Ctrl+V)"
 					class="obsidian-editor-textarea"
 				></textarea>
 			</div>
@@ -983,6 +1158,91 @@
 		height: 16px;
 		background: var(--border-color);
 		margin: 0 0.1rem;
+	}
+
+	.image-ribbon-btn {
+		color: var(--accent-color);
+		font-weight: 800;
+	}
+
+	.image-ribbon-btn:disabled {
+		opacity: 0.6;
+		cursor: wait;
+	}
+
+	/* Attached Images Tray */
+	.attached-images-tray {
+		display: flex;
+		flex-direction: column;
+		gap: 0.35rem;
+		padding: 0.35rem 0.6rem;
+		background: var(--card-bg-subtle);
+		border: 1px solid var(--border-color);
+		border-radius: 10px;
+		flex-shrink: 0;
+	}
+
+	.images-tray-lbl {
+		font-size: 0.68rem;
+		font-weight: 800;
+		color: var(--text-muted);
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+	}
+
+	.images-tray-list {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+		overflow-x: auto;
+		scrollbar-width: none;
+	}
+
+	.images-tray-list::-webkit-scrollbar {
+		display: none;
+	}
+
+	.image-thumb-pill {
+		display: flex;
+		align-items: center;
+		gap: 0.35rem;
+		background: var(--card-bg);
+		border: 1.5px solid var(--border-color);
+		border-radius: 8px;
+		padding: 0.2rem 0.4rem;
+		flex-shrink: 0;
+	}
+
+	.thumb-preview {
+		width: 24px;
+		height: 24px;
+		object-fit: cover;
+		border-radius: 4px;
+	}
+
+	.thumb-link {
+		font-size: 0.72rem;
+		font-weight: 800;
+		color: var(--accent-color);
+		text-decoration: none;
+	}
+
+	.thumb-link:hover {
+		text-decoration: underline;
+	}
+
+	.thumb-delete-btn {
+		background: transparent;
+		border: none;
+		color: #ff5e5b;
+		font-size: 0.75rem;
+		font-weight: 900;
+		cursor: pointer;
+		padding: 0 0.15rem;
+	}
+
+	.thumb-delete-btn:hover {
+		transform: scale(1.2);
 	}
 
 	/* Seamless Title Input */

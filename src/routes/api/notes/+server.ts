@@ -22,6 +22,28 @@ async function writeNotesToFile(notes: Note[]): Promise<boolean> {
 	}
 }
 
+async function deleteMediaFile(imgUrl: string) {
+	if (!imgUrl || typeof imgUrl !== 'string') return;
+	const filename = path.basename(imgUrl.split('?')[0]);
+	if (!filename || filename.includes('..')) return;
+
+	const dataPath = path.resolve('data/uploads', filename);
+	const staticPath = path.resolve('static/uploads', filename);
+
+	await Promise.all([fs.unlink(dataPath).catch(() => {}), fs.unlink(staticPath).catch(() => {})]);
+}
+
+function extractImageUrls(content: string): string[] {
+	if (!content || typeof content !== 'string') return [];
+	const urls: string[] = [];
+	const regex = /!\[.*?\]\(((\/uploads\/[^)]+))\)/g;
+	let match;
+	while ((match = regex.exec(content)) !== null) {
+		urls.push(match[1]);
+	}
+	return urls;
+}
+
 export const GET: RequestHandler = async ({ request, cookies }) => {
 	const user = readSession(cookies);
 	if (!user) {
@@ -69,13 +91,19 @@ export const POST: RequestHandler = async (event) => {
 	const maxOrder = userNotes.reduce((max, n) => Math.max(max, n.order ?? 0), 0);
 
 	const now = new Date().toISOString();
+	const noteContent = payload.content || '';
+	const contentImages = extractImageUrls(noteContent);
+	const explicitImages = Array.isArray(payload.images) ? payload.images : [];
+	const combinedImages = Array.from(new Set([...explicitImages, ...contentImages]));
+
 	const newNote: Note = {
 		id: payload.id || crypto.randomUUID(),
 		userId: user.userId,
 		title: payload.title.trim(),
-		content: payload.content || '',
+		content: noteContent,
 		category: payload.category?.trim() || 'Generale & Varie',
 		tags: Array.isArray(payload.tags) ? payload.tags.map((t) => String(t).trim()).filter(Boolean) : [],
+		images: combinedImages,
 		isPinned: Boolean(payload.isPinned),
 		order: typeof payload.order === 'number' ? payload.order : maxOrder + 1,
 		createdAt: payload.createdAt || now,
@@ -120,15 +148,36 @@ export const PUT: RequestHandler = async (event) => {
 		return json({ error: 'Accesso negato a questa nota.' }, { status: 403 });
 	}
 
+	const oldNote = allNotes[index];
+	const oldImages = new Set<string>([
+		...(oldNote.images || []),
+		...extractImageUrls(oldNote.content || '')
+	]);
+
+	const newContent = updated.content !== undefined ? updated.content : oldNote.content;
+	const contentImages = extractImageUrls(newContent || '');
+	const explicitImages = Array.isArray(updated.images)
+		? updated.images
+		: (oldNote.images || []);
+	const newImages = new Set<string>([...explicitImages, ...contentImages]);
+
+	// Cancella fisicamente dal disco i file immagine non più utilizzati nella nota
+	for (const imgUrl of oldImages) {
+		if (!newImages.has(imgUrl)) {
+			await deleteMediaFile(imgUrl);
+		}
+	}
+
 	const now = new Date().toISOString();
 	allNotes[index] = {
 		...allNotes[index],
 		title: updated.title !== undefined ? updated.title.trim() : allNotes[index].title,
-		content: updated.content !== undefined ? updated.content : allNotes[index].content,
+		content: newContent,
 		category: updated.category !== undefined ? updated.category.trim() : allNotes[index].category,
 		tags: Array.isArray(updated.tags)
 			? updated.tags.map((t) => String(t).trim()).filter(Boolean)
 			: allNotes[index].tags,
+		images: Array.from(newImages),
 		isPinned: updated.isPinned !== undefined ? Boolean(updated.isPinned) : allNotes[index].isPinned,
 		order: typeof updated.order === 'number' ? updated.order : allNotes[index].order,
 		updatedAt: now
@@ -168,6 +217,16 @@ export const DELETE: RequestHandler = async (event) => {
 
 	if (noteToDelete.userId && noteToDelete.userId !== user.userId && !user.isAdmin) {
 		return json({ error: 'Accesso negato: nota non appartenente al tuo account.' }, { status: 403 });
+	}
+
+	// Elimina tutti i file immagine fisici associati a questa nota
+	const imagesToDelete = new Set<string>([
+		...(noteToDelete.images || []),
+		...extractImageUrls(noteToDelete.content || '')
+	]);
+
+	for (const imgUrl of imagesToDelete) {
+		await deleteMediaFile(imgUrl);
 	}
 
 	const filtered = allNotes.filter((n) => n.id !== id);
