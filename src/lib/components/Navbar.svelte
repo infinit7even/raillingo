@@ -197,8 +197,8 @@
 		transform: translateX(-100%);
 		transition:
 			transform 0.32s cubic-bezier(0.16, 1, 0.3, 1),
-			background-color 0.3s ease,
-			border-color 0.3s ease;
+			background-color 0.18s cubic-bezier(0.4, 0, 0.2, 1),
+			border-color 0.18s cubic-bezier(0.4, 0, 0.2, 1);
 	}
 
 	.duo-navigation.open {

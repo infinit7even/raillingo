@@ -1,5 +1,6 @@
 :root,
 [data-theme='dark'] {
+	color-scheme: dark;
 	/* 🦉 Dark Theme Background (#171f23) */
 	--bg-color: #171f23;
 	--header-bg: #171f23;
@@ -39,6 +40,7 @@
 }
 
 [data-theme='light'] {
+	color-scheme: light;
 	/* ☀️ Duolingo Light */
 	--bg-color: #ffffff;
 	--header-bg: #ffffff;
@@ -216,6 +218,30 @@
    ✨ Fast & Cute Micro-Animations & Tactile Touch Feedback System
    ------------------------------------------------------------- */
 
+/* Transizione globale e sincronizzata per cambio tema fluido e senza micro-lag */
+html,
+body,
+.layout-wrapper,
+.duo-card,
+.duo-navigation,
+.desktop-navbar,
+.modal-card,
+.vault-sidebar,
+.note-workspace-pane,
+.duo-widget,
+.sync-progress-box,
+.mission-card,
+.document-canvas-container,
+.obsidian-ribbon-bar,
+.study-card,
+.prompt-card {
+	transition:
+		background-color 0.18s cubic-bezier(0.4, 0, 0.2, 1),
+		border-color 0.18s cubic-bezier(0.4, 0, 0.2, 1),
+		color 0.18s cubic-bezier(0.4, 0, 0.2, 1),
+		box-shadow 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 button:not(:disabled),
 a,
 [role="button"],
@@ -224,10 +250,10 @@ input[type="submit"],
 .interactive-hover {
 	transition:
 		transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1),
-		box-shadow 0.2s ease,
-		background-color 0.15s ease,
-		border-color 0.15s ease,
-		color 0.15s ease;
+		box-shadow 0.18s cubic-bezier(0.4, 0, 0.2, 1),
+		background-color 0.18s cubic-bezier(0.4, 0, 0.2, 1),
+		border-color 0.18s cubic-bezier(0.4, 0, 0.2, 1),
+		color 0.18s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 button:not(:disabled):active,
@@ -428,9 +454,6 @@ body {
 	background-color: var(--bg-color);
 	color: var(--text-color);
 	min-height: 100vh;
-	transition:
-		background-color 0.3s ease,
-		color 0.3s ease;
 	-webkit-font-smoothing: antialiased;
 	padding-bottom: 1.5rem;
 	overflow-x: hidden;
@@ -554,9 +577,6 @@ select {
 	border-bottom: 4px solid var(--border-depth-color);
 	border-radius: 20px;
 	padding: 1.25rem;
-	transition:
-		transform 0.2s ease,
-		border-color 0.2s ease;
 }
 
 /* 🏷️ Duolingo Badge */

@@ -1,6 +1,6 @@
 import { browser } from '$app/environment';
 
-export type ThemePreset = 'dark' | 'light';
+export type ThemePreset = 'dark' | 'light' | 'purple' | 'frecciarossa' | 'emerald' | 'amber';
 
 export interface ThemeOption {
 	id: ThemePreset;
@@ -17,7 +17,7 @@ export const THEME_OPTIONS: ThemeOption[] = [
 		name: 'Tema Scuro',
 		desc: 'Notte blu teal iconico con bordi 3D',
 		color: '#1cb0f6',
-		bg: '#131f24',
+		bg: '#171f23',
 		cardBg: '#18252d'
 	},
 	{
@@ -27,6 +27,38 @@ export const THEME_OPTIONS: ThemeOption[] = [
 		color: '#58cc02',
 		bg: '#ffffff',
 		cardBg: '#ffffff'
+	},
+	{
+		id: 'purple',
+		name: 'Cosmic Purple',
+		desc: 'Super viola cosmico brillante',
+		color: '#ce82ff',
+		bg: '#11091e',
+		cardBg: '#1d1033'
+	},
+	{
+		id: 'frecciarossa',
+		name: 'Frecciarossa',
+		desc: 'Rosso corsa alta velocità',
+		color: '#ff4b4b',
+		bg: '#16080a',
+		cardBg: '#261114'
+	},
+	{
+		id: 'emerald',
+		name: 'Trazione Verde',
+		desc: 'Verde smeraldo ferroviario',
+		color: '#58cc02',
+		bg: '#051913',
+		cardBg: '#0d2d22'
+	},
+	{
+		id: 'amber',
+		name: 'Italo Gold',
+		desc: 'Ambra dorata e bronzo scuro',
+		color: '#ff9600',
+		bg: '#14100a',
+		cardBg: '#241a10'
 	}
 ];
 
@@ -60,6 +92,7 @@ class ThemeStore {
 	}
 
 	public setTheme(theme: ThemePreset) {
+		if (this.currentTheme === theme) return;
 		this.currentTheme = theme;
 		if (browser) {
 			localStorage.setItem('rf_theme', theme);
@@ -72,10 +105,19 @@ class ThemeStore {
 		if (!browser) return;
 		const root = document.documentElement;
 		root.setAttribute('data-theme', theme);
-		if (theme === 'light') {
+
+		const isLight = theme === 'light';
+		if (isLight) {
 			root.classList.remove('dark');
 		} else {
 			root.classList.add('dark');
+		}
+
+		// Aggiorna meta theme-color per la status bar dei browser mobile
+		const themeOption = THEME_OPTIONS.find((t) => t.id === theme);
+		const metaTheme = document.querySelector('meta[name="theme-color"]');
+		if (metaTheme && themeOption) {
+			metaTheme.setAttribute('content', themeOption.bg);
 		}
 	}
 

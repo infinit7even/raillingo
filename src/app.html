@@ -13,6 +13,24 @@
 		<meta name="apple-mobile-web-app-title" content="Raillingo" />
 		<meta name="format-detection" content="telephone=no" />
 
+		<!-- ⚡ Immediate Theme Initialization (Elimina FOUC e salti di stile all'avvio) -->
+		<script>
+			(function () {
+				try {
+					var theme = localStorage.getItem('rf_theme');
+					if (!theme) {
+						theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+					}
+					document.documentElement.setAttribute('data-theme', theme);
+					if (theme === 'light') {
+						document.documentElement.classList.remove('dark');
+					} else {
+						document.documentElement.classList.add('dark');
+					}
+				} catch (e) {}
+			})();
+		</script>
+
 		<!-- 🚀 Performance Resource Hints: Google Fonts Preconnect & Async Load -->
 		<link rel="preconnect" href="https://fonts.googleapis.com" />
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
