@@ -311,6 +311,14 @@
 		min-height: clamp(300px, 44vh, 420px);
 		perspective: 1200px;
 		cursor: pointer;
+		outline: none;
+		-webkit-tap-highlight-color: transparent;
+		user-select: none;
+	}
+
+	.scene:focus,
+	.scene:focus-visible {
+		outline: none;
 	}
 
 	.card {
@@ -320,10 +328,13 @@
 		position: relative;
 		transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
 		transform-style: preserve-3d;
+		outline: none;
+		user-select: none;
 	}
 
-	.card.is-flipped {
-		transform: rotateY(180deg);
+	.card:focus,
+	.card:focus-visible {
+		outline: none;
 	}
 
 	.card-face {
@@ -339,6 +350,14 @@
 		justify-content: space-between;
 		box-sizing: border-box;
 		overflow: hidden;
+		outline: none;
+		user-select: none;
+		-webkit-tap-highlight-color: transparent;
+	}
+
+	.card-face:focus,
+	.card-face:focus-visible {
+		outline: none;
 	}
 
 	.card-face.back {

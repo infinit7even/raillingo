@@ -237,6 +237,34 @@ select:active {
 	transform: scale(0.94) translateY(1px);
 }
 
+/* Rimuovi contorni bianchi indesiderati al focus da tastiera sulle card interattive */
+.scene,
+.card,
+.card-face,
+.study-card,
+.prompt-card,
+.duo-card[role="button"],
+.duo-card[tabindex="0"] {
+	outline: none !important;
+	-webkit-tap-highlight-color: transparent;
+}
+
+.scene:focus,
+.scene:focus-visible,
+.card:focus,
+.card:focus-visible,
+.card-face:focus,
+.card-face:focus-visible,
+.study-card:focus,
+.study-card:focus-visible,
+.prompt-card:focus,
+.prompt-card:focus-visible,
+.duo-card[role="button"]:focus,
+.duo-card[role="button"]:focus-visible {
+	outline: none !important;
+	box-shadow: none;
+}
+
 @keyframes duoPop {
 	0% {
 		transform: scale(1);

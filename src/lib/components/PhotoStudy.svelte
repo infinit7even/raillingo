@@ -219,6 +219,14 @@
 		gap: 1.25rem;
 		cursor: pointer;
 		position: relative;
+		outline: none;
+		user-select: none;
+		-webkit-tap-highlight-color: transparent;
+	}
+
+	.study-card:focus,
+	.study-card:focus-visible {
+		outline: none;
 	}
 
 	.photo-wrapper {
