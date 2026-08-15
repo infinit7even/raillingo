@@ -44,7 +44,13 @@
 		currentImageIndex = 0;
 	});
 
-	function handleCardClick() {
+	function handleCardClick(e?: MouseEvent) {
+		if (e) {
+			const target = e.target as HTMLElement;
+			if (target.closest('.card-star-btn') || target.closest('.photo-count-btn')) {
+				return;
+			}
+		}
 		flipped = !flipped;
 		if (flipped) {
 			statsStore.recordStudySession();
@@ -64,6 +70,7 @@
 
 	async function toggleIgnored(e: MouseEvent) {
 		e.stopPropagation();
+		e.preventDefault();
 		const cardToToggle = card;
 		const isNowIgnored = await ignoredCardsStore.toggleIgnored(cardToToggle.id);
 
@@ -104,7 +111,7 @@
 	<!-- 3D Flip Card Scene -->
 	<div
 		class="scene"
-		onclick={handleCardClick}
+		onclick={(e) => handleCardClick(e)}
 		onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && handleCardClick()}
 		role="button"
 		tabindex="0"
