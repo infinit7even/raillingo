@@ -20,7 +20,7 @@
 	<PageHeader
 		title="Accedi a Rail Focus"
 		subtitle="Autenticazione richiesta per accedere a questa sezione e sincronizzare i tuoi dati."
-		icon="/emoji/lock_3d.png"
+		icon="/emoji/locked_3d.png"
 		variant="blue"
 	/>
 

@@ -63,6 +63,11 @@
 		await pwaStore.promptInstall();
 	}
 
+	async function handleLogout() {
+		await fetch('/api/auth/logout', { method: 'POST' });
+		window.location.href = '/';
+	}
+
 	const lessonNodes = [
 		{
 			id: 1,
@@ -248,7 +253,15 @@
 					</button>
 				{/if}
 
-				<a href="/wiki" class="duo-btn duo-btn-blue flex-btn"> 📚 WIKI </a>
+				{#if user}
+					<button type="button" class="duo-btn duo-btn-red flex-btn" onclick={handleLogout}>
+						🚪 LOGOUT ({user.username})
+					</button>
+				{:else}
+					<a href="/login" class="duo-btn duo-btn-blue flex-btn">
+						🔑 LOGIN
+					</a>
+				{/if}
 				<a
 					href="https://ko-fi.com/infinit7even"
 					target="_blank"
