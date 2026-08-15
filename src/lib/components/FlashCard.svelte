@@ -322,11 +322,12 @@
 		backface-visibility: hidden;
 		-webkit-backface-visibility: hidden;
 		border-radius: 24px;
-		padding: 1.75rem 1.5rem;
+		padding: 1.5rem 1.25rem 1rem 1.25rem;
 		display: flex;
 		flex-direction: column;
 		justify-content: space-between;
 		box-sizing: border-box;
+		overflow: hidden;
 	}
 
 	.card-face.back {
@@ -335,12 +336,16 @@
 	}
 
 	.face-content {
+		flex: 1;
+		min-height: 0;
 		display: flex;
 		flex-direction: column;
-		gap: 1rem;
+		gap: 0.75rem;
 		align-items: center;
+		justify-content: center;
 		text-align: center;
 		width: 100%;
+		overflow: hidden;
 	}
 
 	.card-title {
@@ -391,32 +396,33 @@
 	.front-photo-wrapper {
 		position: relative;
 		width: 100%;
+		height: 100%;
+		flex: 1;
+		min-height: 0;
 		border-radius: 16px;
 		overflow: hidden;
-		background: rgba(0, 0, 0, 0.45);
-		min-height: clamp(180px, 30vh, 280px);
-		max-height: clamp(200px, 34vh, 320px);
+		background: rgba(0, 0, 0, 0.35);
 		display: flex;
 		align-items: center;
 		justify-content: center;
 		border: 2px solid var(--border-color);
-		margin: auto 0;
+		box-sizing: border-box;
 	}
 
 	.front-photo-img {
 		width: 100%;
 		height: 100%;
-		max-height: clamp(200px, 34vh, 320px);
+		max-height: 100%;
 		object-fit: contain;
 		display: block;
 	}
 
 	.photo-count-btn {
 		position: absolute;
-		bottom: 10px;
-		right: 10px;
-		padding: 0.3rem 0.65rem;
-		font-size: 0.75rem;
+		bottom: 8px;
+		right: 8px;
+		padding: 0.25rem 0.55rem;
+		font-size: 0.72rem;
 	}
 
 	.image-gallery {
