@@ -52,7 +52,7 @@
 	let availableCategories = $derived.by<string[]>(() => {
 		const set = new Set<string>();
 		for (const c of rawCards) {
-			if (c.category && c.category.trim()) {
+			if (c.description && c.description.trim() && c.category && c.category.trim()) {
 				set.add(c.category.trim());
 			}
 		}
@@ -61,10 +61,11 @@
 
 	let validCards = $derived(
 		rawCards.filter((c) => {
+			const hasDescription = Boolean(c.description && c.description.trim() !== '');
 			const notIgnored = !ignoredIds.has(c.id);
 			const matchesCategory =
 				selectedCategory === 'ALL' || (c.category && c.category.trim() === selectedCategory);
-			return notIgnored && matchesCategory;
+			return hasDescription && notIgnored && matchesCategory;
 		})
 	);
 
