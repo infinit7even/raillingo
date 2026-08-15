@@ -2,6 +2,8 @@
 	import { onMount } from 'svelte';
 	import type { Card } from '$lib/types/cards';
 	import { cardsStore } from '$lib/stores/cardsStore';
+	import { toastStore } from '$lib/stores/toastStore';
+	import { compressImage } from '$lib/utils/imageCompressor';
 
 	let {
 		initialCard = null,
@@ -113,9 +115,18 @@
 
 	async function uploadBlob(blob: Blob) {
 		uploading = true;
+		toastStore.show({ message: '⏳ Compressione e caricamento immagine...' });
 		try {
+			// Comprimi l'immagine in WebP ottimizzato (massimo 1MB)
+			const compressedFile = await compressImage(blob, {
+				maxSizeMB: 1,
+				maxWidth: 1920,
+				maxHeight: 1920,
+				quality: 0.82
+			});
+
 			const formData = new FormData();
-			formData.append('file', blob, `upload-${Date.now()}.png`);
+			formData.append('file', compressedFile);
 			const res = await fetch('/api/upload', {
 				method: 'POST',
 				body: formData
@@ -125,10 +136,15 @@
 				const data = await res.json();
 				if (data.url) {
 					images = [...images, data.url];
+					toastStore.show({ message: '🖼️ Immagine compressa e aggiunta alla scheda!' });
 				}
+			} else {
+				const err = await res.json();
+				toastStore.show({ message: `⚠️ ${err.error || 'Errore caricamento immagine'}` });
 			}
 		} catch (err) {
 			console.error("Errore durante l'upload dell'immagine:", err);
+			toastStore.show({ message: '⚠️ Impossibile caricare l\'immagine' });
 		} finally {
 			uploading = false;
 		}
@@ -152,6 +168,20 @@
 				if (blob) {
 					uploadBlob(blob);
 				}
+				break;
+			}
+		}
+	}
+
+	function handleDrop(e: DragEvent) {
+		const files = e.dataTransfer?.files;
+		if (!files || files.length === 0) return;
+		for (let i = 0; i < files.length; i++) {
+			const file = files[i];
+			if (file.type.startsWith('image/')) {
+				e.preventDefault();
+				uploadBlob(file);
+				break;
 			}
 		}
 	}
@@ -316,7 +346,13 @@
 		</div>
 
 		<!-- Immagini Visive -->
-		<div class="form-group full-width">
+		<div
+			class="form-group full-width"
+			ondrop={handleDrop}
+			ondragover={(e) => e.preventDefault()}
+			role="region"
+			aria-label="Caricamento immagini"
+		>
 			<label for="card-image-url-field"
 				>Immagini Visive (Carica File, Incolla dagli appunti o inserisci URL)</label
 			>
@@ -326,7 +362,7 @@
 					<span>{uploading ? '⏳ Caricamento...' : '📁 Sfoglia Immagine'}</span>
 					<input
 						type="file"
-						accept="image/*"
+						accept="image/png,image/jpeg,image/webp"
 						onchange={handleFileUpload}
 						disabled={uploading}
 						class="hidden-file-input"

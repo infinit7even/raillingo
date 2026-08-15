@@ -4,8 +4,17 @@ import path from 'node:path';
 import { isAuthorizedAdmin } from '$lib/server/auth';
 import { isSameOriginRequest } from '$lib/server/csrf';
 
-const ALLOWED_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif']);
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+import { env } from '$env/dynamic/private';
+
+const ALLOWED_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp']);
+const ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
+
+function getMaxImageSize(): number {
+	const raw = env.MAX_IMAGE_SIZE_MB || process.env.MAX_IMAGE_SIZE_MB || '1';
+	const parsed = parseFloat(raw);
+	if (isNaN(parsed) || parsed <= 0) return 1 * 1024 * 1024;
+	return parsed * 1024 * 1024;
+}
 
 export const POST: RequestHandler = async (event) => {
 	const { request, cookies } = event;
@@ -30,16 +39,22 @@ export const POST: RequestHandler = async (event) => {
 			return json({ error: 'Nessun file caricato' }, { status: 400 });
 		}
 
+		const maxSizeBytes = getMaxImageSize();
+		const maxMb = (maxSizeBytes / (1024 * 1024)).toFixed(1);
+
 		// Verifica dimensione file
-		if (file.size > MAX_FILE_SIZE) {
-			return json({ error: 'File troppo grande (max 5MB)' }, { status: 400 });
+		if (file.size > maxSizeBytes) {
+			return json(
+				{ error: `File troppo grande. La dimensione massima consentita è di ${maxMb}MB.` },
+				{ status: 400 }
+			);
 		}
 
-		// Verifica estensione file (whitelist)
+		// Verifica estensione file (whitelist PNG, JPG, WebP)
 		const extension = path.extname(file.name).toLowerCase();
-		if (!ALLOWED_EXTENSIONS.has(extension)) {
+		if (!ALLOWED_EXTENSIONS.has(extension) && !ALLOWED_MIME_TYPES.has(file.type)) {
 			return json(
-				{ error: 'Tipo di file non consentito. Usa JPG, PNG, WebP o GIF.' },
+				{ error: 'Formato non consentito. Sono supportati solo file PNG, JPG e WebP.' },
 				{ status: 400 }
 			);
 		}
