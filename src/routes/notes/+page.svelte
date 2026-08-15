@@ -1349,11 +1349,11 @@
 		flex-direction: row;
 		align-items: stretch;
 		gap: 0.75rem;
-		height: calc(100vh - 110px);
-		min-height: 520px;
-		max-height: 900px;
+		height: calc(100vh - 84px);
+		height: calc(100dvh - 84px);
+		min-height: 480px;
 		width: 100%;
-		max-width: 1320px;
+		max-width: 100%;
 		margin: 0 auto;
 		box-sizing: border-box;
 		overflow: hidden;
@@ -2239,13 +2239,13 @@
 	/* 📄 Word-Style Document Canvas */
 	.document-canvas-container {
 		flex: 1;
-		min-height: 200px;
+		min-height: 0;
 		display: flex;
 		overflow-y: auto;
 		background: var(--card-bg-subtle);
 		border: 1.5px solid var(--border-color);
 		border-radius: 14px;
-		padding: 1.15rem;
+		padding: 1.25rem 1.6rem;
 		box-sizing: border-box;
 	}
 
@@ -2712,7 +2712,8 @@
 
 		.obsidian-workspace {
 			flex-direction: column;
-			height: calc(100vh - 100px);
+			height: calc(100vh - 70px);
+			height: calc(100dvh - 70px);
 		}
 
 		.vault-sidebar {
