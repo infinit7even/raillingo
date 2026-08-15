@@ -64,7 +64,7 @@
 			title: 'Appunti di Studio',
 			subtitle: 'Quaderno digitale e sintesi concetti',
 			icon: '/emoji/clipboard_3d.png',
-			variant: 'orange'
+			variant: 'red'
 		},
 		'/privacy': {
 			title: 'Privacy Policy',
