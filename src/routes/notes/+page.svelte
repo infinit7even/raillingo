@@ -786,43 +786,29 @@
 				<button
 					type="button"
 					class="vault-cat-trigger-btn"
+					class:full-width={selectedCategory === 'ALL'}
 					class:active={selectedCategory !== 'ALL'}
 					onclick={() => (isVaultCatPickerOpen = true)}
 					title="Apri filtro categorie con ricerca rapida"
 				>
-					<span class="vcat-ico">📁</span>
-					<span class="vcat-label">Categorie</span>
-					<span class="vcat-badge">
-						{#if selectedCategory === 'ALL'}
-							Tutti ({notes.length})
-						{:else}
-							{selectedCategory.split(',').length} attive
-						{/if}
-					</span>
-					<span class="vcat-arrow">▾</span>
+					<div class="vcat-left">
+						<span class="vcat-ico">📁</span>
+						<span class="vcat-label">Categorie</span>
+					</div>
+					<div class="vcat-right">
+						<span class="vcat-badge">
+							{#if selectedCategory === 'ALL'}
+								Tutti ({notes.length})
+							{:else}
+								{selectedCategory.split(',').length} attive
+							{/if}
+						</span>
+						<span class="vcat-arrow">▾</span>
+					</div>
 				</button>
 
-				<!-- Quick Chips / Active Tags -->
-				{#if selectedCategory === 'ALL'}
-					{#each availableCategories.slice(0, 3) as [catName, count]}
-						<button
-							type="button"
-							class="folder-chip"
-							onclick={() => toggleVaultCategory(catName)}
-						>
-							{catName} ({count})
-						</button>
-					{/each}
-					{#if availableCategories.length > 3}
-						<button
-							type="button"
-							class="folder-chip more-cat-chip"
-							onclick={() => (isVaultCatPickerOpen = true)}
-						>
-							+{availableCategories.length - 3} altre...
-						</button>
-					{/if}
-				{:else}
+				<!-- Mostra solo i tag attivi quando un filtro è selezionato -->
+				{#if selectedCategory !== 'ALL'}
 					{#each selectedCategory.split(',').map((s) => s.trim()) as catName}
 						<span class="active-vault-cat-tag">
 							<span>{catName}</span>
@@ -1607,44 +1593,57 @@
 		display: flex;
 		align-items: center;
 		gap: 0.3rem;
-		overflow-x: auto;
 		padding: 2px 0 4px 0;
 		flex-shrink: 0;
-		scrollbar-width: none;
-		-webkit-overflow-scrolling: touch;
-	}
-
-	.vault-folders-bar::-webkit-scrollbar {
-		display: none;
+		flex-wrap: wrap;
 	}
 
 	.vault-cat-trigger-btn {
 		display: inline-flex;
 		align-items: center;
-		gap: 0.25rem;
-		padding: 0.25rem 0.55rem;
-		border-radius: 9999px;
+		justify-content: space-between;
+		gap: 0.35rem;
+		padding: 0.35rem 0.65rem;
+		border-radius: 10px;
 		background: var(--card-bg-subtle);
 		border: 1.5px solid var(--border-color);
 		color: var(--text-color);
 		font-family: 'Outfit', sans-serif;
-		font-size: 0.72rem;
+		font-size: 0.76rem;
 		font-weight: 800;
 		cursor: pointer;
 		white-space: nowrap;
 		flex-shrink: 0;
 		transition: all 0.12s ease;
+		box-sizing: border-box;
+	}
+
+	.vault-cat-trigger-btn.full-width {
+		width: 100%;
 	}
 
 	.vault-cat-trigger-btn:hover {
 		border-color: var(--accent-color);
 		color: var(--accent-color);
+		background: var(--hover-bg);
 	}
 
 	.vault-cat-trigger-btn.active {
 		background: var(--accent-light-bg);
 		border-color: var(--accent-color);
 		color: var(--accent-color);
+	}
+
+	.vcat-left {
+		display: flex;
+		align-items: center;
+		gap: 0.35rem;
+	}
+
+	.vcat-right {
+		display: flex;
+		align-items: center;
+		gap: 0.3rem;
 	}
 
 	.vcat-badge {
