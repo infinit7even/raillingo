@@ -175,7 +175,7 @@
 		<div class="duo-widget duo-card mobile-missions-widget">
 			<div class="widget-header-row">
 				<h3 class="widget-title">Missioni giornaliere</h3>
-				<a href="/missioni" class="widget-link">VEDI TUTTE &gt;</a>
+				<a href="/missions" class="widget-link">VEDI TUTTE &gt;</a>
 			</div>
 			<div class="mission-item">
 				<img src="/emoji/high_voltage_3d.png" alt="XP" width="24" height="24" decoding="async" class="widget-emoji-img" />
@@ -214,7 +214,7 @@
 	<aside class="duo-right-sidebar">
 		<!-- Top Stats Row (Desktop Only) -->
 		<a
-			href="/missioni"
+			href="/missions"
 			class="top-stats-row duo-card desktop-top-stats"
 			title="Clicca per aprire le Missioni ed i Dettagli"
 		>
@@ -244,7 +244,7 @@
 		<div class="duo-widget duo-card desktop-missions-widget">
 			<div class="widget-header-row">
 				<h3 class="widget-title">Missioni giornaliere</h3>
-				<a href="/missioni" class="widget-link">VEDI TUTTE &gt;</a>
+				<a href="/missions" class="widget-link">VEDI TUTTE &gt;</a>
 			</div>
 			<div class="mission-item">
 				<img src="/emoji/high_voltage_3d.png" alt="XP" width="24" height="24" decoding="async" class="widget-emoji-img" />

@@ -15,7 +15,7 @@ const CRITICAL_PATHS = [
 	'/reels',
 	'/wiki',
 	'/notes',
-	'/missioni',
+	'/missions',
 	'/privacy',
 	'/manifest.webmanifest',
 	'/api/cards',

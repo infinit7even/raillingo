@@ -48,7 +48,7 @@
 			icon: '/emoji/books_3d.png',
 			variant: 'blue'
 		},
-		'/missioni': {
+		'/missions': {
 			title: 'Missioni & Sfide',
 			subtitle: 'Traguardi giornalieri',
 			icon: '/emoji/bullseye_3d.png',
@@ -108,7 +108,7 @@
 		{#key currentPath}
 			{#if currentPath === '/'}
 				<a
-					href="/missioni"
+					href="/missions"
 					class="header-stats"
 					title="Clicca per aprire le Missioni ed i Dettagli"
 					in:fly={{ y: -10, duration: 250, delay: 50 }}
