@@ -703,8 +703,8 @@
 
 	.sidebar-privacy-footer {
 		text-align: center;
-		padding: 0.2rem 0 0.5rem 0;
-		margin-top: 0.15rem;
+		margin-top: -0.55rem;
+		padding: 0;
 	}
 
 	@media (max-width: 1023px) {
