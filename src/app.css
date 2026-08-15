@@ -492,6 +492,16 @@ select {
 	border-color: var(--orange-depth);
 }
 
+.duo-btn-red {
+	background-color: #ff4b4b;
+	color: #ffffff;
+	border-color: #ea2b2b;
+}
+
+.duo-btn-red:hover:not(:disabled) {
+	background-color: #ff5e5e;
+}
+
 .duo-btn-gray {
 	background-color: var(--card-bg-subtle);
 	color: var(--text-color);

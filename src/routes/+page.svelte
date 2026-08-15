@@ -273,7 +273,7 @@
 				{/if}
 
 				{#if user}
-					<button type="button" class="duo-btn duo-btn-red flex-btn" onclick={handleLogout}>
+					<button type="button" class="duo-btn duo-btn-red flex-btn home-logout-btn" onclick={handleLogout}>
 						🚪 LOGOUT ({user.username})
 					</button>
 				{:else}
@@ -780,10 +780,21 @@
 		border-bottom-width: 2px;
 	}
 
-	.discord-icon-mini {
-		width: 18px;
-		height: 18px;
-		flex-shrink: 0;
+	.home-logout-btn {
+		background-color: #ff4b4b !important;
+		color: #ffffff !important;
+		border: none !important;
+		border-bottom: 4px solid #ea2b2b !important;
+		transition: filter 0.15s ease, transform 0.1s ease;
+	}
+
+	.home-logout-btn:hover {
+		filter: brightness(1.1);
+	}
+
+	.home-logout-btn:active {
+		transform: translateY(2px);
+		border-bottom-width: 2px;
 	}
 
 	@media (max-width: 1023px) {
