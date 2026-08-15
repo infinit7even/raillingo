@@ -168,15 +168,6 @@
 
 			<!-- BACK FACE -->
 			<div class="card-face back duo-card">
-				<button
-					class="card-star-btn"
-					class:ignored={isIgnored}
-					onclick={toggleIgnored}
-					title={isIgnored ? 'Card ignorata (Clicca per riattivare)' : 'Ignora card'}
-				>
-					★
-				</button>
-
 				<div class="face-content">
 					<div class="back-header">
 						{#if card.title}
@@ -350,7 +341,7 @@
 
 	.back-header {
 		width: 100%;
-		padding: 0 2rem;
+		padding: 0 0.5rem;
 		box-sizing: border-box;
 		flex-shrink: 0;
 		display: flex;
