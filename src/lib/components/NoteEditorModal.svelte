@@ -505,14 +505,15 @@ Usa **grassetto**, elenchi puntati, - [ ] checklist di studio o tabelle."
 
 	.editor-card {
 		width: 100%;
-		max-width: 950px;
-		max-height: 94vh;
+		max-width: 1000px;
+		height: 92vh;
+		max-height: 92vh;
 		background-color: var(--card-bg);
 		border-radius: 20px;
 		display: flex;
 		flex-direction: column;
-		gap: 0.75rem;
-		padding: 1.25rem;
+		gap: 0.65rem;
+		padding: 1.15rem 1.25rem;
 		box-sizing: border-box;
 		overflow: hidden;
 		box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
@@ -522,8 +523,9 @@ Usa **grassetto**, elenchi puntati, - [ ] checklist di studio o tabelle."
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		padding-bottom: 0.5rem;
+		padding-bottom: 0.45rem;
 		border-bottom: 2px solid var(--border-color);
+		flex-shrink: 0;
 	}
 
 	.editor-badge {
@@ -547,6 +549,7 @@ Usa **grassetto**, elenchi puntati, - [ ] checklist di studio o tabelle."
 		display: flex;
 		align-items: center;
 		gap: 0.6rem;
+		flex-shrink: 0;
 	}
 
 	.pin-toggle-btn {
@@ -558,6 +561,7 @@ Usa **grassetto**, elenchi puntati, - [ ] checklist di studio o tabelle."
 		font-weight: 800;
 		color: var(--text-muted);
 		cursor: pointer;
+		white-space: nowrap;
 	}
 
 	.pin-toggle-btn.pinned {
@@ -578,12 +582,14 @@ Usa **grassetto**, elenchi puntati, - [ ] checklist di studio o tabelle."
 		color: var(--text-color);
 		font-size: 1rem;
 		cursor: pointer;
+		flex-shrink: 0;
 	}
 
 	.editor-inputs-row {
 		display: flex;
 		flex-direction: column;
-		gap: 0.6rem;
+		gap: 0.5rem;
+		flex-shrink: 0;
 	}
 
 	@media (min-width: 640px) {
@@ -596,11 +602,11 @@ Usa **grassetto**, elenchi puntati, - [ ] checklist di studio o tabelle."
 	.input-group {
 		display: flex;
 		flex-direction: column;
-		gap: 0.25rem;
+		gap: 0.2rem;
 	}
 
 	.field-label {
-		font-size: 0.72rem;
+		font-size: 0.7rem;
 		font-weight: 800;
 		color: var(--text-muted);
 		text-transform: uppercase;
@@ -612,10 +618,10 @@ Usa **grassetto**, elenchi puntati, - [ ] checklist di studio o tabelle."
 		background: var(--card-bg-subtle);
 		border: 2px solid var(--border-color);
 		border-radius: 12px;
-		padding: 0.55rem 0.85rem;
+		padding: 0.5rem 0.8rem;
 		color: var(--text-color);
 		font-family: inherit;
-		font-size: 0.9rem;
+		font-size: 0.88rem;
 		font-weight: 700;
 		outline: none;
 		transition: border-color 0.2s ease;
@@ -627,7 +633,7 @@ Usa **grassetto**, elenchi puntati, - [ ] checklist di studio o tabelle."
 	}
 
 	.title-input {
-		font-size: 1.05rem;
+		font-size: 1rem;
 		font-weight: 800;
 	}
 
@@ -635,7 +641,8 @@ Usa **grassetto**, elenchi puntati, - [ ] checklist di studio o tabelle."
 	.tags-row {
 		display: flex;
 		flex-direction: column;
-		gap: 0.25rem;
+		gap: 0.2rem;
+		flex-shrink: 0;
 	}
 
 	.templates-bar {
@@ -643,7 +650,9 @@ Usa **grassetto**, elenchi puntati, - [ ] checklist di studio o tabelle."
 		align-items: center;
 		gap: 0.4rem;
 		overflow-x: auto;
-		padding-bottom: 0.25rem;
+		padding: 0.15rem 0;
+		flex-shrink: 0;
+		min-height: 34px;
 		scrollbar-width: none;
 	}
 
@@ -669,6 +678,7 @@ Usa **grassetto**, elenchi puntati, - [ ] checklist di studio o tabelle."
 		cursor: pointer;
 		white-space: nowrap;
 		transition: all 0.15s ease;
+		flex-shrink: 0;
 	}
 
 	.template-pill:hover {
@@ -686,15 +696,22 @@ Usa **grassetto**, elenchi puntati, - [ ] checklist di studio o tabelle."
 		background: var(--card-bg-subtle);
 		border: 1.5px solid var(--border-color);
 		border-radius: 12px;
-		padding: 0.35rem 0.5rem;
+		padding: 0.4rem 0.6rem;
 		overflow-x: auto;
+		flex-shrink: 0;
+		min-height: 42px;
 		scrollbar-width: none;
+	}
+
+	.markdown-toolbar::-webkit-scrollbar {
+		display: none;
 	}
 
 	.toolbar-tools {
 		display: flex;
 		align-items: center;
 		gap: 0.25rem;
+		flex-shrink: 0;
 	}
 
 	.tool-btn {
@@ -707,6 +724,7 @@ Usa **grassetto**, elenchi puntati, - [ ] checklist di studio o tabelle."
 		color: var(--text-color);
 		cursor: pointer;
 		white-space: nowrap;
+		flex-shrink: 0;
 	}
 
 	.tool-btn:hover {
@@ -719,12 +737,14 @@ Usa **grassetto**, elenchi puntati, - [ ] checklist di studio o tabelle."
 		height: 18px;
 		background: var(--border-color);
 		margin: 0 0.15rem;
+		flex-shrink: 0;
 	}
 
 	.view-toggles {
 		display: flex;
 		align-items: center;
 		gap: 0.2rem;
+		flex-shrink: 0;
 	}
 
 	.mode-toggle-btn {
@@ -736,6 +756,7 @@ Usa **grassetto**, elenchi puntati, - [ ] checklist di studio o tabelle."
 		font-weight: 800;
 		color: var(--text-muted);
 		cursor: pointer;
+		white-space: nowrap;
 	}
 
 	.mode-toggle-btn.active {
@@ -751,9 +772,8 @@ Usa **grassetto**, elenchi puntati, - [ ] checklist di studio o tabelle."
 
 	/* Workspace Area */
 	.editor-workspace {
-		flex: 1;
-		min-height: 280px;
-		max-height: 52vh;
+		flex: 1 1 auto;
+		min-height: 160px;
 		display: flex;
 		gap: 0.75rem;
 		overflow: hidden;
@@ -766,6 +786,7 @@ Usa **grassetto**, elenchi puntati, - [ ] checklist di studio o tabelle."
 
 	.pane {
 		height: 100%;
+		min-height: 0;
 		display: flex;
 		flex-direction: column;
 		overflow: hidden;
@@ -1026,9 +1047,10 @@ Usa **grassetto**, elenchi puntati, - [ ] checklist di studio o tabelle."
 		align-items: center;
 		justify-content: space-between;
 		gap: 0.85rem;
-		padding-top: 0.5rem;
+		padding-top: 0.45rem;
 		border-top: 2px solid var(--border-color);
 		flex-wrap: wrap;
+		flex-shrink: 0;
 	}
 
 	.footer-stats {
