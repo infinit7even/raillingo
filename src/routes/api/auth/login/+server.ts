@@ -14,6 +14,17 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 	const redirectUri = `${url.origin}/api/auth/callback`;
 	const scope = encodeURIComponent('identify');
 
+	const returnUrl = url.searchParams.get('returnUrl') || url.searchParams.get('redirect');
+	if (returnUrl && returnUrl.startsWith('/') && !returnUrl.startsWith('//')) {
+		cookies.set('oauth_return_to', returnUrl, {
+			path: '/',
+			httpOnly: true,
+			sameSite: 'lax',
+			secure,
+			maxAge: 60 * 10
+		});
+	}
+
 	// Anti login-CSRF: `state` casuale salvato in un cookie di breve durata.
 	const state = crypto.randomBytes(16).toString('hex');
 	cookies.set('oauth_state', state, {

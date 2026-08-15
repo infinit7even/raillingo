@@ -113,11 +113,7 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 
 		// 3. Verifica autorizzazione admin
 		const isAdmin = getAdminIds().includes(discordUserId);
-
-		if (!isAdmin) {
-			console.warn(`Tentativo di accesso admin non autorizzato: ${discordUserId} (${username})`);
-			throw redirect(302, '/admin?error=unauthorized');
-		}
+		const userRole: 'admin' | 'user' = isAdmin ? 'admin' : 'user';
 
 		const now = new Date().toISOString();
 
@@ -129,7 +125,7 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 			storedUser.email = email;
 			storedUser.username = username;
 			if (avatarUrl) storedUser.avatar = avatarUrl;
-			storedUser.role = 'admin';
+			storedUser.role = userRole;
 			storedUser.lastLoginAt = now;
 		} else {
 			storedUser = {
@@ -137,7 +133,7 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 				email,
 				username,
 				avatar: avatarUrl,
-				role: 'admin',
+				role: userRole,
 				createdAt: now,
 				lastLoginAt: now,
 				stats: {
@@ -154,24 +150,31 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 
 		await writeUsersToFile(users);
 
-		// 5. Imposta cookie di sessione sicuri (httpOnly, sameSite strict)
+		// 5. Imposta cookie di sessione sicuri (httpOnly, sameSite lax)
 		const sessionData = {
 			userId: discordUserId,
 			email,
 			username,
 			avatar: avatarUrl,
-			role: 'admin',
-			isAdmin: true,
+			role: userRole,
+			isAdmin,
 			loginAt: now
 		};
 
+		const cookieName = isAdmin ? 'admin_session' : 'user_session';
 		cookies.set(
-			'admin_session',
+			cookieName,
 			signSession(sessionData),
 			sessionCookieOptions(url.protocol === 'https:')
 		);
 
-		throw redirect(302, '/');
+		// Recupera eventuale URL di ritorno salvato
+		const returnTo = cookies.get('oauth_return_to');
+		cookies.delete('oauth_return_to', { path: '/', secure: url.protocol === 'https:' });
+		const targetRedirect =
+			returnTo && returnTo.startsWith('/') && !returnTo.startsWith('//') ? returnTo : '/';
+
+		throw redirect(302, targetRedirect);
 	} catch (e) {
 		if (e && typeof e === 'object' && 'status' in e && 'location' in e) {
 			throw e; // SvelteKit redirect

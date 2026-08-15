@@ -66,6 +66,12 @@
 			icon: '/emoji/star_3d.png',
 			variant: 'blue'
 		},
+		'/appunti': {
+			title: 'Appunti di Studio',
+			subtitle: 'Quaderno digitale e sintesi concetti',
+			icon: '/emoji/clipboard_3d.png',
+			variant: 'orange'
+		},
 		'/privacy': {
 			title: 'Privacy Policy',
 			subtitle: 'Informazioni legali',

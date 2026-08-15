@@ -3,6 +3,7 @@ import path from 'node:path';
 
 const CARDS_FILE_PATH = path.resolve('data/cards.json');
 const USERS_FILE_PATH = path.resolve('data/users.json');
+const NOTES_FILE_PATH = path.resolve('data/notes.json');
 
 // Rileggi il file al massimo ogni TTL_MS millisecondi (oltre al check mtime).
 const TTL_MS = 1000;
@@ -54,6 +55,10 @@ export function readUsers<T = unknown>(): Promise<T> {
 	return readJsonCached(USERS_FILE_PATH, []) as Promise<T>;
 }
 
+export function readNotes<T = unknown>(): Promise<T> {
+	return readJsonCached(NOTES_FILE_PATH, []) as Promise<T>;
+}
+
 export function invalidateCards(): void {
 	invalidate(CARDS_FILE_PATH);
 }
@@ -61,3 +66,8 @@ export function invalidateCards(): void {
 export function invalidateUsers(): void {
 	invalidate(USERS_FILE_PATH);
 }
+
+export function invalidateNotes(): void {
+	invalidate(NOTES_FILE_PATH);
+}
+
