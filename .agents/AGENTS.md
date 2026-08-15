@@ -44,8 +44,11 @@ export interface Card {
 
 ## Modalità di Studio
 
-1. **Ripasso**: Mostra Acronimo -> Tap mostra Descrizione e Foto -> Avanti
-2. **Ripasso Foto**: Mostra Foto -> Tap 1 mostra Titolo -> Tap 2 mostra Descrizione
-3. **Inverso**: Mostra Descrizione -> Tap mostra Acronimo
-4. **Quiz**: Domanda a scelta multipla con 5 opzioni e retry infinito
-5. **Scrittura Libera**: Esercizio di digitazione senza blocco severo per incentivare la memorizzazione visiva e motoria.
+1. **Ripasso & Flashcard**:
+   - **Testuale**: Mostra Acronimo -> Tap mostra Descrizione e Foto
+   - **Visivo (Foto)**: Mostra Foto per intero (senza tagli) -> Tap mostra Titolo e Descrizione
+   - **Inverso**: Mostra Descrizione -> Tap mostra Acronimo
+   - **Opzione Scrittura (Digitazione)**: Toggle per digitare direttamente la risposta con punteggio di somiglianza invece di girare la scheda
+2. **Reels Ferroviari**: Feed dinamico verticale di schede con foto intere e ambient background
+3. **Quiz**: Domanda a scelta multipla con 5 opzioni e retry infinito
+4. **Appunti**: Editor note ricco con supporto immagini, markdown e sincronizzazione

@@ -393,8 +393,9 @@
 		width: 100%;
 		border-radius: 16px;
 		overflow: hidden;
-		background-color: #000;
-		min-height: clamp(160px, 26vh, 230px);
+		background: rgba(0, 0, 0, 0.45);
+		min-height: clamp(180px, 30vh, 280px);
+		max-height: clamp(200px, 34vh, 320px);
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -404,8 +405,9 @@
 
 	.front-photo-img {
 		width: 100%;
-		max-height: clamp(160px, 26vh, 230px);
-		object-fit: cover;
+		height: 100%;
+		max-height: clamp(200px, 34vh, 320px);
+		object-fit: contain;
 		display: block;
 	}
 

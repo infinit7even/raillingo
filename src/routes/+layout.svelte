@@ -24,13 +24,12 @@
 	});
 
 	// Route sequence for lateral swipe navigation
-	const routeOrder = ['/', '/flashcard', '/quiz', '/reels', '/scrittura', '/wiki', '/appunti'];
+	const routeOrder = ['/', '/flashcard', '/quiz', '/reels', '/wiki', '/appunti'];
 	const swipeRoutes = [
 		{ href: '/', label: 'Home', color: 'var(--accent-color)' },
 		{ href: '/flashcard', label: 'Flashcard', color: 'var(--green-color)' },
 		{ href: '/quiz', label: 'Quiz', color: 'var(--purple-color)' },
 		{ href: '/reels', label: 'Reels', color: 'var(--orange-color)' },
-		{ href: '/scrittura', label: 'Scrittura', color: '#ff5e5b' },
 		{ href: '/wiki', label: 'Wiki', color: 'var(--accent-color)' },
 		{ href: '/appunti', label: 'Appunti', color: 'var(--orange-color)' }
 	];

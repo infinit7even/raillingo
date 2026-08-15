@@ -115,11 +115,21 @@
 								<div class="face front-face">
 									<img
 										src={card.images![imgIdx]}
-										alt={card.title}
-										class="front-bg-img"
-										loading="lazy"
-										decoding="async"
+										alt=""
+										class="reel-ambient-bg"
+										aria-hidden="true"
 									/>
+
+									<div class="reel-img-container">
+										<img
+											src={card.images![imgIdx]}
+											alt={card.title}
+											class="front-bg-img"
+											loading="lazy"
+											decoding="async"
+										/>
+									</div>
+
 									<div class="front-img-overlay"></div>
 
 									<!-- Multi-photo switcher pill on front -->
@@ -316,18 +326,41 @@
 
 	/* FRONT FACE */
 	.front-face {
-		background: linear-gradient(135deg, var(--card-bg-subtle), var(--card-bg));
+		background: #090d16;
 		border: 2px solid var(--border-color);
 		text-align: center;
+		position: relative;
+	}
+
+	.reel-ambient-bg {
+		position: absolute;
+		inset: -20px;
+		width: calc(100% + 40px);
+		height: calc(100% + 40px);
+		object-fit: cover;
+		filter: blur(28px) brightness(0.4);
+		opacity: 0.75;
+		z-index: 1;
+	}
+
+	.reel-img-container {
+		position: absolute;
+		inset: 0;
+		bottom: 120px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		z-index: 2;
+		padding: 0.75rem;
+		box-sizing: border-box;
 	}
 
 	.front-bg-img {
-		position: absolute;
-		inset: 0;
 		width: 100%;
 		height: 100%;
-		object-fit: cover;
-		z-index: 1;
+		object-fit: contain;
+		display: block;
+		filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.6));
 	}
 
 	.front-img-overlay {
@@ -335,20 +368,25 @@
 		inset: 0;
 		background: linear-gradient(
 			to top,
-			rgba(0, 0, 0, 0.85) 0%,
-			rgba(0, 0, 0, 0.4) 50%,
-			rgba(0, 0, 0, 0.3) 100%
+			rgba(0, 0, 0, 0.95) 0%,
+			rgba(0, 0, 0, 0.6) 35%,
+			rgba(0, 0, 0, 0.1) 70%,
+			rgba(0, 0, 0, 0.4) 100%
 		);
-		z-index: 2;
+		z-index: 3;
+		pointer-events: none;
 	}
 
 	.front-body {
-		position: relative;
-		z-index: 3;
+		position: absolute;
+		bottom: 1rem;
+		left: 1rem;
+		right: 1rem;
+		z-index: 4;
 		display: flex;
 		flex-direction: column;
 		align-items: center;
-		gap: 0.5rem;
+		gap: 0.35rem;
 	}
 
 	.reel-title {

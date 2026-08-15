@@ -126,13 +126,15 @@
 		{#if subMode === 'photo-to-title'}
 			<span class="prompt-badge-label">Descrivi l'immagine:</span>
 			{#if card.images && card.images.length > 0}
-				<img
-					src={card.images[0]}
-					alt="Foto per esercizio"
-					class="prompt-img"
-					loading="lazy"
-					decoding="async"
-				/>
+				<div class="prompt-img-wrapper">
+					<img
+						src={card.images[0]}
+						alt="Foto per esercizio"
+						class="prompt-img"
+						loading="lazy"
+						decoding="async"
+					/>
+				</div>
 			{/if}
 		{:else}
 			<span class="prompt-badge-label">Domanda:</span>
@@ -303,13 +305,26 @@
 		margin: 0;
 	}
 
+	.prompt-img-wrapper {
+		width: 100%;
+		border-radius: 14px;
+		overflow: hidden;
+		background: rgba(0, 0, 0, 0.45);
+		border: 2px solid var(--border-color);
+		margin-top: 0.35rem;
+		min-height: clamp(160px, 28vh, 260px);
+		max-height: clamp(180px, 32vh, 300px);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
 	.prompt-img {
 		width: 100%;
-		max-height: 220px;
-		object-fit: cover;
-		border-radius: 14px;
-		margin-top: 0.35rem;
-		border: 2px solid var(--border-color);
+		height: 100%;
+		max-height: clamp(180px, 32vh, 300px);
+		object-fit: contain;
+		display: block;
 	}
 
 	.write-form {

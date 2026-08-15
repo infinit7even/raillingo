@@ -90,17 +90,17 @@
 		},
 		{
 			id: 4,
-			title: 'SCRITTURA',
-			href: '/scrittura',
-			icon: '/emoji/writing_hand_3d_default.png',
+			title: 'WIKI',
+			href: '/wiki',
+			icon: '/emoji/books_3d.png',
 			state: 'unlocked',
 			offset: -35
 		},
 		{
 			id: 5,
-			title: 'WIKI',
-			href: '/wiki',
-			icon: '/emoji/books_3d.png',
+			title: 'APPUNTI',
+			href: '/appunti',
+			icon: '/emoji/clipboard_3d.png',
 			state: 'unlocked',
 			offset: 0
 		}

@@ -42,12 +42,6 @@
 			icon: '/emoji/camera_3d.png',
 			variant: 'orange'
 		},
-		'/scrittura': {
-			title: 'Scrittura Libera',
-			subtitle: 'Digitazione e memorizzazione',
-			icon: '/emoji/writing_hand_3d_default.png',
-			variant: 'red'
-		},
 		'/wiki': {
 			title: 'Wiki & Dizionario',
 			subtitle: 'Consultazione acronimi',
