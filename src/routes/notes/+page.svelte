@@ -419,39 +419,10 @@
 
 	let draggedFigure = $state<HTMLElement | null>(null);
 
-	// Gestione dei click sui controlli di ridimensionamento / allineamento / spostamento / cancellazione dell'immagine inline
+	// Gestione dei click sui controlli di allineamento / spostamento / cancellazione dell'immagine inline
 	function handleEditorClick(e: MouseEvent) {
 		const target = e.target as HTMLElement;
 		if (!target) return;
-
-		// 1. Click pulsante preset dimensione
-		if (target.classList.contains('img-btn-size')) {
-			e.preventDefault();
-			e.stopPropagation();
-			const newSize = target.getAttribute('data-size') || '400';
-			const figure = target.closest('figure.doc-inline-image') as HTMLElement;
-			if (figure) {
-				const wrapper = figure.querySelector('.doc-image-wrapper') as HTMLElement;
-				const rawW = newSize.replace(/px/g, '').trim();
-				const cssW = rawW.includes('%') ? rawW : `${rawW}px`;
-
-				figure.setAttribute('data-width', rawW);
-				if (wrapper) wrapper.style.maxWidth = cssW;
-
-				// Aggiorna classe active sui pulsanti del gruppo
-				figure.querySelectorAll('.img-btn-size').forEach((btn) => {
-					if (btn.getAttribute('data-size') === newSize) {
-						btn.classList.add('active');
-					} else {
-						btn.classList.remove('active');
-					}
-				});
-
-				handleEditorInput();
-				toastStore.show({ message: `📏 Dimensione immagine: ${newSize}` });
-			}
-			return;
-		}
 
 		// 2. Click pulsante allineamento
 		if (target.classList.contains('img-btn-align')) {
@@ -2417,56 +2388,46 @@
 	/* Toolbar Fluttuante Word-Style */
 	.word-document-editor :global(.doc-image-toolbar) {
 		position: absolute;
-		bottom: 10px;
+		bottom: 8px;
 		left: 50%;
 		transform: translateX(-50%);
-		background: rgba(18, 22, 28, 0.92);
-		backdrop-filter: blur(10px);
-		-webkit-backdrop-filter: blur(10px);
-		border: 1px solid rgba(255, 255, 255, 0.2);
-		border-radius: 10px;
-		padding: 0.25rem 0.5rem;
+		background: rgba(15, 23, 42, 0.94);
+		backdrop-filter: blur(12px);
+		-webkit-backdrop-filter: blur(12px);
+		border: 1.5px solid rgba(255, 255, 255, 0.22);
+		border-radius: 9999px;
+		padding: 0.25rem 0.55rem;
 		display: flex;
 		align-items: center;
-		gap: 0.35rem;
-		box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
-		z-index: 15;
+		gap: 0.3rem;
+		box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+		z-index: 20;
 		opacity: 0.95;
-		max-width: 95%;
-		flex-wrap: wrap;
+		width: max-content;
+		max-width: calc(100vw - 32px);
+		white-space: nowrap;
+		flex-wrap: nowrap;
 		justify-content: center;
-		transition: opacity 0.15s ease;
+		transition: opacity 0.15s ease, transform 0.15s ease;
 	}
 
 	.word-document-editor :global(.doc-image-wrapper:hover .doc-image-toolbar) {
 		opacity: 1;
 	}
 
-	.word-document-editor :global(.img-tool-drag) {
-		cursor: grab;
-		font-size: 0.85rem;
-		color: #9ca3af;
-		padding: 0 0.2rem;
-		user-select: none;
-	}
-
-	.word-document-editor :global(.img-tool-drag:active) {
-		cursor: grabbing;
-	}
-
 	.word-document-editor :global(.img-btn-move) {
-		background: rgba(255, 255, 255, 0.08);
-		border: 1px solid rgba(255, 255, 255, 0.15);
-		border-radius: 5px;
+		background: rgba(255, 255, 255, 0.1);
+		border: 1px solid rgba(255, 255, 255, 0.18);
+		border-radius: 6px;
 		color: #e5e7eb;
-		font-size: 0.7rem;
-		padding: 0.15rem 0.35rem;
+		font-size: 0.72rem;
+		padding: 0.15rem 0.38rem;
 		cursor: pointer;
 		transition: all 0.12s ease;
 	}
 
 	.word-document-editor :global(.img-btn-move:hover) {
-		background: rgba(255, 255, 255, 0.22);
+		background: rgba(255, 255, 255, 0.25);
 		color: #fff;
 	}
 
@@ -2480,15 +2441,15 @@
 	.word-document-editor :global(.img-btn-align) {
 		background: transparent;
 		border: 1px solid transparent;
-		border-radius: 5px;
-		font-size: 0.75rem;
-		padding: 0.15rem 0.3rem;
+		border-radius: 6px;
+		font-size: 0.8rem;
+		padding: 0.15rem 0.32rem;
 		cursor: pointer;
 		transition: all 0.12s ease;
 	}
 
 	.word-document-editor :global(.img-btn-align:hover) {
-		background: rgba(255, 255, 255, 0.15);
+		background: rgba(255, 255, 255, 0.18);
 	}
 
 	.word-document-editor :global(.img-btn-align.active) {
@@ -2496,31 +2457,8 @@
 		border-color: var(--accent-color);
 	}
 
-	.word-document-editor :global(.img-btn-size) {
-		background: transparent;
-		border: 1px solid transparent;
-		border-radius: 5px;
-		padding: 0.15rem 0.4rem;
-		font-size: 0.68rem;
-		font-weight: 800;
-		color: #e5e7eb;
-		cursor: pointer;
-		transition: all 0.12s ease;
-	}
-
-	.word-document-editor :global(.img-btn-size:hover) {
-		background: rgba(255, 255, 255, 0.15);
-		color: #fff;
-	}
-
-	.word-document-editor :global(.img-btn-size.active) {
-		background: var(--accent-color);
-		color: #fff;
-		border-color: var(--accent-color);
-	}
-
 	.word-document-editor :global(.img-btn-view) {
-		font-size: 0.78rem;
+		font-size: 0.82rem;
 		text-decoration: none;
 		color: #e5e7eb;
 		padding: 0 0.2rem;
@@ -2530,7 +2468,7 @@
 		background: transparent;
 		border: none;
 		color: #ff5e5b;
-		font-size: 0.85rem;
+		font-size: 0.88rem;
 		font-weight: 900;
 		cursor: pointer;
 		padding: 0 0.2rem;
