@@ -174,60 +174,64 @@
 		onSelect={(cat) => (selectedCategory = cat)}
 	/>
 
-	<!-- Global Search Bar & Sub-Filters -->
+	<!-- Global Search Bar & Actions Toolbar -->
 	<div class="search-section">
-		<div class="search-box">
-			<span class="search-icon">🔍</span>
-			<input
-				type="text"
-				bind:value={searchQuery}
-				placeholder="Cerca acronimo, parola chiave o spiegazione nella Wiki..."
-				class="search-input"
-			/>
-			{#if searchQuery}
-				<button class="clear-btn" onclick={() => (searchQuery = '')}>✕</button>
-			{/if}
-		</div>
+		<div class="search-bar-row">
+			<div class="search-box">
+				<span class="search-icon">🔍</span>
+				<input
+					type="text"
+					bind:value={searchQuery}
+					placeholder="Cerca acronimo, spiegazione..."
+					class="search-input"
+				/>
+				{#if searchQuery}
+					<button class="clear-btn" onclick={() => (searchQuery = '')}>✕</button>
+				{/if}
+			</div>
 
-		<!-- Ignored Filter & Reset Toolbar -->
-		<div class="ignored-toolbar">
-			<button
-				type="button"
-				class="duo-btn filter-ignored-chip"
-				class:active-filter={showOnlyIgnored}
-				onclick={() => (showOnlyIgnored = !showOnlyIgnored)}
-			>
-				⭐ Ignorate ({ignoredCount})
-			</button>
-
-			{#if ignoredIds.size > 0}
+			<div class="search-actions-group">
 				<button
 					type="button"
-					class="duo-btn duo-btn-purple clear-all-ignored-btn"
-					onclick={handleClearAllIgnored}
+					class="duo-btn filter-ignored-chip"
+					class:active-filter={showOnlyIgnored}
+					onclick={() => (showOnlyIgnored = !showOnlyIgnored)}
+					title="Mostra solo schede ignorate"
 				>
-					✨ Riattiva tutte ({ignoredIds.size})
+					⭐ <span class="action-btn-label">Ignorate</span> ({ignoredCount})
 				</button>
-			{/if}
 
-			{#if !user}
-				<a
-					href="/api/auth/login"
-					class="duo-btn duo-btn-blue login-save-ignored-btn discord-wiki-login-btn"
-				>
-					<svg
-						class="discord-icon-mini"
-						xmlns="http://www.w3.org/2000/svg"
-						viewBox="0 0 127.14 96.36"
-						fill="currentColor"
+				{#if ignoredIds.size > 0}
+					<button
+						type="button"
+						class="duo-btn duo-btn-purple clear-all-ignored-btn"
+						onclick={handleClearAllIgnored}
+						title="Riattiva tutte le schede ignorate"
 					>
-						<path
-							d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.7,77.7,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1A105.25,105.25,0,0,0,126.6,80.22h0C129.24,52.84,122.09,29.11,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,45.92,53.87,53,48.8,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.25,60,73.25,53s5-12.74,11.44-12.74S96.23,45.92,96.1,53,91,65.69,84.69,65.69Z"
-						/>
-					</svg>
-					<span>ACCEDI CON DISCORD</span>
-				</a>
-			{/if}
+						✨ <span class="action-btn-label">Riattiva ({ignoredIds.size})</span>
+					</button>
+				{/if}
+
+				{#if !user}
+					<a
+						href="/api/auth/login"
+						class="duo-btn sync-btn discord-sync-btn discord-wiki-login-btn"
+						title="Accedi con Discord"
+					>
+						<svg
+							class="discord-icon-mini"
+							xmlns="http://www.w3.org/2000/svg"
+							viewBox="0 0 127.14 96.36"
+							fill="currentColor"
+						>
+							<path
+								d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.7,77.7,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1A105.25,105.25,0,0,0,126.6,80.22h0C129.24,52.84,122.09,29.11,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,45.92,53.87,53,48.8,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.25,60,73.25,53s5-12.74,11.44-12.74S96.23,45.92,96.1,53,91,65.69,84.69,65.69Z"
+							/>
+						</svg>
+						<span class="action-btn-label">ACCEDI</span>
+					</a>
+				{/if}
+			</div>
 		</div>
 
 		<!-- Alphabet Filter Bar -->
@@ -361,14 +365,30 @@
 		background: var(--card-bg);
 		border: 1px solid var(--border-color);
 		border-radius: 24px;
-		padding: 1.25rem;
+		padding: 1rem 1.25rem;
 		box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+	}
+
+	.search-bar-row {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		width: 100%;
 	}
 
 	.search-box {
 		position: relative;
 		display: flex;
 		align-items: center;
+		flex: 1;
+		min-width: 0;
+	}
+
+	.search-actions-group {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+		flex-shrink: 0;
 	}
 
 	.search-icon {
@@ -609,16 +629,22 @@
 		border: 1px solid var(--border-color);
 	}
 
-	.ignored-toolbar {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		flex-wrap: wrap;
+	@media (max-width: 600px) {
+		.search-bar-row {
+			flex-direction: column;
+			align-items: stretch;
+		}
+
+		.search-actions-group {
+			justify-content: flex-start;
+			overflow-x: auto;
+			padding-bottom: 0.2rem;
+		}
 	}
 
 	.filter-ignored-chip,
 	.clear-all-ignored-btn,
-	.login-save-ignored-btn {
+	.discord-wiki-login-btn {
 		height: 36px;
 		padding: 0 0.85rem;
 		font-size: 0.78rem;
