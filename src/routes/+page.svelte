@@ -21,6 +21,8 @@
 	let wordOfTheDay = $state<Card | null>(seed.word);
 	let isQuickAddOpen = $state(false);
 	let canInstall = $state(false);
+	let isSpinning = $state(false);
+	let isChangingWord = $state(false);
 	let user = $derived(data.user);
 
 	let stats = $state<StatsData>({
@@ -36,6 +38,21 @@
 		if (cardList.length === 0) return;
 		const randomIndex = Math.floor(Math.random() * cardList.length);
 		wordOfTheDay = cardList[randomIndex];
+	}
+
+	function handleNextWord() {
+		if (cards.length === 0 || isSpinning) return;
+		isSpinning = true;
+		isChangingWord = true;
+
+		setTimeout(() => {
+			pickRandomWord(cards);
+			isChangingWord = false;
+		}, 150);
+
+		setTimeout(() => {
+			isSpinning = false;
+		}, 450);
 	}
 
 	onMount(() => {
@@ -130,15 +147,17 @@
 						<div class="wod-header-actions">
 							<button
 								class="wod-action-btn"
-								onclick={() => pickRandomWord(cards)}
+								class:is-spinning={isSpinning}
+								onclick={handleNextWord}
+								disabled={isSpinning}
 								title="Scopri un'altra parola"
 							>
-								🎲 Altra Parola
+								<span class="dice-icon" class:spin={isSpinning}>🎲</span> Altra Parola
 							</button>
 						</div>
 					</div>
 
-					<div class="wod-content">
+					<div class="wod-content" class:wod-pop={isChangingWord}>
 						<div class="wod-title-row">
 							<h2 class="wod-title">{wordOfTheDay.title}</h2>
 							{#if wordOfTheDay.fullName}
@@ -448,18 +467,41 @@
 		border: 1.5px solid var(--border-color);
 		color: var(--text-color);
 		cursor: pointer;
-		transition: all 0.15s ease;
+		display: inline-flex;
+		align-items: center;
+		gap: 0.35rem;
+		transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 	}
 
-	.wod-action-btn:hover {
+	.wod-action-btn:hover:not(:disabled) {
 		background: var(--hover-bg);
 		border-color: var(--accent-color);
+		transform: translateY(-1px);
+	}
+
+	.wod-action-btn:active:not(:disabled) {
+		transform: translateY(1px);
+	}
+
+	.dice-icon {
+		display: inline-block;
+		transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+	}
+
+	.dice-icon.spin {
+		transform: rotate(360deg) scale(1.3);
 	}
 
 	.wod-content {
 		display: flex;
 		flex-direction: column;
 		gap: 0.6rem;
+		transition: opacity 0.2s ease, transform 0.2s ease;
+	}
+
+	.wod-content.wod-pop {
+		opacity: 0.3;
+		transform: scale(0.97) translateY(4px);
 	}
 
 	.wod-title-row {
@@ -703,8 +745,7 @@
 
 	.sidebar-privacy-footer {
 		text-align: center;
-		margin-top: -0.55rem;
-		padding: 0;
+		padding: 0.8rem 0 1rem 0;
 	}
 
 	@media (max-width: 1023px) {
