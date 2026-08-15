@@ -2,7 +2,6 @@
 	import { onMount } from 'svelte';
 	import { notesStore } from '$lib/stores/notesStore';
 	import {
-		parseMarkdown,
 		getMarkdownStats,
 		extractHeadings,
 		type HeadingItem
@@ -25,7 +24,6 @@
 	let sortOption = $state<NoteSortOption>('custom');
 
 	// Workspace UI states
-	let viewMode = $state<'edit' | 'preview' | 'split'>('edit');
 	let isOutlineOpen = $state(false);
 	let isSidebarOpenMobile = $state(true); // Su mobile: true = mostra lista file, false = mostra editor
 	let isAutoSaving = $state(false);
@@ -49,9 +47,7 @@
 			}
 		});
 
-		// Su desktop inizializza in modalità split o edit a seconda della larghezza
 		if (window.innerWidth >= 1024) {
-			viewMode = 'split';
 			isSidebarOpenMobile = false;
 		}
 
@@ -61,27 +57,23 @@
 		};
 	});
 
-	// Seleziona una nota e carica i dati nel workspace editor
 	function selectNote(note: Note) {
 		selectedNoteId = note.id;
 		currentTitle = note.title;
 		currentContent = note.content || '';
 		currentCategory = note.category || 'Normativa RFI';
 		currentIsPinned = Boolean(note.isPinned);
-		isSidebarOpenMobile = false; // Su mobile passa alla visualizzazione del file
+		isSidebarOpenMobile = false;
 	}
 
-	// Trova la nota attiva nello store
 	let activeNote = $derived(notes.find((n) => n.id === selectedNoteId) || null);
 
-	// Se activeNote cambia dall'esterno e non stiamo modificando
 	$effect(() => {
 		if (activeNote && activeNote.id !== selectedNoteId) {
 			selectNote(activeNote);
 		}
 	});
 
-	// Tutte le categorie disponibili con conteggio
 	let availableCategories = $derived.by(() => {
 		const counts = new Map<string, number>();
 		for (const n of notes) {
@@ -91,16 +83,13 @@
 		return Array.from(counts.entries()).sort((a, b) => a[0].localeCompare(b[0], 'it'));
 	});
 
-	// Note filtrate per cartella/categoria e ricerca
 	let filteredNotes = $derived.by(() => {
 		let list = [...notes];
 
-		// Filtro Categoria / Cartella
 		if (selectedCategory !== 'ALL') {
 			list = list.filter((n) => (n.category?.trim() || 'Generale & Varie') === selectedCategory);
 		}
 
-		// Ricerca
 		const q = searchQuery.toLowerCase().trim();
 		if (q) {
 			list = list.filter(
@@ -112,7 +101,6 @@
 			);
 		}
 
-		// Ordinamento Obsidian style
 		if (sortOption === 'custom') {
 			list.sort((a, b) => {
 				if (a.isPinned && !b.isPinned) return -1;
@@ -123,7 +111,10 @@
 			list.sort((a, b) => {
 				if (a.isPinned && !b.isPinned) return -1;
 				if (!a.isPinned && b.isPinned) return 1;
-				return new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime();
+				return (
+					new Date(b.updatedAt || b.createdAt).getTime() -
+					new Date(a.updatedAt || a.createdAt).getTime()
+				);
 			});
 		} else if (sortOption === 'title-asc') {
 			list.sort((a, b) => {
@@ -142,12 +133,9 @@
 		return list;
 	});
 
-	// Markdown render e statistiche della nota attiva
-	let renderedMarkdown = $derived(parseMarkdown(currentContent));
 	let docStats = $derived(getMarkdownStats(currentContent));
 	let headingsOutline = $derived<HeadingItem[]>(extractHeadings(currentContent));
 
-	// Auto-save debounced a 600ms
 	function triggerAutoSave() {
 		if (!selectedNoteId) return;
 		isAutoSaving = true;
@@ -165,20 +153,19 @@
 			isAutoSaving = false;
 			const now = new Date();
 			lastSavedTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-		}, 600);
+		}, 500);
 	}
 
 	async function handleCreateNewNote() {
 		const newNote = await notesStore.createNote({
 			title: 'Nuovo Appunto',
-			content: '### 📌 Obiettivi di Studio\n- [ ] Concetto chiave 1\n- [ ] Concetto chiave 2\n\n> [!TIP]\n> Inserisci qui le tue note di ripasso.\n',
+			content: '',
 			category: selectedCategory !== 'ALL' ? selectedCategory : 'Normativa RFI',
 			isPinned: false
 		});
 
 		if (newNote) {
 			selectNote(newNote);
-			viewMode = window.innerWidth >= 1024 ? 'split' : 'edit';
 			isSidebarOpenMobile = false;
 			setTimeout(() => {
 				if (textareaEl) textareaEl.focus();
@@ -207,7 +194,6 @@
 		triggerAutoSave();
 	}
 
-	// Toolbar formatting helper
 	function insertFormatting(prefix: string, suffix = '', placeholder = '') {
 		if (!textareaEl) return;
 		const start = textareaEl.selectionStart;
@@ -230,30 +216,10 @@
 		}, 10);
 	}
 
-	// Obsidian-style checklist interactive toggle
-	function toggleChecklistItem(index: number) {
-		const lines = currentContent.split('\n');
-		let checkCount = 0;
-		for (let i = 0; i < lines.length; i++) {
-			const match = lines[i].match(/^([\*\-]\s+\[)([ xX])(\]\s+.+)$/);
-			if (match) {
-				if (checkCount === index) {
-					const isCurrentlyChecked = match[2].toLowerCase() === 'x';
-					const newChar = isCurrentlyChecked ? ' ' : 'x';
-					lines[i] = `${match[1]}${newChar}${match[3]}`;
-					break;
-				}
-				checkCount++;
-			}
-		}
-		currentContent = lines.join('\n');
-		triggerAutoSave();
-	}
-
 	function copyMarkdown() {
 		if (!currentContent) return;
 		navigator.clipboard.writeText(`# ${currentTitle}\n\n${currentContent}`);
-		toastStore.show({ message: '📋 Testo Markdown copiato!' });
+		toastStore.show({ message: '📋 Testo copiato negli appunti!' });
 	}
 
 	function downloadFile() {
@@ -279,7 +245,7 @@
 </script>
 
 <div class="obsidian-workspace" onkeydown={handleKeyDown} role="presentation">
-	<!-- 🗂️ 1. LEFT VAULT EXPLORER / SIDEBAR -->
+	<!-- 🗂️ 1. LEFT VAULT EXPLORER -->
 	<aside
 		class="vault-sidebar duo-card"
 		class:mobile-hidden={!isSidebarOpenMobile && selectedNoteId !== null}
@@ -316,7 +282,7 @@
 			{/if}
 		</div>
 
-		<!-- Categories / Folders Chips -->
+		<!-- Folders Chips -->
 		<div class="vault-folders-bar">
 			<button
 				type="button"
@@ -338,7 +304,7 @@
 			{/each}
 		</div>
 
-		<!-- Notes List Explorer -->
+		<!-- Notes List Explorer (SENZA ANTEPRIME DI TESTO) -->
 		<div class="vault-files-list">
 			{#if filteredNotes.length === 0}
 				<div class="vault-empty-state">
@@ -368,10 +334,6 @@
 							<span class="file-cat">{note.category}</span>
 						</div>
 
-						<p class="file-snippet">
-							{note.content.replace(/[#*`_~>[\]()|\\-]/g, ' ').slice(0, 75)}
-						</p>
-
 						<div class="file-item-meta">
 							<span class="file-date">
 								{new Date(note.updatedAt || note.createdAt).toLocaleDateString('it-IT', {
@@ -387,7 +349,7 @@
 		</div>
 	</aside>
 
-	<!-- 📝 2. CENTER MAIN WORKSPACE (NOTE CANVAS & EDITOR) -->
+	<!-- 📝 2. CENTER MAIN WORKSPACE (SCRITTURA DIRETTA SENZA ANTEPRIMA) -->
 	<main
 		class="note-workspace-pane duo-card"
 		class:mobile-hidden={isSidebarOpenMobile && selectedNoteId !== null}
@@ -426,37 +388,6 @@
 					{:else}
 						<span class="saved-txt">💾 {lastSavedTime ? `Salvato ${lastSavedTime}` : 'Salvato'}</span>
 					{/if}
-				</div>
-
-				<!-- Mode View Switcher: Edit / Read / Split -->
-				<div class="view-mode-tabs">
-					<button
-						type="button"
-						class="mode-tab"
-						class:active={viewMode === 'edit'}
-						onclick={() => (viewMode = 'edit')}
-						title="Modalità Modifica"
-					>
-						✏️ Scrivi
-					</button>
-					<button
-						type="button"
-						class="mode-tab"
-						class:active={viewMode === 'preview'}
-						onclick={() => (viewMode = 'preview')}
-						title="Modalità Lettura"
-					>
-						👁️ Lettura
-					</button>
-					<button
-						type="button"
-						class="mode-tab desktop-only"
-						class:active={viewMode === 'split'}
-						onclick={() => (viewMode = 'split')}
-						title="Affiancato Live"
-					>
-						📑 Split
-					</button>
 				</div>
 
 				<!-- Header Quick Actions -->
@@ -509,85 +440,83 @@
 				</div>
 			</div>
 
-			<!-- Obsidian Formatting Ribbon Bar (quando in edit o split) -->
-			{#if viewMode === 'edit' || viewMode === 'split'}
-				<div class="obsidian-ribbon-bar">
-					<button
-						type="button"
-						class="ribbon-btn"
-						onclick={() => insertFormatting('**', '**', 'grassetto')}
-						title="Grassetto (Ctrl+B)"
-					>
-						<strong>B</strong>
-					</button>
-					<button
-						type="button"
-						class="ribbon-btn"
-						onclick={() => insertFormatting('*', '*', 'corsivo')}
-						title="Corsivo (Ctrl+I)"
-					>
-						<em>I</em>
-					</button>
-					<button
-						type="button"
-						class="ribbon-btn"
-						onclick={() => insertFormatting('### ', '', 'Intestazione')}
-						title="Titolo H3"
-					>
-						<strong>H</strong>
-					</button>
-					<span class="ribbon-sep"></span>
-					<button
-						type="button"
-						class="ribbon-btn"
-						onclick={() => insertFormatting('- ', '', 'Punto')}
-						title="Elenco puntato"
-					>
-						• Lista
-					</button>
-					<button
-						type="button"
-						class="ribbon-btn"
-						onclick={() => insertFormatting('1. ', '', 'Passo')}
-						title="Elenco numerato"
-					>
-						1. Num
-					</button>
-					<button
-						type="button"
-						class="ribbon-btn"
-						onclick={() => insertFormatting('- [ ] ', '', 'Checklist')}
-						title="Checklist interattiva"
-					>
-						☑️ Check
-					</button>
-					<span class="ribbon-sep"></span>
-					<button
-						type="button"
-						class="ribbon-btn"
-						onclick={() => insertFormatting('> [!TIP]\n> ', '', 'Suggerimento')}
-						title="Callout Tip"
-					>
-						💡 Tip
-					</button>
-					<button
-						type="button"
-						class="ribbon-btn"
-						onclick={() => insertFormatting('> [!WARNING]\n> ', '', 'Avviso')}
-						title="Callout Warning"
-					>
-						⚠️ Warning
-					</button>
-					<button
-						type="button"
-						class="ribbon-btn"
-						onclick={() => insertFormatting('```\n', '\n```', 'codice/schema')}
-						title="Blocco di codice"
-					>
-						💻 Codice
-					</button>
-				</div>
-			{/if}
+			<!-- Obsidian Formatting Ribbon Bar -->
+			<div class="obsidian-ribbon-bar">
+				<button
+					type="button"
+					class="ribbon-btn"
+					onclick={() => insertFormatting('**', '**', 'grassetto')}
+					title="Grassetto (Ctrl+B)"
+				>
+					<strong>B</strong>
+				</button>
+				<button
+					type="button"
+					class="ribbon-btn"
+					onclick={() => insertFormatting('*', '*', 'corsivo')}
+					title="Corsivo (Ctrl+I)"
+				>
+					<em>I</em>
+				</button>
+				<button
+					type="button"
+					class="ribbon-btn"
+					onclick={() => insertFormatting('### ', '', 'Intestazione')}
+					title="Titolo H3"
+				>
+					<strong>H</strong>
+				</button>
+				<span class="ribbon-sep"></span>
+				<button
+					type="button"
+					class="ribbon-btn"
+					onclick={() => insertFormatting('- ', '', 'Punto')}
+					title="Elenco puntato"
+				>
+					• Lista
+				</button>
+				<button
+					type="button"
+					class="ribbon-btn"
+					onclick={() => insertFormatting('1. ', '', 'Passo')}
+					title="Elenco numerato"
+				>
+					1. Num
+				</button>
+				<button
+					type="button"
+					class="ribbon-btn"
+					onclick={() => insertFormatting('- [ ] ', '', 'Attività')}
+					title="Checklist"
+				>
+					☑️ Check
+				</button>
+				<span class="ribbon-sep"></span>
+				<button
+					type="button"
+					class="ribbon-btn"
+					onclick={() => insertFormatting('> [!TIP]\n> ', '', 'Suggerimento')}
+					title="Callout Tip"
+				>
+					💡 Tip
+				</button>
+				<button
+					type="button"
+					class="ribbon-btn"
+					onclick={() => insertFormatting('> [!WARNING]\n> ', '', 'Avviso')}
+					title="Callout Warning"
+				>
+					⚠️ Warning
+				</button>
+				<button
+					type="button"
+					class="ribbon-btn"
+					onclick={() => insertFormatting('```\n', '\n```', 'codice/schema')}
+					title="Blocco di codice"
+				>
+					💻 Codice
+				</button>
+			</div>
 
 			<!-- Seamless Note Title Input -->
 			<div class="note-document-title-box">
@@ -600,34 +529,15 @@
 				/>
 			</div>
 
-			<!-- Document Content Area (Edit / Preview / Split) -->
-			<div class="document-canvas-container" class:split-active={viewMode === 'split'}>
-				<!-- Editor Pane -->
-				{#if viewMode === 'edit' || viewMode === 'split'}
-					<div class="canvas-pane editor-pane">
-						<textarea
-							bind:this={textareaEl}
-							bind:value={currentContent}
-							oninput={triggerAutoSave}
-							placeholder="Inizia a scrivere i tuoi appunti in Markdown...
-Usa **grassetto**, liste puntate o checklist `- [ ]` per schematizzare le normative."
-							class="obsidian-editor-textarea"
-						></textarea>
-					</div>
-				{/if}
-
-				<!-- Reading / Rendered Pane -->
-				{#if viewMode === 'preview' || viewMode === 'split'}
-					<div class="canvas-pane reading-pane markdown-rendered-box">
-						{#if currentContent.trim()}
-							{@html renderedMarkdown}
-						{:else}
-							<div class="empty-doc-placeholder">
-								<p>Nessun contenuto. Digita nell'editor per vedere l'anteprima formattata!</p>
-							</div>
-						{/if}
-					</div>
-				{/if}
+			<!-- Pure Writing Textarea Canvas (SENZA ANTEPRIMA) -->
+			<div class="document-canvas-container">
+				<textarea
+					bind:this={textareaEl}
+					bind:value={currentContent}
+					oninput={triggerAutoSave}
+					placeholder="Scrivi qui i tuoi appunti..."
+					class="obsidian-editor-textarea"
+				></textarea>
 			</div>
 
 			<!-- Workspace Footer Status Info -->
@@ -648,7 +558,7 @@ Usa **grassetto**, liste puntate o checklist `- [ ]` per schematizzare le normat
 			<div class="workspace-empty-canvas">
 				<img src="/emoji/owl_3d.png" alt="" class="empty-owl" />
 				<h2>Seleziona una nota dal Vault o creane una nuova</h2>
-				<p>Il tuo spazio di studio per memorizzare concetti e normative ferroviarie.</p>
+				<p>Spazio di scrittura per memorizzare concetti e normative ferroviarie.</p>
 				<button type="button" class="duo-btn duo-btn-green" onclick={handleCreateNewNote}>
 					➕ CREA NUOVA NOTA
 				</button>
@@ -701,8 +611,8 @@ Usa **grassetto**, liste puntate o checklist `- [ ]` per schematizzare le normat
 		grid-template-columns: 1fr;
 		gap: 0.85rem;
 		height: calc(100vh - 120px);
-		min-height: 600px;
-		max-height: 900px;
+		min-height: 560px;
+		max-height: 880px;
 		width: 100%;
 		max-width: 1300px;
 		margin: 0 auto;
@@ -711,7 +621,7 @@ Usa **grassetto**, liste puntate o checklist `- [ ]` per schematizzare le normat
 
 	@media (min-width: 1024px) {
 		.obsidian-workspace {
-			grid-template-columns: 320px 1fr;
+			grid-template-columns: 300px 1fr;
 		}
 	}
 
@@ -719,7 +629,7 @@ Usa **grassetto**, liste puntate o checklist `- [ ]` per schematizzare le normat
 	.vault-sidebar {
 		display: flex;
 		flex-direction: column;
-		gap: 0.65rem;
+		gap: 0.6rem;
 		padding: 1rem;
 		background: var(--card-bg);
 		border-radius: 18px;
@@ -732,7 +642,7 @@ Usa **grassetto**, liste puntate o checklist `- [ ]` per schematizzare le normat
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		padding-bottom: 0.5rem;
+		padding-bottom: 0.45rem;
 		border-bottom: 2px solid var(--border-color);
 		flex-shrink: 0;
 	}
@@ -744,7 +654,7 @@ Usa **grassetto**, liste puntate o checklist `- [ ]` per schematizzare le normat
 	}
 
 	.vault-icon {
-		font-size: 1.15rem;
+		font-size: 1.1rem;
 	}
 
 	.vault-name {
@@ -767,7 +677,7 @@ Usa **grassetto**, liste puntate o checklist `- [ ]` per schematizzare le normat
 
 	.new-note-btn {
 		font-size: 0.75rem;
-		padding: 0.4rem 0.75rem;
+		padding: 0.35rem 0.7rem;
 		border-radius: 10px;
 	}
 
@@ -843,7 +753,7 @@ Usa **grassetto**, liste puntate o checklist `- [ ]` per schematizzare le normat
 		overflow-y: auto;
 		display: flex;
 		flex-direction: column;
-		gap: 0.4rem;
+		gap: 0.35rem;
 		padding-right: 0.2rem;
 	}
 
@@ -852,7 +762,7 @@ Usa **grassetto**, liste puntate o checklist `- [ ]` per schematizzare le normat
 		border: 1.5px solid transparent;
 		border-left: 3px solid transparent;
 		border-radius: 10px;
-		padding: 0.6rem 0.75rem;
+		padding: 0.55rem 0.7rem;
 		cursor: pointer;
 		display: flex;
 		flex-direction: column;
@@ -899,16 +809,6 @@ Usa **grassetto**, liste puntate o checklist `- [ ]` per schematizzare le normat
 		white-space: nowrap;
 	}
 
-	.file-snippet {
-		font-size: 0.75rem;
-		color: var(--text-muted);
-		margin: 0;
-		line-height: 1.35;
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
-
 	.file-item-meta {
 		display: flex;
 		align-items: center;
@@ -945,7 +845,7 @@ Usa **grassetto**, liste puntate o checklist `- [ ]` per schematizzare le normat
 		overflow: hidden;
 		height: 100%;
 		box-sizing: border-box;
-		gap: 0.6rem;
+		gap: 0.55rem;
 	}
 
 	.workspace-header {
@@ -953,7 +853,7 @@ Usa **grassetto**, liste puntate o checklist `- [ ]` per schematizzare le normat
 		align-items: center;
 		justify-content: space-between;
 		gap: 0.6rem;
-		padding-bottom: 0.5rem;
+		padding-bottom: 0.45rem;
 		border-bottom: 2px solid var(--border-color);
 		flex-shrink: 0;
 		flex-wrap: wrap;
@@ -1006,39 +906,6 @@ Usa **grassetto**, liste puntate o checklist `- [ ]` per schematizzare le normat
 
 	.saved-txt {
 		color: var(--text-muted);
-	}
-
-	.view-mode-tabs {
-		display: flex;
-		align-items: center;
-		background: var(--card-bg-subtle);
-		border: 1.5px solid var(--border-color);
-		border-radius: 10px;
-		padding: 0.15rem;
-		gap: 0.15rem;
-	}
-
-	.mode-tab {
-		background: transparent;
-		border: none;
-		border-radius: 7px;
-		padding: 0.25rem 0.55rem;
-		font-size: 0.74rem;
-		font-weight: 800;
-		color: var(--text-muted);
-		cursor: pointer;
-		transition: all 0.12s ease;
-	}
-
-	.mode-tab.active {
-		background: var(--accent-color);
-		color: #ffffff;
-	}
-
-	@media (max-width: 1023px) {
-		.desktop-only {
-			display: none;
-		}
 	}
 
 	.workspace-quick-actions {
@@ -1141,28 +1008,12 @@ Usa **grassetto**, liste puntate o checklist `- [ ]` per schematizzare le normat
 		border-bottom: 2px solid var(--accent-color);
 	}
 
-	/* Document Canvas */
+	/* Pure Textarea Document Canvas */
 	.document-canvas-container {
 		flex: 1;
 		min-height: 200px;
 		display: flex;
-		gap: 0.85rem;
 		overflow: hidden;
-	}
-
-	.split-active {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-	}
-
-	.canvas-pane {
-		height: 100%;
-		overflow-y: auto;
-		box-sizing: border-box;
-	}
-
-	.editor-pane {
-		display: flex;
 	}
 
 	.obsidian-editor-textarea {
@@ -1184,22 +1035,6 @@ Usa **grassetto**, liste puntate o checklist `- [ ]` per schematizzare le normat
 
 	.obsidian-editor-textarea:focus {
 		border-color: var(--accent-color);
-	}
-
-	.reading-pane {
-		background: var(--card-bg-subtle);
-		border: 1.5px solid var(--border-color);
-		border-radius: 12px;
-		padding: 1rem 1.15rem;
-		font-size: 1rem;
-		line-height: 1.7;
-	}
-
-	.empty-doc-placeholder {
-		color: var(--text-muted);
-		text-align: center;
-		padding: 3rem 1rem;
-		font-style: italic;
 	}
 
 	.workspace-footer {
