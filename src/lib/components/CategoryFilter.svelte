@@ -93,24 +93,7 @@
 			<span class="trigger-arrow">▾</span>
 		</button>
 
-		<!-- Mostra i tag delle categorie solo quando un filtro è attivo -->
-		{#if isFiltered}
-			<div class="cat-tags-preview">
-				{#each selectedList as cat}
-					<span class="active-cat-tag">
-						<span class="active-tag-text">{cat}</span>
-						<button
-							type="button"
-							class="tag-remove-btn"
-							onclick={(e) => removeCategory(cat, e)}
-							title="Rimuovi filtro {cat}"
-						>
-							✕
-						</button>
-					</span>
-				{/each}
-			</div>
-		{/if}
+
 
 		<!-- Right Side Actions: Reset (✕) & Shuffle (🔄) -->
 		<div class="filter-right-actions">
@@ -333,58 +316,7 @@
 		opacity: 0.6;
 	}
 
-	/* Horizontal preview pills */
-	.cat-tags-preview {
-		display: flex;
-		align-items: center;
-		gap: 0.3rem;
-		overflow-x: auto;
-		scrollbar-width: none;
-		-webkit-overflow-scrolling: touch;
-		flex: 1;
-		min-width: 0;
-		padding: 2px 0;
-	}
 
-	.cat-tags-preview::-webkit-scrollbar {
-		display: none;
-	}
-
-
-
-	.active-cat-tag {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.3rem;
-		padding: 0.25rem 0.55rem;
-		border-radius: 9999px;
-		background: var(--accent-light-bg);
-		border: 1.5px solid var(--accent-color);
-		color: var(--accent-color);
-		font-family: 'Outfit', sans-serif;
-		font-size: 0.74rem;
-		font-weight: 800;
-		white-space: nowrap;
-		flex-shrink: 0;
-	}
-
-	.tag-remove-btn {
-		background: none;
-		border: none;
-		color: var(--accent-color);
-		font-size: 0.7rem;
-		font-weight: 900;
-		cursor: pointer;
-		padding: 0 0.1rem;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		border-radius: 50%;
-	}
-
-	.tag-remove-btn:hover {
-		color: #ff5e5b;
-	}
 
 	.filter-right-actions {
 		display: flex;

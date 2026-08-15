@@ -785,8 +785,7 @@
 				<!-- Trigger for Category Modal Picker with Search -->
 				<button
 					type="button"
-					class="vault-cat-trigger-btn"
-					class:full-width={selectedCategory === 'ALL'}
+					class="vault-cat-trigger-btn full-width"
 					class:active={selectedCategory !== 'ALL'}
 					onclick={() => (isVaultCatPickerOpen = true)}
 					title="Apri filtro categorie con ricerca rapida"
@@ -806,31 +805,6 @@
 						<span class="vcat-arrow">▾</span>
 					</div>
 				</button>
-
-				<!-- Mostra solo i tag attivi quando un filtro è selezionato -->
-				{#if selectedCategory !== 'ALL'}
-					{#each selectedCategory.split(',').map((s) => s.trim()) as catName}
-						<span class="active-vault-cat-tag">
-							<span>{catName}</span>
-							<button
-								type="button"
-								class="tag-del-btn"
-								onclick={() => toggleVaultCategory(catName)}
-								title="Rimuovi filtro {catName}"
-							>
-								✕
-							</button>
-						</span>
-					{/each}
-					<button
-						type="button"
-						class="folder-chip clear-cat-chip"
-						onclick={() => toggleVaultCategory('ALL')}
-						title="Azzera filtri categoria"
-					>
-						✕ Azzera
-					</button>
-				{/if}
 			</div>
 
 			<!-- Notes List Explorer -->
@@ -1661,75 +1635,7 @@
 		opacity: 0.6;
 	}
 
-	.active-vault-cat-tag {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.25rem;
-		padding: 0.2rem 0.5rem;
-		border-radius: 9999px;
-		background: var(--accent-light-bg);
-		border: 1.5px solid var(--accent-color);
-		color: var(--accent-color);
-		font-family: 'Outfit', sans-serif;
-		font-size: 0.72rem;
-		font-weight: 800;
-		white-space: nowrap;
-		flex-shrink: 0;
-	}
 
-	.tag-del-btn {
-		background: none;
-		border: none;
-		color: var(--accent-color);
-		font-size: 0.68rem;
-		font-weight: 900;
-		cursor: pointer;
-		padding: 0;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-	}
-
-	.tag-del-btn:hover {
-		color: #ff5e5b;
-	}
-
-	.folder-chip {
-		background: var(--card-bg-subtle);
-		border: 1.5px solid var(--border-color);
-		border-radius: 9999px;
-		padding: 0.25rem 0.65rem;
-		font-size: 0.72rem;
-		font-weight: 800;
-		color: var(--text-muted);
-		cursor: pointer;
-		white-space: nowrap;
-		transition: all 0.15s ease;
-		flex-shrink: 0;
-	}
-
-	.folder-chip:hover {
-		color: var(--text-color);
-		border-color: var(--accent-color);
-	}
-
-	.folder-chip.active {
-		background: var(--accent-light-bg);
-		border-color: var(--accent-color);
-		color: var(--accent-color);
-		font-weight: 900;
-	}
-
-	.more-cat-chip {
-		border-style: dashed;
-		color: var(--accent-color);
-	}
-
-	.clear-cat-chip {
-		border-color: #ff5e5b;
-		color: #ff5e5b;
-		background: rgba(255, 94, 91, 0.1);
-	}
 
 	/* 🗂️ Vault Category Modal Styles */
 	.vault-cat-backdrop {
