@@ -8,14 +8,39 @@
 	import { fade } from 'svelte/transition';
 	import { navStore } from '$lib/stores/navStore';
 	import { cardsStore } from '$lib/stores/cardsStore';
+	import { toastStore } from '$lib/stores/toastStore';
 	import { onMount } from 'svelte';
 
 	let { data, children } = $props();
 
 	let user = $derived(data?.user);
 
+	let isOffline = $state(false);
+
 	onMount(() => {
 		cardsStore.hydrate(data?.initialCards);
+
+		if (typeof window !== 'undefined') {
+			isOffline = !navigator.onLine;
+
+			const handleOnline = () => {
+				isOffline = false;
+				toastStore.show({ message: '🟢 Connessione internet ripristinata' });
+			};
+
+			const handleOffline = () => {
+				isOffline = true;
+				toastStore.show({ message: '📡 Modalità Offline attiva — tutti i contenuti sono disponibili in locale' });
+			};
+
+			window.addEventListener('online', handleOnline);
+			window.addEventListener('offline', handleOffline);
+
+			return () => {
+				window.removeEventListener('online', handleOnline);
+				window.removeEventListener('offline', handleOffline);
+			};
+		}
 	});
 
 	// Chiudi la tendina mobile ad ogni navigazione

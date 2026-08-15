@@ -12,6 +12,31 @@
 		<meta name="theme-color" content="#171f23" />
 		<meta name="apple-mobile-web-app-title" content="Raillingo" />
 		<meta name="format-detection" content="telephone=no" />
+
+		<!-- 🚀 Performance Resource Hints: Google Fonts Preconnect & Async Load -->
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+		<link rel="dns-prefetch" href="https://fonts.gstatic.com" />
+
+		<link
+			rel="preload"
+			as="style"
+			href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800;900&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Noto+Color+Emoji&display=swap"
+		/>
+		<link
+			rel="stylesheet"
+			href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800;900&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Noto+Color+Emoji&display=swap"
+			media="print"
+			onload="this.media='all'"
+		/>
+		<noscript>
+			<link
+				rel="stylesheet"
+				href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800;900&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Noto+Color+Emoji&display=swap"
+			/>
+		</noscript>
+
 		<script nonce="%sveltekit.nonce%">
 			window.deferredPwaPrompt = null;
 			window.addEventListener('beforeinstallprompt', (e) => {

@@ -324,6 +324,8 @@
 		box-sizing: border-box;
 		position: relative;
 		overflow: hidden;
+		content-visibility: auto;
+		contain-intrinsic-size: 500px;
 	}
 
 	.reel-header-bar {

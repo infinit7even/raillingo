@@ -89,10 +89,10 @@
 	<!-- Header Brand e Pulsante Chiudi -->
 	<div class="sidebar-brand">
 		<a href="/" class="brand-link" onclick={handleNavClick}>
-			<img src="/emoji/triangular_flag_3d.png" alt="Bandiera" class="brand-emoji" />
+			<img src="/emoji/triangular_flag_3d.png" alt="Bandiera" width="28" height="28" decoding="async" class="brand-emoji" />
 			<span class="brand-title">
 				Rai<span class="ll-track-box"
-					>l<img src="/emoji/railway_track_3d.png" alt="Binario" class="brand-track-img" />l</span
+					>l<img src="/emoji/railway_track_3d.png" alt="Binario" width="18" height="18" decoding="async" class="brand-track-img" />l</span
 				>ingo
 			</span>
 		</a>
@@ -119,7 +119,7 @@
 					data-sveltekit-preload-code="eager"
 				>
 					<div class="icon-wrapper" class:active-outline={isActive}>
-						<img src={item.emoji} alt={item.label} class="nav-emoji-img" />
+						<img src={item.emoji} alt={item.label} width="26" height="26" decoding="async" class="nav-emoji-img" />
 					</div>
 					<span class="nav-label">{item.label}</span>
 				</a>

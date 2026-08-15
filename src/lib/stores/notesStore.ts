@@ -2,6 +2,8 @@ import { browser } from '$app/environment';
 import type { Note } from '$lib/types/notes';
 import { toastStore } from '$lib/stores/toastStore';
 
+const STORAGE_KEY = 'rf_notes_cache';
+
 class NotesStore {
 	private notes: Note[] = [];
 	private loading = false;
@@ -12,13 +14,21 @@ class NotesStore {
 		if (this.hydrated) return;
 		this.hydrated = true;
 
-		if (initialNotes && Array.isArray(initialNotes)) {
+		// 1. Dati SSR ricevuti dal server
+		if (initialNotes && Array.isArray(initialNotes) && initialNotes.length > 0) {
 			this.notes = initialNotes;
+			this.saveToStorage();
 			this.notify();
 			return;
 		}
 
-		this.loadNotes();
+		// 2. Fallback offline: carica subito da localStorage
+		this.loadFromLocalStorage();
+
+		// 3. Tenta sincronizzazione con il server in background
+		if (browser) {
+			this.loadNotes();
+		}
 	}
 
 	public subscribe(run: (notes: Note[]) => void): () => void {
@@ -33,6 +43,22 @@ class NotesStore {
 		return this.notes;
 	}
 
+	private loadFromLocalStorage() {
+		if (!browser) return;
+		try {
+			const cached = localStorage.getItem(STORAGE_KEY);
+			if (cached) {
+				const parsed = JSON.parse(cached);
+				if (Array.isArray(parsed)) {
+					this.notes = parsed;
+					this.notify();
+				}
+			}
+		} catch (e) {
+			console.warn('Errore lettura cache note da localStorage:', e);
+		}
+	}
+
 	public async loadNotes(): Promise<Note[]> {
 		if (!browser) return this.notes;
 		this.loading = true;
@@ -41,12 +67,19 @@ class NotesStore {
 			const res = await fetch('/api/notes');
 			if (res.ok) {
 				const freshNotes: Note[] = await res.json();
-				this.notes = freshNotes;
-				this.notify();
-				return freshNotes;
+				if (Array.isArray(freshNotes)) {
+					this.notes = freshNotes;
+					this.saveToStorage();
+					this.notify();
+					return freshNotes;
+				}
 			}
 		} catch (e) {
-			console.error('Errore caricamento appunti:', e);
+			console.warn('Modalità offline o errore durante il caricamento note da API:', e);
+			// Se siamo offline, assicurati che i dati locali siano caricati
+			if (this.notes.length === 0) {
+				this.loadFromLocalStorage();
+			}
 		} finally {
 			this.loading = false;
 		}
@@ -55,58 +88,94 @@ class NotesStore {
 	}
 
 	public async createNote(noteData: Partial<Note>): Promise<Note | null> {
+		const now = new Date().toISOString();
+		const localId = noteData.id || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : 'note-' + Date.now());
+
+		const newNote: Note = {
+			id: localId,
+			userId: noteData.userId || 'local-user',
+			title: noteData.title?.trim() || 'Nuovo Appunto',
+			content: noteData.content || '',
+			category: noteData.category?.trim() || 'Normativa RFI',
+			tags: noteData.tags || [],
+			images: noteData.images || [],
+			isPinned: Boolean(noteData.isPinned),
+			order: typeof noteData.order === 'number' ? noteData.order : this.notes.length + 1,
+			createdAt: noteData.createdAt || now,
+			updatedAt: now
+		};
+
+		// 1. Salvataggio locale immediato (optimistic)
+		this.notes = [newNote, ...this.notes];
+		this.saveToStorage();
+		this.notify();
+
+		// 2. Sincronizzazione con il server API
 		try {
 			const res = await fetch('/api/notes', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(noteData)
+				body: JSON.stringify(newNote)
 			});
 
 			if (res.ok) {
-				const created: Note = await res.json();
-				this.notes = [created, ...this.notes];
+				const serverCreated: Note = await res.json();
+				this.notes = this.notes.map((n) => (n.id === localId ? serverCreated : n));
+				this.saveToStorage();
 				this.notify();
 				toastStore.show({ message: '📝 Appunto salvato con successo!' });
-				return created;
+				return serverCreated;
 			} else {
-				const err = await res.json();
-				toastStore.show({ message: `⚠️ ${err.error || 'Errore salvataggio'}` });
+				toastStore.show({ message: '📝 Appunto salvato in locale (offline)' });
 			}
-		} catch (e) {
-			console.error('Errore creazione appunto:', e);
-			toastStore.show({ message: '⚠️ Errore di connessione' });
+		} catch {
+			toastStore.show({ message: '📝 Appunto salvato in locale (offline)' });
 		}
-		return null;
+
+		return newNote;
 	}
 
 	public async updateNote(noteData: Partial<Note> & { id: string }): Promise<Note | null> {
+		const now = new Date().toISOString();
+		const index = this.notes.findIndex((n) => n.id === noteData.id);
+		if (index === -1) return null;
+
+		const updated: Note = {
+			...this.notes[index],
+			...noteData,
+			updatedAt: now
+		};
+
+		// 1. Salvataggio locale immediato
+		this.notes = this.notes.map((n) => (n.id === updated.id ? updated : n));
+		this.saveToStorage();
+		this.notify();
+
+		// 2. Sincronizzazione con il server API
 		try {
 			const res = await fetch('/api/notes', {
 				method: 'PUT',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(noteData)
+				body: JSON.stringify(updated)
 			});
 
 			if (res.ok) {
-				const updated: Note = await res.json();
-				this.notes = this.notes.map((n) => (n.id === updated.id ? updated : n));
+				const saved: Note = await res.json();
+				this.notes = this.notes.map((n) => (n.id === saved.id ? saved : n));
+				this.saveToStorage();
 				this.notify();
-				toastStore.show({ message: '✅ Appunto aggiornato!' });
-				return updated;
-			} else {
-				const err = await res.json();
-				toastStore.show({ message: `⚠️ ${err.error || 'Errore modifica'}` });
+				return saved;
 			}
-		} catch (e) {
-			console.error('Errore aggiornamento appunto:', e);
-			toastStore.show({ message: '⚠️ Errore durante il salvataggio' });
+		} catch {
+			// Silenzioso — la nota è già salvata in localStorage
 		}
-		return null;
+
+		return updated;
 	}
 
 	public async deleteNote(id: string): Promise<boolean> {
-		const backup = [...this.notes];
 		this.notes = this.notes.filter((n) => n.id !== id);
+		this.saveToStorage();
 		this.notify();
 
 		try {
@@ -118,16 +187,12 @@ class NotesStore {
 				toastStore.show({ message: '🗑️ Appunto eliminato' });
 				return true;
 			} else {
-				this.notes = backup;
-				this.notify();
-				toastStore.show({ message: '⚠️ Impossibile eliminare la nota' });
+				toastStore.show({ message: '🗑️ Appunto rimosso in locale' });
 			}
-		} catch (e) {
-			this.notes = backup;
-			this.notify();
-			toastStore.show({ message: '⚠️ Errore di rete' });
+		} catch {
+			toastStore.show({ message: '🗑️ Appunto rimosso in locale (offline)' });
 		}
-		return false;
+		return true;
 	}
 
 	public async togglePin(id: string): Promise<void> {
@@ -157,6 +222,7 @@ class NotesStore {
 		}));
 
 		this.notes = updatedItems;
+		this.saveToStorage();
 		this.notify();
 
 		await this.syncOrder(updatedItems.map((n) => ({ id: n.id, order: n.order })));
@@ -170,7 +236,17 @@ class NotesStore {
 				body: JSON.stringify({ items })
 			});
 		} catch (e) {
-			console.error('Errore sincronizzazione ordine appunti:', e);
+			console.warn('Errore sync ordine appunti API:', e);
+		}
+	}
+
+	private saveToStorage() {
+		if (browser) {
+			try {
+				localStorage.setItem(STORAGE_KEY, JSON.stringify(this.notes));
+			} catch (e) {
+				console.warn('Spazio localStorage esaurito o errore salvataggio:', e);
+			}
 		}
 	}
 

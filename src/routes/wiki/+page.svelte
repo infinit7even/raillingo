@@ -49,8 +49,8 @@
 		return Array.from(set).sort();
 	});
 
-	// Get available letters from titles
-	let availableLetters = $derived(() => {
+	// Get available letters from titles (memoized array)
+	let availableLetters = $derived.by<string[]>(() => {
 		const set = new Set<string>();
 		for (const card of wikiCards) {
 			const titleText = card.title?.trim() || card.fullName?.trim() || '';
@@ -214,7 +214,7 @@
 			>
 				TUTTI
 			</button>
-			{#each availableLetters() as letter}
+			{#each availableLetters as letter}
 				<button
 					class="letter-btn"
 					class:active={selectedLetter === letter}
@@ -422,7 +422,8 @@
 		border-radius: 16px;
 		overflow: hidden;
 		transition: border-color 0.2s ease;
-		animation: slideUpFade 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+		content-visibility: auto;
+		contain-intrinsic-size: 58px;
 	}
 
 	.compact-card.is-ignored-card {

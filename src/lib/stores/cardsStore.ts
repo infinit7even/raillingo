@@ -20,6 +20,7 @@ class CardsStore {
 
 		if (initialCards && initialCards.length > 0) {
 			this.cards = initialCards;
+			this.saveToStorage();
 			this.notify();
 			return;
 		}

@@ -115,21 +115,21 @@
 					out:fade={{ duration: 100 }}
 				>
 					<div class="hstat-item streak">
-						<img src="/emoji/fire_3d.png" alt="Serie" class="hstat-emoji" />
+						<img src="/emoji/fire_3d.png" alt="Serie" width="22" height="22" decoding="async" class="hstat-emoji" />
 						<div class="hstat-text">
 							<span class="hstat-lbl">Serie</span>
 							<span class="hstat-val">{stats.streakDays}</span>
 						</div>
 					</div>
 					<div class="hstat-item gems">
-						<img src="/emoji/gem_stone_3d.png" alt="Gemme" class="hstat-emoji" />
+						<img src="/emoji/gem_stone_3d.png" alt="Gemme" width="22" height="22" decoding="async" class="hstat-emoji" />
 						<div class="hstat-text">
 							<span class="hstat-lbl">Gemme</span>
 							<span class="hstat-val">{gems}</span>
 						</div>
 					</div>
 					<div class="hstat-item hearts">
-						<img src="/emoji/high_voltage_3d.png" alt="XP" class="hstat-emoji" />
+						<img src="/emoji/high_voltage_3d.png" alt="XP" width="22" height="22" decoding="async" class="hstat-emoji" />
 						<div class="hstat-text">
 							<span class="hstat-lbl">XP</span>
 							<span class="hstat-val">{totalXP}</span>
@@ -142,7 +142,7 @@
 					in:fly={{ y: 10, duration: 250, delay: 50 }}
 					out:fade={{ duration: 100 }}
 				>
-					<img src={activeHeader.icon} alt="" class="banner-icon" />
+					<img src={activeHeader.icon} alt="" width="26" height="26" decoding="async" class="banner-icon" />
 					<div class="banner-text">
 						<h1 class="banner-title">{activeHeader.title}</h1>
 						{#if activeHeader.subtitle}

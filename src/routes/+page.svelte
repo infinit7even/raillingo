@@ -178,7 +178,7 @@
 				<a href="/missioni" class="widget-link">VEDI TUTTE &gt;</a>
 			</div>
 			<div class="mission-item">
-				<img src="/emoji/high_voltage_3d.png" alt="XP" class="widget-emoji-img" />
+				<img src="/emoji/high_voltage_3d.png" alt="XP" width="24" height="24" decoding="async" class="widget-emoji-img" />
 				<div class="mission-info">
 					<span class="mission-desc">Guadagna 10 XP</span>
 					<div class="duo-progress-track">
@@ -186,7 +186,7 @@
 					</div>
 					<span class="mission-count">{Math.min(10, totalXP)} / 10</span>
 				</div>
-				<img src="/emoji/package_3d.png" alt="Premio" class="widget-emoji-img" />
+				<img src="/emoji/package_3d.png" alt="Premio" width="24" height="24" decoding="async" class="widget-emoji-img" />
 			</div>
 		</div>
 
@@ -196,7 +196,7 @@
 				{#each lessonNodes as node, i}
 					<div class="node-wrapper" style="transform: translateX({node.offset}px)">
 						<a href={node.href} class="path-node-btn" class:active={i === 0} title={node.title}>
-							<img src={node.icon} alt={node.title} class="node-emoji-img" />
+							<img src={node.icon} alt={node.title} width="36" height="36" decoding="async" class="node-emoji-img" />
 						</a>
 						<span class="path-node-label">{node.title}</span>
 					</div>
@@ -204,7 +204,7 @@
 
 				<!-- 🦉 Duolingo Owl Mascot Illustration on Path -->
 				<div class="duo-mascot-box">
-					<img src="/emoji/owl_3d.png" alt="Mascotte Gufo" class="mascot-img" />
+					<img src="/emoji/owl_3d.png" alt="Mascotte Gufo" width="80" height="80" decoding="async" class="mascot-img" />
 				</div>
 			</div>
 		</section>
@@ -219,21 +219,21 @@
 			title="Clicca per aprire le Missioni ed i Dettagli"
 		>
 			<div class="stat-item streak">
-				<img src="/emoji/fire_3d.png" alt="Serie" class="widget-emoji-img" />
+				<img src="/emoji/fire_3d.png" alt="Serie" width="24" height="24" decoding="async" class="widget-emoji-img" />
 				<div class="stat-text-group">
 					<span class="stat-lbl">Serie</span>
 					<span class="stat-val">{stats.streakDays}</span>
 				</div>
 			</div>
 			<div class="stat-item gems">
-				<img src="/emoji/gem_stone_3d.png" alt="Gemme" class="widget-emoji-img" />
+				<img src="/emoji/gem_stone_3d.png" alt="Gemme" width="24" height="24" decoding="async" class="widget-emoji-img" />
 				<div class="stat-text-group">
 					<span class="stat-lbl">Gemme</span>
 					<span class="stat-val">{gems}</span>
 				</div>
 			</div>
 			<div class="stat-item hearts">
-				<img src="/emoji/high_voltage_3d.png" alt="XP" class="widget-emoji-img" />
+				<img src="/emoji/high_voltage_3d.png" alt="XP" width="24" height="24" decoding="async" class="widget-emoji-img" />
 				<div class="stat-text-group">
 					<span class="stat-lbl">XP</span>
 					<span class="stat-val">{totalXP}</span>
@@ -247,7 +247,7 @@
 				<a href="/missioni" class="widget-link">VEDI TUTTE &gt;</a>
 			</div>
 			<div class="mission-item">
-				<img src="/emoji/high_voltage_3d.png" alt="XP" class="widget-emoji-img" />
+				<img src="/emoji/high_voltage_3d.png" alt="XP" width="24" height="24" decoding="async" class="widget-emoji-img" />
 				<div class="mission-info">
 					<span class="mission-desc">Guadagna 10 XP</span>
 					<div class="duo-progress-track">
@@ -255,7 +255,7 @@
 					</div>
 					<span class="mission-count">{Math.min(10, totalXP)} / 10</span>
 				</div>
-				<img src="/emoji/package_3d.png" alt="Premio" class="widget-emoji-img" />
+				<img src="/emoji/package_3d.png" alt="Premio" width="24" height="24" decoding="async" class="widget-emoji-img" />
 			</div>
 		</div>
 
@@ -287,7 +287,7 @@
 					rel="noopener noreferrer"
 					class="duo-btn duo-btn-green flex-btn"
 				>
-					<img src="/emoji/sparkles_3d.png" alt="Splendore" class="btn-emoji-img" />
+					<img src="/emoji/sparkles_3d.png" alt="Splendore" width="20" height="20" decoding="async" class="btn-emoji-img" />
 					SOSTIENI IL PROGETTO
 				</a>
 

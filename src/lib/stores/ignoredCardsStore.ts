@@ -39,18 +39,27 @@ class IgnoredCardsStore {
 	}
 
 	private async loadIgnoredCards() {
-		// 1. Try reading cookie
-		const cookieVal = this.getCookie('rf_ignored_cards');
-		if (cookieVal) {
-			try {
-				const parsed = JSON.parse(cookieVal);
-				if (Array.isArray(parsed)) {
-					this.ignoredIds = new Set(parsed);
-					this.notify();
-				}
-			} catch (e) {
-				console.error('Errore parsing cookie rf_ignored_cards:', e);
+		// 1. Try reading localStorage or cookie
+		let parsed: string[] | null = null;
+		try {
+			const localVal = localStorage.getItem('rf_ignored_cards');
+			if (localVal) {
+				parsed = JSON.parse(localVal);
 			}
+		} catch {}
+
+		if (!parsed) {
+			const cookieVal = this.getCookie('rf_ignored_cards');
+			if (cookieVal) {
+				try {
+					parsed = JSON.parse(cookieVal);
+				} catch {}
+			}
+		}
+
+		if (Array.isArray(parsed)) {
+			this.ignoredIds = new Set(parsed);
+			this.notify();
 		}
 
 		// 2. Fetch from API (syncs with user session if logged in)
@@ -135,7 +144,13 @@ class IgnoredCardsStore {
 
 	private saveToStorage() {
 		const arr = Array.from(this.ignoredIds);
-		this.setCookie('rf_ignored_cards', JSON.stringify(arr));
+		const jsonStr = JSON.stringify(arr);
+		this.setCookie('rf_ignored_cards', jsonStr);
+		if (browser) {
+			try {
+				localStorage.setItem('rf_ignored_cards', jsonStr);
+			} catch {}
+		}
 	}
 
 	private notify() {

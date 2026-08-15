@@ -21,7 +21,7 @@
 <div class="page-header-banner duo-banner-{variant}">
 	<div class="header-content-group">
 		{#if icon}
-			<img src={icon} alt="" class="header-icon-img" />
+			<img src={icon} alt="" width="36" height="36" decoding="async" class="header-icon-img" />
 		{/if}
 
 		<div class="header-text-box">
