@@ -92,7 +92,7 @@
 		title="Quiz a Scelta Multipla"
 		subtitle="Metti alla prova la tua memoria selezionando la risposta corretta tra 5 opzioni."
 		icon="/emoji/star_3d.png"
-		variant="purple"
+		variant="orange"
 	/>
 
 	<!-- Single Unified Category & Shuffle Bar -->
