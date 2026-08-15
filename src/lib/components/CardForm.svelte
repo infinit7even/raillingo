@@ -126,7 +126,7 @@
 			});
 
 			const formData = new FormData();
-			formData.append('file', compressedFile);
+			formData.append('file', compressedFile, 'pasted-card.webp');
 			const res = await fetch('/api/upload', {
 				method: 'POST',
 				body: formData
@@ -159,13 +159,14 @@
 
 	function handlePaste(e: ClipboardEvent) {
 		const items = e.clipboardData?.items;
-		if (!items) return;
+		if (!items || uploading) return;
 		for (let i = 0; i < items.length; i++) {
 			const item = items[i];
 			if (item.type.indexOf('image') !== -1) {
 				e.preventDefault();
+				e.stopPropagation();
 				const blob = item.getAsFile();
-				if (blob) {
+				if (blob && blob.size > 0) {
 					uploadBlob(blob);
 				}
 				break;

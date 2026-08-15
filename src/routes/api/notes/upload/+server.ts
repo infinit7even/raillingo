@@ -15,6 +15,23 @@ function getMaxImageSize(): number {
 	return parsed * 1024 * 1024;
 }
 
+function isImageBuffer(buffer: Buffer): boolean {
+	if (!buffer || buffer.length < 4) return false;
+	// PNG: 89 50 4E 47
+	if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4e && buffer[3] === 0x47) return true;
+	// JPEG: FF D8 FF
+	if (buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) return true;
+	// WebP: RIFF ... WEBP
+	if (
+		buffer.length >= 12 &&
+		buffer[0] === 0x52 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x46 &&
+		buffer[8] === 0x57 && buffer[9] === 0x45 && buffer[10] === 0x42 && buffer[11] === 0x50
+	) return true;
+	// GIF: GIF8
+	if (buffer[0] === 0x47 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x38) return true;
+	return false;
+}
+
 export const POST: RequestHandler = async (event) => {
 	const { request, cookies } = event;
 
@@ -45,16 +62,22 @@ export const POST: RequestHandler = async (event) => {
 			);
 		}
 
-		const extension = path.extname(file.name).toLowerCase();
-		if (!ALLOWED_EXTENSIONS.has(extension) && !ALLOWED_MIME_TYPES.has(file.type)) {
+		const bytes = await file.arrayBuffer();
+		const buffer = Buffer.from(bytes);
+
+		const extension = path.extname(file.name || '').toLowerCase();
+		const mime = (file.type || '').toLowerCase();
+
+		const isAllowedExt = ALLOWED_EXTENSIONS.has(extension);
+		const isAllowedMime = ALLOWED_MIME_TYPES.has(mime) || mime.startsWith('image/');
+		const isImage = isImageBuffer(buffer);
+
+		if (!isAllowedExt && !isAllowedMime && !isImage) {
 			return json(
 				{ error: 'Formato non consentito. Sono supportati solo file PNG, JPG e WebP.' },
 				{ status: 400 }
 			);
 		}
-
-		const bytes = await file.arrayBuffer();
-		const buffer = Buffer.from(bytes);
 
 		// Salva sempre con estensione .webp
 		const filename = `note-img-${Date.now()}-${Math.random().toString(36).substring(2, 8)}.webp`;

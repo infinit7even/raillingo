@@ -251,6 +251,7 @@
 			return;
 		}
 
+		if (isUploadingImage) return;
 		isUploadingImage = true;
 		toastStore.show({ message: '⏳ Compressione e caricamento immagine in corso...' });
 
@@ -264,7 +265,7 @@
 			});
 
 			const formData = new FormData();
-			formData.append('file', compressedFile);
+			formData.append('file', compressedFile, 'pasted-image.webp');
 
 			const res = await fetch('/api/notes/upload', {
 				method: 'POST',
@@ -349,14 +350,15 @@
 	// Gestione globale dell'evento Incolla (Ctrl+V)
 	function handleGlobalPaste(e: ClipboardEvent) {
 		const items = e.clipboardData?.items;
-		if (!items) return;
+		if (!items || isUploadingImage) return;
 
 		for (let i = 0; i < items.length; i++) {
 			const item = items[i];
 			if (item.type.startsWith('image/')) {
 				e.preventDefault();
+				e.stopPropagation();
 				const file = item.getAsFile();
-				if (file) {
+				if (file && file.size > 0) {
 					uploadAndInsertImage(file);
 				}
 				break;

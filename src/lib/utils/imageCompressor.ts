@@ -1,6 +1,6 @@
 /**
  * Utility per la compressione client-side di immagini prima dell'upload.
- * Supporta formati PNG, JPG, WebP e comprime in WebP ottimizzato (o JPEG di fallback).
+ * Supporta formati PNG, JPG, WebP e converte in WebP ottimizzato con fallback sicuro.
  */
 
 export interface CompressionOptions {
@@ -19,15 +19,35 @@ export async function compressImage(
 	const maxHeight = options.maxHeight ?? 1920;
 	const initialQuality = options.quality ?? 0.82;
 
-	return new Promise((resolve, reject) => {
+	return new Promise((resolve) => {
+		let objectUrl = '';
+		try {
+			objectUrl = URL.createObjectURL(file);
+		} catch {
+			const safeFile =
+				file instanceof File
+					? file
+					: new File([file], `img-${Date.now()}.png`, { type: file.type || 'image/png' });
+			resolve(safeFile);
+			return;
+		}
+
 		const img = new Image();
-		const objectUrl = URL.createObjectURL(file);
 
 		img.onload = () => {
 			URL.revokeObjectURL(objectUrl);
 
 			let width = img.naturalWidth || img.width;
 			let height = img.naturalHeight || img.height;
+
+			if (!width || !height) {
+				const safeFile =
+					file instanceof File
+						? file
+						: new File([file], `img-${Date.now()}.png`, { type: file.type || 'image/png' });
+				resolve(safeFile);
+				return;
+			}
 
 			// Scala mantenendo le proporzioni se supera le dimensioni massime
 			if (width > maxWidth || height > maxHeight) {
@@ -42,7 +62,11 @@ export async function compressImage(
 
 			const ctx = canvas.getContext('2d');
 			if (!ctx) {
-				reject(new Error('Impossibile ottenere il contesto 2D del canvas'));
+				const safeFile =
+					file instanceof File
+						? file
+						: new File([file], `img-${Date.now()}.png`, { type: file.type || 'image/png' });
+				resolve(safeFile);
 				return;
 			}
 
@@ -54,7 +78,34 @@ export async function compressImage(
 				canvas.toBlob(
 					(blob) => {
 						if (!blob) {
-							reject(new Error('Compressione immagine fallita'));
+							// Se toBlob 'image/webp' non produce blob, prova con toDataURL o fallback
+							try {
+								const dataUrl = canvas.toDataURL('image/webp', quality);
+								if (dataUrl && dataUrl.startsWith('data:image/')) {
+									const arr = dataUrl.split(',');
+									const mimeMatch = arr[0].match(/:(.*?);/);
+									const mime = mimeMatch ? mimeMatch[1] : 'image/webp';
+									const bstr = atob(arr[1]);
+									let n = bstr.length;
+									const u8arr = new Uint8Array(n);
+									while (n--) {
+										u8arr[n] = bstr.charCodeAt(n);
+									}
+									const fallbackBlob = new Blob([u8arr], { type: mime });
+									const fallbackFile = new File([fallbackBlob], `img-${Date.now()}.webp`, {
+										type: 'image/webp'
+									});
+									resolve(fallbackFile);
+									return;
+								}
+							} catch {
+								// Ignora
+							}
+							const safeFile =
+								file instanceof File
+									? file
+									: new File([file], `img-${Date.now()}.png`, { type: file.type || 'image/png' });
+							resolve(safeFile);
 							return;
 						}
 
@@ -65,7 +116,7 @@ export async function compressImage(
 							return;
 						}
 
-						const filename = `pasted-img-${Date.now()}.webp`;
+						const filename = `img-${Date.now()}.webp`;
 						const compressedFile = new File([blob], filename, { type: 'image/webp' });
 						resolve(compressedFile);
 					},
@@ -79,7 +130,12 @@ export async function compressImage(
 
 		img.onerror = () => {
 			URL.revokeObjectURL(objectUrl);
-			reject(new Error('Formato immagine non valido'));
+			// In caso di errore di rendering immagine, ritorna il file originale per non bloccare l'upload
+			const safeFile =
+				file instanceof File
+					? file
+					: new File([file], `img-${Date.now()}.png`, { type: file.type || 'image/png' });
+			resolve(safeFile);
 		};
 
 		img.src = objectUrl;
