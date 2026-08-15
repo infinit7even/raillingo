@@ -3,21 +3,43 @@
 	import { cardsStore } from '$lib/stores/cardsStore';
 	import { ignoredCardsStore } from '$lib/stores/ignoredCardsStore';
 	import { statsStore } from '$lib/stores/statsStore';
+	import { globalCategoryStore } from '$lib/stores/globalCategoryStore';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import CategoryFilter from '$lib/components/CategoryFilter.svelte';
 	import type { Card } from '$lib/types/cards';
-	import { globalCategoryStore } from '$lib/stores/globalCategoryStore';
 
 	let rawCards = $state<Card[]>([]);
 	let ignoredIds = $state<Set<string>>(new Set());
 	let selectedCategory = $state('ALL');
 	let flippedMap = $state<Record<string, boolean>>({});
 	let imageIndexMap = $state<Record<string, number>>({});
+	let shuffledDeck = $state<Card[]>([]);
+
+	function shuffleArray<T>(array: T[]): T[] {
+		const result = [...array];
+		for (let i = result.length - 1; i > 0; i--) {
+			const j = Math.floor(Math.random() * (i + 1));
+			[result[i], result[j]] = [result[j], result[i]];
+		}
+		return result;
+	}
 
 	onMount(() => {
-		const unsubCards = cardsStore.subscribe((c) => (rawCards = c));
-		const unsubIgnored = ignoredCardsStore.subscribe((ids) => (ignoredIds = ids));
-		const unsubCategory = globalCategoryStore.subscribe((cat) => (selectedCategory = cat));
+		const unsubCards = cardsStore.subscribe((c) => {
+			rawCards = c;
+			refreshReels();
+		});
+		const unsubIgnored = ignoredCardsStore.subscribe((ids) => {
+			ignoredIds = ids;
+			refreshReels();
+		});
+		const unsubCategory = globalCategoryStore.subscribe((cat) => {
+			if (selectedCategory !== cat) {
+				selectedCategory = cat;
+				refreshReels();
+			}
+		});
+
 		return () => {
 			unsubCards();
 			unsubIgnored();
@@ -35,8 +57,8 @@
 		return Array.from(set).sort();
 	});
 
-	// Solo card CON immagini e NON ignorate
-	let reelCards = $derived(
+	// Tutte le card valide CON immagini e NON ignorate
+	let validReelCards = $derived(
 		rawCards.filter((c) => {
 			const hasImg = c.images && c.images.length > 0;
 			const notIgnored = !ignoredIds.has(c.id);
@@ -45,6 +67,20 @@
 			return hasImg && notIgnored && matchesCategory;
 		})
 	);
+
+	function refreshReels() {
+		shuffledDeck = shuffleArray(validReelCards);
+		flippedMap = {};
+		imageIndexMap = {};
+	}
+
+	$effect(() => {
+		const _cat = selectedCategory;
+		const _cards = validReelCards;
+		if (shuffledDeck.length === 0 && _cards.length > 0) {
+			refreshReels();
+		}
+	});
 
 	function toggleFlip(cardId: string) {
 		flippedMap[cardId] = !flippedMap[cardId];
@@ -76,7 +112,7 @@
 </script>
 
 <div class="reels-clean-container">
-	<!-- Standard Page Header -->
+	<!-- Page Header -->
 	<PageHeader
 		title="Reels Ferroviari"
 		subtitle="Scorri le schede visive ed esplora foto e descrizioni in un feed dinamico."
@@ -84,18 +120,22 @@
 		variant="orange"
 	/>
 
-	<!-- Category Filter -->
+	<!-- Category Filter con Bottone Rimescola -->
 	<CategoryFilter
 		categories={availableCategories}
 		{selectedCategory}
-		onSelect={(cat) => (selectedCategory = cat)}
+		onSelect={(cat) => {
+			selectedCategory = cat;
+			refreshReels();
+		}}
+		onRefresh={refreshReels}
 	/>
 
 	<!-- Reels Snap Feed -->
-	{#if reelCards.length > 0}
+	{#if shuffledDeck.length > 0}
 		<div class="reels-viewport duo-card">
 			<div class="reels-scroll-feed">
-				{#each reelCards as card (card.id)}
+				{#each shuffledDeck as card (card.id)}
 					{@const isFlipped = flippedMap[card.id] || false}
 					{@const imgIdx = imageIndexMap[card.id] || 0}
 					{@const isIgnoredCard = ignoredIds.has(card.id)}
@@ -107,9 +147,8 @@
 					)}
 
 					<div class="reel-card-slide">
-						<!-- Top Action Bar (Senza etichetta categoria come richiesto) -->
+						<!-- Top Action Bar -->
 						<div class="reel-header-bar">
-							<!-- Photo Switcher Pill -->
 							{#if card.images!.length > 1}
 								<div class="reel-multi-photo-controls">
 									<button
@@ -153,7 +192,7 @@
 							onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && toggleFlip(card.id)}
 						>
 							<div class="flip-card-inner" class:is-flipped={isFlipped}>
-								<!-- FRONT FACE (Visual Image + Ambient Blur + Title Overlay) -->
+								<!-- FRONT FACE (Visual Picture + Ambient Blurred Background + Overlay Badge) -->
 								<div class="face front-face">
 									<!-- Ambient blurred background -->
 									<img
@@ -174,7 +213,7 @@
 										/>
 									</div>
 
-									<!-- Bottom Gradient Overlay & Title -->
+									<!-- Bottom Title Badge Overlay -->
 									<div class="front-bottom-badge">
 										{#if displayTitle}
 											<h2 class="reel-title">{displayTitle}</h2>
@@ -241,7 +280,7 @@
 <style>
 	.reels-clean-container {
 		width: 100%;
-		max-width: 560px;
+		max-width: 600px;
 		margin: 0 auto;
 		display: flex;
 		flex-direction: column;
