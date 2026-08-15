@@ -277,7 +277,7 @@
 						🚪 LOGOUT ({user.username})
 					</button>
 				{:else}
-					<a href="/login" class="duo-btn duo-btn-blue flex-btn">
+					<a href="/notes" class="duo-btn duo-btn-blue flex-btn">
 						🔑 LOGIN
 					</a>
 				{/if}

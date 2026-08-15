@@ -104,7 +104,7 @@
 						>Accedi con Discord per sincronizzare serie, gemme e XP su tutti i tuoi dispositivi.</span
 					>
 				</div>
-				<a href="/login?returnUrl=/missioni" class="duo-btn sync-btn discord-sync-btn">
+				<a href="/api/auth/login?returnUrl=/missioni" class="duo-btn sync-btn discord-sync-btn">
 					<svg
 						class="discord-icon-mini"
 						xmlns="http://www.w3.org/2000/svg"

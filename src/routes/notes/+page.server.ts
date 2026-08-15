@@ -1,14 +1,18 @@
-import { redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import { readSession } from '$lib/server/auth';
 import { readNotes } from '$lib/server/dataCache';
 import type { Note } from '$lib/types/notes';
 
-export const load: PageServerLoad = async ({ cookies }) => {
+export const load: PageServerLoad = async ({ cookies, url }) => {
 	const user = readSession(cookies);
+	const error = url.searchParams.get('error');
 
 	if (!user) {
-		throw redirect(302, '/login?returnUrl=/notes');
+		return {
+			user: null,
+			initialNotes: [],
+			error
+		};
 	}
 
 	let notes: Note[] = [];
@@ -22,6 +26,7 @@ export const load: PageServerLoad = async ({ cookies }) => {
 
 	return {
 		user,
-		initialNotes: notes
+		initialNotes: notes,
+		error
 	};
 };
