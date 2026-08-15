@@ -120,7 +120,7 @@
 		variant="orange"
 	/>
 
-	<!-- Category Filter con Bottone Rimescola -->
+	<!-- Category Filter (Senza tasto rimescola) -->
 	<CategoryFilter
 		categories={availableCategories}
 		{selectedCategory}
@@ -128,10 +128,9 @@
 			selectedCategory = cat;
 			refreshReels();
 		}}
-		onRefresh={refreshReels}
 	/>
 
-	<!-- Reels Snap Feed -->
+	<!-- Reels Snap Feed Instagram-Style -->
 	{#if shuffledDeck.length > 0}
 		<div class="reels-viewport duo-card">
 			<div class="reels-scroll-feed">
@@ -301,9 +300,10 @@
 
 	.reels-scroll-feed {
 		width: 100%;
-		height: clamp(420px, 60vh, 580px);
+		height: clamp(460px, 68vh, 620px);
 		overflow-y: scroll;
 		scroll-snap-type: y mandatory;
+		scroll-behavior: smooth;
 		scrollbar-width: none;
 	}
 
@@ -314,6 +314,7 @@
 	.reel-card-slide {
 		width: 100%;
 		height: 100%;
+		flex-shrink: 0;
 		scroll-snap-align: start;
 		scroll-snap-stop: always;
 		display: flex;
@@ -322,6 +323,7 @@
 		padding: 0.75rem 0.85rem;
 		box-sizing: border-box;
 		position: relative;
+		overflow: hidden;
 	}
 
 	.reel-header-bar {
