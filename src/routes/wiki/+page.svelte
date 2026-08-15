@@ -167,7 +167,14 @@
 		variant="blue"
 	/>
 
-	<!-- Global Search Bar & Category Filter -->
+	<!-- Standalone Category Filter directly below PageHeader -->
+	<CategoryFilter
+		categories={availableCategories}
+		{selectedCategory}
+		onSelect={(cat) => (selectedCategory = cat)}
+	/>
+
+	<!-- Global Search Bar & Sub-Filters -->
 	<div class="search-section">
 		<div class="search-box">
 			<span class="search-icon">🔍</span>
@@ -181,13 +188,6 @@
 				<button class="clear-btn" onclick={() => (searchQuery = '')}>✕</button>
 			{/if}
 		</div>
-
-		<!-- Category Filter -->
-		<CategoryFilter
-			categories={availableCategories}
-			{selectedCategory}
-			onSelect={(cat) => (selectedCategory = cat)}
-		/>
 
 		<!-- Ignored Filter & Reset Toolbar -->
 		<div class="ignored-toolbar">
