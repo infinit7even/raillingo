@@ -19,6 +19,7 @@
 
 	// Form state for creating / editing card
 	let editingCard = $state<Card | null>(null);
+	let clonedCard = $state<Card | null>(null);
 	let searchQuery = $state('');
 	let selectedCategoryFilter = $state('ALL');
 
@@ -46,10 +47,21 @@
 
 	function resetForm() {
 		editingCard = null;
+		clonedCard = null;
 	}
 
 	function startEdit(card: Card) {
+		clonedCard = null;
 		editingCard = card;
+		window.scrollTo({ top: 0, behavior: 'smooth' });
+	}
+
+	function startDuplicate(card: Card) {
+		editingCard = null;
+		clonedCard = {
+			...card,
+			id: ''
+		};
 		window.scrollTo({ top: 0, behavior: 'smooth' });
 	}
 
@@ -226,15 +238,28 @@
 			<!-- Form Creazione / Modifica Card -->
 			<div class="editor-card duo-card">
 				<h2 class="form-title">
-					{editingCard ? '✏️ Modifica Scheda' : '➕ Aggiungi Nuova Card Informativa'}
+					{#if editingCard}
+						✏️ Modifica Scheda
+					{:else if clonedCard}
+						📋 Aggiungi Scheda Duplicata (da "{clonedCard.title}")
+					{:else}
+						➕ Aggiungi Nuova Card Informativa
+					{/if}
 				</h2>
 
+				{#if clonedCard}
+					<div class="admin-clone-notice">
+						<span>📋 Stai creando una nuova card clonando i dati di <strong>"{clonedCard.title}"</strong>. Modifica i campi e salva.</span>
+						<button type="button" class="cancel-clone-btn" onclick={resetForm}>✕ Azzera</button>
+					</div>
+				{/if}
+
 				<CardForm
-					initialCard={editingCard}
+					initialCard={editingCard || clonedCard}
 					onSave={handleSaveCard}
-					onCancel={editingCard ? resetForm : undefined}
+					onCancel={editingCard || clonedCard ? resetForm : undefined}
 					onSelectExistingCard={startEdit}
-					submitLabel={editingCard ? 'Salva Modifiche' : '➕ AGGIUNGI SCHEDA'}
+					submitLabel={editingCard ? 'Salva Modifiche' : clonedCard ? '➕ AGGIUNGI SCHEDA DUPLICATA' : '➕ AGGIUNGI SCHEDA'}
 				/>
 			</div>
 
@@ -280,13 +305,13 @@
 								</div>
 							{:else}
 								<button
-									class="rename-btn"
+									class="rename-cat-btn"
 									onclick={() => {
 										categoryToRename = stat.category;
 										newCategoryName = stat.category;
 									}}
 								>
-									✏️ Rinomina in blocco
+									✏️ Rinomina
 								</button>
 							{/if}
 						</div>
@@ -294,56 +319,41 @@
 				</div>
 			</div>
 
-			<!-- Sezione Manutenzione & Pulizia Media -->
-			<div class="categories-admin-card duo-card">
-				<div class="media-header-row">
+			<!-- Media Cleaner Panel -->
+			<div class="media-cleaner-card duo-card">
+				<div class="cleaner-header">
 					<div>
-						<h2 class="section-title">🧹 Manutenzione & Pulizia Media</h2>
+						<h2 class="section-title">🧹 Pulizia File & Immagini Non Utilizzate</h2>
 						<p class="section-subtitle">
-							Scansiona i file multimediali caricati ed elimina quelli non referenziati da alcuna scheda o appunto.
+							Scansiona la cartella <code>/uploads</code> per identificare ed eliminare le immagini non
+							collegate.
 						</p>
 					</div>
-					<button
-						type="button"
-						class="duo-btn duo-btn-blue scan-btn"
-						disabled={mediaLoading}
-						onclick={scanMedia}
-					>
-						{mediaLoading ? '⏳ Scansione in corso...' : '🔍 Scansiona Media'}
+					<button class="duo-btn duo-btn-blue scan-btn" disabled={mediaLoading} onclick={scanMedia}>
+						{mediaLoading ? '⏳ Scansione...' : '🔍 Scansiona Uploads'}
 					</button>
 				</div>
 
 				{#if mediaInfo}
 					<div class="media-stats-grid">
-						<div class="media-stat-box duo-card">
-							<span class="media-stat-val">{mediaInfo.totalFiles}</span>
-							<span class="media-stat-lbl">File Caricati</span>
+						<div class="media-stat-box">
+							<span class="m-val">{mediaInfo.totalFiles}</span>
+							<span class="m-lbl">File Totali ({((mediaInfo.totalBytes || 0) / 1024 / 1024).toFixed(2)} MB)</span>
 						</div>
-						<div class="media-stat-box duo-card">
-							<span class="media-stat-val success-val">{mediaInfo.referencedFiles}</span>
-							<span class="media-stat-lbl">File in Uso</span>
+						<div class="media-stat-box success">
+							<span class="m-val">{mediaInfo.referencedFiles}</span>
+							<span class="m-lbl">File in Uso</span>
 						</div>
-						<div class="media-stat-box duo-card">
-							<span class="media-stat-val {mediaInfo.orphanedCount > 0 ? 'warning-val' : 'success-val'}">
-								{mediaInfo.orphanedCount}
-							</span>
-							<span class="media-stat-lbl">File Orfani</span>
-						</div>
-						<div class="media-stat-box duo-card">
-							<span class="media-stat-val">
-								{mediaInfo.orphanedBytes > 1024 * 1024
-									? `${(mediaInfo.orphanedBytes / (1024 * 1024)).toFixed(2)} MB`
-									: `${(mediaInfo.orphanedBytes / 1024).toFixed(1)} KB`}
-							</span>
-							<span class="media-stat-lbl">Spazio Recuperabile</span>
+						<div class="media-stat-box warning">
+							<span class="m-val">{mediaInfo.orphanedCount}</span>
+							<span class="m-lbl">File Orfani ({mediaInfo.orphanedBytes ? ((mediaInfo.orphanedBytes || 0) / 1024 / 1024).toFixed(2) : 0} MB)</span>
 						</div>
 					</div>
 
 					{#if mediaInfo.orphanedCount > 0}
-						<div class="cleanup-action-row">
+						<div class="clean-action-box">
 							<button
-								type="button"
-								class="duo-btn duo-btn-red"
+								class="duo-btn duo-btn-red clean-btn"
 								disabled={mediaLoading}
 								onclick={cleanOrphanedMedia}
 							>
@@ -400,6 +410,9 @@
 							</div>
 
 							<div class="item-actions">
+								<button class="duplicate-btn" onclick={() => startDuplicate(card)} title="Duplica e crea nuova scheda da questa">
+									📋 Duplica
+								</button>
 								<button class="edit-btn" onclick={() => startEdit(card)}> ✏️ Modifica </button>
 								<button class="delete-btn" onclick={() => handleDeleteCard(card.id)}>
 									🗑️ Elimina
@@ -625,7 +638,7 @@
 		border-radius: 12px;
 	}
 
-	.rename-btn {
+	.rename-cat-btn {
 		background: transparent;
 		border: 1px dashed var(--border-color);
 		color: var(--accent-color);
@@ -767,24 +780,73 @@
 		overflow: hidden;
 	}
 
-	.item-actions {
+	.admin-clone-notice {
 		display: flex;
-		gap: 0.5rem;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.6rem;
+		padding: 0.65rem 0.85rem;
+		background: rgba(88, 204, 2, 0.12);
+		border: 1.5px solid var(--green-color);
+		border-radius: 12px;
+		font-size: 0.8rem;
+		color: var(--text-color);
+		margin-bottom: 0.75rem;
 	}
 
+	.cancel-clone-btn {
+		background: var(--card-bg);
+		border: 1.5px solid var(--border-color);
+		border-radius: 8px;
+		padding: 0.25rem 0.55rem;
+		font-size: 0.72rem;
+		font-weight: 800;
+		color: var(--text-muted);
+		cursor: pointer;
+		white-space: nowrap;
+	}
+
+	.cancel-clone-btn:hover {
+		color: #ff5e5b;
+		border-color: #ff5e5b;
+	}
+
+	.item-actions {
+		display: flex;
+		gap: 0.4rem;
+		flex-wrap: wrap;
+	}
+
+	.duplicate-btn,
 	.edit-btn,
 	.delete-btn {
-		padding: 0.5rem 0.85rem;
+		padding: 0.45rem 0.75rem;
 		border-radius: 10px;
-		font-size: 0.8rem;
-		font-weight: 700;
-		border: 1px solid var(--border-color);
+		font-size: 0.78rem;
+		font-weight: 800;
+		border: 1.5px solid var(--border-color);
 		cursor: pointer;
+		transition: all 0.15s ease;
+		white-space: nowrap;
+	}
+
+	.duplicate-btn {
+		background: var(--card-bg-subtle);
+		color: var(--accent-color);
+		border-color: var(--accent-color);
+	}
+
+	.duplicate-btn:hover {
+		background: var(--accent-light-bg);
 	}
 
 	.edit-btn {
 		background: var(--card-bg-subtle);
 		color: var(--text-color);
+	}
+
+	.edit-btn:hover {
+		background: var(--hover-bg);
 	}
 
 	.delete-btn {
@@ -793,7 +855,18 @@
 		border-color: rgba(239, 68, 68, 0.3);
 	}
 
-	.media-header-row {
+	.delete-btn:hover {
+		background: rgba(239, 68, 68, 0.2);
+	}
+
+	.media-cleaner-card {
+		background: var(--card-bg);
+		border: 2px solid var(--border-color);
+		border-radius: 18px;
+		padding: 1.5rem;
+	}
+
+	.cleaner-header {
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
@@ -823,30 +896,31 @@
 		gap: 0.25rem;
 		background: var(--card-bg-subtle);
 		border-radius: 14px;
+		border: 1px solid var(--border-color);
 	}
 
-	.media-stat-val {
+	.m-val {
 		font-size: 1.4rem;
 		font-weight: 900;
 		color: var(--accent-color);
 	}
 
-	.warning-val {
+	.media-stat-box.warning .m-val {
 		color: #f59e0b !important;
 	}
 
-	.success-val {
+	.media-stat-box.success .m-val {
 		color: var(--green-color) !important;
 	}
 
-	.media-stat-lbl {
+	.m-lbl {
 		font-size: 0.75rem;
 		font-weight: 800;
 		color: var(--text-muted);
 		text-transform: uppercase;
 	}
 
-	.cleanup-action-row {
+	.clean-action-box {
 		margin-top: 1.25rem;
 		display: flex;
 		justify-content: flex-end;

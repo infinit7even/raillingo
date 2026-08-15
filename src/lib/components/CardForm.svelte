@@ -29,6 +29,9 @@
 	let uploading = $state(false);
 	let saving = $state(false);
 	let validationError = $state<string | null>(null);
+	let isCloneSearchOpen = $state(false);
+	let cloneQuery = $state('');
+	let cloneCategoryFilter = $state('ALL');
 
 	// Existing cards and category list for suggestions
 	let allCards = $state<Card[]>([]);
@@ -48,6 +51,34 @@
 		}
 		return Array.from(set).sort();
 	});
+
+	// Filtered cards for the inline clone drawer
+	let cloneFilteredCards = $derived.by<Card[]>(() => {
+		let list = [...allCards];
+		if (cloneCategoryFilter !== 'ALL') {
+			list = list.filter((c) => (c.category?.trim() || '') === cloneCategoryFilter);
+		}
+		const q = cloneQuery.toLowerCase().trim();
+		if (q) {
+			list = list.filter(
+				(c) =>
+					c.title.toLowerCase().includes(q) ||
+					(c.fullName && c.fullName.toLowerCase().includes(q)) ||
+					(c.category && c.category.toLowerCase().includes(q))
+			);
+		}
+		return list.slice(0, 10);
+	});
+
+	function cloneCardIntoForm(card: Card) {
+		title = card.title || '';
+		fullName = card.fullName || '';
+		description = card.description || '';
+		category = card.category || '';
+		images = card.images ? [...card.images] : [];
+		isCloneSearchOpen = false;
+		toastStore.show({ message: `📋 Dati clonati da "${card.title}"!` });
+	}
 
 	$effect(() => {
 		if (initialCard) {
@@ -238,6 +269,59 @@
 		</div>
 	{/if}
 
+	<!-- Quick Inline Clone Helper -->
+	<div class="clone-helper-section">
+		<button
+			type="button"
+			class="clone-helper-trigger-btn"
+			class:active={isCloneSearchOpen}
+			onclick={() => (isCloneSearchOpen = !isCloneSearchOpen)}
+		>
+			<span class="c-ico">📋</span>
+			<span>{isCloneSearchOpen ? 'Chiudi selettore clonazione' : 'Clona dati da una card esistente...'}</span>
+			<span class="c-arr">{isCloneSearchOpen ? '▲' : '▼'}</span>
+		</button>
+
+		{#if isCloneSearchOpen}
+			<div class="inline-clone-panel duo-card">
+				<div class="clone-filter-row">
+					<input
+						type="text"
+						bind:value={cloneQuery}
+						placeholder="Cerca acronimo o titolo da clonare..."
+						class="duo-input clone-search-input"
+					/>
+					<select bind:value={cloneCategoryFilter} class="duo-input clone-cat-select">
+						<option value="ALL">Tutte le Categorie ({availableCategories.length})</option>
+						{#each availableCategories as cat}
+							<option value={cat}>{cat}</option>
+						{/each}
+					</select>
+				</div>
+
+				<div class="clone-results-grid">
+					{#if cloneFilteredCards.length === 0}
+						<div class="no-clone-results">Nessuna card trovata per la ricerca.</div>
+					{:else}
+						{#each cloneFilteredCards as c}
+							<button
+								type="button"
+								class="clone-card-chip"
+								onclick={() => cloneCardIntoForm(c)}
+								title="Copia tutti i dati di questa card nel form"
+							>
+								<span class="chip-title">{c.title}</span>
+								{#if c.fullName}<span class="chip-fn">({c.fullName})</span>{/if}
+								{#if c.category}<span class="chip-cat">{c.category}</span>{/if}
+								<span class="chip-action">📋 Clona</span>
+							</button>
+						{/each}
+					{/if}
+				</div>
+			</div>
+		{/if}
+	</div>
+
 	<div class="form-grid">
 		<!-- Campo Categoria (OBBLIGATORIO) -->
 		<div class="form-group full-width">
@@ -283,19 +367,24 @@
 			<!-- Dropdown Suggerimenti Anti-Duplicato -->
 			{#if titleSuggestions.length > 0}
 				<div class="suggestions-dropdown duo-card">
-					<div class="suggestion-header">💡 Card esistente trovata! Clicca per modificarla:</div>
+					<div class="suggestion-header">💡 Card esistente trovata:</div>
 					{#each titleSuggestions as sug}
-						<button
-							type="button"
-							class="suggestion-item"
-							onclick={() => handleSelectExisting(sug)}
-						>
-							<span class="sug-title">{sug.title}</span>
-							{#if sug.fullName}
-								<span class="sug-fullname">({sug.fullName})</span>
-							{/if}
-							<span class="sug-badge">✏️ Apri in modifica</span>
-						</button>
+						<div class="suggestion-item">
+							<div class="sug-info">
+								<span class="sug-title">{sug.title}</span>
+								{#if sug.fullName}
+									<span class="sug-fullname">({sug.fullName})</span>
+								{/if}
+							</div>
+							<div class="sug-actions">
+								<button type="button" class="sug-action-btn clone" onclick={() => cloneCardIntoForm(sug)}>
+									📋 Clona
+								</button>
+								<button type="button" class="sug-action-btn edit" onclick={() => handleSelectExisting(sug)}>
+									✏️ Modifica
+								</button>
+							</div>
+						</div>
 					{/each}
 				</div>
 			{/if}
@@ -316,19 +405,24 @@
 			<!-- Dropdown Suggerimenti Anti-Duplicato per Titolo -->
 			{#if fullNameSuggestions.length > 0}
 				<div class="suggestions-dropdown duo-card">
-					<div class="suggestion-header">💡 Card esistente trovata! Clicca per modificarla:</div>
+					<div class="suggestion-header">💡 Card esistente trovata:</div>
 					{#each fullNameSuggestions as sug}
-						<button
-							type="button"
-							class="suggestion-item"
-							onclick={() => handleSelectExisting(sug)}
-						>
-							<span class="sug-title">{sug.title}</span>
-							{#if sug.fullName}
-								<span class="sug-fullname">({sug.fullName})</span>
-							{/if}
-							<span class="sug-badge">✏️ Apri in modifica</span>
-						</button>
+						<div class="suggestion-item">
+							<div class="sug-info">
+								<span class="sug-title">{sug.title}</span>
+								{#if sug.fullName}
+									<span class="sug-fullname">({sug.fullName})</span>
+								{/if}
+							</div>
+							<div class="sug-actions">
+								<button type="button" class="sug-action-btn clone" onclick={() => cloneCardIntoForm(sug)}>
+									📋 Clona
+								</button>
+								<button type="button" class="sug-action-btn edit" onclick={() => handleSelectExisting(sug)}>
+									✏️ Modifica
+								</button>
+							</div>
+						</div>
 					{/each}
 				</div>
 			{/if}
@@ -489,6 +583,128 @@
 		min-height: 75px;
 	}
 
+	/* Clone Helper Section */
+	.clone-helper-section {
+		display: flex;
+		flex-direction: column;
+		gap: 0.4rem;
+	}
+
+	.clone-helper-trigger-btn {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 0.45rem 0.75rem;
+		background: var(--card-bg-subtle);
+		border: 1.5px dashed var(--border-color);
+		border-radius: 12px;
+		color: var(--accent-color);
+		font-family: 'Outfit', sans-serif;
+		font-size: 0.78rem;
+		font-weight: 800;
+		cursor: pointer;
+		transition: all 0.15s ease;
+	}
+
+	.clone-helper-trigger-btn:hover,
+	.clone-helper-trigger-btn.active {
+		border-color: var(--accent-color);
+		background: var(--accent-light-bg);
+	}
+
+	.inline-clone-panel {
+		background: var(--card-bg);
+		border: 1.5px solid var(--border-color);
+		border-radius: 14px;
+		padding: 0.75rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+	}
+
+	.clone-filter-row {
+		display: flex;
+		gap: 0.4rem;
+	}
+
+	.clone-search-input {
+		flex: 1;
+		font-size: 0.8rem;
+		padding: 0.35rem 0.6rem;
+	}
+
+	.clone-cat-select {
+		max-width: 180px;
+		font-size: 0.75rem;
+		padding: 0.35rem 0.5rem;
+	}
+
+	.clone-results-grid {
+		display: flex;
+		flex-direction: column;
+		gap: 0.3rem;
+		max-height: 160px;
+		overflow-y: auto;
+	}
+
+	.no-clone-results {
+		text-align: center;
+		padding: 0.75rem;
+		font-size: 0.76rem;
+		color: var(--text-muted);
+	}
+
+	.clone-card-chip {
+		display: flex;
+		align-items: center;
+		gap: 0.45rem;
+		padding: 0.4rem 0.6rem;
+		background: var(--card-bg-subtle);
+		border: 1px solid var(--border-color);
+		border-radius: 8px;
+		cursor: pointer;
+		text-align: left;
+		transition: all 0.12s ease;
+	}
+
+	.clone-card-chip:hover {
+		background: var(--accent-light-bg);
+		border-color: var(--accent-color);
+	}
+
+	.chip-title {
+		font-weight: 900;
+		font-size: 0.82rem;
+		color: var(--text-color);
+	}
+
+	.chip-fn {
+		font-size: 0.74rem;
+		color: var(--text-muted);
+		flex: 1;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.chip-cat {
+		font-size: 0.65rem;
+		font-weight: 800;
+		text-transform: uppercase;
+		color: var(--accent-color);
+		background: var(--card-bg);
+		border: 1px solid var(--border-color);
+		padding: 0.05rem 0.3rem;
+		border-radius: 4px;
+	}
+
+	.chip-action {
+		font-size: 0.72rem;
+		font-weight: 800;
+		color: var(--green-color);
+		white-space: nowrap;
+	}
+
 	/* Suggestions anti-duplicate dropdown */
 	.suggestions-dropdown {
 		position: absolute;
@@ -517,39 +733,74 @@
 	.suggestion-item {
 		display: flex;
 		align-items: center;
+		justify-content: space-between;
 		gap: 0.5rem;
-		padding: 0.5rem 0.75rem;
+		padding: 0.45rem 0.65rem;
 		border-radius: 10px;
 		background: var(--card-bg-subtle);
 		border: 1px solid var(--border-color);
 		color: var(--text-color);
-		cursor: pointer;
-		text-align: left;
-		transition: background 0.15s ease;
 	}
 
-	.suggestion-item:hover {
-		background: var(--accent-light-bg);
-		border-color: var(--accent-color);
+	.sug-info {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+		flex: 1;
+		min-width: 0;
 	}
 
 	.sug-title {
 		font-weight: 900;
-		font-size: 0.95rem;
-
+		font-size: 0.88rem;
+		color: var(--text-color);
 	}
 
 	.sug-fullname {
-		font-size: 0.8rem;
+		font-size: 0.78rem;
 		color: var(--text-muted);
-		flex: 1;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 
-	.sug-badge {
+	.sug-actions {
+		display: flex;
+		gap: 0.3rem;
+		flex-shrink: 0;
+	}
+
+	.sug-action-btn {
 		font-size: 0.72rem;
 		font-weight: 800;
-		color: var(--accent-color);
+		padding: 0.25rem 0.5rem;
+		border-radius: 6px;
+		border: 1px solid var(--border-color);
+		cursor: pointer;
+		transition: all 0.12s ease;
 		white-space: nowrap;
+	}
+
+	.sug-action-btn.clone {
+		background: rgba(88, 204, 2, 0.15);
+		color: var(--green-color);
+		border-color: var(--green-color);
+	}
+
+	.sug-action-btn.clone:hover {
+		background: var(--green-color);
+		color: #ffffff;
+	}
+
+	.sug-action-btn.edit {
+		background: var(--card-bg);
+		color: var(--text-color);
+	}
+
+	.sug-action-btn.edit:hover {
+		background: var(--accent-light-bg);
+		border-color: var(--accent-color);
+		color: var(--accent-color);
 	}
 
 	.upload-controls-row {
