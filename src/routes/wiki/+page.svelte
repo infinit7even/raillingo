@@ -66,7 +66,7 @@
 
 	let availableCategories = $derived.by<string[]>(() => {
 		const set = new Set<string>();
-		for (const c of wikiCards) {
+		for (const c of cards) {
 			if (c.category && c.category.trim()) {
 				set.add(c.category.trim());
 			}
