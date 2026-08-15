@@ -12,6 +12,8 @@
 	let user = $derived(data?.user);
 
 	let cards = $state<Card[]>([]);
+	import { globalCategoryStore } from '$lib/stores/globalCategoryStore';
+
 	let ignoredIds = $state<Set<string>>(new Set());
 	let searchQuery = $state('');
 	let selectedCategory = $state('ALL');
@@ -22,9 +24,11 @@
 	onMount(() => {
 		const unsubCards = cardsStore.subscribe((c) => (cards = c));
 		const unsubIgnored = ignoredCardsStore.subscribe((ids) => (ignoredIds = ids));
+		const unsubCategory = globalCategoryStore.subscribe((cat) => (selectedCategory = cat));
 		return () => {
 			unsubCards();
 			unsubIgnored();
+			unsubCategory();
 		};
 	});
 

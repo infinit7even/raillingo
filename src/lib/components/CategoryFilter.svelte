@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { globalCategoryStore } from '$lib/stores/globalCategoryStore';
+
 	let {
 		categories = [],
 		selectedCategory = 'ALL',
@@ -6,12 +8,18 @@
 		onRefresh = undefined
 	} = $props<{
 		categories: string[];
-		selectedCategory: string;
+		selectedCategory?: string;
 		onSelect: (category: string) => void;
 		onRefresh?: () => void;
 	}>();
 
 	let isFiltered = $derived(selectedCategory !== 'ALL');
+
+	function handleCategoryChange(e: Event) {
+		const val = (e.target as HTMLSelectElement).value;
+		globalCategoryStore.setCategory(val);
+		onSelect(val);
+	}
 </script>
 
 {#if categories.length > 0 || onRefresh}
@@ -23,7 +31,7 @@
 					class="duo-input category-select"
 					class:is-filtered={isFiltered}
 					value={selectedCategory}
-					onchange={(e) => onSelect((e.target as HTMLSelectElement).value)}
+					onchange={handleCategoryChange}
 					aria-label="Seleziona Categoria"
 				>
 					<option value="ALL">Tutte le Categorie ({categories.length})</option>

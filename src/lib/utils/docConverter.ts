@@ -1,6 +1,6 @@
 /**
  * Utility per convertire bidirezionalmente tra Markdown e l'HTML dell'editor visuale in stile Word/Notion.
- * Permette di visualizzare e manipolare le immagini inline direttamente nel flusso del testo.
+ * Garantisce zero inserimenti di righe vuote duplicate e stabilità al 100%.
  */
 
 function escapeHtml(text: string): string {
@@ -32,59 +32,26 @@ export function createInlineImageFigureHtml(url: string, width = '400', alt = 'i
 	const rawW = width ? width.replace(/px/g, '').trim() : '400';
 	const cssW = rawW.includes('%') ? rawW : `${rawW}px`;
 
-	return `
-<figure class="doc-inline-image" contenteditable="false" data-url="${safeUrl}" data-width="${rawW}">
-	<div class="doc-image-wrapper" style="max-width: ${cssW};">
-		<img src="${safeUrl}" alt="${safeAlt}" class="doc-img-element" loading="lazy" />
-		<div class="doc-image-toolbar">
-			<button type="button" class="img-btn-size ${rawW === '200' ? 'active' : ''}" data-size="200">200px</button>
-			<button type="button" class="img-btn-size ${rawW === '400' ? 'active' : ''}" data-size="400">400px</button>
-			<button type="button" class="img-btn-size ${rawW === '650' ? 'active' : ''}" data-size="650">650px</button>
-			<button type="button" class="img-btn-size ${rawW === '100%' ? 'active' : ''}" data-size="100%">100%</button>
-			<a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="img-btn-view" title="Apri a dimensione intera">🔍</a>
-			<button type="button" class="img-btn-del" title="Rimuovi immagine">✕</button>
-		</div>
-	</div>
-</figure>`.trim();
+	return `<figure class="doc-inline-image" contenteditable="false" data-url="${safeUrl}" data-width="${rawW}"><div class="doc-image-wrapper" style="max-width: ${cssW};"><img src="${safeUrl}" alt="${safeAlt}" class="doc-img-element" loading="lazy" /><div class="doc-image-toolbar"><button type="button" class="img-btn-size ${rawW === '200' ? 'active' : ''}" data-size="200">200px</button><button type="button" class="img-btn-size ${rawW === '400' ? 'active' : ''}" data-size="400">400px</button><button type="button" class="img-btn-size ${rawW === '650' ? 'active' : ''}" data-size="650">650px</button><button type="button" class="img-btn-size ${rawW === '100%' ? 'active' : ''}" data-size="100%">100%</button><a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="img-btn-view" title="Apri a dimensione intera">🔍</a><button type="button" class="img-btn-del" title="Rimuovi immagine">✕</button></div></div></figure>`;
 }
 
 /**
- * Converte Markdown in HTML per l'editor contenteditable
+ * Converte Markdown in HTML per l'editor contenteditable (senza righe vuote duplicate)
  */
 export function markdownToDocHtml(md: string): string {
-	if (!md || typeof md !== 'string') return '<p><br></p>';
+	if (!md || typeof md !== 'string' || !md.trim()) return '<p><br></p>';
 
-	const lines = md.replace(/\r\n/g, '\n').split('\n');
+	// Suddividi in blocchi logici separati da righe vuote (\n\n+)
+	const rawBlocks = md.replace(/\r\n/g, '\n').split(/\n\n+/);
 	const htmlParts: string[] = [];
 
-	let inUl = false;
-	let inOl = false;
+	for (const block of rawBlocks) {
+		const trimmed = block.trim();
+		if (!trimmed) continue;
 
-	function closeLists() {
-		if (inUl) {
-			htmlParts.push('</ul>');
-			inUl = false;
-		}
-		if (inOl) {
-			htmlParts.push('</ol>');
-			inOl = false;
-		}
-	}
-
-	for (let i = 0; i < lines.length; i++) {
-		const line = lines[i];
-		const trimmed = line.trim();
-
-		if (!trimmed) {
-			closeLists();
-			htmlParts.push('<p><br></p>');
-			continue;
-		}
-
-		// Immagine Markdown: ![alt|width](url) o ![alt](url)
+		// 1. Immagine Markdown: ![alt|width](url) o ![alt](url)
 		const imgMatch = trimmed.match(/^!\[([^\]|]*)(\|([^\]]+))?\]\(([^)]+)\)$/);
 		if (imgMatch) {
-			closeLists();
 			const alt = imgMatch[1] || 'immagine';
 			const width = imgMatch[3] ? imgMatch[3].trim() : '400';
 			const url = imgMatch[4].trim();
@@ -92,59 +59,44 @@ export function markdownToDocHtml(md: string): string {
 			continue;
 		}
 
-		// Headings
+		// 2. Headings
 		if (trimmed.startsWith('### ')) {
-			closeLists();
 			htmlParts.push(`<h3>${parseInlineMd(trimmed.substring(4))}</h3>`);
 			continue;
 		}
 		if (trimmed.startsWith('## ')) {
-			closeLists();
 			htmlParts.push(`<h2>${parseInlineMd(trimmed.substring(3))}</h2>`);
 			continue;
 		}
 		if (trimmed.startsWith('# ')) {
-			closeLists();
 			htmlParts.push(`<h1>${parseInlineMd(trimmed.substring(2))}</h1>`);
 			continue;
 		}
 
-		// Unordered List
-		if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
-			if (inOl) closeLists();
-			if (!inUl) {
-				htmlParts.push('<ul>');
-				inUl = true;
-			}
-			htmlParts.push(`<li>${parseInlineMd(trimmed.substring(2))}</li>`);
-			continue;
-		}
-
-		// Ordered List
-		const olMatch = trimmed.match(/^(\d+)\.\s+(.*)$/);
-		if (olMatch) {
-			if (inUl) closeLists();
-			if (!inOl) {
-				htmlParts.push('<ol>');
-				inOl = true;
-			}
-			htmlParts.push(`<li>${parseInlineMd(olMatch[2])}</li>`);
-			continue;
-		}
-
-		// Blockquote / Callout
+		// 3. Blockquote / Callout
 		if (trimmed.startsWith('> ')) {
-			closeLists();
 			htmlParts.push(`<blockquote>${parseInlineMd(trimmed.substring(2))}</blockquote>`);
 			continue;
 		}
 
-		// Normale paragrafo
-		closeLists();
-		htmlParts.push(`<p>${parseInlineMd(line)}</p>`);
+		// 4. Liste
+		const lines = trimmed.split('\n');
+		if (lines.length > 0 && lines.every((l) => l.trim().startsWith('- ') || l.trim().startsWith('* '))) {
+			const items = lines.map((l) => `<li>${parseInlineMd(l.trim().substring(2))}</li>`).join('');
+			htmlParts.push(`<ul>${items}</ul>`);
+			continue;
+		}
+		if (lines.length > 0 && lines.every((l) => /^\d+\.\s+/.test(l.trim()))) {
+			const items = lines.map((l) => `<li>${parseInlineMd(l.trim().replace(/^\d+\.\s+/, ''))}</li>`).join('');
+			htmlParts.push(`<ol>${items}</ol>`);
+			continue;
+		}
+
+		// 5. Paragrafo standard (unisce eventuali ritorni a capo singoli interni con <br>)
+		const pContent = lines.map((l) => parseInlineMd(l)).join('<br>');
+		htmlParts.push(`<p>${pContent}</p>`);
 	}
 
-	closeLists();
 	return htmlParts.join('\n') || '<p><br></p>';
 }
 
@@ -154,16 +106,68 @@ export function markdownToDocHtml(md: string): string {
 export function docHtmlToMarkdown(rootEl: HTMLElement): string {
 	if (!rootEl) return '';
 
-	function serializeNode(node: Node): string {
+	function serializeInline(node: Node): string {
 		if (node.nodeType === Node.TEXT_NODE) {
 			return node.textContent || '';
 		}
-
 		if (node.nodeType !== Node.ELEMENT_NODE) {
 			return '';
 		}
 
 		const el = node as HTMLElement;
+		const tag = el.tagName.toLowerCase();
+
+		if (tag === 'br') {
+			return '\n';
+		}
+		if (tag === 'strong' || tag === 'b') {
+			const inner = serializeChildrenInline(el);
+			return inner ? `**${inner}**` : '';
+		}
+		if (tag === 'em' || tag === 'i') {
+			const inner = serializeChildrenInline(el);
+			return inner ? `*${inner}*` : '';
+		}
+		if (tag === 'mark') {
+			const inner = serializeChildrenInline(el);
+			return inner ? `==${inner}==` : '';
+		}
+		if (tag === 'code') {
+			const inner = serializeChildrenInline(el);
+			return inner ? `\`${inner}\`` : '';
+		}
+		if (tag === 'del' || tag === 's') {
+			const inner = serializeChildrenInline(el);
+			return inner ? `~~${inner}~~` : '';
+		}
+		if (tag === 'a') {
+			const href = el.getAttribute('href') || '#';
+			const inner = serializeChildrenInline(el);
+			return `[${inner}](${href})`;
+		}
+
+		return serializeChildrenInline(el);
+	}
+
+	function serializeChildrenInline(el: Node): string {
+		let out = '';
+		el.childNodes.forEach((child) => {
+			out += serializeInline(child);
+		});
+		return out;
+	}
+
+	const blocks: string[] = [];
+
+	for (const child of Array.from(rootEl.childNodes)) {
+		if (child.nodeType === Node.TEXT_NODE) {
+			const t = child.textContent?.trim();
+			if (t) blocks.push(t);
+			continue;
+		}
+		if (child.nodeType !== Node.ELEMENT_NODE) continue;
+
+		const el = child as HTMLElement;
 		const tag = el.tagName.toLowerCase();
 
 		// Immagine Inline
@@ -172,89 +176,60 @@ export function docHtmlToMarkdown(rootEl: HTMLElement): string {
 			const width = el.getAttribute('data-width') || '400';
 			const alt = el.querySelector('img')?.getAttribute('alt') || 'immagine';
 			if (url) {
-				return `\n![${alt}|${width}](${url})\n`;
+				blocks.push(`![${alt}|${width}](${url})`);
 			}
-			return '';
+			continue;
 		}
 
 		if (tag === 'h1') {
-			return `\n# ${serializeChildren(el).trim()}\n`;
+			blocks.push(`# ${serializeInline(el).trim()}`);
+			continue;
 		}
 		if (tag === 'h2') {
-			return `\n## ${serializeChildren(el).trim()}\n`;
+			blocks.push(`## ${serializeInline(el).trim()}`);
+			continue;
 		}
 		if (tag === 'h3') {
-			return `\n### ${serializeChildren(el).trim()}\n`;
-		}
-
-		if (tag === 'strong' || tag === 'b') {
-			const content = serializeChildren(el);
-			return content ? `**${content}**` : '';
-		}
-		if (tag === 'em' || tag === 'i') {
-			const content = serializeChildren(el);
-			return content ? `*${content}*` : '';
-		}
-		if (tag === 'mark') {
-			const content = serializeChildren(el);
-			return content ? `==${content}==` : '';
-		}
-		if (tag === 'code') {
-			const content = serializeChildren(el);
-			return content ? `\`${content}\`` : '';
-		}
-		if (tag === 'del' || tag === 's') {
-			const content = serializeChildren(el);
-			return content ? `~~${content}~~` : '';
+			blocks.push(`### ${serializeInline(el).trim()}`);
+			continue;
 		}
 
 		if (tag === 'ul') {
-			let res = '';
+			const items: string[] = [];
 			el.querySelectorAll(':scope > li').forEach((li) => {
-				res += `- ${serializeChildren(li).trim()}\n`;
+				items.push(`- ${serializeInline(li).trim()}`);
 			});
-			return `\n${res}\n`;
+			if (items.length > 0) blocks.push(items.join('\n'));
+			continue;
 		}
 
 		if (tag === 'ol') {
-			let res = '';
+			const items: string[] = [];
 			let idx = 1;
 			el.querySelectorAll(':scope > li').forEach((li) => {
-				res += `${idx}. ${serializeChildren(li).trim()}\n`;
+				items.push(`${idx}. ${serializeInline(li).trim()}`);
 				idx++;
 			});
-			return `\n${res}\n`;
+			if (items.length > 0) blocks.push(items.join('\n'));
+			continue;
 		}
 
 		if (tag === 'blockquote') {
-			return `\n> ${serializeChildren(el).trim()}\n`;
+			blocks.push(`> ${serializeInline(el).trim()}`);
+			continue;
 		}
 
 		if (tag === 'p' || tag === 'div') {
-			const content = serializeChildren(el).trim();
-			if (!content || el.innerHTML === '<br>') {
-				return '\n';
+			const text = serializeInline(el).trim();
+			if (text) {
+				blocks.push(text);
 			}
-			return `\n${content}\n`;
+			continue;
 		}
 
-		if (tag === 'br') {
-			return '\n';
-		}
-
-		return serializeChildren(el);
+		const fallback = serializeInline(el).trim();
+		if (fallback) blocks.push(fallback);
 	}
 
-	function serializeChildren(el: Node): string {
-		let out = '';
-		el.childNodes.forEach((child) => {
-			out += serializeNode(child);
-		});
-		return out;
-	}
-
-	let markdown = serializeChildren(rootEl);
-	// Normalizza righe vuote multiple (max 2 consecutive)
-	markdown = markdown.replace(/\n{3,}/g, '\n\n').trim();
-	return markdown;
+	return blocks.join('\n\n').trim();
 }

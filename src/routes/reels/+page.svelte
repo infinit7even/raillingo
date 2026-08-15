@@ -7,6 +7,8 @@
 	import CategoryFilter from '$lib/components/CategoryFilter.svelte';
 	import type { Card } from '$lib/types/cards';
 
+	import { globalCategoryStore } from '$lib/stores/globalCategoryStore';
+
 	let rawCards = $state<Card[]>([]);
 	let ignoredIds = $state<Set<string>>(new Set());
 	let selectedCategory = $state('ALL');
@@ -16,9 +18,11 @@
 	onMount(() => {
 		const unsubCards = cardsStore.subscribe((c) => (rawCards = c));
 		const unsubIgnored = ignoredCardsStore.subscribe((ids) => (ignoredIds = ids));
+		const unsubCategory = globalCategoryStore.subscribe((cat) => (selectedCategory = cat));
 		return () => {
 			unsubCards();
 			unsubIgnored();
+			unsubCategory();
 		};
 	});
 

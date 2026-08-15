@@ -12,6 +12,8 @@
 		createInlineImageFigureHtml
 	} from '$lib/utils/docConverter';
 
+	import { globalCategoryStore } from '$lib/stores/globalCategoryStore';
+
 	let { data } = $props();
 
 	const seed = (() => {
@@ -20,7 +22,7 @@
 	})();
 
 	let notes = $state<Note[]>(seed.list);
-	let selectedNoteId = $state<string | null>(seed.list.length > 0 ? seed.list[0].id : null);
+	let selectedNoteId = $state<string | null>(null);
 	let searchQuery = $state('');
 	let selectedCategory = $state<string>('ALL');
 	let sortOption = $state<NoteSortOption>('custom');
@@ -48,12 +50,6 @@
 
 	onMount(() => {
 		notesStore.hydrate(data.initialNotes);
-		const unsub = notesStore.subscribe((n) => {
-			notes = n;
-			if (!selectedNoteId && n.length > 0) {
-				selectNote(n[0]);
-			}
-		});
 
 		if (typeof window !== 'undefined') {
 			if (window.innerWidth >= 1024) {
@@ -68,11 +64,27 @@
 			window.addEventListener('paste', handleGlobalPaste);
 		}
 
+		const unsubGlobalCat = globalCategoryStore.subscribe((cat) => {
+			if (cat) {
+				selectedCategory = cat;
+			}
+		});
+
+		const unsub = notesStore.subscribe((n) => {
+			notes = n;
+			if (!selectedNoteId && n.length > 0) {
+				const lastOpenedId = typeof localStorage !== 'undefined' ? localStorage.getItem('rf_last_opened_note_id') : null;
+				const targetNote = (lastOpenedId && n.find((x) => x.id === lastOpenedId)) || n[0];
+				selectNote(targetNote);
+			}
+		});
+
 		return () => {
 			if (typeof window !== 'undefined') {
 				window.removeEventListener('paste', handleGlobalPaste);
 			}
 			unsub();
+			unsubGlobalCat();
 			if (saveDebounceTimer) clearTimeout(saveDebounceTimer);
 		};
 	});
@@ -92,6 +104,10 @@
 		currentImages = note.images ? [...note.images] : [];
 		currentIsPinned = Boolean(note.isPinned);
 		isSidebarOpenMobile = false;
+
+		if (typeof localStorage !== 'undefined') {
+			localStorage.setItem('rf_last_opened_note_id', note.id);
+		}
 
 		await tick();
 		if (editorEl) {
@@ -546,7 +562,10 @@
 					type="button"
 					class="folder-chip"
 					class:active={selectedCategory === 'ALL'}
-					onclick={() => (selectedCategory = 'ALL')}
+					onclick={() => {
+						selectedCategory = 'ALL';
+						globalCategoryStore.setCategory('ALL');
+					}}
 				>
 					📁 Tutti ({notes.length})
 				</button>
@@ -555,7 +574,10 @@
 						type="button"
 						class="folder-chip"
 						class:active={selectedCategory === catName}
-						onclick={() => (selectedCategory = catName)}
+						onclick={() => {
+							selectedCategory = catName;
+							globalCategoryStore.setCategory(catName);
+						}}
 					>
 						📁 {catName} ({count})
 					</button>
