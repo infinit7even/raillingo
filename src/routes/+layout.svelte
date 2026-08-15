@@ -185,7 +185,7 @@
 
 	<Navbar {user} />
 	<Toast />
-	<QuickContextMenu {user} />
+	<QuickContextMenu />
 </div>
 
 <style>

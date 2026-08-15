@@ -2,31 +2,34 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import { themeStore, type ThemePreset } from '$lib/stores/themeStore';
-	import { toastStore } from '$lib/stores/toastStore';
-
-	let { user } = $props<{ user?: any }>();
 
 	let isOpen = $state(false);
 	let menuX = $state(0);
 	let menuY = $state(0);
-	let currentTheme = $state<ThemePreset>('dark');
 
-	const MENU_WIDTH = 250;
-	const MENU_APPROX_HEIGHT = 420;
-	const PADDING = 12;
+	const MENU_WIDTH = 195;
+	const MENU_APPROX_HEIGHT = 310;
+	const PADDING = 10;
+
+	const navItems = [
+		{ href: '/', label: 'Home', icon: '/emoji/house_3d.png' },
+		{ href: '/flashcard', label: 'Flashcard', icon: '/emoji/open_book_3d.png' },
+		{ href: '/quiz', label: 'Quiz', icon: '/emoji/star_3d.png' },
+		{ href: '/reels', label: 'Reels', icon: '/emoji/camera_3d.png' },
+		{ href: '/wiki', label: 'Wiki', icon: '/emoji/books_3d.png' },
+		{ href: '/notes', label: 'Appunti', icon: '/emoji/clipboard_3d.png' },
+		{ href: '/missions', label: 'Missioni', icon: '/emoji/package_3d.png' }
+	];
 
 	onMount(() => {
-		const unsubTheme = themeStore.subscribe((t) => (currentTheme = t));
-
 		function handleContextMenu(e: MouseEvent) {
-			// Disabilita il menu contestuale predefinito del browser su tutto il sito
+			// Disabilita il menu contestuale predefinito del browser
 			e.preventDefault();
 
 			const clientX = e.clientX;
 			const clientY = e.clientY;
 
-			// Calcola le coordinate per mantenere il menu sempre completamente visibile nello schermo
+			// Calcola le coordinate per mantenere il menu sempre completamente visibile
 			const maxX = window.innerWidth - MENU_WIDTH - PADDING;
 			const maxY = window.innerHeight - MENU_APPROX_HEIGHT - PADDING;
 
@@ -39,7 +42,7 @@
 		function handleGlobalClick(e: MouseEvent) {
 			if (!isOpen) return;
 			const target = e.target as HTMLElement;
-			if (!target.closest('.quick-context-menu')) {
+			if (!target.closest('.quick-nav-menu')) {
 				isOpen = false;
 			}
 		}
@@ -62,7 +65,6 @@
 		window.addEventListener('scroll', handleGlobalScroll, { passive: true });
 
 		return () => {
-			unsubTheme();
 			window.removeEventListener('contextmenu', handleContextMenu, { capture: true });
 			window.removeEventListener('click', handleGlobalClick, { capture: true });
 			window.removeEventListener('keydown', handleGlobalKeyDown);
@@ -74,173 +76,73 @@
 		isOpen = false;
 		goto(path);
 	}
-
-	function handleReload() {
-		isOpen = false;
-		window.location.reload();
-	}
-
-	function handleGoBack() {
-		isOpen = false;
-		window.history.back();
-	}
-
-	function toggleTheme() {
-		const nextTheme: ThemePreset = currentTheme === 'dark' ? 'light' : 'dark';
-		themeStore.setTheme(nextTheme);
-		toastStore.show({ message: `🎨 Tema applicato: ${nextTheme === 'dark' ? 'SCURO' : 'CHIARO'}` });
-	}
-
-	const navItems = [
-		{ href: '/', label: 'Home', icon: '/emoji/house_3d.png', key: 'H' },
-		{ href: '/flashcard', label: 'Flashcard & Studio', icon: '/emoji/open_book_3d.png', key: 'F' },
-		{ href: '/quiz', label: 'Quiz Multiplo', icon: '/emoji/bullseye_3d.png', key: 'Q' },
-		{ href: '/reels', label: 'Reels Ferroviari', icon: '/emoji/train_3d.png', key: 'R' },
-		{ href: '/notes', label: 'Vault Appunti', icon: '/emoji/spiral_notebook_3d.png', key: 'N' },
-		{ href: '/wiki', label: 'Glossario Wiki', icon: '/emoji/bookmark_tabs_3d.png', key: 'W' },
-		{ href: '/missions', label: 'Missioni & XP', icon: '/emoji/trophy_3d.png', key: 'M' }
-	];
 </script>
 
 {#if isOpen}
-	<!-- Backdrop trasparente per catturare click esterni -->
+	<!-- Backdrop trasparente -->
 	<div
-		class="quick-menu-backdrop"
+		class="quick-nav-backdrop"
 		onclick={() => (isOpen = false)}
 		onkeydown={(e) => e.key === 'Escape' && (isOpen = false)}
 		role="presentation"
 	></div>
 
-	<!-- Menu Rapido Contestuale -->
+	<!-- Menu Rapido Minimale per Navigazione -->
 	<div
-		class="quick-context-menu duo-card"
+		class="quick-nav-menu duo-card"
 		style="left: {menuX}px; top: {menuY}px;"
 		role="menu"
 		tabindex="-1"
 	>
-		<!-- Header -->
-		<div class="menu-header">
-			<div class="menu-title-group">
-				<span class="menu-title-icon">⚡</span>
-				<span class="menu-title-text">MENU RAPIDO</span>
-			</div>
-			<button
-				type="button"
-				class="menu-close-btn"
-				onclick={() => (isOpen = false)}
-				title="Chiudi menu"
-			>
-				✕
-			</button>
-		</div>
-
-		<!-- Navigazione Sezioni Principali -->
-		<div class="menu-section">
-			<span class="menu-section-label">NAVIGAZIONE</span>
-			<div class="menu-items-list">
-				{#each navItems as item}
-					{@const isActive = page.url.pathname === item.href}
-					<button
-						type="button"
-						class="menu-item-btn"
-						class:active={isActive}
-						onclick={() => navigateTo(item.href)}
-					>
-						<img src={item.icon} alt="" class="menu-item-img" />
-						<span class="menu-item-name">{item.label}</span>
-						{#if isActive}
-							<span class="active-dot">●</span>
-						{/if}
-					</button>
-				{/each}
-			</div>
-		</div>
-
-		<!-- Separatore -->
-		<div class="menu-divider"></div>
-
-		<!-- Azioni e Strumenti Rapidi -->
-		<div class="menu-section">
-			<span class="menu-section-label">AZIONI RAPIDE</span>
-			<div class="menu-actions-grid">
+		<div class="quick-nav-list">
+			{#each navItems as item}
+				{@const isActive = page.url.pathname === item.href}
 				<button
 					type="button"
-					class="menu-action-btn"
-					onclick={toggleTheme}
-					title="Cambia tema visivo"
+					class="quick-nav-item"
+					class:active={isActive}
+					onclick={() => navigateTo(item.href)}
 				>
-					<span>🎨</span>
-					<span class="action-btn-text">Tema ({currentTheme})</span>
+					<img src={item.icon} alt="" width="20" height="20" class="nav-ico-img" />
+					<span class="nav-label-text">{item.label}</span>
+					{#if isActive}
+						<span class="active-dot-indicator">●</span>
+					{/if}
 				</button>
-
-				<button
-					type="button"
-					class="menu-action-btn"
-					onclick={handleReload}
-					title="Ricarica la pagina corrente"
-				>
-					<span>🔄</span>
-					<span class="action-btn-text">Ricarica</span>
-				</button>
-
-				<button
-					type="button"
-					class="menu-action-btn"
-					onclick={handleGoBack}
-					title="Torna alla schermata precedente"
-				>
-					<span>⬅️</span>
-					<span class="action-btn-text">Indietro</span>
-				</button>
-
-				{#if user && (user.isAdmin || user.role === 'admin')}
-					<button
-						type="button"
-						class="menu-action-btn admin-action-btn"
-						onclick={() => navigateTo('/admin')}
-						title="Accedi al pannello amministratore"
-					>
-						<span>🔐</span>
-						<span class="action-btn-text">Admin</span>
-					</button>
-				{/if}
-			</div>
+			{/each}
 		</div>
 	</div>
 {/if}
 
 <style>
-	.quick-menu-backdrop {
+	.quick-nav-backdrop {
 		position: fixed;
 		inset: 0;
 		z-index: 9998;
 		background: transparent;
 	}
 
-	.quick-context-menu {
+	.quick-nav-menu {
 		position: fixed;
 		z-index: 9999;
-		width: 250px;
+		width: 195px;
 		background: var(--card-bg);
-		border: 2px solid var(--border-color);
-		border-bottom: 4px solid var(--border-depth-color);
-		border-radius: 18px;
-		padding: 0.55rem;
-		box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45);
-		backdrop-filter: blur(16px);
-		-webkit-backdrop-filter: blur(16px);
-		display: flex;
-		flex-direction: column;
-		gap: 0.45rem;
+		border: 1.5px solid var(--border-color);
+		border-bottom: 3.5px solid var(--border-depth-color);
+		border-radius: 16px;
+		padding: 0.35rem;
+		box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+		backdrop-filter: blur(12px);
+		-webkit-backdrop-filter: blur(12px);
 		box-sizing: border-box;
-		animation: menuPop 0.16s cubic-bezier(0.34, 1.56, 0.64, 1);
+		animation: navPop 0.14s cubic-bezier(0.34, 1.56, 0.64, 1);
 		user-select: none;
 	}
 
-	@keyframes menuPop {
+	@keyframes navPop {
 		0% {
 			opacity: 0;
-			transform: scale(0.92) translateY(4px);
+			transform: scale(0.92) translateY(3px);
 		}
 		100% {
 			opacity: 1;
@@ -248,157 +150,60 @@
 		}
 	}
 
-	.menu-header {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		padding: 0.2rem 0.4rem 0.4rem 0.4rem;
-		border-bottom: 1.5px solid var(--border-color);
-	}
-
-	.menu-title-group {
-		display: flex;
-		align-items: center;
-		gap: 0.35rem;
-	}
-
-	.menu-title-icon {
-		font-size: 0.95rem;
-	}
-
-	.menu-title-text {
-		font-family: 'Outfit', sans-serif;
-		font-size: 0.72rem;
-		font-weight: 900;
-		letter-spacing: 0.06em;
-		color: var(--accent-color);
-	}
-
-	.menu-close-btn {
-		background: transparent;
-		border: none;
-		color: var(--text-muted);
-		font-size: 0.75rem;
-		font-weight: 800;
-		cursor: pointer;
-		padding: 0.2rem 0.35rem;
-		border-radius: 6px;
-		transition: all 0.12s ease;
-	}
-
-	.menu-close-btn:hover {
-		color: var(--text-color);
-		background: var(--hover-bg);
-	}
-
-	.menu-section {
-		display: flex;
-		flex-direction: column;
-		gap: 0.25rem;
-	}
-
-	.menu-section-label {
-		font-size: 0.62rem;
-		font-weight: 900;
-		letter-spacing: 0.06em;
-		color: var(--text-muted);
-		padding: 0 0.4rem;
-	}
-
-	.menu-items-list {
+	.quick-nav-list {
 		display: flex;
 		flex-direction: column;
 		gap: 0.15rem;
 	}
 
-	.menu-item-btn {
+	.quick-nav-item {
 		display: flex;
 		align-items: center;
-		gap: 0.5rem;
-		padding: 0.38rem 0.55rem;
-		border-radius: 10px;
+		gap: 0.6rem;
+		padding: 0.45rem 0.65rem;
+		border-radius: 11px;
 		border: 1.5px solid transparent;
 		background: transparent;
 		color: var(--text-color);
 		font-family: 'Outfit', sans-serif;
-		font-size: 0.78rem;
-		font-weight: 700;
+		font-size: 0.85rem;
+		font-weight: 800;
 		cursor: pointer;
 		text-align: left;
-		transition: all 0.12s ease;
+		transition: all 0.1s ease;
 		box-sizing: border-box;
 		width: 100%;
 	}
 
-	.menu-item-btn:hover {
+	.quick-nav-item:hover {
 		background: var(--card-bg-subtle);
 		border-color: var(--border-color);
 		transform: translateX(2px);
 	}
 
-	.menu-item-btn.active {
+	.quick-nav-item.active {
 		background: var(--active-nav-bg);
 		border-color: var(--accent-color);
 		color: var(--accent-color);
-		font-weight: 800;
+		font-weight: 900;
 	}
 
-	.menu-item-img {
-		width: 18px;
-		height: 18px;
+	.nav-ico-img {
+		width: 20px;
+		height: 20px;
 		object-fit: contain;
 		flex-shrink: 0;
 	}
 
-	.menu-item-name {
+	.nav-label-text {
 		flex: 1;
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
 	}
 
-	.active-dot {
+	.active-dot-indicator {
 		color: var(--accent-color);
 		font-size: 0.6rem;
-	}
-
-	.menu-divider {
-		height: 1px;
-		background: var(--border-color);
-		margin: 0.1rem 0.2rem;
-	}
-
-	.menu-actions-grid {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: 0.3rem;
-	}
-
-	.menu-action-btn {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		gap: 0.35rem;
-		padding: 0.38rem 0.45rem;
-		border-radius: 9px;
-		background: var(--card-bg-subtle);
-		border: 1.5px solid var(--border-color);
-		color: var(--text-color);
-		font-family: 'Outfit', sans-serif;
-		font-size: 0.72rem;
-		font-weight: 700;
-		cursor: pointer;
-		transition: all 0.12s ease;
-		white-space: nowrap;
-	}
-
-	.menu-action-btn:hover {
-		border-color: var(--accent-color);
-		background: var(--hover-bg);
-	}
-
-	.menu-action-btn.admin-action-btn {
-		border-color: var(--purple-color);
-		color: var(--purple-color);
 	}
 </style>
