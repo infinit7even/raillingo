@@ -212,6 +212,10 @@
 
 	.page-transition-wrapper {
 		width: 100%;
+		height: 100%;
+		display: flex;
+		flex-direction: column;
+		flex: 1;
 	}
 
 	/* 📍 Floating Mobile Swipe Pagination Indicator */

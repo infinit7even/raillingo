@@ -2011,6 +2011,9 @@
 
 	/* 📝 Center Main Workspace */
 	.note-workspace-pane {
+		flex: 1 1 0%;
+		min-width: 0;
+		width: 100%;
 		display: flex;
 		flex-direction: column;
 		background: var(--card-bg);
