@@ -2,14 +2,24 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
+	import { contextMenuStore, type ContextMenuState } from '$lib/stores/contextMenuStore';
+	import { notesStore } from '$lib/stores/notesStore';
+	import { toastStore } from '$lib/stores/toastStore';
+	import type { Note } from '$lib/types/notes';
 
-	let isOpen = $state(false);
-	let menuX = $state(0);
-	let menuY = $state(0);
+	let menuState = $state<ContextMenuState>({
+		isOpen: false,
+		type: 'global-nav',
+		x: 0,
+		y: 0,
+		targetNoteId: null
+	});
 
-	const MENU_WIDTH = 195;
-	const MENU_APPROX_HEIGHT = 310;
-	const PADDING = 10;
+	let notesList = $state<Note[]>([]);
+
+	const MENU_WIDTH = 215;
+	const MENU_APPROX_HEIGHT = 300;
+	const PADDING = 12;
 
 	const navItems = [
 		{ href: '/', label: 'Home', icon: '/emoji/house_3d.png' },
@@ -22,48 +32,62 @@
 	];
 
 	onMount(() => {
+		const unsubMenu = contextMenuStore.subscribe((val) => {
+			menuState = val;
+		});
+
+		const unsubNotes = notesStore.subscribe((val) => {
+			notesList = val;
+		});
+
 		function handleContextMenu(e: MouseEvent) {
-			const target = e.target as HTMLElement;
-
-			// Se ci troviamo nella sezione /notes E il click è avvenuto dentro l'area di lavoro degli appunti
-			// lasciamo che sia il menu dedicato delle note a gestire l'evento
-			if (page.url.pathname.startsWith('/notes') && target && target.closest('.obsidian-workspace, .notes-custom-context-menu')) {
-				return;
-			}
-
-			// Disabilita SEMPRE il menu contestuale predefinito del browser Chrome
+			// Blocca SEMPRE il menu nativo di Chrome ovunque nel sito
 			e.preventDefault();
 
+			const target = e.target as HTMLElement;
 			const clientX = e.clientX;
 			const clientY = e.clientY;
 
-			// Calcola le coordinate per mantenere il menu sempre completamente visibile
-			const maxX = window.innerWidth - MENU_WIDTH - PADDING;
-			const maxY = window.innerHeight - MENU_APPROX_HEIGHT - PADDING;
+			// Se siamo nella pagina /notes
+			if (page.url.pathname.startsWith('/notes')) {
+				const noteItem = target.closest('[data-note-id]') as HTMLElement | null;
+				if (noteItem) {
+					const noteId = noteItem.getAttribute('data-note-id');
+					if (noteId) {
+						contextMenuStore.openNoteItem(clientX, clientY, noteId);
+						return;
+					}
+				}
 
-			menuX = Math.max(PADDING, Math.min(clientX, maxX));
-			menuY = Math.max(PADDING, Math.min(clientY, maxY));
+				const workspacePane = target.closest('.obsidian-workspace, .note-workspace-pane, .vault-sidebar');
+				if (workspacePane) {
+					const activeId = typeof localStorage !== 'undefined' ? localStorage.getItem('rf_last_opened_note_id') : null;
+					contextMenuStore.openNotesWorkspace(clientX, clientY, activeId);
+					return;
+				}
+			}
 
-			isOpen = true;
+			// Altrimenti (esterno o su un'altra pagina del sito)
+			contextMenuStore.openGlobalNav(clientX, clientY);
 		}
 
 		function handleGlobalClick(e: MouseEvent) {
-			if (!isOpen) return;
+			if (!menuState.isOpen) return;
 			const target = e.target as HTMLElement;
 			if (!target.closest('.quick-nav-menu')) {
-				isOpen = false;
+				contextMenuStore.close();
 			}
 		}
 
 		function handleGlobalKeyDown(e: KeyboardEvent) {
-			if (e.key === 'Escape' && isOpen) {
-				isOpen = false;
+			if (e.key === 'Escape' && menuState.isOpen) {
+				contextMenuStore.close();
 			}
 		}
 
 		function handleGlobalScroll() {
-			if (isOpen) {
-				isOpen = false;
+			if (menuState.isOpen) {
+				contextMenuStore.close();
 			}
 		}
 
@@ -73,6 +97,8 @@
 		window.addEventListener('scroll', handleGlobalScroll, { passive: true });
 
 		return () => {
+			unsubMenu();
+			unsubNotes();
 			window.removeEventListener('contextmenu', handleContextMenu, { capture: true });
 			window.removeEventListener('click', handleGlobalClick, { capture: true });
 			window.removeEventListener('keydown', handleGlobalKeyDown);
@@ -80,45 +106,209 @@
 		};
 	});
 
+	let targetNote = $derived(
+		menuState.targetNoteId ? notesList.find((n: Note) => n.id === menuState.targetNoteId) || null : null
+	);
+
+	let activeNote = $derived(
+		menuState.targetNoteId
+			? notesList.find((n: Note) => n.id === menuState.targetNoteId) || null
+			: notesList.length > 0
+				? notesList[0]
+				: null
+	);
+
+	let menuX = $derived(
+		Math.max(PADDING, Math.min(menuState.x, typeof window !== 'undefined' ? window.innerWidth - MENU_WIDTH - PADDING : 0))
+	);
+
+	let menuY = $derived(
+		Math.max(PADDING, Math.min(menuState.y, typeof window !== 'undefined' ? window.innerHeight - MENU_APPROX_HEIGHT - PADDING : 0))
+	);
+
 	function navigateTo(path: string) {
-		isOpen = false;
+		contextMenuStore.close();
 		goto(path);
+	}
+
+	async function handleTogglePin(note: Note) {
+		contextMenuStore.close();
+		const newPinned = !note.isPinned;
+		await notesStore.updateNote({ id: note.id, isPinned: newPinned });
+		toastStore.show({
+			message: newPinned ? `📌 "${note.title}" fissato in alto` : `📌 "${note.title}" rimosso dall'evidenza`
+		});
+	}
+
+	function handleCopy(note: Note) {
+		contextMenuStore.close();
+		const text = `# ${note.title}\n\n${note.content || ''}`;
+		if (navigator.clipboard && navigator.clipboard.writeText) {
+			navigator.clipboard.writeText(text);
+			toastStore.show({ message: '📋 Appunto copiato negli appunti!' });
+		}
+	}
+
+	async function handleDuplicate(note: Note) {
+		contextMenuStore.close();
+		const copy = await notesStore.createNote({
+			title: `${note.title} (Copia)`,
+			content: note.content || '',
+			category: note.category || '',
+			isPinned: false
+		});
+		if (copy) {
+			toastStore.show({ message: '📑 Appunto duplicato!' });
+		}
+	}
+
+	async function handleDelete(note: Note) {
+		contextMenuStore.close();
+		if (confirm(`Sei sicuro di voler eliminare "${note.title}"?`)) {
+			await notesStore.deleteNote(note.id);
+			toastStore.show({ message: '🗑️ Appunto eliminato' });
+		}
+	}
+
+	function handlePaste() {
+		contextMenuStore.close();
+		window.dispatchEvent(new CustomEvent('rf-paste-request'));
+	}
+
+	function handleOpenCategoryModal() {
+		contextMenuStore.close();
+		window.dispatchEvent(new CustomEvent('rf-open-category-modal'));
+	}
+
+	async function handleCreateNew() {
+		contextMenuStore.close();
+		const newNote = await notesStore.createNote({
+			title: 'Nuovo Appunto',
+			content: '',
+			category: ''
+		});
+		if (newNote) {
+			toastStore.show({ message: '📝 Nuovo appunto creato!' });
+		}
 	}
 </script>
 
-{#if isOpen}
-	<!-- Backdrop trasparente -->
+{#if menuState.isOpen}
+	<!-- Backdrop trasparente a tutto schermo: intercetta click, click destri e chiude all'istante -->
 	<div
 		class="quick-nav-backdrop"
-		onclick={() => (isOpen = false)}
-		onkeydown={(e) => e.key === 'Escape' && (isOpen = false)}
+		onclick={() => contextMenuStore.close()}
+		oncontextmenu={(e) => {
+			e.preventDefault();
+			contextMenuStore.close();
+		}}
 		role="presentation"
 	></div>
 
-	<!-- Menu Rapido Minimale per Navigazione -->
+	<!-- Menu Rapido Globale con Posizionamento Viewport Pixel-Perfect -->
 	<div
 		class="quick-nav-menu duo-card"
 		style="left: {menuX}px; top: {menuY}px;"
 		role="menu"
 		tabindex="-1"
+		onclick={(e) => e.stopPropagation()}
+		onkeydown={(e) => e.stopPropagation()}
 	>
-		<div class="quick-nav-list">
-			{#each navItems as item}
-				{@const isActive = page.url.pathname === item.href}
-				<button
-					type="button"
-					class="quick-nav-item"
-					class:active={isActive}
-					onclick={() => navigateTo(item.href)}
-				>
-					<img src={item.icon} alt="" width="20" height="20" class="nav-ico-img" />
-					<span class="nav-label-text">{item.label}</span>
-					{#if isActive}
-						<span class="active-dot-indicator">●</span>
-					{/if}
+		{#if menuState.type === 'note-item' && targetNote}
+			<!-- 📄 Menu Contestuale per Nota Specifica -->
+			<div class="ctx-header">
+				<span class="ctx-note-title">{targetNote.title || 'Appunto'}</span>
+				{#if targetNote.category}
+					<span class="ctx-note-cat">📁 {targetNote.category}</span>
+				{/if}
+			</div>
+			<div class="ctx-divider"></div>
+
+			<button type="button" class="ctx-item" onclick={() => handleTogglePin(targetNote!)}>
+				<span class="ctx-icon">{targetNote.isPinned ? '📌' : '📍'}</span>
+				<span>{targetNote.isPinned ? 'Rimuovi evidenza' : 'Fissa in alto'}</span>
+			</button>
+
+			<button type="button" class="ctx-item" onclick={handleOpenCategoryModal}>
+				<span class="ctx-icon">📁</span>
+				<span>Gestisci Categoria...</span>
+			</button>
+
+			<button type="button" class="ctx-item" onclick={() => handleCopy(targetNote!)}>
+				<span class="ctx-icon">📋</span>
+				<span>Copia appunto</span>
+			</button>
+
+			<button type="button" class="ctx-item" onclick={handlePaste}>
+				<span class="ctx-icon">📥</span>
+				<span>Incolla</span>
+			</button>
+
+			<button type="button" class="ctx-item" onclick={() => handleDuplicate(targetNote!)}>
+				<span class="ctx-icon">📑</span>
+				<span>Duplica appunto</span>
+			</button>
+
+			<div class="ctx-divider"></div>
+
+			<button type="button" class="ctx-item ctx-danger" onclick={() => handleDelete(targetNote!)}>
+				<span class="ctx-icon">🗑️</span>
+				<span>Elimina appunto</span>
+			</button>
+		{:else if menuState.type === 'notes-workspace'}
+			<!-- 📓 Menu Contestuale per Area di Lavoro Note -->
+			<button type="button" class="ctx-item" onclick={handleCreateNew}>
+				<span class="ctx-icon">📝</span>
+				<span>Nuovo appunto</span>
+			</button>
+
+			<button type="button" class="ctx-item" onclick={handleOpenCategoryModal}>
+				<span class="ctx-icon">📁</span>
+				<span>Gestisci Categorie...</span>
+			</button>
+
+			<button type="button" class="ctx-item" onclick={handlePaste}>
+				<span class="ctx-icon">📥</span>
+				<span>Incolla</span>
+			</button>
+
+			{#if activeNote}
+				<div class="ctx-divider"></div>
+				<button type="button" class="ctx-item" onclick={() => handleCopy(activeNote!)}>
+					<span class="ctx-icon">📋</span>
+					<span>Copia appunto aperto</span>
 				</button>
-			{/each}
-		</div>
+
+				<button type="button" class="ctx-item" onclick={() => handleDuplicate(activeNote!)}>
+					<span class="ctx-icon">📑</span>
+					<span>Duplica appunto aperto</span>
+				</button>
+
+				<button type="button" class="ctx-item ctx-danger" onclick={() => handleDelete(activeNote!)}>
+					<span class="ctx-icon">🗑️</span>
+					<span>Elimina appunto aperto</span>
+				</button>
+			{/if}
+		{:else}
+			<!-- 🧭 Menu Rapido di Navigazione Globale -->
+			<div class="quick-nav-list">
+				{#each navItems as item}
+					{@const isActive = page.url.pathname === item.href}
+					<button
+						type="button"
+						class="quick-nav-item"
+						class:active={isActive}
+						onclick={() => navigateTo(item.href)}
+					>
+						<img src={item.icon} alt="" width="20" height="20" class="nav-ico-img" />
+						<span class="nav-label-text">{item.label}</span>
+						{#if isActive}
+							<span class="active-dot-indicator">●</span>
+						{/if}
+					</button>
+				{/each}
+			</div>
+		{/if}
 	</div>
 {/if}
 
@@ -126,25 +316,28 @@
 	.quick-nav-backdrop {
 		position: fixed;
 		inset: 0;
-		z-index: 9998;
+		z-index: 99998;
 		background: transparent;
 	}
 
 	.quick-nav-menu {
 		position: fixed;
-		z-index: 9999;
-		width: 195px;
+		z-index: 99999;
+		width: 215px;
 		background: var(--card-bg);
 		border: 1.5px solid var(--border-color);
 		border-bottom: 3.5px solid var(--border-depth-color);
 		border-radius: 16px;
-		padding: 0.35rem;
-		box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+		padding: 0.4rem;
+		box-shadow: 0 14px 40px rgba(0, 0, 0, 0.45);
 		backdrop-filter: blur(12px);
 		-webkit-backdrop-filter: blur(12px);
 		box-sizing: border-box;
 		animation: navPop 0.14s cubic-bezier(0.34, 1.56, 0.64, 1);
 		user-select: none;
+		display: flex;
+		flex-direction: column;
+		gap: 0.15rem;
 	}
 
 	@keyframes navPop {
@@ -190,7 +383,7 @@
 	}
 
 	.quick-nav-item.active {
-		background: var(--active-nav-bg);
+		background: var(--accent-light-bg);
 		border-color: var(--accent-color);
 		color: var(--accent-color);
 		font-weight: 900;
@@ -213,5 +406,77 @@
 	.active-dot-indicator {
 		color: var(--accent-color);
 		font-size: 0.6rem;
+	}
+
+	/* 📝 Context Menu Styles */
+	.ctx-header {
+		padding: 0.35rem 0.55rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.15rem;
+	}
+
+	.ctx-note-title {
+		font-size: 0.84rem;
+		font-weight: 900;
+		color: var(--text-color);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.ctx-note-cat {
+		font-size: 0.68rem;
+		font-weight: 800;
+		color: var(--accent-color);
+		text-transform: uppercase;
+	}
+
+	.ctx-divider {
+		height: 1px;
+		background: var(--border-color);
+		margin: 0.25rem 0.2rem;
+	}
+
+	.ctx-item {
+		display: flex;
+		align-items: center;
+		gap: 0.6rem;
+		width: 100%;
+		padding: 0.45rem 0.65rem;
+		border-radius: 10px;
+		background: transparent;
+		border: none;
+		color: var(--text-color);
+		font-family: inherit;
+		font-size: 0.82rem;
+		font-weight: 800;
+		text-align: left;
+		cursor: pointer;
+		box-sizing: border-box;
+		transition: background 0.12s ease, transform 0.08s ease;
+	}
+
+	.ctx-item:hover {
+		background: var(--hover-bg, rgba(255, 255, 255, 0.08));
+	}
+
+	.ctx-item:active {
+		transform: scale(0.98);
+	}
+
+	.ctx-icon {
+		font-size: 0.92rem;
+		flex-shrink: 0;
+		width: 18px;
+		text-align: center;
+	}
+
+	.ctx-danger {
+		color: var(--pink-color, #ff4b4b);
+	}
+
+	.ctx-danger:hover {
+		background: rgba(255, 75, 75, 0.15);
 	}
 </style>

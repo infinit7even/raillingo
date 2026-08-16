@@ -46,19 +46,6 @@
 	let isUploadingImage = $state(false);
 	let lastSavedTime = $state<string>('');
 
-	// Custom Notes Context Menu (Tasto Destro)
-	let contextMenu = $state<{
-		isOpen: boolean;
-		x: number;
-		y: number;
-		targetNote: Note | null;
-	}>({
-		isOpen: false,
-		x: 0,
-		y: 0,
-		targetNote: null
-	});
-
 	// Sync engine state
 	let syncState = $state<SyncState>('synced');
 	let pendingSyncCount = $state(0);
@@ -80,6 +67,13 @@
 	onMount(() => {
 		notesStore.hydrate(data.initialNotes);
 
+		const handleOpenCatModal = () => {
+			isVaultCatPickerOpen = true;
+		};
+		const handlePasteReq = () => {
+			handleContextPaste();
+		};
+
 		if (typeof window !== 'undefined') {
 			if (window.innerWidth >= 1024) {
 				isSidebarOpenMobile = false;
@@ -90,10 +84,11 @@
 			}
 			customCreatedCategories = loadCustomCategories();
 
-			// Intercetta paste globale e chiusura context menu
+			// Intercetta paste globale ed eventi custom
 			window.addEventListener('paste', handleGlobalPaste);
-			window.addEventListener('click', closeContextMenu);
 			window.addEventListener('keydown', handleGlobalKeydown);
+			window.addEventListener('rf-open-category-modal', handleOpenCatModal);
+			window.addEventListener('rf-paste-request', handlePasteReq);
 		}
 
 		const unsubSync = offlineNotesSync.subscribe((state, count) => {
@@ -119,9 +114,9 @@
 		return () => {
 			if (typeof window !== 'undefined') {
 				window.removeEventListener('paste', handleGlobalPaste);
-				window.removeEventListener('click', closeContextMenu);
 				window.removeEventListener('keydown', handleGlobalKeydown);
-				window.removeEventListener('scroll', closeContextMenu);
+				window.removeEventListener('rf-open-category-modal', handleOpenCatModal);
+				window.removeEventListener('rf-paste-request', handlePasteReq);
 			}
 			unsubSync();
 			unsubGlobalCat();
@@ -132,126 +127,11 @@
 
 	function handleGlobalKeydown(e: KeyboardEvent) {
 		if (e.key === 'Escape') {
-			closeContextMenu();
 			isVaultCatPickerOpen = false;
 		}
 	}
 
-	const CTX_MENU_WIDTH = 215;
-	const CTX_MENU_HEIGHT = 250;
-	const CTX_PADDING = 12;
-
-	function openNoteContextMenu(e: MouseEvent, note: Note) {
-		e.preventDefault();
-		e.stopPropagation();
-
-		const clientX = e.clientX;
-		const clientY = e.clientY;
-		const maxX = window.innerWidth - CTX_MENU_WIDTH - CTX_PADDING;
-		const maxY = window.innerHeight - CTX_MENU_HEIGHT - CTX_PADDING;
-
-		contextMenu = {
-			isOpen: true,
-			x: Math.max(CTX_PADDING, Math.min(clientX, maxX)),
-			y: Math.max(CTX_PADDING, Math.min(clientY, maxY)),
-			targetNote: note
-		};
-	}
-
-	function openWorkspaceContextMenu(e: MouseEvent) {
-		e.preventDefault();
-
-		const clientX = e.clientX;
-		const clientY = e.clientY;
-		const maxX = window.innerWidth - CTX_MENU_WIDTH - CTX_PADDING;
-		const maxY = window.innerHeight - CTX_MENU_HEIGHT - CTX_PADDING;
-
-		contextMenu = {
-			isOpen: true,
-			x: Math.max(CTX_PADDING, Math.min(clientX, maxX)),
-			y: Math.max(CTX_PADDING, Math.min(clientY, maxY)),
-			targetNote: activeNote
-		};
-	}
-
-	function closeContextMenu() {
-		if (contextMenu.isOpen) {
-			contextMenu = { isOpen: false, x: 0, y: 0, targetNote: null };
-		}
-	}
-
-	async function handleCopyNote(note: Note) {
-		closeContextMenu();
-		const fullText = `# ${note.title}\n\n${note.content || ''}`;
-		try {
-			await navigator.clipboard.writeText(fullText);
-			toastStore.show({ message: `📋 Contenuto di "${note.title}" copiato!`, type: 'success' });
-		} catch (e) {
-			toastStore.show({ message: '⚠️ Impossibile accedere agli appunti', type: 'error' });
-		}
-	}
-
-	async function handleDuplicateNote(note: Note) {
-		closeContextMenu();
-		const copy = await notesStore.createNote({
-			title: `${note.title} (Copia)`,
-			content: note.content,
-			category: note.category,
-			images: note.images ? [...note.images] : [],
-			isPinned: false
-		});
-		if (copy) {
-			selectNote(copy);
-			toastStore.show({ message: `📑 Nota duplicata con successo!`, type: 'success' });
-		}
-	}
-
-	async function handleTogglePinNote(note: Note) {
-		closeContextMenu();
-		const newPinned = !note.isPinned;
-		await notesStore.updateNote({
-			id: note.id,
-			isPinned: newPinned
-		});
-		toastStore.show({
-			message: newPinned ? `📌 "${note.title}" fissata in evidenza` : `📌 "${note.title}" rimossa dall'evidenza`,
-			type: 'info'
-		});
-	}
-
-	async function handleDeleteContextNote(note: Note) {
-		closeContextMenu();
-		if (confirm(`Sei sicuro di voler eliminare "${note.title}"?`)) {
-			await notesStore.deleteNote(note.id);
-			const remaining = notes.filter((n) => n.id !== note.id);
-			if (remaining.length > 0) {
-				selectNote(remaining[0]);
-			} else {
-				selectedNoteId = null;
-				currentTitle = '';
-				currentContent = '';
-				currentCategory = '';
-				if (editorEl) editorEl.innerHTML = '';
-			}
-			toastStore.show({ message: `🗑️ Nota eliminata`, type: 'info' });
-		}
-	}
-
-	async function handleChangeNoteCategory(note: Note, newCat: string) {
-		closeContextMenu();
-		const trimmed = newCat.trim();
-		if (note.id === selectedNoteId) {
-			currentCategory = trimmed;
-		}
-		await notesStore.updateNote({
-			id: note.id,
-			category: trimmed
-		});
-		toastStore.show({ message: `📁 Categoria cambiata in "${trimmed || 'Senza Categoria'}"`, type: 'success' });
-	}
-
 	async function handleContextPaste() {
-		closeContextMenu();
 		if (!selectedNoteId && notes.length > 0) {
 			selectNote(notes[0]);
 		}
@@ -1123,8 +1003,8 @@
 						<div
 							class="vault-file-item"
 							class:active={isSelected}
+							data-note-id={note.id}
 							onclick={() => selectNote(note)}
-							oncontextmenu={(e) => openNoteContextMenu(e, note)}
 							role="button"
 							tabindex="0"
 							onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && selectNote(note)}
@@ -1158,7 +1038,6 @@
 	<main
 		class="note-workspace-pane duo-card"
 		class:mobile-hidden={isSidebarOpenMobile && selectedNoteId !== null}
-		oncontextmenu={openWorkspaceContextMenu}
 	>
 		{#if selectedNoteId && activeNote}
 			<!-- Workspace Top Header Bar -->
@@ -1689,99 +1568,6 @@
 					✓ CHIUDI
 				</button>
 			</div>
-		</div>
-	{/if}
-
-	<!-- 🖱️ Custom Context Menu per la sezione Note (Tasto Destro) -->
-	{#if contextMenu.isOpen}
-		<!-- Backdrop trasparente per chiudere immediatamente al click o click destro ovunque -->
-		<div
-			class="notes-ctx-backdrop"
-			onclick={closeContextMenu}
-			oncontextmenu={(e) => {
-				closeContextMenu();
-			}}
-			role="presentation"
-		></div>
-
-		<div
-			class="notes-custom-context-menu duo-card"
-			style="top: {contextMenu.y}px; left: {contextMenu.x}px;"
-			transition:scale={{ start: 0.94, duration: 120 }}
-			onclick={(e) => e.stopPropagation()}
-			onkeydown={(e) => e.stopPropagation()}
-			role="menu"
-			tabindex="-1"
-		>
-			{#if contextMenu.targetNote}
-				<div class="ctx-header">
-					<span class="ctx-note-title">{contextMenu.targetNote.title || 'Appunto'}</span>
-				</div>
-				<div class="ctx-divider"></div>
-
-				<button type="button" class="ctx-item" onclick={() => handleTogglePinNote(contextMenu.targetNote!)}>
-					<span class="ctx-icon">{contextMenu.targetNote.isPinned ? '📌' : '📍'}</span>
-					<span>{contextMenu.targetNote.isPinned ? 'Rimuovi evidenza' : 'Fissa in alto'}</span>
-				</button>
-
-				<button type="button" class="ctx-item" onclick={() => { closeContextMenu(); isVaultCatPickerOpen = true; }}>
-					<span class="ctx-icon">📁</span>
-					<span>Gestisci Categoria...</span>
-				</button>
-
-				<button type="button" class="ctx-item" onclick={() => handleCopyNote(contextMenu.targetNote!)}>
-					<span class="ctx-icon">📋</span>
-					<span>Copia appunto</span>
-				</button>
-
-				<button type="button" class="ctx-item" onclick={handleContextPaste}>
-					<span class="ctx-icon">📥</span>
-					<span>Incolla</span>
-				</button>
-
-				<button type="button" class="ctx-item" onclick={() => handleDuplicateNote(contextMenu.targetNote!)}>
-					<span class="ctx-icon">📑</span>
-					<span>Duplica appunto</span>
-				</button>
-
-				<div class="ctx-divider"></div>
-
-				<button type="button" class="ctx-item ctx-danger" onclick={() => handleDeleteContextNote(contextMenu.targetNote!)}>
-					<span class="ctx-icon">🗑️</span>
-					<span>Elimina appunto</span>
-				</button>
-			{:else}
-				<button type="button" class="ctx-item" onclick={handleCreateNewNote}>
-					<span class="ctx-icon">📝</span>
-					<span>Nuovo appunto</span>
-				</button>
-
-				<button type="button" class="ctx-item" onclick={() => { closeContextMenu(); isVaultCatPickerOpen = true; }}>
-					<span class="ctx-icon">📁</span>
-					<span>Gestisci Categorie...</span>
-				</button>
-
-				<button type="button" class="ctx-item" onclick={handleContextPaste}>
-					<span class="ctx-icon">📥</span>
-					<span>Incolla</span>
-				</button>
-
-				{#if activeNote}
-					<button type="button" class="ctx-item" onclick={() => handleCopyNote(activeNote)}>
-						<span class="ctx-icon">📋</span>
-						<span>Copia appunto</span>
-					</button>
-					<button type="button" class="ctx-item" onclick={() => handleDuplicateNote(activeNote)}>
-						<span class="ctx-icon">📑</span>
-						<span>Duplica appunto</span>
-					</button>
-					<div class="ctx-divider"></div>
-					<button type="button" class="ctx-item ctx-danger" onclick={handleDeleteActiveNote}>
-						<span class="ctx-icon">🗑️</span>
-						<span>Elimina appunto</span>
-					</button>
-				{/if}
-			{/if}
 		</div>
 	{/if}
 </div>
@@ -3802,95 +3588,5 @@
 		font-size: 0.78rem !important;
 		border-radius: 10px !important;
 		white-space: nowrap;
-	}
-
-	/* 🖱️ Custom Context Menu (Tasto Destro) */
-	.notes-ctx-backdrop {
-		position: fixed;
-		inset: 0;
-		z-index: 9998;
-		background: transparent;
-	}
-
-	.notes-custom-context-menu {
-		position: fixed;
-		z-index: 9999;
-		width: 215px;
-		background: var(--card-bg);
-		border: 2px solid var(--border-color);
-		border-bottom: 4px solid var(--border-depth-color, var(--border-color));
-		border-radius: 16px;
-		box-shadow: 0 14px 40px rgba(0, 0, 0, 0.45);
-		padding: 0.4rem;
-		display: flex;
-		flex-direction: column;
-		gap: 0.15rem;
-		box-sizing: border-box;
-		animation: duoPop 0.12s cubic-bezier(0.34, 1.56, 0.64, 1);
-		user-select: none;
-	}
-
-	.ctx-header {
-		padding: 0.35rem 0.55rem;
-		display: flex;
-		flex-direction: column;
-		gap: 0.15rem;
-	}
-
-	.ctx-note-title {
-		font-size: 0.85rem;
-		font-weight: 900;
-		color: var(--text-color);
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
-
-	.ctx-divider {
-		height: 1px;
-		background: var(--border-color);
-		margin: 0.25rem 0.2rem;
-	}
-
-	.ctx-item {
-		display: flex;
-		align-items: center;
-		gap: 0.6rem;
-		width: 100%;
-		padding: 0.5rem 0.65rem;
-		border-radius: 10px;
-		background: transparent;
-		border: none;
-		color: var(--text-color);
-		font-family: inherit;
-		font-size: 0.82rem;
-		font-weight: 800;
-		text-align: left;
-		cursor: pointer;
-		box-sizing: border-box;
-		transition: background 0.12s ease, transform 0.08s ease;
-	}
-
-	.ctx-item:hover {
-		background: var(--hover-bg, rgba(255, 255, 255, 0.08));
-	}
-
-	.ctx-item:active {
-		transform: scale(0.98);
-	}
-
-	.ctx-icon {
-		font-size: 0.95rem;
-		flex-shrink: 0;
-		width: 18px;
-		text-align: center;
-	}
-
-	.ctx-danger {
-		color: var(--pink-color, #ff4b4b);
-	}
-
-	.ctx-danger:hover {
-		background: rgba(255, 75, 75, 0.15);
 	}
 </style>
