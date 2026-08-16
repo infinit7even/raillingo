@@ -133,11 +133,19 @@
 
 <style>
 	.quiz-page-container {
+		width: 100%;
 		max-width: 600px;
 		margin: 0 auto;
 		display: flex;
 		flex-direction: column;
 		gap: 0.75rem;
+		box-sizing: border-box;
+	}
+
+	@media (min-width: 1024px) {
+		.quiz-page-container {
+			max-width: 800px;
+		}
 	}
 
 	.empty-box {
