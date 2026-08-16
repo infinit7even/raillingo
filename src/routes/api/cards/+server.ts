@@ -1,27 +1,11 @@
 import { json, type RequestHandler } from '@sveltejs/kit';
-import fs from 'node:fs/promises';
-import path from 'node:path';
 import crypto from 'node:crypto';
 import { isAuthorizedAdmin } from '$lib/server/auth';
 import { isSameOriginRequest } from '$lib/server/csrf';
-import { invalidateCards, readCards } from '$lib/server/dataCache';
+import { CARDS_FILE_PATH, invalidateCards, readCards } from '$lib/server/dataCache';
+import { mutateJsonSafe } from '$lib/server/fileStorage';
 import { deleteImagesForCard, cleanupUnusedImagesOnCardUpdate } from '$lib/server/mediaCleanup';
 import type { Card } from '$lib/types/cards';
-
-const CARDS_FILE_PATH = path.resolve('data/cards.json');
-
-async function writeCardsToFile(cards: Card[]): Promise<boolean> {
-	try {
-		const dir = path.dirname(CARDS_FILE_PATH);
-		await fs.mkdir(dir, { recursive: true });
-		await fs.writeFile(CARDS_FILE_PATH, JSON.stringify(cards, null, 2), 'utf-8');
-		invalidateCards();
-		return true;
-	} catch (err) {
-		console.error('Errore durante il salvataggio di data/cards.json:', err);
-		return false;
-	}
-}
 
 export const GET: RequestHandler = async ({ request }) => {
 	const cards = await readCards<Card[]>();
@@ -78,7 +62,7 @@ export const POST: RequestHandler = async (event) => {
 
 	const now = new Date().toISOString();
 	const cardToSave: Card = {
-		id: newCard.id || `card-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+		id: newCard.id || `card-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`,
 		title: title || fullName || 'Scheda Visiva',
 		fullName: fullName || undefined,
 		description: description,
@@ -89,19 +73,21 @@ export const POST: RequestHandler = async (event) => {
 		updatedAt: now
 	};
 
-	const cards = await readCards<Card[]>();
-	const existingIndex = cards.findIndex((c) => c.id === cardToSave.id);
-	if (existingIndex >= 0) {
-		cards[existingIndex] = cardToSave;
-	} else {
-		cards.unshift(cardToSave);
-	}
+	const result = await mutateJsonSafe<Card[]>(CARDS_FILE_PATH, [], (cards) => {
+		const existingIndex = cards.findIndex((c) => c.id === cardToSave.id);
+		if (existingIndex >= 0) {
+			cards[existingIndex] = cardToSave;
+		} else {
+			cards.unshift(cardToSave);
+		}
+		return cards;
+	});
 
-	const ok = await writeCardsToFile(cards);
-	if (!ok) {
+	if (!result.success) {
 		return json({ error: 'Errore durante la scrittura della scheda su disco.' }, { status: 500 });
 	}
 
+	invalidateCards();
 	return json(cardToSave, { status: 201 });
 };
 
@@ -127,46 +113,60 @@ export const PUT: RequestHandler = async (event) => {
 		return json({ error: 'ID card mancante' }, { status: 400 });
 	}
 
-	const cards = await readCards<Card[]>();
-	const index = cards.findIndex((c) => c.id === updatedCard.id);
-	if (index === -1) {
+	let oldCardForCleanup: Card | null = null;
+	let finalSavedCard: Card | null = null;
+
+	const result = await mutateJsonSafe<Card[]>(CARDS_FILE_PATH, [], (cards) => {
+		const index = cards.findIndex((c) => c.id === updatedCard.id);
+		if (index === -1) {
+			return cards;
+		}
+
+		const oldCard = cards[index];
+		oldCardForCleanup = oldCard;
+
+		const oldImages = oldCard.images || [];
+		const newImages = Array.isArray(updatedCard.images)
+			? updatedCard.images.filter((img): img is string => typeof img === 'string' && img.trim().length > 0)
+			: oldImages;
+
+		const title = (updatedCard.title !== undefined ? updatedCard.title : oldCard.title || '').trim();
+		const fullName = (updatedCard.fullName !== undefined ? updatedCard.fullName : oldCard.fullName || '').trim();
+		const description = (updatedCard.description !== undefined ? updatedCard.description : oldCard.description || '').trim();
+		const category = (updatedCard.category !== undefined ? updatedCard.category : oldCard.category || '').trim();
+
+		finalSavedCard = {
+			...oldCard,
+			...updatedCard,
+			id: oldCard.id,
+			title: title || fullName || oldCard.title || 'Scheda Visiva',
+			fullName: fullName || undefined,
+			description: description,
+			category: category || oldCard.category || 'Generale',
+			images: newImages.length > 0 ? newImages : undefined,
+			updatedAt: new Date().toISOString()
+		};
+
+		cards[index] = finalSavedCard;
+		return cards;
+	});
+
+	if (!finalSavedCard) {
 		return json({ error: 'Card non trovata' }, { status: 404 });
 	}
 
-	const oldCard = cards[index];
-	const oldImages = oldCard.images || [];
-	const newImages = Array.isArray(updatedCard.images)
-		? updatedCard.images.filter((img): img is string => typeof img === 'string' && img.trim().length > 0)
-		: [];
-
-	const title = (updatedCard.title !== undefined ? updatedCard.title : oldCard.title || '').trim();
-	const fullName = (updatedCard.fullName !== undefined ? updatedCard.fullName : oldCard.fullName || '').trim();
-	const description = (updatedCard.description !== undefined ? updatedCard.description : oldCard.description || '').trim();
-	const category = (updatedCard.category !== undefined ? updatedCard.category : oldCard.category || '').trim();
-
-	const cardToSave: Card = {
-		...oldCard,
-		...updatedCard,
-		id: oldCard.id,
-		title: title || fullName || oldCard.title || 'Scheda Visiva',
-		fullName: fullName || undefined,
-		description: description,
-		category: category || oldCard.category || 'Generale',
-		images: newImages.length > 0 ? newImages : undefined,
-		updatedAt: new Date().toISOString()
-	};
-
-	// Cancella le immagini non più usate
-	await cleanupUnusedImagesOnCardUpdate(oldCard, cardToSave);
-
-	cards[index] = cardToSave;
-
-	const ok = await writeCardsToFile(cards);
-	if (!ok) {
+	if (!result.success) {
 		return json({ error: 'Errore durante l\'aggiornamento della scheda su disco.' }, { status: 500 });
 	}
 
-	return json(cards[index]);
+	invalidateCards();
+
+	// Cancella le immagini non più usate in background
+	if (oldCardForCleanup) {
+		await cleanupUnusedImagesOnCardUpdate(oldCardForCleanup, finalSavedCard);
+	}
+
+	return json(finalSavedCard);
 };
 
 export const DELETE: RequestHandler = async (event) => {
@@ -191,18 +191,25 @@ export const DELETE: RequestHandler = async (event) => {
 		return json({ error: 'ID non specificato' }, { status: 400 });
 	}
 
-	const cards = await readCards<Card[]>();
-	const cardToDelete = cards.find((c) => c.id === id);
+	let deletedCard: Card | null = null;
 
-	if (cardToDelete) {
-		// Elimina fisicamente dal disco tutti i file immagine associati a questa scheda
-		await deleteImagesForCard(cardToDelete);
+	const result = await mutateJsonSafe<Card[]>(CARDS_FILE_PATH, [], (cards) => {
+		const found = cards.find((c) => c.id === id);
+		if (found) {
+			deletedCard = found;
+		}
+		return cards.filter((c) => c.id !== id);
+	});
+
+	if (!result.success) {
+		return json({ error: 'Errore durante l\'eliminazione della scheda dal disco.' }, { status: 500 });
 	}
 
-	const filtered = cards.filter((c) => c.id !== id);
-	const ok = await writeCardsToFile(filtered);
-	if (!ok) {
-		return json({ error: 'Errore durante l\'eliminazione della scheda dal disco.' }, { status: 500 });
+	invalidateCards();
+
+	if (deletedCard) {
+		// Elimina fisicamente dal disco tutti i file immagine associati a questa scheda
+		await deleteImagesForCard(deletedCard);
 	}
 
 	return json({ success: true, id });

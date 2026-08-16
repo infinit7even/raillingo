@@ -1,23 +1,8 @@
 import { json, type RequestHandler } from '@sveltejs/kit';
-import fs from 'node:fs/promises';
-import path from 'node:path';
 import { readSession } from '$lib/server/auth';
 import { isSameOriginRequest } from '$lib/server/csrf';
-import { invalidateUsers, readUsers } from '$lib/server/dataCache';
-
-const USERS_FILE_PATH = path.resolve('data/users.json');
-
-async function writeUsers(users: any[]): Promise<boolean> {
-	try {
-		const dir = path.dirname(USERS_FILE_PATH);
-		await fs.mkdir(dir, { recursive: true });
-		await fs.writeFile(USERS_FILE_PATH, JSON.stringify(users, null, 2), 'utf-8');
-		invalidateUsers();
-		return true;
-	} catch {
-		return false;
-	}
-}
+import { USERS_FILE_PATH, invalidateUsers, readUsers } from '$lib/server/dataCache';
+import { mutateJsonSafe } from '$lib/server/fileStorage';
 
 export const GET: RequestHandler = async ({ cookies }) => {
 	const cookieVal = cookies.get('rf_ignored_cards');
@@ -42,7 +27,7 @@ export const GET: RequestHandler = async ({ cookies }) => {
 				ignoredCardIds = merged;
 			}
 		} catch {
-			// Cookie invalid or unreadable
+			// Cookie non leggibile o corrotto
 		}
 	}
 
@@ -62,7 +47,7 @@ export const POST: RequestHandler = async (event) => {
 		return json({ error: 'Array ignoredCardIds non valido' }, { status: 400 });
 	}
 
-	// Always set cookie for persistence
+	// Salva nei cookie per persistenza client immediata
 	cookies.set('rf_ignored_cards', JSON.stringify(ignoredCardIds), {
 		path: '/',
 		maxAge: 60 * 60 * 24 * 365,
@@ -70,21 +55,19 @@ export const POST: RequestHandler = async (event) => {
 		httpOnly: false
 	});
 
-	// If logged in, associate with user object in data/users.json
+	// Se autenticato, associa all'oggetto utente in data/users.json in modo atomico
 	const session = readSession(cookies);
 	if (session && session.userId) {
-		try {
-			const users = await readUsers<any[]>();
+		await mutateJsonSafe<any[]>(USERS_FILE_PATH, [], (users) => {
 			const userIndex = users.findIndex(
 				(u) => String(u.discordId).trim() === String(session.userId).trim()
 			);
 			if (userIndex >= 0) {
 				users[userIndex].ignoredCardIds = ignoredCardIds;
-				await writeUsers(users);
 			}
-		} catch (e) {
-			console.error('Errore salvataggio card ignorate utente:', e);
-		}
+			return users;
+		});
+		invalidateUsers();
 	}
 
 	return json({ success: true, ignoredCardIds });

@@ -3,7 +3,7 @@
 	import type { Card } from '$lib/types/cards';
 	import { cardsStore } from '$lib/stores/cardsStore';
 	import { toastStore } from '$lib/stores/toastStore';
-	import { compressImage } from '$lib/utils/imageCompressor';
+	import { uploadImage } from '$lib/utils/imageUploader';
 
 	let {
 		initialCard = null,
@@ -147,37 +147,18 @@
 	}
 
 	async function uploadBlob(blob: Blob) {
+		if (uploading) return;
 		uploading = true;
 		toastStore.show({ message: '⏳ Compressione e caricamento immagine...' });
 		try {
-			// Comprimi l'immagine in WebP ottimizzato (massimo 1MB)
-			const compressedFile = await compressImage(blob, {
-				maxSizeMB: 1,
-				maxWidth: 1920,
-				maxHeight: 1920,
-				quality: 0.82
-			});
-
-			const formData = new FormData();
-			formData.append('file', compressedFile, 'pasted-card.webp');
-			const res = await fetch('/api/upload', {
-				method: 'POST',
-				body: formData
-			});
-
-			if (res.ok) {
-				const data = await res.json();
-				if (data.url) {
-					images = [...images, data.url];
-					toastStore.show({ message: '🖼️ Immagine compressa e aggiunta alla scheda!' });
-				}
-			} else {
-				const err = await res.json();
-				toastStore.show({ message: `⚠️ ${err.error || 'Errore caricamento immagine'}` });
+			const res = await uploadImage(blob, { context: 'card' });
+			if (res.url) {
+				images = [...images, res.url];
+				toastStore.show({ message: '🖼️ Immagine compressa e aggiunta alla scheda!' });
 			}
-		} catch (err) {
+		} catch (err: any) {
 			console.error("Errore durante l'upload dell'immagine:", err);
-			toastStore.show({ message: '⚠️ Impossibile caricare l\'immagine' });
+			toastStore.show({ message: `⚠️ ${err.message || 'Impossibile caricare l\'immagine'}` });
 		} finally {
 			uploading = false;
 		}

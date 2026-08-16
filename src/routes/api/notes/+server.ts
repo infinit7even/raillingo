@@ -1,31 +1,15 @@
 import { json, type RequestHandler } from '@sveltejs/kit';
-import fs from 'node:fs/promises';
-import path from 'node:path';
 import crypto from 'node:crypto';
 import { readSession } from '$lib/server/auth';
 import { isSameOriginRequest } from '$lib/server/csrf';
-import { invalidateNotes, readNotes } from '$lib/server/dataCache';
+import { NOTES_FILE_PATH, invalidateNotes, readNotes } from '$lib/server/dataCache';
+import { mutateJsonSafe } from '$lib/server/fileStorage';
 import {
 	deleteImagesForNote,
 	cleanupUnusedImagesOnNoteUpdate,
 	extractMediaFilenames
 } from '$lib/server/mediaCleanup';
 import type { Note } from '$lib/types/notes';
-
-const NOTES_FILE_PATH = path.resolve('data/notes.json');
-
-async function writeNotesToFile(notes: Note[]): Promise<boolean> {
-	try {
-		const dir = path.dirname(NOTES_FILE_PATH);
-		await fs.mkdir(dir, { recursive: true });
-		await fs.writeFile(NOTES_FILE_PATH, JSON.stringify(notes, null, 2), 'utf-8');
-		invalidateNotes();
-		return true;
-	} catch (err) {
-		console.error('Errore scrittura data/notes.json:', err);
-		return false;
-	}
-}
 
 export const GET: RequestHandler = async ({ request, cookies }) => {
 	const user = readSession(cookies);
@@ -34,7 +18,7 @@ export const GET: RequestHandler = async ({ request, cookies }) => {
 	}
 
 	const allNotes = await readNotes<Note[]>();
-	// Restituisce le note associate all'utente corrente
+	// Restituisce le note associate all'utente corrente o create localmente
 	const userNotes = allNotes.filter((n) => !n.userId || n.userId === user.userId);
 
 	const body = JSON.stringify(userNotes);
@@ -69,37 +53,48 @@ export const POST: RequestHandler = async (event) => {
 		return json({ error: 'Il titolo della nota è obbligatorio.' }, { status: 400 });
 	}
 
-	const allNotes = await readNotes<Note[]>();
-	const userNotes = allNotes.filter((n) => !n.userId || n.userId === user.userId);
-	const maxOrder = userNotes.reduce((max, n) => Math.max(max, n.order ?? 0), 0);
-
 	const now = new Date().toISOString();
 	const noteContent = payload.content || '';
 	const contentImages = Array.from(extractMediaFilenames([noteContent])).map((fn) => `/uploads/${fn}`);
 	const explicitImages = Array.isArray(payload.images) ? payload.images : [];
 	const combinedImages = Array.from(new Set([...explicitImages, ...contentImages]));
 
-	const newNote: Note = {
-		id: payload.id || crypto.randomUUID(),
-		userId: user.userId,
-		title: payload.title.trim(),
-		content: noteContent,
-		category: payload.category?.trim() || 'Generale & Varie',
-		tags: Array.isArray(payload.tags) ? payload.tags.map((t) => String(t).trim()).filter(Boolean) : [],
-		images: combinedImages,
-		isPinned: Boolean(payload.isPinned),
-		order: typeof payload.order === 'number' ? payload.order : maxOrder + 1,
-		createdAt: payload.createdAt || now,
-		updatedAt: now
-	};
+	let createdNote: Note | null = null;
 
-	allNotes.unshift(newNote);
-	const saved = await writeNotesToFile(allNotes);
-	if (!saved) {
+	const result = await mutateJsonSafe<Note[]>(NOTES_FILE_PATH, [], (allNotes) => {
+		const userNotes = allNotes.filter((n) => !n.userId || n.userId === user.userId);
+		const maxOrder = userNotes.reduce((max, n) => Math.max(max, n.order ?? 0), 0);
+
+		const newNote: Note = {
+			id: payload.id || crypto.randomUUID(),
+			userId: user.userId,
+			title: payload.title!.trim(),
+			content: noteContent,
+			category: payload.category?.trim() || 'Generale & Varie',
+			tags: Array.isArray(payload.tags) ? payload.tags.map((t) => String(t).trim()).filter(Boolean) : [],
+			images: combinedImages,
+			isPinned: Boolean(payload.isPinned),
+			order: typeof payload.order === 'number' ? payload.order : maxOrder + 1,
+			createdAt: payload.createdAt || now,
+			updatedAt: now
+		};
+
+		createdNote = newNote;
+		const existingIdx = allNotes.findIndex((n) => n.id === newNote.id);
+		if (existingIdx >= 0) {
+			allNotes[existingIdx] = newNote;
+		} else {
+			allNotes.unshift(newNote);
+		}
+		return allNotes;
+	});
+
+	if (!result.success || !createdNote) {
 		return json({ error: 'Impossibile salvare la nota su disco.' }, { status: 500 });
 	}
 
-	return json(newNote, { status: 201 });
+	invalidateNotes();
+	return json(createdNote, { status: 201 });
 };
 
 export const PUT: RequestHandler = async (event) => {
@@ -119,52 +114,93 @@ export const PUT: RequestHandler = async (event) => {
 		return json({ error: 'ID nota mancante.' }, { status: 400 });
 	}
 
-	const allNotes = await readNotes<Note[]>();
-	const index = allNotes.findIndex((n) => n.id === updated.id);
+	let oldNoteForCleanup: Note | null = null;
+	let savedNote: Note | null = null;
+	let accessDenied = false;
+	let notFound = false;
 
-	if (index === -1) {
-		return json({ error: 'Nota non trovata.' }, { status: 404 });
-	}
+	const result = await mutateJsonSafe<Note[]>(NOTES_FILE_PATH, [], (allNotes) => {
+		const index = allNotes.findIndex((n) => n.id === updated.id);
 
-	// Verifica appartenenza nota all'utente
-	if (allNotes[index].userId && allNotes[index].userId !== user.userId && !user.isAdmin) {
+		if (index === -1) {
+			// Se la nota non esiste ancora sul server (es. creata offline), creala direttamente
+			const now = new Date().toISOString();
+			const noteContent = updated.content || '';
+			const contentImages = Array.from(extractMediaFilenames([noteContent])).map((fn) => `/uploads/${fn}`);
+			const explicitImages = Array.isArray(updated.images) ? updated.images : [];
+			const combinedImages = Array.from(new Set([...explicitImages, ...contentImages]));
+
+			const userNotes = allNotes.filter((n) => !n.userId || n.userId === user.userId);
+			const maxOrder = userNotes.reduce((max, n) => Math.max(max, n.order ?? 0), 0);
+
+			savedNote = {
+				id: updated.id,
+				userId: user.userId,
+				title: updated.title?.trim() || 'Nuovo Appunto',
+				content: noteContent,
+				category: updated.category?.trim() || 'Generale & Varie',
+				tags: Array.isArray(updated.tags) ? updated.tags.map((t) => String(t).trim()).filter(Boolean) : [],
+				images: combinedImages,
+				isPinned: Boolean(updated.isPinned),
+				order: typeof updated.order === 'number' ? updated.order : maxOrder + 1,
+				createdAt: updated.createdAt || now,
+				updatedAt: now
+			};
+
+			allNotes.unshift(savedNote);
+			return allNotes;
+		}
+
+		// Verifica appartenenza nota all'utente
+		if (allNotes[index].userId && allNotes[index].userId !== user.userId && !user.isAdmin) {
+			accessDenied = true;
+			return allNotes;
+		}
+
+		const oldNote = allNotes[index];
+		oldNoteForCleanup = oldNote;
+
+		const newContent = updated.content !== undefined ? updated.content : oldNote.content;
+		const contentImages = Array.from(extractMediaFilenames([newContent])).map((fn) => `/uploads/${fn}`);
+		const explicitImages = Array.isArray(updated.images) ? updated.images : (oldNote.images || []);
+		const newImages = Array.from(new Set([...explicitImages, ...contentImages]));
+
+		const now = new Date().toISOString();
+		const noteToSave: Note = {
+			...allNotes[index],
+			title: updated.title !== undefined ? updated.title.trim() : allNotes[index].title,
+			content: newContent,
+			category: updated.category !== undefined ? updated.category.trim() : allNotes[index].category,
+			tags: Array.isArray(updated.tags)
+				? updated.tags.map((t) => String(t).trim()).filter(Boolean)
+				: allNotes[index].tags,
+			images: newImages,
+			isPinned: updated.isPinned !== undefined ? Boolean(updated.isPinned) : allNotes[index].isPinned,
+			order: typeof updated.order === 'number' ? updated.order : allNotes[index].order,
+			updatedAt: now
+		};
+
+		allNotes[index] = noteToSave;
+		savedNote = noteToSave;
+		return allNotes;
+	});
+
+	if (accessDenied) {
 		return json({ error: 'Accesso negato a questa nota.' }, { status: 403 });
 	}
 
-	const oldNote = allNotes[index];
-	const newContent = updated.content !== undefined ? updated.content : oldNote.content;
-	const contentImages = Array.from(extractMediaFilenames([newContent])).map((fn) => `/uploads/${fn}`);
-	const explicitImages = Array.isArray(updated.images)
-		? updated.images
-		: (oldNote.images || []);
-	const newImages = Array.from(new Set([...explicitImages, ...contentImages]));
-
-	const now = new Date().toISOString();
-	const noteToSave: Note = {
-		...allNotes[index],
-		title: updated.title !== undefined ? updated.title.trim() : allNotes[index].title,
-		content: newContent,
-		category: updated.category !== undefined ? updated.category.trim() : allNotes[index].category,
-		tags: Array.isArray(updated.tags)
-			? updated.tags.map((t) => String(t).trim()).filter(Boolean)
-			: allNotes[index].tags,
-		images: newImages,
-		isPinned: updated.isPinned !== undefined ? Boolean(updated.isPinned) : allNotes[index].isPinned,
-		order: typeof updated.order === 'number' ? updated.order : allNotes[index].order,
-		updatedAt: now
-	};
-
-	// Cancella fisicamente dal disco i file immagine rimossi da questa nota
-	await cleanupUnusedImagesOnNoteUpdate(oldNote, noteToSave);
-
-	allNotes[index] = noteToSave;
-
-	const saved = await writeNotesToFile(allNotes);
-	if (!saved) {
+	if (!savedNote || !result.success) {
 		return json({ error: 'Impossibile aggiornare la nota.' }, { status: 500 });
 	}
 
-	return json(allNotes[index]);
+	invalidateNotes();
+
+	// Cancella fisicamente dal disco i file immagine rimossi da questa nota
+	if (oldNoteForCleanup) {
+		await cleanupUnusedImagesOnNoteUpdate(oldNoteForCleanup, savedNote);
+	}
+
+	return json(savedNote);
 };
 
 export const DELETE: RequestHandler = async (event) => {
@@ -184,30 +220,43 @@ export const DELETE: RequestHandler = async (event) => {
 		return json({ error: 'Parametro id mancante.' }, { status: 400 });
 	}
 
-	const allNotes = await readNotes<Note[]>();
-	const noteToDelete = allNotes.find((n) => n.id === id);
+	let deletedNote: Note | null = null;
+	let accessDenied = false;
 
-	if (!noteToDelete) {
-		return json({ error: 'Nota non trovata.' }, { status: 404 });
-	}
+	const result = await mutateJsonSafe<Note[]>(NOTES_FILE_PATH, [], (allNotes) => {
+		const note = allNotes.find((n) => n.id === id);
+		if (!note) {
+			return allNotes;
+		}
 
-	if (noteToDelete.userId && noteToDelete.userId !== user.userId && !user.isAdmin) {
+		if (note.userId && note.userId !== user.userId && !user.isAdmin) {
+			accessDenied = true;
+			return allNotes;
+		}
+
+		deletedNote = note;
+		return allNotes.filter((n) => n.id !== id);
+	});
+
+	if (accessDenied) {
 		return json({ error: 'Accesso negato: nota non appartenente al tuo account.' }, { status: 403 });
 	}
 
-	// Elimina tutti i file immagine fisici associati a questa nota (se non usati altrove)
-	await deleteImagesForNote(noteToDelete);
-
-	const filtered = allNotes.filter((n) => n.id !== id);
-	const saved = await writeNotesToFile(filtered);
-	if (!saved) {
+	if (!result.success) {
 		return json({ error: 'Impossibile eliminare la nota.' }, { status: 500 });
+	}
+
+	invalidateNotes();
+
+	if (deletedNote) {
+		// Elimina tutti i file immagine fisici associati a questa nota (se non usati altrove)
+		await deleteImagesForNote(deletedNote);
 	}
 
 	return json({ success: true, id });
 };
 
-// PATCH per riordinamento batch di più note
+// PATCH per riordinamento batch di più note in modo concorrente e sicuro
 export const PATCH: RequestHandler = async (event) => {
 	const { request, cookies } = event;
 
@@ -225,22 +274,24 @@ export const PATCH: RequestHandler = async (event) => {
 		return json({ error: 'Formato batch non valido.' }, { status: 400 });
 	}
 
-	const allNotes = await readNotes<Note[]>();
 	const orderMap = new Map(payload.items.map((i) => [i.id, i.order]));
 
-	for (let i = 0; i < allNotes.length; i++) {
-		const targetNote = allNotes[i];
-		if (orderMap.has(targetNote.id)) {
-			if (!targetNote.userId || targetNote.userId === user.userId || user.isAdmin) {
-				allNotes[i].order = orderMap.get(targetNote.id)!;
+	const result = await mutateJsonSafe<Note[]>(NOTES_FILE_PATH, [], (allNotes) => {
+		for (let i = 0; i < allNotes.length; i++) {
+			const targetNote = allNotes[i];
+			if (orderMap.has(targetNote.id)) {
+				if (!targetNote.userId || targetNote.userId === user.userId || user.isAdmin) {
+					allNotes[i].order = orderMap.get(targetNote.id)!;
+				}
 			}
 		}
-	}
+		return allNotes;
+	});
 
-	const saved = await writeNotesToFile(allNotes);
-	if (!saved) {
+	if (!result.success) {
 		return json({ error: 'Impossibile salvare il nuovo ordine.' }, { status: 500 });
 	}
 
+	invalidateNotes();
 	return json({ success: true });
 };

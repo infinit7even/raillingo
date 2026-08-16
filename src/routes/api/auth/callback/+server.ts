@@ -1,16 +1,12 @@
 import { redirect, type RequestHandler } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
 import { getAdminIds, sessionCookieOptions, signSession } from '$lib/server/auth';
-import { invalidateUsers, readUsers } from '$lib/server/dataCache';
-import fs from 'node:fs/promises';
-import path from 'node:path';
+import { USERS_FILE_PATH, invalidateUsers, readUsers } from '$lib/server/dataCache';
+import { mutateJsonSafe } from '$lib/server/fileStorage';
 
 // ⚠️ Credenziali obbligatorie da variabili d'ambiente — nessun fallback hardcoded
 const CLIENT_ID = env.DISCORD_CLIENT_ID;
 const CLIENT_SECRET = env.DISCORD_CLIENT_SECRET;
-
-// Path sicuro fuori da static/ (non accessibile via HTTP)
-const USERS_FILE_PATH = path.resolve('data/users.json');
 
 interface StoredUser {
 	discordId: string;
@@ -28,23 +24,9 @@ interface StoredUser {
 		lastStudiedDate: string;
 		favorites: string[];
 	};
+	ignoredCardIds?: string[];
 }
 
-async function readUsersFromFile(): Promise<StoredUser[]> {
-	return readUsers<StoredUser[]>();
-}
-
-async function writeUsersToFile(users: StoredUser[]): Promise<boolean> {
-	try {
-		const dir = path.dirname(USERS_FILE_PATH);
-		await fs.mkdir(dir, { recursive: true });
-		await fs.writeFile(USERS_FILE_PATH, JSON.stringify(users, null, 2), 'utf-8');
-		invalidateUsers();
-		return true;
-	} catch {
-		return false;
-	}
-}
 
 export const GET: RequestHandler = async ({ url, cookies }) => {
 	if (!CLIENT_ID || !CLIENT_SECRET) {
@@ -117,38 +99,40 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 
 		const now = new Date().toISOString();
 
-		// 4. Salva / aggiorna il profilo nel file data/users.json
-		const users = await readUsersFromFile();
-		let storedUser = users.find((u) => String(u.discordId).trim() === discordUserId);
+		// 4. Salva / aggiorna il profilo nel file data/users.json in modo concorrente e sicuro
+		await mutateJsonSafe<StoredUser[]>(USERS_FILE_PATH, [], (users) => {
+			let storedUser = users.find((u: StoredUser) => String(u.discordId).trim() === discordUserId);
 
-		if (storedUser) {
-			storedUser.email = email;
-			storedUser.username = username;
-			if (avatarUrl) storedUser.avatar = avatarUrl;
-			storedUser.role = userRole;
-			storedUser.lastLoginAt = now;
-		} else {
-			storedUser = {
-				discordId: discordUserId,
-				email,
-				username,
-				avatar: avatarUrl,
-				role: userRole,
-				createdAt: now,
-				lastLoginAt: now,
-				stats: {
-					cardsStudied: 0,
-					quizAnswered: 0,
-					quizCorrect: 0,
-					streakDays: 1,
-					lastStudiedDate: now.split('T')[0],
-					favorites: []
-				}
-			};
-			users.push(storedUser);
-		}
+			if (storedUser) {
+				storedUser.email = email;
+				storedUser.username = username;
+				if (avatarUrl) storedUser.avatar = avatarUrl;
+				storedUser.role = userRole;
+				storedUser.lastLoginAt = now;
+			} else {
+				storedUser = {
+					discordId: discordUserId,
+					email,
+					username,
+					avatar: avatarUrl,
+					role: userRole,
+					createdAt: now,
+					lastLoginAt: now,
+					stats: {
+						cardsStudied: 0,
+						quizAnswered: 0,
+						quizCorrect: 0,
+						streakDays: 1,
+						lastStudiedDate: now.split('T')[0],
+						favorites: []
+					}
+				};
+				users.push(storedUser);
+			}
+			return users;
+		});
 
-		await writeUsersToFile(users);
+		invalidateUsers();
 
 		// 5. Imposta cookie di sessione sicuri (httpOnly, sameSite lax)
 		const sessionData = {

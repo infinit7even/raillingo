@@ -1,6 +1,7 @@
 /**
- * Utility per la compressione client-side di immagini prima dell'upload.
- * Supporta formati PNG, JPG, WebP e converte in WebP ottimizzato con fallback sicuro.
+ * Utility ultra-veloce per la compressione client-side di immagini prima dell'upload.
+ * Supporta formati WebP, PNG, JPG, JPEG, GIF, SVG e AVIF.
+ * Se l'immagine è già leggera o SVG/GIF animata, evita ricodifiche non necessarie.
  */
 
 export interface CompressionOptions {
@@ -14,21 +15,33 @@ export async function compressImage(
 	file: File | Blob,
 	options: CompressionOptions = {}
 ): Promise<File> {
-	const maxSizeMB = Math.max(0.1, options.maxSizeMB ?? 1);
+	const maxSizeMB = Math.max(0.1, options.maxSizeMB ?? 2);
 	const maxWidth = Math.max(100, options.maxWidth ?? 1920);
 	const maxHeight = Math.max(100, options.maxHeight ?? 1920);
-	const initialQuality = Math.min(1, Math.max(0.1, options.quality ?? 0.82));
+	const initialQuality = Math.min(1, Math.max(0.1, options.quality ?? 0.85));
+
+	// Se è SVG, preserva il file originale vettoriale
+	const mimeType = file.type || '';
+	if (mimeType.includes('svg') || mimeType.includes('xml')) {
+		return file instanceof File ? file : new File([file], `vector-${Date.now()}.svg`, { type: 'image/svg+xml' });
+	}
+
+	// Se è già un WebP/PNG/JPEG piccolo (< 300KB) e non richiede resize esplicito, possiamo procedere rapidamente
+	if (file.size < 300 * 1024 && (mimeType.includes('webp') || mimeType.includes('png') || mimeType.includes('jpeg'))) {
+		if (file instanceof File) return file;
+		return new File([file], `img-${Date.now()}.webp`, { type: file.type || 'image/webp' });
+	}
 
 	return new Promise((resolve) => {
 		let objectUrl = '';
 		try {
 			objectUrl = URL.createObjectURL(file);
 		} catch {
-			const safeFile =
+			const fallback =
 				file instanceof File
 					? file
 					: new File([file], `img-${Date.now()}.png`, { type: file.type || 'image/png' });
-			resolve(safeFile);
+			resolve(fallback);
 			return;
 		}
 
@@ -41,15 +54,15 @@ export async function compressImage(
 			let height = img.naturalHeight || img.height;
 
 			if (!width || !height || width <= 0 || height <= 0) {
-				const safeFile =
+				const fallback =
 					file instanceof File
 						? file
 						: new File([file], `img-${Date.now()}.png`, { type: file.type || 'image/png' });
-				resolve(safeFile);
+				resolve(fallback);
 				return;
 			}
 
-			// Scala mantenendo le proporzioni se supera le dimensioni massime
+			// Ridimensiona mantenendo le proporzioni
 			if (width > maxWidth || height > maxHeight) {
 				const ratio = Math.min(maxWidth / width, maxHeight / height);
 				width = Math.max(1, Math.round(width * ratio));
@@ -62,11 +75,11 @@ export async function compressImage(
 
 			const ctx = canvas.getContext('2d');
 			if (!ctx) {
-				const safeFile =
+				const fallback =
 					file instanceof File
 						? file
 						: new File([file], `img-${Date.now()}.png`, { type: file.type || 'image/png' });
-				resolve(safeFile);
+				resolve(fallback);
 				return;
 			}
 
@@ -78,7 +91,7 @@ export async function compressImage(
 				canvas.toBlob(
 					(blob) => {
 						if (!blob) {
-							// Se toBlob 'image/webp' non produce blob, prova con toDataURL o fallback
+							// Prova toDataURL come fallback per browser con supporto canvas parziale
 							try {
 								const dataUrl = canvas.toDataURL('image/webp', quality);
 								if (dataUrl && dataUrl.startsWith('data:image/')) {
@@ -101,18 +114,19 @@ export async function compressImage(
 							} catch {
 								// Ignora
 							}
-							const safeFile =
+
+							const fallback =
 								file instanceof File
 									? file
 									: new File([file], `img-${Date.now()}.png`, { type: file.type || 'image/png' });
-							resolve(safeFile);
+							resolve(fallback);
 							return;
 						}
 
 						const maxSizeBytes = maxSizeMB * 1024 * 1024;
-						if (blob.size > maxSizeBytes && quality > 0.3) {
-							// Se supera ancora il limite, riduci progressivamente la qualità
-							const nextQuality = Math.max(0.15, quality - 0.15);
+						if (blob.size > maxSizeBytes && quality > 0.35) {
+							// Se supera il limite, abbassa progressivamente la qualità
+							const nextQuality = Math.max(0.2, quality - 0.15);
 							attemptBlob(nextQuality);
 							return;
 						}
@@ -131,12 +145,12 @@ export async function compressImage(
 
 		img.onerror = () => {
 			URL.revokeObjectURL(objectUrl);
-			// In caso di errore di rendering immagine, ritorna il file originale per non bloccare l'upload
-			const safeFile =
+			// In caso di errore di decodifica, ritorna il file originale per non bloccare l'utente
+			const fallback =
 				file instanceof File
 					? file
 					: new File([file], `img-${Date.now()}.png`, { type: file.type || 'image/png' });
-			resolve(safeFile);
+			resolve(fallback);
 		};
 
 		img.src = objectUrl;

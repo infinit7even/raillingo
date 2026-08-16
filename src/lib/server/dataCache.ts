@@ -1,9 +1,9 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
-const CARDS_FILE_PATH = path.resolve('data/cards.json');
-const USERS_FILE_PATH = path.resolve('data/users.json');
-const NOTES_FILE_PATH = path.resolve('data/notes.json');
+export const CARDS_FILE_PATH = path.resolve('data/cards.json');
+export const USERS_FILE_PATH = path.resolve('data/users.json');
+export const NOTES_FILE_PATH = path.resolve('data/notes.json');
 
 // Rileggi il file al massimo ogni TTL_MS millisecondi (oltre al check mtime).
 const TTL_MS = 1000;
@@ -43,8 +43,16 @@ async function readJsonCached(filePath: string, fallback: unknown): Promise<unkn
 	}
 }
 
-function invalidate(filePath: string): void {
+export function invalidate(filePath: string): void {
 	cache.delete(filePath);
+}
+
+export function updateCacheEntry(filePath: string, data: unknown): void {
+	cache.set(path.resolve(filePath), {
+		data,
+		mtimeMs: Date.now(),
+		checkedAt: Date.now()
+	});
 }
 
 export function readCards<T = unknown>(): Promise<T> {
@@ -70,4 +78,5 @@ export function invalidateUsers(): void {
 export function invalidateNotes(): void {
 	invalidate(NOTES_FILE_PATH);
 }
+
 
