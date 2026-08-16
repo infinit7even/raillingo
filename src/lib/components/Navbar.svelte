@@ -96,15 +96,7 @@
 				>ingo
 			</span>
 		</a>
-		<button
-			type="button"
-			class="close-drawer-btn"
-			onclick={() => navStore.close()}
-			aria-label="Chiudi menu"
-		>
-			✕
-		</button>
-	</div>
+		</div>
 
 	<div class="nav-container">
 		<div class="nav-scroll-wrapper">
@@ -250,27 +242,7 @@
 		margin: 0 -0.08em;
 	}
 
-	.close-drawer-btn {
-		background: var(--card-bg-subtle);
-		border: 2px solid var(--border-color);
-		border-radius: 12px;
-		width: 34px;
-		height: 34px;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		color: var(--text-color);
-		font-size: 1.1rem;
-		font-weight: 800;
-		cursor: pointer;
-		transition:
-			transform 0.15s ease,
-			background-color 0.2s ease;
-	}
 
-	.close-drawer-btn:active {
-		transform: scale(0.92);
-	}
 
 	.nav-container {
 		flex: 1;
@@ -430,9 +402,7 @@
 			display: none !important;
 		}
 
-		.close-drawer-btn {
-			display: none !important;
-		}
+
 
 		.duo-navigation {
 			position: fixed;
