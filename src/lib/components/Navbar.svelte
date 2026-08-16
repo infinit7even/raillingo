@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { slide } from 'svelte/transition';
 	import { themeStore, LIVERY_OPTIONS, type TrainLivery, type ThemeMode } from '$lib/stores/themeStore';
 	import { cardsStore } from '$lib/stores/cardsStore';
 	import { pwaStore } from '$lib/stores/pwaStore';
@@ -13,6 +14,7 @@
 	let currentTheme = $state<ThemeMode>('dark');
 	let currentLivery = $state<TrainLivery>('regionale');
 	let activeLivery = $derived(LIVERY_OPTIONS.find((l) => l.id === currentLivery) ?? LIVERY_OPTIONS[0]);
+	let isLiveryOpen = $state(false);
 	let cards = $state<Card[]>([]);
 	let isQuickAddOpen = $state(false);
 	let canInstall = $state(false);
@@ -140,25 +142,52 @@
 			</button>
 		{/if}
 
-		<!-- 🚆 Selettore Livree Ferroviarie 3D Minimal & Contenuto -->
-		<div class="livery-segmented-container" role="radiogroup" aria-label="Seleziona Livrea Treno">
-			{#each LIVERY_OPTIONS as liv}
-				{@const isSelected = currentLivery === liv.id}
-				<button
-					type="button"
-					class="livery-segment-btn"
-					class:active={isSelected}
-					class:is-freccia={liv.id === 'frecciarossa'}
-					class:is-intercity={liv.id === 'intercity'}
-					class:is-regio={liv.id === 'regionale'}
-					onclick={() => themeStore.setLivery(liv.id)}
-					title="{liv.name} ({liv.trainModel})"
-					role="radio"
-					aria-checked={isSelected}
+		<!-- 🚆 Selettore Livree Ferroviarie 3D con Espansione Animata -->
+		<div class="livery-dropdown-wrapper">
+			<button
+				type="button"
+				class="duo-btn duo-btn-gray livery-trigger-btn"
+				onclick={() => (isLiveryOpen = !isLiveryOpen)}
+				aria-expanded={isLiveryOpen}
+				title="Clicca per scegliere la livrea del treno"
+			>
+				<span class="livery-trigger-dot" style="background-color: {activeLivery.color};"></span>
+				<span class="livery-trigger-title">LIVREA: {activeLivery.name.toUpperCase()}</span>
+				<span class="livery-trigger-chevron" class:open={isLiveryOpen}>▾</span>
+			</button>
+
+			{#if isLiveryOpen}
+				<div
+					class="livery-options-tray"
+					transition:slide={{ duration: 200 }}
+					role="radiogroup"
+					aria-label="Seleziona Livrea Treno"
 				>
-					<span class="segment-name">{liv.name}</span>
-				</button>
-			{/each}
+					{#each LIVERY_OPTIONS as liv}
+						{@const isSelected = currentLivery === liv.id}
+						<button
+							type="button"
+							class="livery-option-row"
+							class:active={isSelected}
+							class:is-freccia={liv.id === 'frecciarossa'}
+							class:is-intercity={liv.id === 'intercity'}
+							class:is-regio={liv.id === 'regionale'}
+							onclick={() => {
+								themeStore.setLivery(liv.id);
+								isLiveryOpen = false;
+							}}
+							role="radio"
+							aria-checked={isSelected}
+						>
+							<span class="option-dot" style="background-color: {liv.color};"></span>
+							<span class="option-name">{liv.name}</span>
+							{#if isSelected}
+								<span class="option-check">✓</span>
+							{/if}
+						</button>
+					{/each}
+				</div>
+			{/if}
 		</div>
 
 		<!-- 🌙 / ☀️ Toggle Tema Chiaro / Scuro -->
@@ -412,15 +441,62 @@
 		justify-content: center;
 	}
 
-	/* 🚆 Minimal Segmented Track strictly inside Sidebar Container */
-	.livery-segmented-container {
-		display: grid;
-		grid-template-columns: repeat(3, 1fr);
-		gap: 0.25rem;
+	/* 🚆 Livery Animated Dropdown Container */
+	.livery-dropdown-wrapper {
+		display: flex;
+		flex-direction: column;
 		width: 100%;
-		max-width: 100%;
+		gap: 0.35rem;
+		box-sizing: border-box;
+	}
+
+	.livery-trigger-btn {
+		width: 100%;
+		font-size: 0.78rem;
+		padding: 0.65rem 0.75rem;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.5rem;
+		box-sizing: border-box;
+	}
+
+	.livery-trigger-dot {
+		width: 10px;
+		height: 10px;
+		border-radius: 50%;
+		flex-shrink: 0;
+		box-shadow: 0 0 6px rgba(0, 0, 0, 0.25);
+		transition: background-color 0.2s ease;
+	}
+
+	.livery-trigger-title {
+		font-weight: 900;
+		letter-spacing: 0.04em;
+		flex: 1;
+		text-align: left;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.livery-trigger-chevron {
+		font-size: 0.85rem;
+		transition: transform 0.2s ease;
+		display: inline-block;
+	}
+
+	.livery-trigger-chevron.open {
+		transform: rotate(180deg);
+	}
+
+	.livery-options-tray {
+		display: flex;
+		flex-direction: column;
+		gap: 0.35rem;
+		width: 100%;
 		background: var(--card-bg-subtle);
-		padding: 0.25rem;
+		padding: 0.35rem;
 		border-radius: 14px;
 		border: 2px solid var(--border-color);
 		border-bottom: 3px solid var(--border-depth-color);
@@ -428,38 +504,42 @@
 		overflow: hidden;
 	}
 
-	.livery-segment-btn {
+	.livery-option-row {
 		display: flex;
 		align-items: center;
-		justify-content: center;
-		padding: 0.55rem 0.15rem;
+		gap: 0.6rem;
+		padding: 0.55rem 0.75rem;
 		border-radius: 10px;
-		border: 2px solid transparent;
-		border-bottom: 3px solid transparent;
-		background: transparent;
+		background: var(--card-bg);
+		border: 1.5px solid var(--border-color);
+		border-bottom: 3px solid var(--border-depth-color);
 		cursor: pointer;
 		font-family: 'Outfit', sans-serif;
+		font-size: 0.8rem;
+		font-weight: 800;
+		color: var(--text-color);
+		text-align: left;
 		transition:
-			transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1),
+			transform 0.1s ease,
 			background-color 0.15s ease,
-			border-color 0.15s ease,
-			box-shadow 0.15s ease;
+			border-color 0.15s ease;
 		user-select: none;
 		-webkit-tap-highlight-color: transparent;
 		box-sizing: border-box;
-		min-width: 0;
+		width: 100%;
 	}
 
-	.livery-segment-btn:not(.active):hover {
-		background: var(--hover-bg);
+	.livery-option-row:not(.active):hover {
+		background-color: var(--hover-bg);
+		transform: translateY(-1px);
 	}
 
-	.livery-segment-btn:active {
-		transform: translateY(2px);
+	.livery-option-row:active {
+		transform: translateY(1px);
 		border-bottom-width: 1.5px;
 	}
 
-	.livery-segment-btn.active.is-freccia {
+	.livery-option-row.active.is-freccia {
 		background-color: #e21b24;
 		border-color: #a81118;
 		border-bottom-color: #7d0910;
@@ -467,7 +547,7 @@
 		box-shadow: 0 3px 10px rgba(226, 27, 36, 0.35);
 	}
 
-	.livery-segment-btn.active.is-intercity {
+	.livery-option-row.active.is-intercity {
 		background-color: #0080da;
 		border-color: #005899;
 		border-bottom-color: #004578;
@@ -475,7 +555,7 @@
 		box-shadow: 0 3px 10px rgba(0, 128, 218, 0.35);
 	}
 
-	.livery-segment-btn.active.is-regio {
+	.livery-option-row.active.is-regio {
 		background-color: #58cc02;
 		border-color: #46a302;
 		border-bottom-color: #3b8a02;
@@ -483,23 +563,23 @@
 		box-shadow: 0 3px 10px rgba(88, 204, 2, 0.35);
 	}
 
-	.segment-name {
-		font-size: 0.62rem;
-		font-weight: 800;
-		color: var(--text-color);
-		letter-spacing: -0.01em;
-		text-transform: uppercase;
-		line-height: 1;
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		max-width: 100%;
-		text-align: center;
+	.option-dot {
+		width: 10px;
+		height: 10px;
+		border-radius: 50%;
+		flex-shrink: 0;
+		box-shadow: 0 0 6px rgba(0, 0, 0, 0.2);
 	}
 
-	.livery-segment-btn.active .segment-name {
-		color: #ffffff;
+	.option-name {
+		flex: 1;
 		font-weight: 900;
+		letter-spacing: 0.02em;
+	}
+
+	.option-check {
+		font-weight: 900;
+		font-size: 0.85rem;
 	}
 
 	.desktop-theme-btn {
