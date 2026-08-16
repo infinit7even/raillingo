@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { slide } from 'svelte/transition';
 	import { themeStore, LIVERY_OPTIONS, type TrainLivery, type ThemeMode } from '$lib/stores/themeStore';
 	import { cardsStore } from '$lib/stores/cardsStore';
 	import { pwaStore } from '$lib/stores/pwaStore';
 	import { navStore } from '$lib/stores/navStore';
+	import { toastStore } from '$lib/stores/toastStore';
 	import QuickAddCardModal from '$lib/components/QuickAddCardModal.svelte';
 	import type { Card } from '$lib/types/cards';
 	import { onMount } from 'svelte';
@@ -14,11 +14,16 @@
 	let currentTheme = $state<ThemeMode>('dark');
 	let currentLivery = $state<TrainLivery>('regionale');
 	let activeLivery = $derived(LIVERY_OPTIONS.find((l) => l.id === currentLivery) ?? LIVERY_OPTIONS[0]);
-	let isLiveryOpen = $state(false);
 	let cards = $state<Card[]>([]);
 	let isQuickAddOpen = $state(false);
 	let canInstall = $state(false);
 	let isNavOpen = $state(false);
+
+	function handleLogoClick() {
+		const nextLiveryId = themeStore.cycleLivery();
+		const liv = LIVERY_OPTIONS.find((l) => l.id === nextLiveryId) ?? LIVERY_OPTIONS[0];
+		toastStore.show({ message: `Tema cambiato in ${liv.name}` });
+	}
 
 	onMount(() => {
 		const unTheme = themeStore.subscribe((state) => {
@@ -93,17 +98,23 @@
 	ontouchstart={handleDrawerTouchStart}
 	ontouchend={handleDrawerTouchEnd}
 >
-	<!-- Header Brand e Pulsante Chiudi -->
+	<!-- Header Brand e Pulsante Cambio Tema al Click -->
 	<div class="sidebar-brand">
-		<a href="/" class="brand-link" onclick={handleNavClick}>
+		<button
+			type="button"
+			class="brand-link"
+			onclick={handleLogoClick}
+			title="Clicca per cambiare tema a rotazione"
+			aria-label="Cambia tema a rotazione"
+		>
 			<img src="/emoji/triangular_flag_3d.png" alt="Bandiera" width="28" height="28" decoding="async" class="brand-emoji" />
 			<span class="brand-title">
 				Rai<span class="ll-track-box"
 					>l<img src="/emoji/railway_track_3d.png" alt="Binario" width="18" height="18" decoding="async" class="brand-track-img" />l</span
 				>ingo
 			</span>
-		</a>
-		</div>
+		</button>
+	</div>
 
 	<div class="nav-container">
 		<div class="nav-scroll-wrapper">
@@ -126,7 +137,7 @@
 		</div>
 	</div>
 
-	<!-- Actions Bottom Drawer (Theme + Livery + Quick Add Section) -->
+	<!-- Actions Bottom Drawer (Theme + Quick Add Section) -->
 	<div class="sidebar-actions">
 		{#if user && (user.isAdmin || user.role === 'admin')}
 			<button
@@ -141,54 +152,6 @@
 				⚡ AGGIUNGI SCHEDA
 			</button>
 		{/if}
-
-		<!-- 🚆 Selettore Livree Ferroviarie 3D con Espansione Animata -->
-		<div class="livery-dropdown-wrapper">
-			<button
-				type="button"
-				class="duo-btn duo-btn-gray livery-trigger-btn"
-				onclick={() => (isLiveryOpen = !isLiveryOpen)}
-				aria-expanded={isLiveryOpen}
-				title="Clicca per scegliere la livrea del treno"
-			>
-				<span class="livery-trigger-dot" style="background-color: {activeLivery.color};"></span>
-				<span class="livery-trigger-title">LIVREA: {activeLivery.name.toUpperCase()}</span>
-				<span class="livery-trigger-chevron" class:open={isLiveryOpen}>▾</span>
-			</button>
-
-			{#if isLiveryOpen}
-				<div
-					class="livery-options-tray"
-					transition:slide={{ duration: 200 }}
-					role="radiogroup"
-					aria-label="Seleziona Livrea Treno"
-				>
-					{#each LIVERY_OPTIONS as liv}
-						{@const isSelected = currentLivery === liv.id}
-						<button
-							type="button"
-							class="livery-option-row"
-							class:active={isSelected}
-							class:is-freccia={liv.id === 'frecciarossa'}
-							class:is-intercity={liv.id === 'intercity'}
-							class:is-regio={liv.id === 'regionale'}
-							onclick={() => {
-								themeStore.setLivery(liv.id);
-								isLiveryOpen = false;
-							}}
-							role="radio"
-							aria-checked={isSelected}
-						>
-							<span class="option-dot" style="background-color: {liv.color};"></span>
-							<span class="option-name">{liv.name}</span>
-							{#if isSelected}
-								<span class="option-check">✓</span>
-							{/if}
-						</button>
-					{/each}
-				</div>
-			{/if}
-		</div>
 
 		<!-- 🌙 / ☀️ Toggle Tema Chiaro / Scuro -->
 		<button
@@ -266,6 +229,23 @@
 		align-items: center;
 		gap: 0.6rem;
 		text-decoration: none;
+		background: none;
+		border: none;
+		padding: 0;
+		cursor: pointer;
+		font-family: inherit;
+		text-align: left;
+		transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+		user-select: none;
+		-webkit-tap-highlight-color: transparent;
+	}
+
+	.brand-link:hover {
+		transform: scale(1.03);
+	}
+
+	.brand-link:active {
+		transform: scale(0.96);
 	}
 
 	.brand-emoji {
@@ -439,147 +419,6 @@
 		padding: 0.65rem;
 		text-align: center;
 		justify-content: center;
-	}
-
-	/* 🚆 Livery Animated Dropdown Container */
-	.livery-dropdown-wrapper {
-		display: flex;
-		flex-direction: column;
-		width: 100%;
-		gap: 0.35rem;
-		box-sizing: border-box;
-	}
-
-	.livery-trigger-btn {
-		width: 100%;
-		font-size: 0.78rem;
-		padding: 0.65rem 0.75rem;
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 0.5rem;
-		box-sizing: border-box;
-	}
-
-	.livery-trigger-dot {
-		width: 10px;
-		height: 10px;
-		border-radius: 50%;
-		flex-shrink: 0;
-		box-shadow: 0 0 6px rgba(0, 0, 0, 0.25);
-		transition: background-color 0.2s ease;
-	}
-
-	.livery-trigger-title {
-		font-weight: 900;
-		letter-spacing: 0.04em;
-		flex: 1;
-		text-align: left;
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
-
-	.livery-trigger-chevron {
-		font-size: 0.85rem;
-		transition: transform 0.2s ease;
-		display: inline-block;
-	}
-
-	.livery-trigger-chevron.open {
-		transform: rotate(180deg);
-	}
-
-	.livery-options-tray {
-		display: flex;
-		flex-direction: column;
-		gap: 0.35rem;
-		width: 100%;
-		background: var(--card-bg-subtle);
-		padding: 0.35rem;
-		border-radius: 14px;
-		border: 2px solid var(--border-color);
-		border-bottom: 3px solid var(--border-depth-color);
-		box-sizing: border-box;
-		overflow: hidden;
-	}
-
-	.livery-option-row {
-		display: flex;
-		align-items: center;
-		gap: 0.6rem;
-		padding: 0.55rem 0.75rem;
-		border-radius: 10px;
-		background: var(--card-bg);
-		border: 1.5px solid var(--border-color);
-		border-bottom: 3px solid var(--border-depth-color);
-		cursor: pointer;
-		font-family: 'Outfit', sans-serif;
-		font-size: 0.8rem;
-		font-weight: 800;
-		color: var(--text-color);
-		text-align: left;
-		transition:
-			transform 0.1s ease,
-			background-color 0.15s ease,
-			border-color 0.15s ease;
-		user-select: none;
-		-webkit-tap-highlight-color: transparent;
-		box-sizing: border-box;
-		width: 100%;
-	}
-
-	.livery-option-row:not(.active):hover {
-		background-color: var(--hover-bg);
-		transform: translateY(-1px);
-	}
-
-	.livery-option-row:active {
-		transform: translateY(1px);
-		border-bottom-width: 1.5px;
-	}
-
-	.livery-option-row.active.is-freccia {
-		background-color: #ff5e5b;
-		border-color: #d9423f;
-		border-bottom-color: #b83230;
-		color: #ffffff;
-		box-shadow: 0 3px 10px rgba(255, 94, 91, 0.35);
-	}
-
-	.livery-option-row.active.is-intercity {
-		background-color: #0080da;
-		border-color: #005899;
-		border-bottom-color: #004578;
-		color: #ffffff;
-		box-shadow: 0 3px 10px rgba(0, 128, 218, 0.35);
-	}
-
-	.livery-option-row.active.is-regio {
-		background-color: #58cc02;
-		border-color: #46a302;
-		border-bottom-color: #3b8a02;
-		color: #ffffff;
-		box-shadow: 0 3px 10px rgba(88, 204, 2, 0.35);
-	}
-
-	.option-dot {
-		width: 10px;
-		height: 10px;
-		border-radius: 50%;
-		flex-shrink: 0;
-		box-shadow: 0 0 6px rgba(0, 0, 0, 0.2);
-	}
-
-	.option-name {
-		flex: 1;
-		font-weight: 900;
-		letter-spacing: 0.02em;
-	}
-
-	.option-check {
-		font-weight: 900;
-		font-size: 0.85rem;
 	}
 
 	.desktop-theme-btn {

@@ -129,10 +129,12 @@ class ThemeStore {
 		this.notify();
 	}
 
-	public cycleLivery() {
+	public cycleLivery(): TrainLivery {
 		const currentIndex = LIVERY_OPTIONS.findIndex((l) => l.id === this.currentLivery);
 		const nextIndex = (currentIndex + 1) % LIVERY_OPTIONS.length;
-		this.setLivery(LIVERY_OPTIONS[nextIndex].id);
+		const nextLivery = LIVERY_OPTIONS[nextIndex].id;
+		this.setLivery(nextLivery);
+		return nextLivery;
 	}
 
 	private applyDOM() {
