@@ -1365,12 +1365,6 @@
 		box-sizing: border-box;
 	}
 
-	@media (min-width: 1024px) {
-		.notes-header-container {
-			max-width: 1200px;
-		}
-	}
-
 	/* 📐 Main Obsidian Workspace Flex Container */
 	.obsidian-workspace {
 		display: flex;

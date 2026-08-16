@@ -142,12 +142,6 @@
 		box-sizing: border-box;
 	}
 
-	@media (min-width: 1024px) {
-		.quiz-page-container {
-			max-width: 800px;
-		}
-	}
-
 	.empty-box {
 		text-align: center;
 		padding: 3rem;

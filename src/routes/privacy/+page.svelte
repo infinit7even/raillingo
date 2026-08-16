@@ -38,11 +38,13 @@
 
 <style>
 	.privacy-container {
-		max-width: 720px;
-		margin: 2rem auto;
+		width: 100%;
+		max-width: 600px;
+		margin: 0 auto;
 		display: flex;
 		flex-direction: column;
-		gap: 1.5rem;
+		gap: 0.75rem;
+		box-sizing: border-box;
 	}
 
 	.privacy-header {

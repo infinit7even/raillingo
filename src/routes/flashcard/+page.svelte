@@ -314,12 +314,6 @@
 		box-sizing: border-box;
 	}
 
-	@media (min-width: 1024px) {
-		.ripasso-page-container {
-			max-width: 800px;
-		}
-	}
-
 	/* 🎛️ Unified Flashcard Navigation Bar */
 	.flashcard-nav-bar {
 		display: flex;

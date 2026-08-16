@@ -7,7 +7,7 @@
 		subtitle = '',
 		badge = '',
 		icon = '',
-		variant = 'green',
+		variant = 'brand',
 		mobileOpenNav = true,
 		children
 	} = $props<{
@@ -15,7 +15,7 @@
 		subtitle?: string;
 		badge?: string;
 		icon?: string;
-		variant?: 'green' | 'blue' | 'purple' | 'orange' | 'red';
+		variant?: 'brand' | 'green' | 'blue' | 'purple' | 'orange' | 'red';
 		/** Se true, toccare il banner su mobile apre il menu laterale */
 		mobileOpenNav?: boolean;
 		children?: Snippet;
@@ -106,6 +106,9 @@
 			filter 0.18s ease;
 		box-sizing: border-box;
 		width: 100%;
+		max-width: 600px;
+		margin-left: auto;
+		margin-right: auto;
 		margin-top: 0;
 		margin-bottom: 0.75rem;
 		animation: slideUpFade 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -171,6 +174,7 @@
 		}
 	}
 
+	.duo-banner-brand,
 	.duo-banner-green {
 		background-color: var(--brand-color, var(--green-color));
 		border: 2px solid var(--brand-depth, var(--green-depth));
