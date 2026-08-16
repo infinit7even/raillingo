@@ -95,6 +95,7 @@
 		subtitle="Sfide e traguardi per guadagnare XP e mantenere la serie attiva"
 		icon="/emoji/package_3d.png"
 		variant="green"
+		mobileOpenNav={true}
 	/>
 
 	<!-- Box Sincronizzazione / Salvataggio Progressi Cloud -->

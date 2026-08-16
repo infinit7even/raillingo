@@ -93,6 +93,7 @@
 		subtitle="Metti alla prova la tua memoria selezionando la risposta corretta tra 5 opzioni."
 		icon="/emoji/star_3d.png"
 		variant="orange"
+		mobileOpenNav={true}
 	/>
 
 	<!-- Single Unified Category & Shuffle Bar -->

@@ -164,6 +164,7 @@
 		subtitle="Consultazione rapida di tutti gli acronimi in ordine alfabetico e gestione card ignorate."
 		icon="/emoji/books_3d.png"
 		variant="blue"
+		mobileOpenNav={true}
 	/>
 
 	<!-- Standalone Category Filter directly below PageHeader -->

@@ -1244,6 +1244,7 @@
 			subtitle="Salva le tue note e sincronizzale ovunque tu sia su tutti i tuoi dispositivi."
 			icon="/emoji/clipboard_3d.png"
 			variant="red"
+			mobileOpenNav={true}
 		/>
 
 		{#if data?.error === 'admin_required'}

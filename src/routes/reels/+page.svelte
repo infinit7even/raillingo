@@ -117,6 +117,7 @@
 		subtitle="Scorri le schede visive ed esplora foto e descrizioni in un feed dinamico."
 		icon="/emoji/camera_3d.png"
 		variant="purple"
+		mobileOpenNav={true}
 	/>
 
 	<!-- Category Filter (Senza tasto rimescola) -->

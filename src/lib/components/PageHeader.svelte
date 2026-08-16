@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import { navStore } from '$lib/stores/navStore';
 
 	let {
 		title,
@@ -7,6 +8,7 @@
 		badge = '',
 		icon = '',
 		variant = 'green',
+		mobileOpenNav = false,
 		children
 	} = $props<{
 		title: string;
@@ -14,33 +16,73 @@
 		badge?: string;
 		icon?: string;
 		variant?: 'green' | 'blue' | 'purple' | 'orange' | 'red';
+		/** Se true, toccare il banner su mobile apre il menu laterale */
+		mobileOpenNav?: boolean;
 		children?: Snippet;
 	}>();
+
+	function handleClick() {
+		if (mobileOpenNav && window.innerWidth < 1024) {
+			navStore.open();
+		}
+	}
 </script>
 
-<div class="page-header-banner duo-banner-{variant}">
-	<div class="header-content-group">
-		{#if icon}
-			<img src={icon} alt="" width="36" height="36" decoding="async" class="header-icon-img" />
+{#if mobileOpenNav}
+	<button
+		type="button"
+		class="page-header-banner duo-banner-{variant} mobile-tappable"
+		onclick={handleClick}
+	>
+		<div class="header-content-group">
+			{#if icon}
+				<img src={icon} alt="" width="36" height="36" decoding="async" class="header-icon-img" />
+			{/if}
+
+			<div class="header-text-box">
+				{#if badge}
+					<span class="header-badge-tag">{badge}</span>
+				{/if}
+				<h1 class="header-title-heading">{title}</h1>
+				{#if subtitle}
+					<p class="header-subtitle-text">{subtitle}</p>
+				{/if}
+			</div>
+		</div>
+
+		<span class="mobile-nav-hint" aria-hidden="true">☰</span>
+
+		{#if children}
+			<div class="header-actions-slot">
+				{@render children()}
+			</div>
 		{/if}
+	</button>
+{:else}
+	<div class="page-header-banner duo-banner-{variant}">
+		<div class="header-content-group">
+			{#if icon}
+				<img src={icon} alt="" width="36" height="36" decoding="async" class="header-icon-img" />
+			{/if}
 
-		<div class="header-text-box">
-			{#if badge}
-				<span class="header-badge-tag">{badge}</span>
-			{/if}
-			<h1 class="header-title-heading">{title}</h1>
-			{#if subtitle}
-				<p class="header-subtitle-text">{subtitle}</p>
-			{/if}
+			<div class="header-text-box">
+				{#if badge}
+					<span class="header-badge-tag">{badge}</span>
+				{/if}
+				<h1 class="header-title-heading">{title}</h1>
+				{#if subtitle}
+					<p class="header-subtitle-text">{subtitle}</p>
+				{/if}
+			</div>
 		</div>
+
+		{#if children}
+			<div class="header-actions-slot">
+				{@render children()}
+			</div>
+		{/if}
 	</div>
-
-	{#if children}
-		<div class="header-actions-slot">
-			{@render children()}
-		</div>
-	{/if}
-</div>
+{/if}
 
 <style>
 	.page-header-banner {
@@ -51,12 +93,62 @@
 		align-items: center;
 		gap: 0.85rem;
 		box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
-		transition: transform 0.2s ease;
+		transition:
+			transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1),
+			box-shadow 0.18s ease,
+			filter 0.18s ease;
 		box-sizing: border-box;
 		width: 100%;
 		margin-top: 0;
 		margin-bottom: 0.75rem;
 		animation: slideUpFade 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+	}
+
+	/* Reset button element default styles */
+	button.page-header-banner {
+		font-family: inherit;
+		text-align: left;
+		cursor: pointer;
+	}
+
+	/* 🖱️ Hover animation (desktop) */
+	@media (hover: hover) {
+		.page-header-banner:hover {
+			transform: translateY(-3px) scale(1.012);
+			box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22);
+			filter: brightness(1.08);
+		}
+		.page-header-banner:active {
+			transform: translateY(1px) scale(0.998);
+			box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+			filter: brightness(0.96);
+		}
+	}
+
+	/* 📱 Mobile tap feedback */
+	.mobile-tappable {
+		cursor: pointer;
+		user-select: none;
+		-webkit-tap-highlight-color: transparent;
+	}
+	.mobile-tappable:active {
+		transform: scale(0.97);
+		filter: brightness(0.92);
+		transition:
+			transform 0.08s ease,
+			filter 0.08s ease;
+	}
+
+	.mobile-nav-hint {
+		font-size: 1.25rem;
+		opacity: 0.85;
+		flex-shrink: 0;
+	}
+
+	@media (min-width: 1024px) {
+		.mobile-nav-hint {
+			display: none;
+		}
 	}
 
 	.duo-banner-green {
@@ -146,8 +238,16 @@
 	}
 
 	@media (max-width: 1023px) {
-		.page-header-banner {
+		.page-header-banner:not(.mobile-tappable) {
 			display: none !important;
+		}
+
+		.header-subtitle-text {
+			display: none;
+		}
+
+		.page-header-banner.mobile-tappable {
+			margin-bottom: 0.5rem;
 		}
 	}
 </style>

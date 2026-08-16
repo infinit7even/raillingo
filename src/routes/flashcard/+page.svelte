@@ -148,6 +148,7 @@
 		subtitle="Gira le card o digita le risposte per allenare la memoria visiva e motoria."
 		icon="/emoji/open_book_3d.png"
 		variant="green"
+		mobileOpenNav={true}
 	/>
 
 	<!-- Unified Category Filter & Rimescola Bar -->
