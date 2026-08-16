@@ -1378,9 +1378,9 @@
 		flex-direction: row;
 		align-items: stretch;
 		gap: 0.75rem;
-		height: calc(100vh - 165px);
-		height: calc(100dvh - 165px);
-		min-height: 440px;
+		height: calc(100vh - 180px);
+		height: calc(100dvh - 180px);
+		min-height: 420px;
 		width: 100%;
 		max-width: 100%;
 		margin: 0 auto;
@@ -1391,8 +1391,8 @@
 
 	@media (max-width: 1023px) {
 		.obsidian-workspace {
-			height: calc(100vh - 145px);
-			height: calc(100dvh - 145px);
+			height: calc(100vh - 150px);
+			height: calc(100dvh - 150px);
 		}
 	}
 

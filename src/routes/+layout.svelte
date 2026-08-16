@@ -207,7 +207,7 @@
 
 	.main-content:has(:global(.obsidian-workspace)) {
 		max-width: 100%;
-		padding: 0.35rem 0.5rem 0.35rem 0.5rem;
+		padding: 0.6rem 0.5rem 0.35rem 0.5rem;
 	}
 
 	.page-transition-wrapper {
@@ -275,7 +275,7 @@
 
 		.main-content:has(:global(.obsidian-workspace)) {
 			max-width: 100%;
-			padding: 0.65rem 1.25rem 0.65rem 1.25rem;
+			padding: 1.5rem 1.25rem 0.65rem 1.25rem;
 		}
 
 		.mobile-swipe-indicator {
