@@ -113,7 +113,7 @@
 <div class="reels-clean-container">
 	<!-- Page Header -->
 	<PageHeader
-		title="Reels Ferroviari"
+		title="Reels Memonici"
 		subtitle="Scorri le schede visive ed esplora foto e descrizioni in un feed dinamico."
 		icon="/emoji/camera_3d.png"
 		variant="orange"
@@ -417,7 +417,6 @@
 		min-height: 0;
 		min-width: 0;
 		width: 100%;
-		height: 100%;
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -428,10 +427,10 @@
 	}
 
 	.front-main-img {
-		width: 100%;
-		height: 100%;
 		max-width: 100%;
 		max-height: 100%;
+		width: auto;
+		height: auto;
 		object-fit: contain;
 		object-position: center;
 		display: block;
