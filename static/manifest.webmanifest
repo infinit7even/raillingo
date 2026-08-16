@@ -59,15 +59,29 @@
     {
       "name": "Quiz a Scelta Multipla",
       "short_name": "Quiz",
-      "description": "Mettiti alla prova con le domande sui segnali",
+      "description": "Seleziona la risposta giusta tra le 5 opzioni casuali.",
       "url": "/quiz",
       "icons": [{ "src": "/android-icon-96x96.png", "sizes": "96x96" }]
     },
     {
       "name": "Reels Foto",
       "short_name": "Reels",
-      "description": "Ripassa visivamente con le immagini dei segnali",
+      "description": "Scrolla il feed infinito e memorizza i significati delle immagini.",
       "url": "/reels",
+      "icons": [{ "src": "/android-icon-96x96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Wiki Ferroviaria",
+      "short_name": "Wiki",
+      "description": "Consulta l'enciclopedia con tutti i termini e segnali ferroviari.",
+      "url": "/wiki",
+      "icons": [{ "src": "/android-icon-96x96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Appunti & Note Vault",
+      "short_name": "Appunti",
+      "description": "Apri il tuo Vault per creare, modificare e consultare note personali.",
+      "url": "/notes",
       "icons": [{ "src": "/android-icon-96x96.png", "sizes": "96x96" }]
     }
   ]
