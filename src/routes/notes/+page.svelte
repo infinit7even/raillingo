@@ -1114,7 +1114,7 @@
 					<div class="vault-empty-state">
 						<p>Nessun appunto trovato nel Vault.</p>
 						<button type="button" class="create-first-link" onclick={handleCreateNewNote}>
-							+ Crea una nuova nota
+							Crea un nuovo appunto
 						</button>
 					</div>
 				{:else}
@@ -1752,7 +1752,7 @@
 				</button>
 			{:else}
 				<button type="button" class="ctx-item" onclick={handleCreateNewNote}>
-					<span class="ctx-icon">➕</span>
+					<span class="ctx-icon">📝</span>
 					<span>Nuovo appunto</span>
 				</button>
 
