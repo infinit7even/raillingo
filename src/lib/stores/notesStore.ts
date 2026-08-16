@@ -130,7 +130,7 @@ class NotesStore {
 			userId: noteData.userId || 'local-user',
 			title: noteData.title?.trim() || 'Nuovo Appunto',
 			content: noteData.content || '',
-			category: noteData.category?.trim() || 'Normativa RFI',
+			category: noteData.category !== undefined ? noteData.category.trim() : '',
 			tags: noteData.tags || [],
 			images: noteData.images || [],
 			isPinned: Boolean(noteData.isPinned),
@@ -258,6 +258,16 @@ class NotesStore {
 			toastStore.show({ message: '🗑️ Appunto eliminato in locale (offline)' });
 		}
 		return true;
+	}
+
+	public async deleteCategoryFromAllNotes(categoryName: string): Promise<number> {
+		const target = categoryName.trim();
+		if (!target) return 0;
+		const affected = this.notes.filter((n) => (n.category || '').trim() === target);
+		for (const note of affected) {
+			await this.updateNote({ id: note.id, category: '' });
+		}
+		return affected.length;
 	}
 
 	public async saveOfflineImageBlob(
