@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import { navStore } from '$lib/stores/navStore';
+	import { toastStore } from '$lib/stores/toastStore';
 
 	let {
 		title,
@@ -21,75 +22,77 @@
 		children?: Snippet;
 	}>();
 
+	async function toggleFullscreen() {
+		if (typeof document === 'undefined') return;
+		try {
+			if (!document.fullscreenElement) {
+				if (document.documentElement.requestFullscreen) {
+					await document.documentElement.requestFullscreen();
+					toastStore.show({ message: '🖥️ Modalità Schermo Intero attivata!', type: 'info' });
+				}
+			} else {
+				if (document.exitFullscreen) {
+					await document.exitFullscreen();
+					toastStore.show({ message: '🖥️ Schermo Intero disattivato', type: 'info' });
+				}
+			}
+		} catch (e) {
+			console.warn('Impossibile passare allo Schermo Intero:', e);
+		}
+	}
+
 	function handleClick() {
-		if (mobileOpenNav && typeof window !== 'undefined' && window.innerWidth < 1024) {
-			navStore.open();
+		if (typeof window !== 'undefined') {
+			if (window.innerWidth < 1024) {
+				if (mobileOpenNav) {
+					navStore.open();
+				}
+			} else {
+				toggleFullscreen();
+			}
 		}
 	}
 </script>
 
-{#if mobileOpenNav}
-	<button
-		type="button"
-		class="page-header-banner duo-banner-{variant} mobile-tappable"
-		onclick={handleClick}
-		aria-label="Apri menu navigazione: {title}"
-		title="Tocca per aprire il menu di navigazione"
-	>
-		<div class="header-content-group">
+<button
+	type="button"
+	class="page-header-banner duo-banner-{variant}"
+	class:mobile-tappable={mobileOpenNav}
+	onclick={handleClick}
+	aria-label="Banner {title}"
+	title="Tocca su mobile per aprire il menu o clicca su desktop per lo Schermo Intero"
+>
+	<div class="header-content-group">
+		{#if mobileOpenNav}
 			<!-- ☰ Hamburger Lines on Left for Mobile -->
 			<span class="mobile-nav-hint" aria-hidden="true">
 				<span class="nav-hint-bar"></span>
 				<span class="nav-hint-bar"></span>
 				<span class="nav-hint-bar"></span>
 			</span>
-
-			{#if icon}
-				<img src={icon} alt="" width="36" height="36" decoding="async" class="header-icon-img" />
-			{/if}
-
-			<div class="header-text-box">
-				{#if badge}
-					<span class="header-badge-tag">{badge}</span>
-				{/if}
-				<h1 class="header-title-heading">{title}</h1>
-				{#if subtitle}
-					<p class="header-subtitle-text">{subtitle}</p>
-				{/if}
-			</div>
-		</div>
-
-		{#if children}
-			<div class="header-actions-slot">
-				{@render children()}
-			</div>
 		{/if}
-	</button>
-{:else}
-	<div class="page-header-banner duo-banner-{variant}">
-		<div class="header-content-group">
-			{#if icon}
-				<img src={icon} alt="" width="36" height="36" decoding="async" class="header-icon-img" />
-			{/if}
 
-			<div class="header-text-box">
-				{#if badge}
-					<span class="header-badge-tag">{badge}</span>
-				{/if}
-				<h1 class="header-title-heading">{title}</h1>
-				{#if subtitle}
-					<p class="header-subtitle-text">{subtitle}</p>
-				{/if}
-			</div>
-		</div>
-
-		{#if children}
-			<div class="header-actions-slot">
-				{@render children()}
-			</div>
+		{#if icon}
+			<img src={icon} alt="" width="36" height="36" decoding="async" class="header-icon-img" />
 		{/if}
+
+		<div class="header-text-box">
+			{#if badge}
+				<span class="header-badge-tag">{badge}</span>
+			{/if}
+			<h1 class="header-title-heading">{title}</h1>
+			{#if subtitle}
+				<p class="header-subtitle-text">{subtitle}</p>
+			{/if}
+		</div>
 	</div>
-{/if}
+
+	{#if children}
+		<div class="header-actions-slot">
+			{@render children()}
+		</div>
+	{/if}
+</button>
 
 <style>
 	.page-header-banner {
