@@ -332,6 +332,10 @@
 		user-select: none;
 	}
 
+	.card.is-flipped {
+		transform: rotateY(180deg);
+	}
+
 	.card:focus,
 	.card:focus-visible {
 		outline: none;
