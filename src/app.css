@@ -111,12 +111,12 @@
 }
 
 [data-livery='frecciarossa'] {
-	--brand-color: #e21b24;
-	--brand-depth: #a81118;
-	--brand-hover: #f02c35;
-	--brand-light: #ff4d56;
-	--brand-light-bg: rgba(226, 27, 36, 0.15);
-	--brand-glow: rgba(226, 27, 36, 0.35);
+	--brand-color: #ff5e5b;
+	--brand-depth: #d9423f;
+	--brand-hover: #ff7370;
+	--brand-light: #ff8583;
+	--brand-light-bg: rgba(255, 94, 91, 0.15);
+	--brand-glow: rgba(255, 94, 91, 0.35);
 	--brand-text: #ffffff;
 }
 

@@ -32,11 +32,11 @@ export const LIVERY_OPTIONS: LiveryOption[] = [
 		name: 'Frecciarossa',
 		desc: 'Rosso Corsa Alta Velocità',
 		trainModel: 'Frecciarossa ETR 1000',
-		color: '#e21b24',
-		depth: '#a81118',
-		hoverColor: '#f02c35',
+		color: '#ff5e5b',
+		depth: '#d9423f',
+		hoverColor: '#ff7370',
 		emoji: '🔴',
-		badgeBg: 'rgba(226, 27, 36, 0.15)'
+		badgeBg: 'rgba(255, 94, 91, 0.15)'
 	},
 	{
 		id: 'intercity',

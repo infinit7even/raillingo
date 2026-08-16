@@ -540,11 +540,11 @@
 	}
 
 	.livery-option-row.active.is-freccia {
-		background-color: #e21b24;
-		border-color: #a81118;
-		border-bottom-color: #7d0910;
+		background-color: #ff5e5b;
+		border-color: #d9423f;
+		border-bottom-color: #b83230;
 		color: #ffffff;
-		box-shadow: 0 3px 10px rgba(226, 27, 36, 0.35);
+		box-shadow: 0 3px 10px rgba(255, 94, 91, 0.35);
 	}
 
 	.livery-option-row.active.is-intercity {

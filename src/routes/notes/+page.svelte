@@ -5,7 +5,8 @@
 	import { DEFAULT_NOTE_CATEGORIES, type Note, type NoteSortOption } from '$lib/types/notes';
 	import { toastStore } from '$lib/stores/toastStore';
 	import { fade, scale } from 'svelte/transition';
-	import { compressImage } from '$lib/utils/imageCompressor';
+	import { uploadImage } from '$lib/utils/imageUploader';
+	import { offlineNotesSync, type SyncState } from '$lib/utils/offlineNotesSync';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import {
 		markdownToDocHtml,
@@ -42,6 +43,10 @@
 	let isUploadingImage = $state(false);
 	let lastSavedTime = $state<string>('');
 
+	// Sync engine state
+	let syncState = $state<SyncState>('synced');
+	let pendingSyncCount = $state(0);
+
 	// Active note local editor state
 	let currentTitle = $state('');
 	let currentContent = $state('');
@@ -71,6 +76,11 @@
 			window.addEventListener('paste', handleGlobalPaste);
 		}
 
+		const unsubSync = offlineNotesSync.subscribe((state, count) => {
+			syncState = state;
+			pendingSyncCount = count;
+		});
+
 		const unsubGlobalCat = globalCategoryStore.subscribe((cat) => {
 			if (cat) {
 				selectedCategory = cat;
@@ -91,6 +101,7 @@
 				window.removeEventListener('paste', handleGlobalPaste);
 			}
 			unsub();
+			unsubSync();
 			unsubGlobalCat();
 			if (saveDebounceTimer) clearTimeout(saveDebounceTimer);
 		};
@@ -338,40 +349,27 @@
 
 		if (isUploadingImage) return;
 		isUploadingImage = true;
-		toastStore.show({ message: '⏳ Compressione e inserimento immagine nel testo...' });
+		toastStore.show({ message: '⏳ Compressione e inserimento immagine...' });
 
 		try {
-			// Comprimi e converti in WebP ottimizzato (massimo 1MB)
-			const compressedFile = await compressImage(rawFile, {
-				maxSizeMB: 1,
-				maxWidth: 1920,
-				maxHeight: 1920,
-				quality: 0.82
-			});
+			const uploadRes = await uploadImage(rawFile, { context: 'note' });
 
-			const formData = new FormData();
-			formData.append('file', compressedFile, 'pasted-image.webp');
-
-			const res = await fetch('/api/notes/upload', {
-				method: 'POST',
-				body: formData
-			});
-
-			if (!res.ok) {
-				const err = await res.json();
-				toastStore.show({ message: `⚠️ ${err.error || 'Errore caricamento immagine'}` });
-				return;
+			if (uploadRes.isOffline && uploadRes.blob) {
+				// Modalità offline: salva il blob in IndexedDB e usa l'URL blob locale
+				const filename = uploadRes.filename || `note-img-${Date.now()}.webp`;
+				await notesStore.saveOfflineImageBlob(uploadRes.blob, filename, selectedNoteId);
+				insertImageBlockAtCursor(uploadRes.url, '400');
+				toastStore.show({ message: '📝 Immagine inserita e salvata in locale (modalità offline)' });
+			} else {
+				insertImageBlockAtCursor(uploadRes.url, '400');
+				toastStore.show({ message: '🖼️ Immagine compressa e inserita nel testo!' });
 			}
 
-			const data = await res.json();
-			const imageUrl = data.url;
-
-			// Inserisci il blocco immagine direttamente nel documento visuale (Word-style)
-			insertImageBlockAtCursor(imageUrl, '400');
-			toastStore.show({ message: '🖼️ Immagine inserita nel testo!' });
-		} catch (err) {
+			syncContentFromEditor();
+			triggerAutoSave();
+		} catch (err: any) {
 			console.error('Errore compressione/upload immagine:', err);
-			toastStore.show({ message: '⚠️ Impossibile caricare l\'immagine' });
+			toastStore.show({ message: `⚠️ ${err.message || 'Impossibile caricare l\'immagine'}` });
 		} finally {
 			isUploadingImage = false;
 		}
@@ -695,13 +693,15 @@
 </script>
 
 <div class="notes-page-wrapper">
-	<PageHeader
-		title="Vault Appunti Cloud"
-		subtitle="Salva le tue note e sincronizzale ovunque tu sia su tutti i tuoi dispositivi."
-		icon="/emoji/clipboard_3d.png"
-		variant="red"
-		mobileOpenNav={true}
-	/>
+	<div class="notes-header-container">
+		<PageHeader
+			title="Vault Appunti Cloud"
+			subtitle="Salva le tue note e sincronizzale ovunque tu sia su tutti i tuoi dispositivi."
+			icon="/emoji/clipboard_3d.png"
+			variant="red"
+			mobileOpenNav={true}
+		/>
+	</div>
 
 	{#if user}
 		<div
@@ -895,6 +895,32 @@
 							<span class="saved-txt">💾 {lastSavedTime ? `Salvato ${lastSavedTime}` : 'Salvato'}</span>
 						{/if}
 					</div>
+
+					<!-- Cloud / Offline Sync Status Interactive Badge -->
+					<button
+						type="button"
+						class="sync-status-badge-btn"
+						class:is-synced={syncState === 'synced'}
+						class:is-syncing={syncState === 'syncing'}
+						class:is-pending={syncState === 'pending'}
+						class:is-offline={syncState === 'offline'}
+						onclick={() => notesStore.syncNow()}
+						title="Stato sincronizzazione Cloud & Offline (Clicca per forzare il sync)"
+					>
+						{#if syncState === 'syncing'}
+							<span class="sync-icon-spin">🔄</span>
+							<span class="sync-btn-txt">Sincronizzazione...</span>
+						{:else if syncState === 'pending'}
+							<span class="sync-status-dot pending"></span>
+							<span class="sync-btn-txt">{pendingSyncCount} in sospeso (Sync)</span>
+						{:else if syncState === 'offline'}
+							<span class="sync-status-dot offline"></span>
+							<span class="sync-btn-txt">Offline (Locale)</span>
+						{:else}
+							<span class="sync-status-dot synced"></span>
+							<span class="sync-btn-txt">Cloud Sincronizzato</span>
+						{/if}
+					</button>
 				</div>
 
 				<div class="workspace-quick-actions">
@@ -1332,6 +1358,19 @@
 </div>
 
 <style>
+	.notes-header-container {
+		width: 100%;
+		max-width: 600px;
+		margin: 0 auto 0.5rem auto;
+		box-sizing: border-box;
+	}
+
+	@media (min-width: 1024px) {
+		.notes-header-container {
+			max-width: 1200px;
+		}
+	}
+
 	/* 📐 Main Obsidian Workspace Flex Container */
 	.obsidian-workspace {
 		display: flex;
@@ -2125,6 +2164,83 @@
 	.saved-txt {
 		color: var(--text-muted);
 	}
+
+	.sync-status-badge-btn {
+		font-size: 0.72rem;
+		font-weight: 800;
+		white-space: nowrap;
+		display: inline-flex;
+		align-items: center;
+		gap: 0.4rem;
+		padding: 0.15rem 0.6rem;
+		background: var(--card-bg-subtle);
+		border: 1px solid var(--border-color);
+		border-radius: 8px;
+		height: 32px;
+		box-sizing: border-box;
+		cursor: pointer;
+		color: var(--text-color);
+		transition: all 0.15s ease;
+	}
+
+	.sync-status-badge-btn:hover {
+		background: var(--btn-hover-bg, rgba(255, 255, 255, 0.08));
+		border-color: var(--accent-color);
+		transform: translateY(-1px);
+	}
+
+	.sync-status-badge-btn.is-synced {
+		border-color: rgba(46, 204, 113, 0.35);
+	}
+
+	.sync-status-badge-btn.is-pending {
+		border-color: rgba(241, 196, 15, 0.5);
+		background: rgba(241, 196, 15, 0.08);
+	}
+
+	.sync-status-badge-btn.is-offline {
+		border-color: rgba(231, 76, 60, 0.5);
+		background: rgba(231, 76, 60, 0.08);
+	}
+
+	.sync-status-dot {
+		width: 7px;
+		height: 7px;
+		border-radius: 50%;
+		flex-shrink: 0;
+	}
+
+	.sync-status-dot.synced {
+		background: #2ecc71;
+		box-shadow: 0 0 6px #2ecc71;
+	}
+
+	.sync-status-dot.pending {
+		background: #f1c40f;
+		box-shadow: 0 0 6px #f1c40f;
+		animation: pulse-dot 1.5s infinite;
+	}
+
+	.sync-status-dot.offline {
+		background: #e74c3c;
+		box-shadow: 0 0 6px #e74c3c;
+	}
+
+	.sync-icon-spin {
+		display: inline-block;
+		animation: spin-icon 1s linear infinite;
+	}
+
+	@keyframes spin-icon {
+		from { transform: rotate(0deg); }
+		to { transform: rotate(360deg); }
+	}
+
+	@keyframes pulse-dot {
+		0%, 100% { opacity: 1; transform: scale(1); }
+		50% { opacity: 0.4; transform: scale(0.85); }
+	}
+
 
 	.workspace-quick-actions {
 		display: flex;
