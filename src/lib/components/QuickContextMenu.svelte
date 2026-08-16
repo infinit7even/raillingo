@@ -23,13 +23,15 @@
 
 	onMount(() => {
 		function handleContextMenu(e: MouseEvent) {
-			// Se ci troviamo nella sezione /notes, non mostrare il menu globale di navigazione
-			// poiché /notes dispone del suo menu contestuale personalizzato dedicato (elimina, copia, incolla, ecc.)
-			if (page.url.pathname.startsWith('/notes')) {
+			const target = e.target as HTMLElement;
+
+			// Se ci troviamo nella sezione /notes E il click è avvenuto dentro l'area di lavoro degli appunti
+			// lasciamo che sia il menu dedicato delle note a gestire l'evento
+			if (page.url.pathname.startsWith('/notes') && target && target.closest('.obsidian-workspace, .notes-custom-context-menu')) {
 				return;
 			}
 
-			// Disabilita il menu contestuale predefinito del browser
+			// Disabilita SEMPRE il menu contestuale predefinito del browser Chrome
 			e.preventDefault();
 
 			const clientX = e.clientX;
