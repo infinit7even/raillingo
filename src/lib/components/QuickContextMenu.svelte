@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { contextMenuStore, type ContextMenuState } from '$lib/stores/contextMenuStore';
+	import { confirmModalStore } from '$lib/stores/confirmModalStore';
 	import { notesStore } from '$lib/stores/notesStore';
 	import { toastStore } from '$lib/stores/toastStore';
 	import type { Note } from '$lib/types/notes';
@@ -162,12 +163,19 @@
 		}
 	}
 
-	async function handleDelete(note: Note) {
+	function handleDelete(note: Note) {
 		contextMenuStore.close();
-		if (confirm(`Sei sicuro di voler eliminare "${note.title}"?`)) {
-			await notesStore.deleteNote(note.id);
-			toastStore.show({ message: '🗑️ Appunto eliminato' });
-		}
+		confirmModalStore.open({
+			title: 'Elimina Appunto',
+			message: `Sei sicuro di voler eliminare "${note.title || 'questo appunto'}"? L'operazione non può essere annullata.`,
+			confirmText: 'Elimina',
+			confirmVariant: 'danger',
+			icon: '🗑️',
+			onConfirm: async () => {
+				await notesStore.deleteNote(note.id);
+				toastStore.show({ message: '🗑️ Appunto eliminato' });
+			}
+		});
 	}
 
 	function handlePaste() {

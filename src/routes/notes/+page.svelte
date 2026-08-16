@@ -4,6 +4,7 @@
 	import { getMarkdownStats, extractHeadings, type HeadingItem } from '$lib/utils/markdown';
 	import type { Note, NoteSortOption } from '$lib/types/notes';
 	import { toastStore } from '$lib/stores/toastStore';
+	import { confirmModalStore } from '$lib/stores/confirmModalStore';
 	import { fade, scale } from 'svelte/transition';
 	import { uploadImage } from '$lib/utils/imageUploader';
 	import { offlineNotesSync, type SyncState } from '$lib/utils/offlineNotesSync';
@@ -307,29 +308,34 @@
 	}
 
 	// Elimina una categoria da tutte le note e dal sistema
-	async function handleDeleteCategoryGlobally(catToDelete: string) {
+	function handleDeleteCategoryGlobally(catToDelete: string) {
 		const trimmed = catToDelete.trim();
 		if (!trimmed) return;
 
-		if (!confirm(`Sei sicuro di voler eliminare la categoria "${trimmed}"? Verrà rimossa da tutte le note associate.`)) {
-			return;
-		}
+		confirmModalStore.open({
+			title: 'Elimina Categoria',
+			message: `Sei sicuro di voler eliminare la categoria "${trimmed}"? Verrà rimossa da tutti gli appunti associati.`,
+			confirmText: 'Elimina Categoria',
+			confirmVariant: 'danger',
+			icon: '📁',
+			onConfirm: async () => {
+				customCreatedCategories = customCreatedCategories.filter((c) => c !== trimmed);
+				saveCustomCategories(customCreatedCategories);
 
-		customCreatedCategories = customCreatedCategories.filter((c) => c !== trimmed);
-		saveCustomCategories(customCreatedCategories);
+				await notesStore.deleteCategoryFromAllNotes(trimmed);
 
-		await notesStore.deleteCategoryFromAllNotes(trimmed);
+				if (currentCategory === trimmed) {
+					currentCategory = '';
+				}
 
-		if (currentCategory === trimmed) {
-			currentCategory = '';
-		}
+				if (selectedCategory.includes(trimmed)) {
+					const remaining = selectedCategory.split(',').filter((s) => s.trim() !== trimmed);
+					selectedCategory = remaining.length > 0 ? remaining.join(',') : 'ALL';
+				}
 
-		if (selectedCategory.includes(trimmed)) {
-			const remaining = selectedCategory.split(',').filter((s) => s.trim() !== trimmed);
-			selectedCategory = remaining.length > 0 ? remaining.join(',') : 'ALL';
-		}
-
-		toastStore.show({ message: `🗑️ Categoria "${trimmed}" eliminata`, type: 'info' });
+				toastStore.show({ message: `🗑️ Categoria "${trimmed}" eliminata`, type: 'info' });
+			}
+		});
 	}
 
 	function toggleVaultCategory(cat: string) {
@@ -483,22 +489,32 @@
 		}
 	}
 
-	async function handleDeleteActiveNote() {
+	function handleDeleteActiveNote() {
 		if (!selectedNoteId || !activeNote) return;
-		if (confirm(`Sei sicuro di voler eliminare "${activeNote.title}" e le sue immagini allegate?`)) {
-			const idToDelete = selectedNoteId;
-			await notesStore.deleteNote(idToDelete);
-			const remaining = notes.filter((n) => n.id !== idToDelete);
-			if (remaining.length > 0) {
-				selectNote(remaining[0]);
-			} else {
-				selectedNoteId = null;
-				currentTitle = '';
-				currentContent = '';
-				currentImages = [];
-				if (editorEl) editorEl.innerHTML = '';
+		const idToDelete = selectedNoteId;
+		const titleToDelete = activeNote.title || 'questo appunto';
+
+		confirmModalStore.open({
+			title: 'Elimina Appunto',
+			message: `Sei sicuro di voler eliminare definitivamente "${titleToDelete}"? L'operazione non può essere annullata.`,
+			confirmText: 'Elimina Appunto',
+			confirmVariant: 'danger',
+			icon: '🗑️',
+			onConfirm: async () => {
+				await notesStore.deleteNote(idToDelete);
+				const remaining = notes.filter((n) => n.id !== idToDelete);
+				if (remaining.length > 0) {
+					selectNote(remaining[0]);
+				} else {
+					selectedNoteId = null;
+					currentTitle = '';
+					currentContent = '';
+					currentImages = [];
+					if (editorEl) editorEl.innerHTML = '';
+				}
+				toastStore.show({ message: `🗑️ Appunto eliminato`, type: 'info' });
 			}
-		}
+		});
 	}
 
 	async function handleTogglePin() {
