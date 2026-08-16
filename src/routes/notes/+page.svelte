@@ -902,7 +902,7 @@
 </script>
 
 <div class="notes-page-wrapper">
-	<div class="notes-header-container">
+	<div class="notes-header-container" class:is-collapsed={isVaultCollapsed}>
 		<PageHeader
 			title="Vault Appunti Cloud"
 			subtitle="Salva le tue note e sincronizzale ovunque tu sia su tutti i tuoi dispositivi."
@@ -1701,6 +1701,23 @@
 		max-width: 600px;
 		margin: 0 auto 0.5rem auto;
 		box-sizing: border-box;
+		max-height: 180px;
+		opacity: 1;
+		transform: translateY(0) scale(1);
+		transition:
+			max-height 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
+			opacity 0.28s ease,
+			transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
+			margin 0.3s ease;
+		overflow: hidden;
+	}
+
+	.notes-header-container.is-collapsed {
+		max-height: 0;
+		opacity: 0;
+		transform: translateY(-20px) scale(0.98);
+		margin-bottom: 0;
+		pointer-events: none;
 	}
 
 	/* 📐 Main Obsidian Workspace Flex Container */
@@ -1718,12 +1735,23 @@
 		box-sizing: border-box;
 		overflow: hidden;
 		position: relative;
+		transition: height 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+	}
+
+	.obsidian-workspace.vault-collapsed {
+		height: calc(100vh - 80px);
+		height: calc(100dvh - 80px);
 	}
 
 	@media (max-width: 1023px) {
 		.obsidian-workspace {
 			height: calc(100vh - 150px);
 			height: calc(100dvh - 150px);
+		}
+
+		.obsidian-workspace.vault-collapsed {
+			height: calc(100vh - 75px);
+			height: calc(100dvh - 75px);
 		}
 	}
 
