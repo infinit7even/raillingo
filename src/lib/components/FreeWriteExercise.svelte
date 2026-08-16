@@ -236,11 +236,12 @@
 <style>
 	.freewrite-container {
 		width: 100%;
-		max-width: 580px;
+		max-width: 100%;
 		margin: 0 auto;
 		display: flex;
 		flex-direction: column;
 		gap: 1rem;
+		box-sizing: border-box;
 	}
 
 	.prompt-card {

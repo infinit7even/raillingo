@@ -694,13 +694,22 @@
 	}
 </script>
 
-{#if user}
-	<div
-		class="obsidian-workspace"
-		class:vault-collapsed={isVaultCollapsed}
-		onkeydown={handleKeyDown}
-		role="presentation"
-	>
+<div class="notes-page-wrapper">
+	<PageHeader
+		title="Vault Appunti Cloud"
+		subtitle="Salva le tue note e sincronizzale ovunque tu sia su tutti i tuoi dispositivi."
+		icon="/emoji/clipboard_3d.png"
+		variant="red"
+		mobileOpenNav={true}
+	/>
+
+	{#if user}
+		<div
+			class="obsidian-workspace"
+			class:vault-collapsed={isVaultCollapsed}
+			onkeydown={handleKeyDown}
+			role="presentation"
+		>
 	<!-- 🗂️ 1. LEFT VAULT EXPLORER -->
 	<aside
 		class="vault-sidebar duo-card"
@@ -1254,14 +1263,6 @@
 </div>
 {:else}
 	<div class="login-page-container">
-		<PageHeader
-			title="Vault Appunti Cloud"
-			subtitle="Salva le tue note e sincronizzale ovunque tu sia su tutti i tuoi dispositivi."
-			icon="/emoji/clipboard_3d.png"
-			variant="red"
-			mobileOpenNav={true}
-		/>
-
 		{#if data?.error === 'admin_required'}
 			<div class="login-error-alert duo-card">
 				<span class="error-icon">⚠️</span>
@@ -1328,6 +1329,7 @@
 		</div>
 	</div>
 {/if}
+</div>
 
 <style>
 	/* 📐 Main Obsidian Workspace Flex Container */
