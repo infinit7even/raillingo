@@ -9,10 +9,39 @@
 
 	let { data } = $props();
 
+	function isAcronymCard(c: Card): boolean {
+		if (!c.title || !c.title.trim()) return false;
+		const title = c.title.trim();
+		const fullName = c.fullName?.trim() || '';
+
+		// Se fullName esiste ed è diverso dal titolo, è un acronimo con espansione (es. BEM -> Blocco Elettrico Manuale)
+		if (fullName && fullName.toLowerCase() !== title.toLowerCase()) {
+			return true;
+		}
+
+		// Se il titolo è lungo o contiene descrizioni di segnali visivi ("fisso", "lampeggiante", "spenta", "temporanea"), non è un acronimo
+		if (title.length > 12) return false;
+		const lower = title.toLowerCase();
+		if (
+			lower.includes('fisso') ||
+			lower.includes('lampeggiante') ||
+			lower.includes('alternat') ||
+			lower.includes('spenta') ||
+			lower.includes('temporanea') ||
+			lower.includes('permanente')
+		) {
+			return false;
+		}
+
+		return true;
+	}
+
 	// Seed iniziale letto una sola volta dai dati del server (non reattivo)
 	const seed = (() => {
 		const list: Card[] = data.initialCards ?? [];
-		const word = list.length > 0 ? list[Math.floor(Math.random() * list.length)] : null;
+		const acronyms = list.filter(isAcronymCard);
+		const pool = acronyms.length > 0 ? acronyms : list;
+		const word = pool.length > 0 ? pool[Math.floor(Math.random() * pool.length)] : null;
 		return { list, word };
 	})();
 
@@ -33,14 +62,19 @@
 		favorites: []
 	});
 
+	let acronymCards = $derived(cards.filter(isAcronymCard));
+
 	function pickRandomWord(cardList: Card[]) {
-		if (cardList.length === 0) return;
-		const randomIndex = Math.floor(Math.random() * cardList.length);
-		wordOfTheDay = cardList[randomIndex];
+		const pool = cardList.filter(isAcronymCard);
+		const targetList = pool.length > 0 ? pool : cardList;
+		if (targetList.length === 0) return;
+		const randomIndex = Math.floor(Math.random() * targetList.length);
+		wordOfTheDay = targetList[randomIndex];
 	}
 
 	function handleNextWord() {
-		if (cards.length === 0 || isSpinning) return;
+		const pool = acronymCards.length > 0 ? acronymCards : cards;
+		if (pool.length === 0 || isSpinning) return;
 		isSpinning = true;
 		isChangingWord = true;
 
