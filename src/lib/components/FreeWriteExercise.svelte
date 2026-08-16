@@ -135,16 +135,18 @@
 						decoding="async"
 					/>
 				</div>
+			{:else}
+				<p class="prompt-desc-text">{card.description || card.fullName || card.title || '(Scheda senza immagine né testo)'}</p>
 			{/if}
 		{:else}
 			<span class="prompt-badge-label">Domanda:</span>
 
 			{#if subMode === 'title-to-desc'}
 				<h2 class="prompt-title">
-					Che cos'è: <span class="prompt-term">{card.title || card.fullName}</span>
+					Che cos'è: <span class="prompt-term">{card.title || card.fullName || 'Scheda'}</span>
 				</h2>
 			{:else if subMode === 'desc-to-title'}
-				<p class="prompt-desc-text">{card.description}</p>
+				<p class="prompt-desc-text">{card.description || card.fullName || card.title || '(Nessuna descrizione o testo disponibile per questa scheda)'}</p>
 			{/if}
 		{/if}
 	</div>

@@ -138,7 +138,7 @@
 						</h2>
 					{:else if mode === 'inverso'}
 						<div class="description-box duo-card front-desc-box">
-							<p>{card.description || '(Nessuna descrizione specificata)'}</p>
+							<p>{card.description || card.fullName || card.title || '(Nessuna descrizione o testo specificato per questa scheda)'}</p>
 						</div>
 					{:else if mode === 'foto'}
 						{#if card.images && card.images.length > 0}
