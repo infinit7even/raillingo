@@ -23,6 +23,12 @@
 
 	onMount(() => {
 		function handleContextMenu(e: MouseEvent) {
+			// Se ci troviamo nella sezione /notes, non mostrare il menu globale di navigazione
+			// poiché /notes dispone del suo menu contestuale personalizzato dedicato (elimina, copia, incolla, ecc.)
+			if (page.url.pathname.startsWith('/notes')) {
+				return;
+			}
+
 			// Disabilita il menu contestuale predefinito del browser
 			e.preventDefault();
 
