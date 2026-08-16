@@ -2,7 +2,7 @@
 	import { onMount, tick } from 'svelte';
 	import { notesStore } from '$lib/stores/notesStore';
 	import { getMarkdownStats, extractHeadings, type HeadingItem } from '$lib/utils/markdown';
-	import { DEFAULT_NOTE_CATEGORIES, type Note, type NoteSortOption } from '$lib/types/notes';
+	import type { Note, NoteSortOption } from '$lib/types/notes';
 	import { toastStore } from '$lib/stores/toastStore';
 	import { fade, scale } from 'svelte/transition';
 	import { uploadImage } from '$lib/utils/imageUploader';
@@ -14,8 +14,6 @@
 		createInlineImageFigureHtml
 	} from '$lib/utils/docConverter';
 
-	import { cardsStore } from '$lib/stores/cardsStore';
-	import type { Card } from '$lib/types/cards';
 	import { globalCategoryStore, matchesCategory } from '$lib/stores/globalCategoryStore';
 	import { navStore } from '$lib/stores/navStore';
 
@@ -28,7 +26,6 @@
 	})();
 
 	let notes = $state<Note[]>(seed.list);
-	let siteCards = $state<Card[]>([]);
 	let selectedNoteId = $state<string | null>(null);
 	let searchQuery = $state('');
 	let selectedCategory = $state<string>('ALL');
@@ -55,7 +52,7 @@
 	// Active note local editor state
 	let currentTitle = $state('');
 	let currentContent = $state('');
-	let currentCategory = $state('Normativa RFI');
+	let currentCategory = $state('');
 	let currentImages = $state<string[]>([]);
 	let currentIsPinned = $state(false);
 
@@ -86,8 +83,6 @@
 			pendingSyncCount = count;
 		});
 
-		const unsubCards = cardsStore.subscribe((c) => (siteCards = c));
-
 		const unsubGlobalCat = globalCategoryStore.subscribe((cat) => {
 			if (cat) {
 				selectedCategory = cat;
@@ -108,7 +103,6 @@
 				window.removeEventListener('paste', handleGlobalPaste);
 			}
 			unsubSync();
-			unsubCards();
 			unsubGlobalCat();
 			unsub();
 			if (saveDebounceTimer) clearTimeout(saveDebounceTimer);
@@ -126,7 +120,7 @@
 		selectedNoteId = note.id;
 		currentTitle = note.title;
 		currentContent = note.content || '';
-		currentCategory = note.category || 'Normativa RFI';
+		currentCategory = note.category || '';
 		currentImages = note.images ? [...note.images] : [];
 		currentIsPinned = Boolean(note.isPinned);
 		isSidebarOpenMobile = false;
@@ -149,16 +143,9 @@
 		}
 	});
 
-	let siteCategoryNames = $derived.by<string[]>(() => {
+	// Categorie personali dell'utente (derivate esclusivamente dalle sue note)
+	let userNoteCategories = $derived.by<string[]>(() => {
 		const set = new Set<string>();
-		for (const cat of DEFAULT_NOTE_CATEGORIES) {
-			if (cat) set.add(cat.trim());
-		}
-		for (const c of siteCards) {
-			if (c.category && c.category.trim()) {
-				set.add(c.category.trim());
-			}
-		}
 		for (const n of notes) {
 			if (n.category && n.category.trim()) {
 				set.add(n.category.trim());
@@ -169,11 +156,11 @@
 
 	let availableCategories = $derived.by<[string, number][]>(() => {
 		const counts = new Map<string, number>();
-		for (const catName of siteCategoryNames) {
+		for (const catName of userNoteCategories) {
 			counts.set(catName, 0);
 		}
 		for (const n of notes) {
-			const cat = n.category?.trim() || 'Generale & Varie';
+			const cat = n.category?.trim() || 'Senza Categoria';
 			counts.set(cat, (counts.get(cat) || 0) + 1);
 		}
 		return Array.from(counts.entries()).sort((a, b) => a[0].localeCompare(b[0], 'it'));
@@ -188,7 +175,7 @@
 		currentCategory = trimmed;
 		isCreatingCustomCategory = false;
 		triggerAutoSave();
-		toastStore.show({ message: `Nuova categoria "${trimmed}" impostata!`, type: 'success' });
+		toastStore.show({ message: `Nuova categoria "${trimmed}" creata ed applicata!`, type: 'success' });
 	}
 
 	let filteredVaultCategories = $derived.by<[string, number][]>(() => {
@@ -319,10 +306,11 @@
 	}
 
 	async function handleCreateNewNote() {
+		const defaultCat = selectedCategory !== 'ALL' ? selectedCategory : (userNoteCategories[0] || '');
 		const newNote = await notesStore.createNote({
 			title: 'Nuovo Appunto',
 			content: '',
-			category: selectedCategory !== 'ALL' ? selectedCategory : 'Normativa RFI',
+			category: defaultCat,
 			images: [],
 			isPinned: false
 		});
@@ -961,13 +949,21 @@
 									}
 								}}
 								class="breadcrumb-category-select"
-								title="Seleziona o crea categoria nota"
+								title="Seleziona o crea la tua categoria personale"
 							>
-								<optgroup label="Categorie">
-									{#each siteCategoryNames as cat}
-										<option value={cat}>{cat}</option>
-									{/each}
-								</optgroup>
+								{#if userNoteCategories.length > 0}
+									<optgroup label="Le Mie Categorie">
+										{#each userNoteCategories as cat}
+											<option value={cat}>{cat}</option>
+										{/each}
+									</optgroup>
+								{/if}
+								{#if currentCategory && !userNoteCategories.includes(currentCategory)}
+									<option value={currentCategory}>{currentCategory}</option>
+								{/if}
+								{#if userNoteCategories.length === 0 && !currentCategory}
+									<option value="">Nessuna Categoria</option>
+								{/if}
 								<optgroup label="Personalizzata">
 									<option value="__CREATE_NEW__">➕ Crea Nuova Categoria...</option>
 								</optgroup>
