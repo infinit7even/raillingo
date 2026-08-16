@@ -140,38 +140,25 @@
 			</button>
 		{/if}
 
-		<!-- 🚄 Selettore Livree Ferroviarie 3D Ultra Moderno -->
-		<div class="livery-box duo-card-subtle">
-			<div class="livery-header">
-				<div class="livery-title-group">
-					<span class="livery-title-emoji">🚆</span>
-					<span class="livery-section-lbl">LIVREA TRENO</span>
-				</div>
-				<span class="livery-active-tag">
-					{activeLivery.name}
-				</span>
-			</div>
-
-			<div class="livery-segmented-track" role="radiogroup" aria-label="Seleziona Livrea Treno">
-				{#each LIVERY_OPTIONS as liv}
-					{@const isSelected = currentLivery === liv.id}
-					<button
-						type="button"
-						class="livery-segment-btn"
-						class:active={isSelected}
-						class:is-freccia={liv.id === 'frecciarossa'}
-						class:is-intercity={liv.id === 'intercity'}
-						class:is-regio={liv.id === 'regionale'}
-						onclick={() => themeStore.setLivery(liv.id)}
-						title="{liv.name} ({liv.trainModel})"
-						role="radio"
-						aria-checked={isSelected}
-					>
-						<span class="segment-emoji">{liv.id === 'frecciarossa' ? '🚄' : liv.id === 'intercity' ? '🚆' : '🟢'}</span>
-						<span class="segment-name">{liv.name}</span>
-					</button>
-				{/each}
-			</div>
+		<!-- 🚆 Selettore Livree Ferroviarie 3D Minimal & Contenuto -->
+		<div class="livery-segmented-container" role="radiogroup" aria-label="Seleziona Livrea Treno">
+			{#each LIVERY_OPTIONS as liv}
+				{@const isSelected = currentLivery === liv.id}
+				<button
+					type="button"
+					class="livery-segment-btn"
+					class:active={isSelected}
+					class:is-freccia={liv.id === 'frecciarossa'}
+					class:is-intercity={liv.id === 'intercity'}
+					class:is-regio={liv.id === 'regionale'}
+					onclick={() => themeStore.setLivery(liv.id)}
+					title="{liv.name} ({liv.trainModel})"
+					role="radio"
+					aria-checked={isSelected}
+				>
+					<span class="segment-name">{liv.name}</span>
+				</button>
+			{/each}
 		</div>
 
 		<!-- 🌙 / ☀️ Toggle Tema Chiaro / Scuro -->
@@ -425,80 +412,27 @@
 		justify-content: center;
 	}
 
-	/* 🚄 Livery Selector Box 3D Ultra Moderno */
-	.livery-box {
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-		width: 100%;
-		background: var(--card-bg);
-		padding: 0.65rem;
-		border-radius: 18px;
-		border: 2px solid var(--border-color);
-		border-bottom: 4px solid var(--border-depth-color);
-		box-sizing: border-box;
-	}
-
-	.livery-header {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		padding: 0 0.15rem;
-	}
-
-	.livery-title-group {
-		display: flex;
-		align-items: center;
-		gap: 0.35rem;
-	}
-
-	.livery-title-emoji {
-		font-size: 0.95rem;
-	}
-
-	.livery-section-lbl {
-		font-family: 'Outfit', sans-serif;
-		font-size: 0.68rem;
-		font-weight: 900;
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
-		color: var(--text-muted);
-	}
-
-	.livery-active-tag {
-		font-family: 'Outfit', sans-serif;
-		font-size: 0.65rem;
-		font-weight: 900;
-		padding: 0.2rem 0.55rem;
-		border-radius: 9999px;
-		background: var(--brand-light-bg);
-		color: var(--brand-color);
-		border: 1.5px solid var(--brand-color);
-		text-transform: uppercase;
-		letter-spacing: 0.04em;
-		transition: all 0.2s ease;
-	}
-
-	.livery-segmented-track {
+	/* 🚆 Minimal Segmented Track strictly inside Sidebar Container */
+	.livery-segmented-container {
 		display: grid;
 		grid-template-columns: repeat(3, 1fr);
-		gap: 0.35rem;
+		gap: 0.25rem;
+		width: 100%;
+		max-width: 100%;
 		background: var(--card-bg-subtle);
-		padding: 0.3rem;
+		padding: 0.25rem;
 		border-radius: 14px;
 		border: 2px solid var(--border-color);
 		border-bottom: 3px solid var(--border-depth-color);
 		box-sizing: border-box;
+		overflow: hidden;
 	}
 
 	.livery-segment-btn {
-		position: relative;
 		display: flex;
-		flex-direction: column;
 		align-items: center;
 		justify-content: center;
-		gap: 0.2rem;
-		padding: 0.55rem 0.2rem;
+		padding: 0.55rem 0.15rem;
 		border-radius: 10px;
 		border: 2px solid transparent;
 		border-bottom: 3px solid transparent;
@@ -512,11 +446,12 @@
 			box-shadow 0.15s ease;
 		user-select: none;
 		-webkit-tap-highlight-color: transparent;
+		box-sizing: border-box;
+		min-width: 0;
 	}
 
 	.livery-segment-btn:not(.active):hover {
 		background: var(--hover-bg);
-		transform: translateY(-1px);
 	}
 
 	.livery-segment-btn:active {
@@ -529,8 +464,7 @@
 		border-color: #a81118;
 		border-bottom-color: #7d0910;
 		color: #ffffff;
-		box-shadow: 0 4px 12px rgba(226, 27, 36, 0.45);
-		transform: translateY(-1px);
+		box-shadow: 0 3px 10px rgba(226, 27, 36, 0.35);
 	}
 
 	.livery-segment-btn.active.is-intercity {
@@ -538,8 +472,7 @@
 		border-color: #005899;
 		border-bottom-color: #004578;
 		color: #ffffff;
-		box-shadow: 0 4px 12px rgba(0, 128, 218, 0.45);
-		transform: translateY(-1px);
+		box-shadow: 0 3px 10px rgba(0, 128, 218, 0.35);
 	}
 
 	.livery-segment-btn.active.is-regio {
@@ -547,27 +480,21 @@
 		border-color: #46a302;
 		border-bottom-color: #3b8a02;
 		color: #ffffff;
-		box-shadow: 0 4px 12px rgba(88, 204, 2, 0.45);
-		transform: translateY(-1px);
-	}
-
-	.segment-emoji {
-		font-size: 1.1rem;
-		line-height: 1;
-		filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.15));
+		box-shadow: 0 3px 10px rgba(88, 204, 2, 0.35);
 	}
 
 	.segment-name {
-		font-size: 0.64rem;
+		font-size: 0.62rem;
 		font-weight: 800;
 		color: var(--text-color);
-		letter-spacing: 0.03em;
+		letter-spacing: -0.01em;
 		text-transform: uppercase;
-		line-height: 1.1;
+		line-height: 1;
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
 		max-width: 100%;
+		text-align: center;
 	}
 
 	.livery-segment-btn.active .segment-name {
