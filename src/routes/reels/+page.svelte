@@ -297,7 +297,7 @@
 
 	.reels-scroll-feed {
 		width: 100%;
-		height: clamp(460px, 68vh, 620px);
+		height: clamp(500px, 72vh, 680px);
 		overflow-y: scroll;
 		scroll-snap-type: y mandatory;
 		scroll-behavior: smooth;
@@ -413,24 +413,27 @@
 	.reel-img-wrapper {
 		position: relative;
 		z-index: 2;
-		flex: 1;
+		flex: 1 1 0%;
 		min-height: 0;
+		min-width: 0;
 		width: 100%;
+		height: 100%;
 		display: flex;
 		align-items: center;
 		justify-content: center;
 		overflow: hidden;
 		border-radius: 14px;
-		padding: 0.35rem;
+		padding: 0.25rem;
 		box-sizing: border-box;
 	}
 
 	.front-main-img {
+		width: 100%;
+		height: 100%;
 		max-width: 100%;
 		max-height: 100%;
-		width: auto;
-		height: auto;
 		object-fit: contain;
+		object-position: center;
 		display: block;
 		border-radius: 12px;
 		filter: drop-shadow(0 6px 20px rgba(0, 0, 0, 0.7));
@@ -440,20 +443,20 @@
 		position: relative;
 		z-index: 4;
 		width: 100%;
-		background: rgba(10, 15, 25, 0.85);
-		backdrop-filter: blur(12px);
-		-webkit-backdrop-filter: blur(12px);
+		background: rgba(10, 15, 25, 0.88);
+		backdrop-filter: blur(14px);
+		-webkit-backdrop-filter: blur(14px);
 		border: 1.5px solid rgba(255, 255, 255, 0.15);
 		border-radius: 16px;
-		padding: 0.65rem 0.85rem;
+		padding: 0.5rem 0.75rem;
 		display: flex;
 		flex-direction: column;
 		align-items: center;
-		gap: 0.2rem;
+		gap: 0.15rem;
 		text-align: center;
 		box-sizing: border-box;
 		flex-shrink: 0;
-		margin-top: 0.4rem;
+		margin-top: 0.35rem;
 	}
 
 	.reel-title {
