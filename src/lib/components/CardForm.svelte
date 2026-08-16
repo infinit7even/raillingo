@@ -32,6 +32,8 @@
 	let isCloneSearchOpen = $state(false);
 	let cloneQuery = $state('');
 	let cloneCategoryFilter = $state('ALL');
+	let isTitleFocused = $state(false);
+	let isFullNameFocused = $state(false);
 
 	// Existing cards and category list for suggestions
 	let allCards = $state<Card[]>([]);
@@ -359,14 +361,17 @@
 				id="card-title-field"
 				type="text"
 				bind:value={title}
+				onfocus={() => (isTitleFocused = true)}
+				onblur={() => setTimeout(() => (isTitleFocused = false), 200)}
 				placeholder="es: IF, SCMT, RFI..."
 				class="duo-input"
 				autocomplete="off"
 			/>
 
-			<!-- Dropdown Suggerimenti Anti-Duplicato -->
-			{#if titleSuggestions.length > 0}
-				<div class="suggestions-dropdown duo-card">
+			<!-- Dropdown Suggerimenti Anti-Duplicato (Visibile solo al focus del campo) -->
+			{#if isTitleFocused && titleSuggestions.length > 0}
+				<!-- svelte-ignore a11y_no_static_element_interactions -->
+				<div class="suggestions-dropdown duo-card" onmousedown={(e) => e.preventDefault()}>
 					<div class="suggestion-header">💡 Card esistente trovata:</div>
 					{#each titleSuggestions as sug}
 						<div class="suggestion-item">
@@ -397,14 +402,17 @@
 				id="card-fullname-field"
 				type="text"
 				bind:value={fullName}
+				onfocus={() => (isFullNameFocused = true)}
+				onblur={() => setTimeout(() => (isFullNameFocused = false), 200)}
 				placeholder="es: Impresa Ferroviaria"
 				class="duo-input"
 				autocomplete="off"
 			/>
 
-			<!-- Dropdown Suggerimenti Anti-Duplicato per Titolo -->
-			{#if fullNameSuggestions.length > 0}
-				<div class="suggestions-dropdown duo-card">
+			<!-- Dropdown Suggerimenti Anti-Duplicato per Titolo (Visibile solo al focus del campo) -->
+			{#if isFullNameFocused && fullNameSuggestions.length > 0}
+				<!-- svelte-ignore a11y_no_static_element_interactions -->
+				<div class="suggestions-dropdown duo-card" onmousedown={(e) => e.preventDefault()}>
 					<div class="suggestion-header">💡 Card esistente trovata:</div>
 					{#each fullNameSuggestions as sug}
 						<div class="suggestion-item">

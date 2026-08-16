@@ -52,8 +52,17 @@
 
 	function startEdit(card: Card) {
 		clonedCard = null;
+		if (editingCard?.id === card.id) {
+			editingCard = null;
+			return;
+		}
 		editingCard = card;
-		window.scrollTo({ top: 0, behavior: 'smooth' });
+		setTimeout(() => {
+			const el = document.getElementById(`admin-card-${card.id}`);
+			if (el) {
+				el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+			}
+		}, 60);
 	}
 
 	function startDuplicate(card: Card) {
@@ -67,14 +76,22 @@
 
 	async function handleSaveCard(cardData: Omit<Card, 'id' | 'createdAt' | 'updatedAt'>) {
 		if (editingCard) {
+			const savedId = editingCard.id;
 			await cardsStore.updateCard({
 				...editingCard,
 				...cardData
 			});
+			editingCard = null;
+			setTimeout(() => {
+				const el = document.getElementById(`admin-card-${savedId}`);
+				if (el) {
+					el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+				}
+			}, 60);
 		} else {
 			await cardsStore.addCard(cardData);
+			resetForm();
 		}
-		resetForm();
 	}
 
 	async function handleDeleteCard(id: string) {
@@ -235,12 +252,10 @@
 				</div>
 			</div>
 
-			<!-- Form Creazione / Modifica Card -->
+			<!-- Form Creazione Nuova Card -->
 			<div class="editor-card duo-card">
 				<h2 class="form-title">
-					{#if editingCard}
-						✏️ Modifica Scheda
-					{:else if clonedCard}
+					{#if clonedCard}
 						📋 Aggiungi Scheda Duplicata (da "{clonedCard.title}")
 					{:else}
 						➕ Aggiungi Nuova Card Informativa
@@ -255,11 +270,11 @@
 				{/if}
 
 				<CardForm
-					initialCard={editingCard || clonedCard}
+					initialCard={clonedCard}
 					onSave={handleSaveCard}
-					onCancel={editingCard || clonedCard ? resetForm : undefined}
+					onCancel={clonedCard ? resetForm : undefined}
 					onSelectExistingCard={startEdit}
-					submitLabel={editingCard ? 'Salva Modifiche' : clonedCard ? '➕ AGGIUNGI SCHEDA DUPLICATA' : '➕ AGGIUNGI SCHEDA'}
+					submitLabel={clonedCard ? '➕ AGGIUNGI SCHEDA DUPLICATA' : '➕ AGGIUNGI SCHEDA'}
 				/>
 			</div>
 
@@ -391,33 +406,58 @@
 				</div>
 
 				<div class="cards-list">
-					{#each filteredCards as card}
-						<div class="admin-card-item duo-card">
-							<div class="card-main-info">
-								<div class="item-title-row">
-									<h3 class="card-item-title">{card.title}</h3>
-									{#if card.fullName && card.fullName.trim().toLowerCase() !== card.title.trim().toLowerCase()}
-										<span class="fullname-badge">{card.fullName}</span>
-									{/if}
-									{#if card.category}
-										<span class="category-pill">{card.category}</span>
-									{/if}
-									{#if card.images && card.images.length > 0}
-										<span class="img-count-pill">📷 {card.images.length}</span>
-									{/if}
-								</div>
-								<p class="card-item-desc">{card.description}</p>
-							</div>
+					{#each filteredCards as card (card.id)}
+						<div
+							id={`admin-card-${card.id}`}
+							class="admin-card-item duo-card"
+							class:is-editing-this={editingCard?.id === card.id}
+						>
+							{#if editingCard?.id === card.id}
+								<div class="inline-edit-wrapper">
+									<div class="inline-edit-header">
+										<div class="inline-edit-title">
+											<span class="inline-edit-icon">✏️</span>
+											<span>Modifica Scheda: <strong>"{card.title}"</strong></span>
+										</div>
+										<button type="button" class="close-inline-btn" onclick={resetForm}>
+											✕ Chiudi Modifica
+										</button>
+									</div>
 
-							<div class="item-actions">
-								<button class="duplicate-btn" onclick={() => startDuplicate(card)} title="Duplica e crea nuova scheda da questa">
-									📋 Duplica
-								</button>
-								<button class="edit-btn" onclick={() => startEdit(card)}> ✏️ Modifica </button>
-								<button class="delete-btn" onclick={() => handleDeleteCard(card.id)}>
-									🗑️ Elimina
-								</button>
-							</div>
+									<CardForm
+										initialCard={editingCard}
+										onSave={handleSaveCard}
+										onCancel={resetForm}
+										submitLabel="💾 Salva Modifiche"
+									/>
+								</div>
+							{:else}
+								<div class="card-main-info">
+									<div class="item-title-row">
+										<h3 class="card-item-title">{card.title}</h3>
+										{#if card.fullName && card.fullName.trim().toLowerCase() !== card.title.trim().toLowerCase()}
+											<span class="fullname-badge">{card.fullName}</span>
+										{/if}
+										{#if card.category}
+											<span class="category-pill">{card.category}</span>
+										{/if}
+										{#if card.images && card.images.length > 0}
+											<span class="img-count-pill">📷 {card.images.length}</span>
+										{/if}
+									</div>
+									<p class="card-item-desc">{card.description}</p>
+								</div>
+
+								<div class="item-actions">
+									<button class="duplicate-btn" onclick={() => startDuplicate(card)} title="Duplica e crea nuova scheda da questa">
+										📋 Duplica
+									</button>
+									<button class="edit-btn" onclick={() => startEdit(card)}> ✏️ Modifica </button>
+									<button class="delete-btn" onclick={() => handleDeleteCard(card.id)}>
+										🗑️ Elimina
+									</button>
+								</div>
+							{/if}
 						</div>
 					{/each}
 				</div>
@@ -707,10 +747,64 @@
 		justify-content: space-between;
 		align-items: center;
 		gap: 1rem;
+		transition: all 0.2s ease;
+	}
+
+	.admin-card-item.is-editing-this {
+		flex-direction: column;
+		align-items: stretch;
+		border-color: var(--accent-color);
+		border-width: 2px;
+		box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+		padding: 1.5rem;
+		gap: 1rem;
+	}
+
+	.inline-edit-wrapper {
+		width: 100%;
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+	}
+
+	.inline-edit-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.75rem;
+		padding-bottom: 0.75rem;
+		border-bottom: 1.5px solid var(--border-color);
+	}
+
+	.inline-edit-title {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		font-size: 1.05rem;
+		font-weight: 800;
+		color: var(--accent-color);
+	}
+
+	.close-inline-btn {
+		background: var(--card-bg-subtle);
+		border: 1.5px solid var(--border-color);
+		border-radius: 10px;
+		padding: 0.35rem 0.75rem;
+		font-size: 0.8rem;
+		font-weight: 800;
+		color: var(--text-muted);
+		cursor: pointer;
+		transition: all 0.15s ease;
+	}
+
+	.close-inline-btn:hover {
+		color: #ff5e5b;
+		border-color: #ff5e5b;
+		background: rgba(255, 94, 91, 0.1);
 	}
 
 	@media (max-width: 600px) {
-		.admin-card-item {
+		.admin-card-item:not(.is-editing-this) {
 			flex-direction: column;
 			align-items: flex-start;
 		}
