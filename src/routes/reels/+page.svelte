@@ -8,12 +8,18 @@
 	import CategoryFilter from '$lib/components/CategoryFilter.svelte';
 	import type { Card } from '$lib/types/cards';
 
+	interface ReelItem {
+		instanceId: string;
+		card: Card;
+	}
+
 	let rawCards = $state<Card[]>([]);
 	let ignoredIds = $state<Set<string>>(new Set());
 	let selectedCategory = $state('ALL');
 	let flippedMap = $state<Record<string, boolean>>({});
 	let imageIndexMap = $state<Record<string, number>>({});
-	let shuffledDeck = $state<Card[]>([]);
+	let shuffledDeck = $state<ReelItem[]>([]);
+	let feedContainerEl = $state<HTMLDivElement | null>(null);
 
 	function shuffleArray<T>(array: T[]): T[] {
 		const result = [...array];
@@ -22,6 +28,13 @@
 			[result[i], result[j]] = [result[j], result[i]];
 		}
 		return result;
+	}
+
+	function createBatch(cards: Card[]): ReelItem[] {
+		return shuffleArray(cards).map((c) => ({
+			instanceId: `${c.id}_${Math.random().toString(36).slice(2, 9)}_${Date.now()}`,
+			card: c
+		}));
 	}
 
 	onMount(() => {
@@ -68,9 +81,31 @@
 	);
 
 	function refreshReels() {
-		shuffledDeck = shuffleArray(validReelCards);
 		flippedMap = {};
 		imageIndexMap = {};
+		if (validReelCards.length === 0) {
+			shuffledDeck = [];
+			return;
+		}
+		const batch1 = createBatch(validReelCards);
+		const batch2 = createBatch(validReelCards);
+		shuffledDeck = [...batch1, ...batch2];
+		if (feedContainerEl) {
+			feedContainerEl.scrollTop = 0;
+		}
+	}
+
+	function handleFeedScroll(e: Event) {
+		const el = e.target as HTMLElement;
+		if (!el || validReelCards.length === 0) return;
+
+		// Quando l'utente scorre verso il fondo dell'elenco corrente (ultime 1-2 card),
+		// rimescola l'intero set di card e genera il prossimo ciclo infinito in modo seamless
+		const scrollBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+		if (scrollBottom < 750) {
+			const nextCycle = createBatch(validReelCards);
+			shuffledDeck = [...shuffledDeck, ...nextCycle];
+		}
 	}
 
 	$effect(() => {
@@ -81,9 +116,9 @@
 		}
 	});
 
-	function toggleFlip(cardId: string) {
-		flippedMap[cardId] = !flippedMap[cardId];
-		if (flippedMap[cardId]) {
+	function toggleFlip(instanceId: string) {
+		flippedMap[instanceId] = !flippedMap[instanceId];
+		if (flippedMap[instanceId]) {
 			statsStore.recordStudySession();
 		}
 	}
@@ -93,19 +128,21 @@
 		await ignoredCardsStore.toggleIgnored(cardId);
 	}
 
-	function nextImage(e: MouseEvent, card: Card) {
+	function nextImage(e: MouseEvent, item: ReelItem) {
 		e.stopPropagation();
+		const card = item.card;
 		if (card.images && card.images.length > 0) {
-			const curr = imageIndexMap[card.id] || 0;
-			imageIndexMap[card.id] = (curr + 1) % card.images.length;
+			const curr = imageIndexMap[item.instanceId] || 0;
+			imageIndexMap[item.instanceId] = (curr + 1) % card.images.length;
 		}
 	}
 
-	function prevImage(e: MouseEvent, card: Card) {
+	function prevImage(e: MouseEvent, item: ReelItem) {
 		e.stopPropagation();
+		const card = item.card;
 		if (card.images && card.images.length > 0) {
-			const curr = imageIndexMap[card.id] || 0;
-			imageIndexMap[card.id] = (curr - 1 + card.images.length) % card.images.length;
+			const curr = imageIndexMap[item.instanceId] || 0;
+			imageIndexMap[item.instanceId] = (curr - 1 + card.images.length) % card.images.length;
 		}
 	}
 </script>
@@ -114,7 +151,7 @@
 	<!-- Page Header -->
 	<PageHeader
 		title="Reels Memonici"
-		subtitle="Scorri le schede visive ed esplora foto e descrizioni in un feed dinamico."
+		subtitle="Scorri le schede visive ed esplora foto e descrizioni in un feed dinamico ed infinito."
 		icon="/emoji/camera_3d.png"
 		variant="orange"
 		mobileOpenNav={true}
@@ -130,13 +167,18 @@
 		}}
 	/>
 
-	<!-- Reels Snap Feed Instagram-Style -->
+	<!-- Reels Snap Feed Instagram-Style Infinito & Ciclico -->
 	{#if shuffledDeck.length > 0}
 		<div class="reels-viewport duo-card">
-			<div class="reels-scroll-feed">
-				{#each shuffledDeck as card (card.id)}
-					{@const isFlipped = flippedMap[card.id] || false}
-					{@const imgIdx = imageIndexMap[card.id] || 0}
+			<div
+				class="reels-scroll-feed"
+				bind:this={feedContainerEl}
+				onscroll={handleFeedScroll}
+			>
+				{#each shuffledDeck as item (item.instanceId)}
+					{@const card = item.card}
+					{@const isFlipped = flippedMap[item.instanceId] || false}
+					{@const imgIdx = imageIndexMap[item.instanceId] || 0}
 					{@const isIgnoredCard = ignoredIds.has(card.id)}
 					{@const displayTitle = card.title?.trim() || card.fullName?.trim() || ''}
 					{@const hasDistinctFullName = Boolean(
@@ -148,21 +190,21 @@
 					<div class="reel-card-slide">
 						<!-- Top Action Bar -->
 						<div class="reel-header-bar">
-							{#if card.images!.length > 1}
+							{#if card.images && card.images.length > 1}
 								<div class="reel-multi-photo-controls">
 									<button
 										class="photo-nav-btn prev-btn"
-										onclick={(e) => prevImage(e, card)}
+										onclick={(e) => prevImage(e, item)}
 										title="Foto precedente"
 									>
 										◀
 									</button>
 									<span class="photo-counter-badge">
-										📷 {imgIdx + 1} / {card.images!.length}
+										📷 {imgIdx + 1} / {card.images.length}
 									</span>
 									<button
 										class="photo-nav-btn next-btn"
-										onclick={(e) => nextImage(e, card)}
+										onclick={(e) => nextImage(e, item)}
 										title="Foto successiva"
 									>
 										▶
@@ -185,10 +227,10 @@
 						<!-- 3D Flip Card Container -->
 						<div
 							class="flip-scene"
-							onclick={() => toggleFlip(card.id)}
+							onclick={() => toggleFlip(item.instanceId)}
 							role="button"
 							tabindex="0"
-							onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && toggleFlip(card.id)}
+							onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && toggleFlip(item.instanceId)}
 						>
 							<div class="flip-card-inner" class:is-flipped={isFlipped}>
 								<!-- FRONT FACE (Pure Visual Picture + Ambient Blurred Background) -->
