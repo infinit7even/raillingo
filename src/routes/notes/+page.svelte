@@ -34,6 +34,7 @@
 	// Vault category search & picker modal
 	let isVaultCatPickerOpen = $state(false);
 	let vaultCatSearchQuery = $state('');
+	let newCategoryModalInput = $state('');
 	let isCreatingCustomCategory = $state(false);
 	let customCategoryInput = $state('');
 
@@ -44,6 +45,19 @@
 	let isAutoSaving = $state(false);
 	let isUploadingImage = $state(false);
 	let lastSavedTime = $state<string>('');
+
+	// Custom Notes Context Menu (Tasto Destro)
+	let contextMenu = $state<{
+		isOpen: boolean;
+		x: number;
+		y: number;
+		targetNote: Note | null;
+	}>({
+		isOpen: false,
+		x: 0,
+		y: 0,
+		targetNote: null
+	});
 
 	// Sync engine state
 	let syncState = $state<SyncState>('synced');
@@ -74,8 +88,10 @@
 				isVaultCollapsed = true;
 			}
 
-			// Intercetta paste globale
+			// Intercetta paste globale e chiusura context menu
 			window.addEventListener('paste', handleGlobalPaste);
+			window.addEventListener('click', closeContextMenu);
+			window.addEventListener('keydown', handleGlobalKeydown);
 		}
 
 		const unsubSync = offlineNotesSync.subscribe((state, count) => {
@@ -101,6 +117,8 @@
 		return () => {
 			if (typeof window !== 'undefined') {
 				window.removeEventListener('paste', handleGlobalPaste);
+				window.removeEventListener('click', closeContextMenu);
+				window.removeEventListener('keydown', handleGlobalKeydown);
 			}
 			unsubSync();
 			unsubGlobalCat();
@@ -108,6 +126,168 @@
 			if (saveDebounceTimer) clearTimeout(saveDebounceTimer);
 		};
 	});
+
+	function handleGlobalKeydown(e: KeyboardEvent) {
+		if (e.key === 'Escape') {
+			closeContextMenu();
+			isVaultCatPickerOpen = false;
+		}
+	}
+
+	function openNoteContextMenu(e: MouseEvent, note: Note) {
+		e.preventDefault();
+		e.stopPropagation();
+		const menuWidth = 240;
+		const menuHeight = 300;
+		const x = Math.min(e.clientX, window.innerWidth - menuWidth - 10);
+		const y = Math.min(e.clientY, window.innerHeight - menuHeight - 10);
+		contextMenu = {
+			isOpen: true,
+			x: Math.max(10, x),
+			y: Math.max(10, y),
+			targetNote: note
+		};
+	}
+
+	function openWorkspaceContextMenu(e: MouseEvent) {
+		e.preventDefault();
+		const menuWidth = 240;
+		const menuHeight = 260;
+		const x = Math.min(e.clientX, window.innerWidth - menuWidth - 10);
+		const y = Math.min(e.clientY, window.innerHeight - menuHeight - 10);
+		contextMenu = {
+			isOpen: true,
+			x: Math.max(10, x),
+			y: Math.max(10, y),
+			targetNote: activeNote
+		};
+	}
+
+	function closeContextMenu() {
+		if (contextMenu.isOpen) {
+			contextMenu = { isOpen: false, x: 0, y: 0, targetNote: null };
+		}
+	}
+
+	async function handleCopyNote(note: Note) {
+		closeContextMenu();
+		const fullText = `# ${note.title}\n\n${note.content || ''}`;
+		try {
+			await navigator.clipboard.writeText(fullText);
+			toastStore.show({ message: `📋 Contenuto di "${note.title}" copiato!`, type: 'success' });
+		} catch (e) {
+			toastStore.show({ message: '⚠️ Impossibile accedere agli appunti', type: 'error' });
+		}
+	}
+
+	async function handleDuplicateNote(note: Note) {
+		closeContextMenu();
+		const copy = await notesStore.createNote({
+			title: `${note.title} (Copia)`,
+			content: note.content,
+			category: note.category,
+			images: note.images ? [...note.images] : [],
+			isPinned: false
+		});
+		if (copy) {
+			selectNote(copy);
+			toastStore.show({ message: `📑 Nota duplicata con successo!`, type: 'success' });
+		}
+	}
+
+	async function handleTogglePinNote(note: Note) {
+		closeContextMenu();
+		const newPinned = !note.isPinned;
+		await notesStore.updateNote({
+			id: note.id,
+			isPinned: newPinned
+		});
+		toastStore.show({
+			message: newPinned ? `📌 "${note.title}" fissata in evidenza` : `📌 "${note.title}" rimossa dall'evidenza`,
+			type: 'info'
+		});
+	}
+
+	async function handleDeleteContextNote(note: Note) {
+		closeContextMenu();
+		if (confirm(`Sei sicuro di voler eliminare "${note.title}"?`)) {
+			await notesStore.deleteNote(note.id);
+			const remaining = notes.filter((n) => n.id !== note.id);
+			if (remaining.length > 0) {
+				selectNote(remaining[0]);
+			} else {
+				selectedNoteId = null;
+				currentTitle = '';
+				currentContent = '';
+				currentCategory = '';
+				if (editorEl) editorEl.innerHTML = '';
+			}
+			toastStore.show({ message: `🗑️ Nota eliminata`, type: 'info' });
+		}
+	}
+
+	async function handleChangeNoteCategory(note: Note, newCat: string) {
+		closeContextMenu();
+		const trimmed = newCat.trim();
+		if (note.id === selectedNoteId) {
+			currentCategory = trimmed;
+		}
+		await notesStore.updateNote({
+			id: note.id,
+			category: trimmed
+		});
+		toastStore.show({ message: `📁 Categoria cambiata in "${trimmed || 'Senza Categoria'}"`, type: 'success' });
+	}
+
+	async function handleContextPaste() {
+		closeContextMenu();
+		if (!selectedNoteId && notes.length > 0) {
+			selectNote(notes[0]);
+		}
+		try {
+			if (navigator.clipboard && navigator.clipboard.read) {
+				const items = await navigator.clipboard.read();
+				for (const item of items) {
+					const imageType = item.types.find((t) => t.startsWith('image/'));
+					if (imageType) {
+						const blob = await item.getType(imageType);
+						if (blob && blob.size > 0) {
+							await uploadAndInsertImage(blob);
+							return;
+						}
+					}
+				}
+			}
+
+			if (navigator.clipboard && navigator.clipboard.readText) {
+				const text = await navigator.clipboard.readText();
+				if (text) {
+					if (editorEl) {
+						editorEl.focus();
+						document.execCommand('insertText', false, text);
+						syncContentFromEditor();
+						triggerAutoSave();
+						toastStore.show({ message: '📋 Testo incollato!', type: 'info' });
+					}
+				}
+			}
+		} catch (err: any) {
+			console.warn('Errore lettura appunti:', err);
+			toastStore.show({ message: '💡 Suggerimento: usa Ctrl+V o Cmd+V per incollare.', type: 'info' });
+		}
+	}
+
+	function handleCreateCategoryFromModal() {
+		const trimmed = newCategoryModalInput.trim();
+		if (!trimmed) return;
+		selectedCategory = trimmed;
+		if (activeNote) {
+			currentCategory = trimmed;
+			triggerAutoSave();
+		}
+		newCategoryModalInput = '';
+		toastStore.show({ message: `Filtro categoria "${trimmed}" creato!`, type: 'success' });
+	}
 
 	function toggleVaultCollapse() {
 		isVaultCollapsed = !isVaultCollapsed;
@@ -846,6 +1026,7 @@
 							class="vault-file-item"
 							class:active={isSelected}
 							onclick={() => selectNote(note)}
+							oncontextmenu={(e) => openNoteContextMenu(e, note)}
 							role="button"
 							tabindex="0"
 							onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && selectNote(note)}
@@ -857,7 +1038,7 @@
 									{/if}
 									{note.title || 'Senza titolo'}
 								</span>
-								<span class="file-cat">{note.category}</span>
+								<span class="file-cat">{note.category || 'Senza Categoria'}</span>
 							</div>
 
 							<div class="file-item-meta">
@@ -879,6 +1060,7 @@
 	<main
 		class="note-workspace-pane duo-card"
 		class:mobile-hidden={isSidebarOpenMobile && selectedNoteId !== null}
+		oncontextmenu={openWorkspaceContextMenu}
 	>
 		{#if selectedNoteId && activeNote}
 			<!-- Workspace Top Header Bar -->
@@ -904,72 +1086,18 @@
 						← Vault
 					</button>
 
-					<div class="workspace-breadcrumb">
-						<span class="folder-ico">📁</span>
-						{#if isCreatingCustomCategory}
-							<div class="custom-cat-input-group">
-								<input
-									type="text"
-									bind:value={customCategoryInput}
-									placeholder="Nuova categoria..."
-									class="custom-cat-input"
-									onkeydown={(e) => {
-										if (e.key === 'Enter') handleConfirmCustomCategory();
-										if (e.key === 'Escape') isCreatingCustomCategory = false;
-									}}
-								/>
-								<button
-									type="button"
-									class="custom-cat-confirm-btn"
-									onclick={handleConfirmCustomCategory}
-									title="Conferma nuova categoria"
-								>
-									✓
-								</button>
-								<button
-									type="button"
-									class="custom-cat-cancel-btn"
-									onclick={() => (isCreatingCustomCategory = false)}
-									title="Annulla"
-								>
-									✕
-								</button>
-							</div>
-						{:else}
-							<select
-								value={currentCategory}
-								onchange={(e) => {
-									const val = (e.target as HTMLSelectElement).value;
-									if (val === '__CREATE_NEW__') {
-										customCategoryInput = '';
-										isCreatingCustomCategory = true;
-									} else {
-										currentCategory = val;
-										triggerAutoSave();
-									}
-								}}
-								class="breadcrumb-category-select"
-								title="Seleziona o crea la tua categoria personale"
-							>
-								{#if userNoteCategories.length > 0}
-									<optgroup label="Le Mie Categorie">
-										{#each userNoteCategories as cat}
-											<option value={cat}>{cat}</option>
-										{/each}
-									</optgroup>
-								{/if}
-								{#if currentCategory && !userNoteCategories.includes(currentCategory)}
-									<option value={currentCategory}>{currentCategory}</option>
-								{/if}
-								{#if userNoteCategories.length === 0 && !currentCategory}
-									<option value="">Nessuna Categoria</option>
-								{/if}
-								<optgroup label="Personalizzata">
-									<option value="__CREATE_NEW__">➕ Crea Nuova Categoria...</option>
-								</optgroup>
-							</select>
-						{/if}
-					</div>
+					{#if currentCategory}
+						<button
+							type="button"
+							class="workspace-category-pill"
+							title="Categoria dell'appunto (Clicca per filtri o Tasto destro per opzioni)"
+							onclick={() => (isVaultCatPickerOpen = true)}
+							oncontextmenu={(e) => openNoteContextMenu(e, activeNote!)}
+						>
+							<span class="cat-pill-ico">📁</span>
+							<span class="cat-pill-txt">{currentCategory}</span>
+						</button>
+					{/if}
 
 					<div class="save-status-pill">
 						{#if isAutoSaving}
@@ -1357,6 +1485,27 @@
 				{/if}
 			</div>
 
+			<!-- Create New Category Filter Row -->
+			<div class="vcat-create-row">
+				<input
+					type="text"
+					bind:value={newCategoryModalInput}
+					placeholder="➕ Crea nuova categoria..."
+					class="vcat-create-input"
+					onkeydown={(e) => {
+						if (e.key === 'Enter') handleCreateCategoryFromModal();
+					}}
+				/>
+				<button
+					type="button"
+					class="vcat-create-btn duo-btn duo-btn-blue"
+					onclick={handleCreateCategoryFromModal}
+					disabled={!newCategoryModalInput.trim()}
+				>
+					+ Aggiungi
+				</button>
+			</div>
+
 			<!-- Footer -->
 			<div class="vcat-modal-footer">
 				<button
@@ -1367,6 +1516,105 @@
 					✓ CONFERMA ({selectedCategory === 'ALL' ? 'Tutte' : `${selectedCategory.split(',').length} attive`})
 				</button>
 			</div>
+		</div>
+	{/if}
+
+	<!-- 🖱️ Custom Context Menu per la sezione Note (Tasto Destro) -->
+	{#if contextMenu.isOpen}
+		<div
+			class="notes-custom-context-menu duo-card"
+			style="top: {contextMenu.y}px; left: {contextMenu.x}px;"
+			transition:scale={{ start: 0.92, duration: 120 }}
+			onclick={(e) => e.stopPropagation()}
+			onkeydown={(e) => e.stopPropagation()}
+			role="menu"
+			tabindex="-1"
+		>
+			{#if contextMenu.targetNote}
+				<div class="ctx-header">
+					<span class="ctx-note-title">{contextMenu.targetNote.title || 'Appunto'}</span>
+					<span class="ctx-note-cat">📁 {contextMenu.targetNote.category || 'Senza Categoria'}</span>
+				</div>
+				<div class="ctx-divider"></div>
+
+				<button type="button" class="ctx-item" onclick={() => handleTogglePinNote(contextMenu.targetNote!)}>
+					<span class="ctx-icon">{contextMenu.targetNote.isPinned ? '📌' : '📍'}</span>
+					<span>{contextMenu.targetNote.isPinned ? 'Rimuovi evidenza' : 'Fissa in alto'}</span>
+				</button>
+
+				<button type="button" class="ctx-item" onclick={() => handleCopyNote(contextMenu.targetNote!)}>
+					<span class="ctx-icon">📋</span>
+					<span>Copia testo appunto</span>
+				</button>
+
+				<button type="button" class="ctx-item" onclick={() => handleDuplicateNote(contextMenu.targetNote!)}>
+					<span class="ctx-icon">📑</span>
+					<span>Duplica appunto</span>
+				</button>
+
+				<!-- Submenu Categoria -->
+				<div class="ctx-item ctx-category-container">
+					<span class="ctx-icon">📁</span>
+					<select
+						class="ctx-cat-select"
+						value={contextMenu.targetNote.category || ''}
+						onchange={(e) => {
+							const val = (e.target as HTMLSelectElement).value;
+							if (val === '__CREATE_NEW__') {
+								closeContextMenu();
+								isVaultCatPickerOpen = true;
+							} else {
+								handleChangeNoteCategory(contextMenu.targetNote!, val);
+							}
+						}}
+					>
+						<option value="" disabled>📁 Assegna Categoria...</option>
+						{#each userNoteCategories as cat}
+							<option value={cat}>{cat}</option>
+						{/each}
+						<option value="">(Nessuna categoria)</option>
+						<option value="__CREATE_NEW__">➕ Crea Nuova Categoria...</option>
+					</select>
+				</div>
+
+				<div class="ctx-divider"></div>
+
+				<button type="button" class="ctx-item" onclick={handleContextPaste}>
+					<span class="ctx-icon">📥</span>
+					<span>Incolla dagli appunti</span>
+				</button>
+
+				<button type="button" class="ctx-item ctx-danger" onclick={() => handleDeleteContextNote(contextMenu.targetNote!)}>
+					<span class="ctx-icon">🗑️</span>
+					<span>Elimina appunto</span>
+				</button>
+			{:else}
+				<button type="button" class="ctx-item" onclick={handleCreateNewNote}>
+					<span class="ctx-icon">➕</span>
+					<span>Nuovo appunto</span>
+				</button>
+
+				<button type="button" class="ctx-item" onclick={handleContextPaste}>
+					<span class="ctx-icon">📥</span>
+					<span>Incolla dagli appunti</span>
+				</button>
+
+				{#if activeNote}
+					<button type="button" class="ctx-item" onclick={() => handleCopyNote(activeNote)}>
+						<span class="ctx-icon">📋</span>
+						<span>Copia appunto corrente</span>
+					</button>
+					<button type="button" class="ctx-item" onclick={() => handleDuplicateNote(activeNote)}>
+						<span class="ctx-icon">📑</span>
+						<span>Duplica appunto corrente</span>
+					</button>
+					<div class="ctx-divider"></div>
+					<button type="button" class="ctx-item ctx-danger" onclick={handleDeleteActiveNote}>
+						<span class="ctx-icon">🗑️</span>
+						<span>Elimina appunto corrente</span>
+					</button>
+				{/if}
+			{/if}
 		</div>
 	{/if}
 </div>
@@ -2200,87 +2448,32 @@
 		}
 	}
 
-	.workspace-breadcrumb {
-		display: flex;
+	.workspace-category-pill {
+		display: inline-flex;
 		align-items: center;
-		gap: 0.3rem;
+		gap: 0.35rem;
 		background: var(--card-bg-subtle);
 		border: 1.5px solid var(--border-color);
 		border-radius: 8px;
-		padding: 0 0.5rem;
+		padding: 0 0.55rem;
 		height: 32px;
 		box-sizing: border-box;
+		user-select: none;
 	}
 
-	.folder-ico {
-		font-size: 0.85rem;
+	.cat-pill-ico {
+		font-size: 0.82rem;
 		flex-shrink: 0;
 	}
 
-	.breadcrumb-category-select {
-		background: transparent;
-		border: none;
-		color: var(--text-color);
-		font-family: inherit;
+	.cat-pill-txt {
 		font-size: 0.76rem;
 		font-weight: 800;
-		outline: none;
-		cursor: pointer;
-		max-width: 140px;
-	}
-
-	.breadcrumb-category-select option {
-		background: var(--card-bg);
-		color: var(--text-color);
-	}
-
-	.custom-cat-input-group {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.25rem;
-	}
-
-	.custom-cat-input {
-		background: var(--card-bg);
-		border: 1.5px solid var(--border-color);
-		border-radius: 6px;
-		color: var(--text-color);
-		font-family: inherit;
-		font-size: 0.76rem;
-		font-weight: 800;
-		padding: 0.15rem 0.4rem;
-		outline: none;
-		max-width: 130px;
-	}
-
-	.custom-cat-input:focus {
-		border-color: var(--brand-color, var(--green-color));
-	}
-
-	.custom-cat-confirm-btn,
-	.custom-cat-cancel-btn {
-		background: var(--card-bg);
-		border: 1px solid var(--border-color);
-		border-radius: 6px;
-		color: var(--text-color);
-		font-size: 0.72rem;
-		font-weight: 800;
-		padding: 0.15rem 0.35rem;
-		cursor: pointer;
-		line-height: 1;
-		transition: all 0.12s ease;
-	}
-
-	.custom-cat-confirm-btn:hover {
-		background: var(--green-color, #58cc02);
-		color: #ffffff;
-		border-color: var(--green-depth, #46a302);
-	}
-
-	.custom-cat-cancel-btn:hover {
-		background: #ef4444;
-		color: #ffffff;
-		border-color: #b91c1c;
+		color: var(--accent-color);
+		white-space: nowrap;
+		max-width: 150px;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 
 	.save-status-pill {
@@ -3181,5 +3374,164 @@
 		padding: 0.7rem 1rem;
 		text-decoration: none;
 		box-sizing: border-box;
+	}
+
+	/* 🗂️ Category Creator Row in Modal */
+	.vcat-create-row {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		padding: 0.6rem 0.85rem;
+		background: var(--card-bg-subtle);
+		border-radius: 12px;
+		margin: 0.5rem 0;
+		border: 1.5px solid var(--border-color);
+	}
+
+	.vcat-create-input {
+		flex: 1;
+		background: var(--card-bg);
+		border: 1.5px solid var(--border-color);
+		border-radius: 8px;
+		padding: 0.45rem 0.65rem;
+		color: var(--text-color);
+		font-family: inherit;
+		font-size: 0.82rem;
+		font-weight: 800;
+		outline: none;
+	}
+
+	.vcat-create-input:focus {
+		border-color: var(--accent-color);
+	}
+
+	.vcat-create-btn {
+		padding: 0.45rem 0.85rem !important;
+		font-size: 0.78rem !important;
+		border-radius: 10px !important;
+		white-space: nowrap;
+	}
+
+	/* 🖱️ Custom Context Menu (Tasto Destro) */
+	.notes-custom-context-menu {
+		position: fixed;
+		z-index: 10000;
+		width: 235px;
+		background: var(--card-bg);
+		border: 2px solid var(--border-color);
+		border-bottom: 4px solid var(--border-depth-color, var(--border-color));
+		border-radius: 16px;
+		box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45);
+		padding: 0.45rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.2rem;
+		box-sizing: border-box;
+		animation: duoPop 0.12s cubic-bezier(0.34, 1.56, 0.64, 1);
+		user-select: none;
+	}
+
+	.ctx-header {
+		padding: 0.35rem 0.55rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.15rem;
+	}
+
+	.ctx-note-title {
+		font-size: 0.85rem;
+		font-weight: 900;
+		color: var(--text-color);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.ctx-note-cat {
+		font-size: 0.7rem;
+		font-weight: 800;
+		color: var(--accent-color);
+		text-transform: uppercase;
+	}
+
+	.ctx-divider {
+		height: 1px;
+		background: var(--border-color);
+		margin: 0.25rem 0.2rem;
+	}
+
+	.ctx-item {
+		display: flex;
+		align-items: center;
+		gap: 0.6rem;
+		width: 100%;
+		padding: 0.5rem 0.65rem;
+		border-radius: 10px;
+		background: transparent;
+		border: none;
+		color: var(--text-color);
+		font-family: inherit;
+		font-size: 0.82rem;
+		font-weight: 800;
+		text-align: left;
+		cursor: pointer;
+		box-sizing: border-box;
+		transition: background 0.12s ease, transform 0.08s ease;
+	}
+
+	.ctx-item:hover {
+		background: var(--hover-bg, rgba(255, 255, 255, 0.08));
+	}
+
+	.ctx-item:active {
+		transform: scale(0.98);
+	}
+
+	.ctx-icon {
+		font-size: 0.95rem;
+		flex-shrink: 0;
+		width: 18px;
+		text-align: center;
+	}
+
+	.ctx-danger {
+		color: var(--pink-color, #ff4b4b);
+	}
+
+	.ctx-danger:hover {
+		background: rgba(255, 75, 75, 0.15);
+	}
+
+	.ctx-category-container {
+		position: relative;
+		cursor: pointer;
+		padding: 0;
+	}
+
+	.ctx-cat-select {
+		width: 100%;
+		background: transparent;
+		border: none;
+		color: var(--text-color);
+		font-family: inherit;
+		font-size: 0.82rem;
+		font-weight: 800;
+		padding: 0.5rem 0.65rem 0.5rem 2rem;
+		border-radius: 10px;
+		cursor: pointer;
+		outline: none;
+	}
+
+	.ctx-cat-select option {
+		background: var(--card-bg);
+		color: var(--text-color);
+	}
+
+	.ctx-category-container .ctx-icon {
+		position: absolute;
+		left: 0.65rem;
+		top: 50%;
+		transform: translateY(-50%);
+		pointer-events: none;
 	}
 </style>
