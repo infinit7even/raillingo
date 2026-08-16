@@ -1114,7 +1114,7 @@
 				<div class="workspace-quick-actions">
 					<button
 						type="button"
-						class="action-icon-btn"
+						class="action-icon-btn action-pin-btn"
 						class:pinned={currentIsPinned}
 						onclick={handleTogglePin}
 						title={currentIsPinned ? 'Rimuovi pin' : 'Fissa in alto'}
@@ -1124,7 +1124,7 @@
 
 					<button
 						type="button"
-						class="action-icon-btn"
+						class="action-icon-btn action-outline-btn"
 						onclick={() => (isOutlineOpen = !isOutlineOpen)}
 						title="Indice contenuti (TOC)"
 					>
@@ -1133,7 +1133,7 @@
 
 					<button
 						type="button"
-						class="action-icon-btn"
+						class="action-icon-btn action-copy-btn"
 						onclick={copyMarkdown}
 						title="Copia Markdown"
 					>
@@ -1142,7 +1142,7 @@
 
 					<button
 						type="button"
-						class="action-icon-btn"
+						class="action-icon-btn action-export-btn"
 						onclick={downloadFile}
 						title="Esporta file .md"
 					>
@@ -1151,7 +1151,7 @@
 
 					<button
 						type="button"
-						class="action-icon-btn delete-btn"
+						class="action-icon-btn action-delete-btn delete-btn"
 						onclick={handleDeleteActiveNote}
 						title="Elimina nota"
 					>
@@ -2572,6 +2572,7 @@
 		flex: 1 1 0%;
 		min-width: 0;
 		width: 100%;
+		max-width: 100%;
 		display: flex;
 		flex-direction: column;
 		background: var(--card-bg);
@@ -2594,6 +2595,9 @@
 		border-bottom: 1.5px solid var(--border-color);
 		flex-shrink: 0;
 		min-height: 38px;
+		width: 100%;
+		min-width: 0;
+		box-sizing: border-box;
 	}
 
 	.workspace-header-left {
@@ -2601,6 +2605,8 @@
 		align-items: center;
 		gap: 0.4rem;
 		min-width: 0;
+		flex: 1 1 auto;
+		overflow: hidden;
 	}
 
 	.mobile-back-btn {
@@ -2617,6 +2623,7 @@
 		cursor: pointer;
 		white-space: nowrap;
 		transition: all 0.12s ease;
+		flex-shrink: 0;
 	}
 
 	@media (max-width: 1023px) {
@@ -2637,6 +2644,8 @@
 		height: 32px;
 		box-sizing: border-box;
 		user-select: none;
+		min-width: 0;
+		flex-shrink: 1;
 	}
 
 	.cat-pill-ico {
@@ -2666,6 +2675,7 @@
 		border-radius: 8px;
 		height: 32px;
 		box-sizing: border-box;
+		flex-shrink: 0;
 	}
 
 	.saving-txt {
@@ -2692,6 +2702,7 @@
 		cursor: pointer;
 		color: var(--text-color);
 		transition: all 0.15s ease;
+		flex-shrink: 0;
 	}
 
 	.sync-status-badge-btn:hover {
@@ -2775,6 +2786,7 @@
 		cursor: pointer;
 		transition: all 0.12s ease;
 		user-select: none;
+		flex-shrink: 0;
 	}
 
 	.action-icon-btn:hover {
@@ -2799,6 +2811,81 @@
 		border-bottom-color: #ea2b2b;
 	}
 
+	/* 📱 Mobile Responsive Header & Editor Optimizations */
+	@media (max-width: 768px) {
+		.note-workspace-pane {
+			padding: 0.6rem 0.65rem;
+			border-radius: 14px;
+			gap: 0.4rem;
+		}
+
+		.workspace-header {
+			gap: 0.3rem;
+			min-height: 34px;
+			padding-bottom: 0.35rem;
+		}
+
+		.workspace-header-left {
+			gap: 0.25rem;
+		}
+
+		.mobile-back-btn {
+			height: 30px;
+			padding: 0 0.45rem;
+			font-size: 0.72rem;
+		}
+
+		.workspace-category-pill {
+			height: 30px;
+			padding: 0 0.45rem;
+			max-width: 110px;
+		}
+
+		.cat-pill-txt {
+			max-width: 65px;
+			font-size: 0.72rem;
+		}
+
+		.save-status-pill {
+			display: none;
+		}
+
+		.sync-status-badge-btn {
+			height: 30px;
+			padding: 0 0.45rem;
+		}
+
+		.sync-status-badge-btn .sync-btn-txt {
+			display: none;
+		}
+
+		.workspace-quick-actions {
+			gap: 0.2rem;
+		}
+
+		.action-icon-btn {
+			width: 29px;
+			height: 29px;
+			font-size: 0.8rem;
+			border-radius: 7px;
+		}
+	}
+
+	@media (max-width: 480px) {
+		.workspace-category-pill {
+			max-width: 95px;
+		}
+
+		.cat-pill-txt {
+			max-width: 50px;
+		}
+
+		.action-outline-btn,
+		.action-export-btn {
+			display: none;
+		}
+	}
+
 	/* Ribbon formatting bar */
 	.obsidian-ribbon-bar {
 		display: flex;
@@ -2813,11 +2900,21 @@
 		scrollbar-width: none;
 		-webkit-overflow-scrolling: touch;
 		height: 38px;
+		max-width: 100%;
 		box-sizing: border-box;
 	}
 
 	.obsidian-ribbon-bar::-webkit-scrollbar {
 		display: none;
+	}
+
+	@media (max-width: 768px) {
+		.obsidian-ribbon-bar {
+			height: 35px;
+			padding: 0.2rem 0.35rem;
+			gap: 0.2rem;
+			border-radius: 10px;
+		}
 	}
 
 	.ribbon-btn {
@@ -2837,6 +2934,14 @@
 		gap: 0.25rem;
 		transition: all 0.12s ease;
 		flex-shrink: 0;
+	}
+
+	@media (max-width: 768px) {
+		.ribbon-btn {
+			height: 26px;
+			padding: 0 0.45rem;
+			font-size: 0.72rem;
+		}
 	}
 
 	.ribbon-btn:hover {
