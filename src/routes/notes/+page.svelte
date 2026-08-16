@@ -120,6 +120,7 @@
 				window.removeEventListener('paste', handleGlobalPaste);
 				window.removeEventListener('click', closeContextMenu);
 				window.removeEventListener('keydown', handleGlobalKeydown);
+				window.removeEventListener('scroll', closeContextMenu);
 			}
 			unsubSync();
 			unsubGlobalCat();
@@ -135,69 +136,41 @@
 		}
 	}
 
+	const CTX_MENU_WIDTH = 215;
+	const CTX_MENU_HEIGHT = 250;
+	const CTX_PADDING = 12;
+
 	function openNoteContextMenu(e: MouseEvent, note: Note) {
 		e.preventDefault();
 		e.stopPropagation();
-		const menuWidth = 235;
-		const menuHeight = 310;
 
-		let clickX = e.clientX;
-		let clickY = e.clientY;
+		const clientX = e.clientX;
+		const clientY = e.clientY;
+		const maxX = window.innerWidth - CTX_MENU_WIDTH - CTX_PADDING;
+		const maxY = window.innerHeight - CTX_MENU_HEIGHT - CTX_PADDING;
 
-		if (notesWrapperEl) {
-			const rect = notesWrapperEl.getBoundingClientRect();
-			clickX = e.clientX - rect.left;
-			clickY = e.clientY - rect.top;
-			const maxX = rect.width - menuWidth - 10;
-			const maxY = rect.height - menuHeight - 10;
-			contextMenu = {
-				isOpen: true,
-				x: Math.max(10, Math.min(clickX, maxX)),
-				y: Math.max(10, Math.min(clickY, maxY)),
-				targetNote: note
-			};
-		} else {
-			const maxX = window.innerWidth - menuWidth - 10;
-			const maxY = window.innerHeight - menuHeight - 10;
-			contextMenu = {
-				isOpen: true,
-				x: Math.max(10, Math.min(clickX, maxX)),
-				y: Math.max(10, Math.min(clickY, maxY)),
-				targetNote: note
-			};
-		}
+		contextMenu = {
+			isOpen: true,
+			x: Math.max(CTX_PADDING, Math.min(clientX, maxX)),
+			y: Math.max(CTX_PADDING, Math.min(clientY, maxY)),
+			targetNote: note
+		};
 	}
 
 	function openWorkspaceContextMenu(e: MouseEvent) {
 		e.preventDefault();
-		const menuWidth = 235;
-		const menuHeight = 260;
 
-		let clickX = e.clientX;
-		let clickY = e.clientY;
+		const clientX = e.clientX;
+		const clientY = e.clientY;
+		const maxX = window.innerWidth - CTX_MENU_WIDTH - CTX_PADDING;
+		const maxY = window.innerHeight - CTX_MENU_HEIGHT - CTX_PADDING;
 
-		if (notesWrapperEl) {
-			const rect = notesWrapperEl.getBoundingClientRect();
-			clickX = e.clientX - rect.left;
-			clickY = e.clientY - rect.top;
-			const maxX = rect.width - menuWidth - 10;
-			const maxY = rect.height - menuHeight - 10;
-			contextMenu = {
-				isOpen: true,
-				x: Math.max(10, Math.min(clickX, maxX)),
-				y: Math.max(10, Math.min(clickY, maxY)),
-				targetNote: activeNote
-			};
-		} else {
-			const maxX = window.innerWidth - menuWidth - 10;
-			const maxY = window.innerHeight - menuHeight - 10;
-			contextMenu = {
-				isOpen: true,
-				x: Math.max(10, Math.min(clickX, maxX)),
-				y: Math.max(10, Math.min(clickY, maxY)),
-				targetNote: activeNote
-			};
-		}
+		contextMenu = {
+			isOpen: true,
+			x: Math.max(CTX_PADDING, Math.min(clientX, maxX)),
+			y: Math.max(CTX_PADDING, Math.min(clientY, maxY)),
+			targetNote: activeNote
+		};
 	}
 
 	function closeContextMenu() {
@@ -1558,10 +1531,20 @@
 
 	<!-- 🖱️ Custom Context Menu per la sezione Note (Tasto Destro) -->
 	{#if contextMenu.isOpen}
+		<!-- Backdrop trasparente per chiudere immediatamente al click o click destro ovunque -->
+		<div
+			class="notes-ctx-backdrop"
+			onclick={closeContextMenu}
+			oncontextmenu={(e) => {
+				closeContextMenu();
+			}}
+			role="presentation"
+		></div>
+
 		<div
 			class="notes-custom-context-menu duo-card"
 			style="top: {contextMenu.y}px; left: {contextMenu.x}px;"
-			transition:scale={{ start: 0.92, duration: 120 }}
+			transition:scale={{ start: 0.94, duration: 120 }}
 			onclick={(e) => e.stopPropagation()}
 			onkeydown={(e) => e.stopPropagation()}
 			role="menu"
@@ -1570,7 +1553,6 @@
 			{#if contextMenu.targetNote}
 				<div class="ctx-header">
 					<span class="ctx-note-title">{contextMenu.targetNote.title || 'Appunto'}</span>
-					<span class="ctx-note-cat">📁 {contextMenu.targetNote.category || 'Senza Categoria'}</span>
 				</div>
 				<div class="ctx-divider"></div>
 
@@ -1581,7 +1563,12 @@
 
 				<button type="button" class="ctx-item" onclick={() => handleCopyNote(contextMenu.targetNote!)}>
 					<span class="ctx-icon">📋</span>
-					<span>Copia testo appunto</span>
+					<span>Copia appunto</span>
+				</button>
+
+				<button type="button" class="ctx-item" onclick={handleContextPaste}>
+					<span class="ctx-icon">📥</span>
+					<span>Incolla</span>
 				</button>
 
 				<button type="button" class="ctx-item" onclick={() => handleDuplicateNote(contextMenu.targetNote!)}>
@@ -1589,37 +1576,7 @@
 					<span>Duplica appunto</span>
 				</button>
 
-				<!-- Submenu Categoria -->
-				<div class="ctx-item ctx-category-container">
-					<span class="ctx-icon">📁</span>
-					<select
-						class="ctx-cat-select"
-						value={contextMenu.targetNote.category || ''}
-						onchange={(e) => {
-							const val = (e.target as HTMLSelectElement).value;
-							if (val === '__CREATE_NEW__') {
-								closeContextMenu();
-								isVaultCatPickerOpen = true;
-							} else {
-								handleChangeNoteCategory(contextMenu.targetNote!, val);
-							}
-						}}
-					>
-						<option value="" disabled>📁 Assegna Categoria...</option>
-						{#each userNoteCategories as cat}
-							<option value={cat}>{cat}</option>
-						{/each}
-						<option value="">(Nessuna categoria)</option>
-						<option value="__CREATE_NEW__">➕ Crea Nuova Categoria...</option>
-					</select>
-				</div>
-
 				<div class="ctx-divider"></div>
-
-				<button type="button" class="ctx-item" onclick={handleContextPaste}>
-					<span class="ctx-icon">📥</span>
-					<span>Incolla dagli appunti</span>
-				</button>
 
 				<button type="button" class="ctx-item ctx-danger" onclick={() => handleDeleteContextNote(contextMenu.targetNote!)}>
 					<span class="ctx-icon">🗑️</span>
@@ -1633,22 +1590,22 @@
 
 				<button type="button" class="ctx-item" onclick={handleContextPaste}>
 					<span class="ctx-icon">📥</span>
-					<span>Incolla dagli appunti</span>
+					<span>Incolla</span>
 				</button>
 
 				{#if activeNote}
 					<button type="button" class="ctx-item" onclick={() => handleCopyNote(activeNote)}>
 						<span class="ctx-icon">📋</span>
-						<span>Copia appunto corrente</span>
+						<span>Copia appunto</span>
 					</button>
 					<button type="button" class="ctx-item" onclick={() => handleDuplicateNote(activeNote)}>
 						<span class="ctx-icon">📑</span>
-						<span>Duplica appunto corrente</span>
+						<span>Duplica appunto</span>
 					</button>
 					<div class="ctx-divider"></div>
 					<button type="button" class="ctx-item ctx-danger" onclick={handleDeleteActiveNote}>
 						<span class="ctx-icon">🗑️</span>
-						<span>Elimina appunto corrente</span>
+						<span>Elimina appunto</span>
 					</button>
 				{/if}
 			{/if}
@@ -3479,19 +3436,26 @@
 	}
 
 	/* 🖱️ Custom Context Menu (Tasto Destro) */
+	.notes-ctx-backdrop {
+		position: fixed;
+		inset: 0;
+		z-index: 9998;
+		background: transparent;
+	}
+
 	.notes-custom-context-menu {
-		position: absolute;
-		z-index: 10000;
-		width: 235px;
+		position: fixed;
+		z-index: 9999;
+		width: 215px;
 		background: var(--card-bg);
 		border: 2px solid var(--border-color);
 		border-bottom: 4px solid var(--border-depth-color, var(--border-color));
 		border-radius: 16px;
-		box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45);
-		padding: 0.45rem;
+		box-shadow: 0 14px 40px rgba(0, 0, 0, 0.45);
+		padding: 0.4rem;
 		display: flex;
 		flex-direction: column;
-		gap: 0.2rem;
+		gap: 0.15rem;
 		box-sizing: border-box;
 		animation: duoPop 0.12s cubic-bezier(0.34, 1.56, 0.64, 1);
 		user-select: none;
@@ -3511,13 +3475,6 @@
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
-	}
-
-	.ctx-note-cat {
-		font-size: 0.7rem;
-		font-weight: 800;
-		color: var(--accent-color);
-		text-transform: uppercase;
 	}
 
 	.ctx-divider {
@@ -3566,38 +3523,5 @@
 
 	.ctx-danger:hover {
 		background: rgba(255, 75, 75, 0.15);
-	}
-
-	.ctx-category-container {
-		position: relative;
-		cursor: pointer;
-		padding: 0;
-	}
-
-	.ctx-cat-select {
-		width: 100%;
-		background: transparent;
-		border: none;
-		color: var(--text-color);
-		font-family: inherit;
-		font-size: 0.82rem;
-		font-weight: 800;
-		padding: 0.5rem 0.65rem 0.5rem 2rem;
-		border-radius: 10px;
-		cursor: pointer;
-		outline: none;
-	}
-
-	.ctx-cat-select option {
-		background: var(--card-bg);
-		color: var(--text-color);
-	}
-
-	.ctx-category-container .ctx-icon {
-		position: absolute;
-		left: 0.65rem;
-		top: 50%;
-		transform: translateY(-50%);
-		pointer-events: none;
 	}
 </style>
