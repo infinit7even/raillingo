@@ -1358,6 +1358,13 @@
 </div>
 
 <style>
+	.notes-page-wrapper {
+		width: 100%;
+		display: flex;
+		flex-direction: column;
+		box-sizing: border-box;
+	}
+
 	.notes-header-container {
 		width: 100%;
 		max-width: 600px;
@@ -1371,15 +1378,22 @@
 		flex-direction: row;
 		align-items: stretch;
 		gap: 0.75rem;
-		height: calc(100vh - 84px);
-		height: calc(100dvh - 84px);
-		min-height: 480px;
+		height: calc(100vh - 165px);
+		height: calc(100dvh - 165px);
+		min-height: 440px;
 		width: 100%;
 		max-width: 100%;
 		margin: 0 auto;
 		box-sizing: border-box;
 		overflow: hidden;
 		position: relative;
+	}
+
+	@media (max-width: 1023px) {
+		.obsidian-workspace {
+			height: calc(100vh - 145px);
+			height: calc(100dvh - 145px);
+		}
 	}
 
 	/* 🗂️ Vault Left Sidebar */
