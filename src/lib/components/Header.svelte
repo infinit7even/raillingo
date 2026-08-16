@@ -62,8 +62,11 @@
 			aria-label="Cambia livrea treno: {activeLivery.name}"
 			title="Livrea attiva: {activeLivery.name} ({activeLivery.trainModel}) — Tocca per cambiare"
 		>
-			<span class="livery-btn-dot" style="background-color: {activeLivery.color};"></span>
-			<span class="livery-btn-lbl">{activeLivery.name}</span>
+			<span class="livery-train-emoji">{currentLivery === 'frecciarossa' ? '🚄' : currentLivery === 'intercity' ? '🚆' : '🟢'}</span>
+			<div class="livery-text-col">
+				<span class="livery-sub-lbl">LIVREA</span>
+				<span class="livery-btn-lbl">{activeLivery.name}</span>
+			</div>
 		</button>
 
 		<!-- Content Area in Header: Stats on Home ('/') -->
@@ -125,23 +128,39 @@
 	}
 
 	.livery-quick-btn {
-		padding: 0.45rem 0.65rem;
+		padding: 0.35rem 0.55rem;
 		height: 48px;
 		display: flex;
 		align-items: center;
-		gap: 0.4rem;
+		gap: 0.45rem;
 		flex-shrink: 0;
 		border-color: var(--brand-depth);
-		background-color: var(--brand-light-bg);
 		border-bottom-color: var(--brand-depth);
+		background-color: var(--brand-light-bg);
+		transition: transform 0.1s ease, border-color 0.2s ease, background-color 0.2s ease;
 	}
 
-	.livery-btn-dot {
-		width: 10px;
-		height: 10px;
-		border-radius: 50%;
-		flex-shrink: 0;
-		box-shadow: 0 0 6px var(--brand-glow);
+	.livery-train-emoji {
+		font-size: 1.15rem;
+		line-height: 1;
+		filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+	}
+
+	.livery-text-col {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		line-height: 1;
+		gap: 0.1rem;
+	}
+
+	.livery-sub-lbl {
+		font-size: 0.55rem;
+		font-weight: 900;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		opacity: 0.75;
+		color: var(--text-color);
 	}
 
 	.livery-btn-lbl {

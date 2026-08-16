@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { cardsStore } from '$lib/stores/cardsStore';
 	import { statsStore, type StatsData } from '$lib/stores/statsStore';
+	import { themeStore, LIVERY_OPTIONS, type TrainLivery } from '$lib/stores/themeStore';
 	import QuickAddCardModal from '$lib/components/QuickAddCardModal.svelte';
 	import type { Card } from '$lib/types/cards';
 
@@ -18,6 +19,8 @@
 
 	let cards = $state<Card[]>(seed.list);
 	let wordOfTheDay = $state<Card | null>(seed.word);
+	let currentLivery = $state<TrainLivery>('regionale');
+	let activeLiveryHome = $derived(LIVERY_OPTIONS.find((l) => l.id === currentLivery) ?? LIVERY_OPTIONS[0]);
 	let isQuickAddOpen = $state(false);
 	let canInstall = $state(false);
 	let isSpinning = $state(false);
@@ -67,11 +70,15 @@
 		const unpwa = pwaStore.subscribe(() => {
 			canInstall = pwaStore.canInstall;
 		});
+		const untheme = themeStore.subscribe((st) => {
+			currentLivery = st.livery;
+		});
 
 		return () => {
 			uncards();
 			unstats();
 			unpwa();
+			untheme();
 		};
 	});
 
@@ -255,6 +262,42 @@
 					<span class="mission-count">{Math.min(10, totalXP)} / 10</span>
 				</div>
 				<img src="/emoji/package_3d.png" alt="Premio" width="24" height="24" decoding="async" class="widget-emoji-img" />
+			</div>
+		</div>
+
+		<!-- 🚄 Widget Livrea Treno 3D -->
+		<div class="duo-widget duo-card livery-home-widget">
+			<div class="widget-header-row">
+				<div class="widget-title-group">
+					<img src="/emoji/railway_track_3d.png" alt="" width="22" height="22" class="widget-emoji-img" />
+					<h3 class="widget-title">Livrea Treno</h3>
+				</div>
+				<span class="duo-badge duo-badge-brand">
+					{activeLiveryHome.name}
+				</span>
+			</div>
+			<div class="home-livery-grid" role="radiogroup" aria-label="Seleziona Livrea Treno">
+				{#each LIVERY_OPTIONS as liv}
+					{@const isSelected = currentLivery === liv.id}
+					<button
+						type="button"
+						class="home-livery-card"
+						class:active={isSelected}
+						class:is-freccia={liv.id === 'frecciarossa'}
+						class:is-intercity={liv.id === 'intercity'}
+						class:is-regio={liv.id === 'regionale'}
+						onclick={() => themeStore.setLivery(liv.id)}
+						role="radio"
+						aria-checked={isSelected}
+						title="{liv.name} ({liv.trainModel}) — {liv.desc}"
+					>
+						<span class="home-livery-emoji">{liv.id === 'frecciarossa' ? '🚄' : liv.id === 'intercity' ? '🚆' : '🟢'}</span>
+						<div class="home-livery-info">
+							<span class="home-livery-name">{liv.name}</span>
+							<span class="home-livery-sub">{liv.trainModel}</span>
+						</div>
+					</button>
+				{/each}
 			</div>
 		</div>
 
@@ -805,6 +848,114 @@
 	.home-logout-btn:active {
 		transform: translateY(2px);
 		border-bottom-width: 2px;
+	}
+
+	/* 🚄 Home Sidebar Livery Widget 3D */
+	.livery-home-widget {
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+	}
+
+	.home-livery-grid {
+		display: flex;
+		flex-direction: column;
+		gap: 0.45rem;
+		width: 100%;
+	}
+
+	.home-livery-card {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		padding: 0.65rem 0.85rem;
+		border-radius: 14px;
+		background: var(--card-bg-subtle);
+		border: 2px solid var(--border-color);
+		border-bottom: 3.5px solid var(--border-depth-color);
+		cursor: pointer;
+		font-family: inherit;
+		text-align: left;
+		transition:
+			transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1),
+			background-color 0.15s ease,
+			border-color 0.15s ease,
+			box-shadow 0.15s ease;
+		user-select: none;
+		-webkit-tap-highlight-color: transparent;
+	}
+
+	.home-livery-card:not(.active):hover {
+		background: var(--hover-bg);
+		transform: translateY(-1.5px);
+	}
+
+	.home-livery-card:active {
+		transform: translateY(2px);
+		border-bottom-width: 1.5px;
+	}
+
+	.home-livery-card.active.is-freccia {
+		background-color: #e21b24;
+		border-color: #a81118;
+		border-bottom-color: #7d0910;
+		color: #ffffff;
+		box-shadow: 0 4px 14px rgba(226, 27, 36, 0.4);
+		transform: translateY(-1px);
+	}
+
+	.home-livery-card.active.is-intercity {
+		background-color: #0080da;
+		border-color: #005899;
+		border-bottom-color: #004578;
+		color: #ffffff;
+		box-shadow: 0 4px 14px rgba(0, 128, 218, 0.4);
+		transform: translateY(-1px);
+	}
+
+	.home-livery-card.active.is-regio {
+		background-color: #58cc02;
+		border-color: #46a302;
+		border-bottom-color: #3b8a02;
+		color: #ffffff;
+		box-shadow: 0 4px 14px rgba(88, 204, 2, 0.4);
+		transform: translateY(-1px);
+	}
+
+	.home-livery-emoji {
+		font-size: 1.35rem;
+		line-height: 1;
+		flex-shrink: 0;
+		filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+	}
+
+	.home-livery-info {
+		display: flex;
+		flex-direction: column;
+		line-height: 1.15;
+		gap: 0.1rem;
+	}
+
+	.home-livery-name {
+		font-size: 0.88rem;
+		font-weight: 900;
+		letter-spacing: 0.03em;
+		text-transform: uppercase;
+		color: var(--text-color);
+	}
+
+	.home-livery-card.active .home-livery-name {
+		color: #ffffff;
+	}
+
+	.home-livery-sub {
+		font-size: 0.72rem;
+		font-weight: 700;
+		color: var(--text-muted);
+	}
+
+	.home-livery-card.active .home-livery-sub {
+		color: rgba(255, 255, 255, 0.9);
 	}
 
 	@media (max-width: 1023px) {

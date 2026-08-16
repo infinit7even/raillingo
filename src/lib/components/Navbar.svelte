@@ -12,6 +12,7 @@
 
 	let currentTheme = $state<ThemeMode>('dark');
 	let currentLivery = $state<TrainLivery>('regionale');
+	let activeLivery = $derived(LIVERY_OPTIONS.find((l) => l.id === currentLivery) ?? LIVERY_OPTIONS[0]);
 	let cards = $state<Card[]>([]);
 	let isQuickAddOpen = $state(false);
 	let canInstall = $state(false);
@@ -139,25 +140,35 @@
 			</button>
 		{/if}
 
-		<!-- 🚄 Selettore Livree Ferroviarie -->
-		<div class="livery-box">
-			<div class="livery-title-row">
-				<span class="livery-section-lbl">LIVREA TRENO</span>
+		<!-- 🚄 Selettore Livree Ferroviarie 3D Ultra Moderno -->
+		<div class="livery-box duo-card-subtle">
+			<div class="livery-header">
+				<div class="livery-title-group">
+					<span class="livery-title-emoji">🚆</span>
+					<span class="livery-section-lbl">LIVREA TRENO</span>
+				</div>
+				<span class="livery-active-tag">
+					{activeLivery.name}
+				</span>
 			</div>
-			<div class="livery-pill-group" role="radiogroup" aria-label="Seleziona Livrea Treno">
+
+			<div class="livery-segmented-track" role="radiogroup" aria-label="Seleziona Livrea Treno">
 				{#each LIVERY_OPTIONS as liv}
 					{@const isSelected = currentLivery === liv.id}
 					<button
 						type="button"
-						class="livery-pill-btn"
+						class="livery-segment-btn"
 						class:active={isSelected}
+						class:is-freccia={liv.id === 'frecciarossa'}
+						class:is-intercity={liv.id === 'intercity'}
+						class:is-regio={liv.id === 'regionale'}
 						onclick={() => themeStore.setLivery(liv.id)}
 						title="{liv.name} ({liv.trainModel})"
 						role="radio"
 						aria-checked={isSelected}
 					>
-						<span class="livery-dot" style="background-color: {liv.color};"></span>
-						<span class="livery-name">{liv.name}</span>
+						<span class="segment-emoji">{liv.id === 'frecciarossa' ? '🚄' : liv.id === 'intercity' ? '🚆' : '🟢'}</span>
+						<span class="segment-name">{liv.name}</span>
 					</button>
 				{/each}
 			</div>
@@ -169,7 +180,7 @@
 			onclick={() => themeStore.toggleTheme()}
 			title="Alterna Scuro/Chiaro"
 		>
-			<span>MODO: {currentTheme === 'dark' ? 'SCURO 🌙' : 'CHIARO ☀️'}</span>
+			<span>MODALITÀ: {currentTheme === 'dark' ? 'SCURO 🌙' : 'CHIARO ☀️'}</span>
 		</button>
 	</div>
 </nav>
@@ -414,97 +425,153 @@
 		justify-content: center;
 	}
 
-	/* 🚄 Livery Selector Box */
+	/* 🚄 Livery Selector Box 3D Ultra Moderno */
 	.livery-box {
 		display: flex;
 		flex-direction: column;
-		gap: 0.35rem;
+		gap: 0.5rem;
 		width: 100%;
-		background: var(--card-bg-subtle);
-		padding: 0.45rem 0.5rem;
-		border-radius: 16px;
-		border: 1.5px solid var(--border-color);
+		background: var(--card-bg);
+		padding: 0.65rem;
+		border-radius: 18px;
+		border: 2px solid var(--border-color);
+		border-bottom: 4px solid var(--border-depth-color);
 		box-sizing: border-box;
 	}
 
-	.livery-title-row {
+	.livery-header {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		padding: 0 0.2rem;
+		padding: 0 0.15rem;
+	}
+
+	.livery-title-group {
+		display: flex;
+		align-items: center;
+		gap: 0.35rem;
+	}
+
+	.livery-title-emoji {
+		font-size: 0.95rem;
 	}
 
 	.livery-section-lbl {
-		font-size: 0.65rem;
+		font-family: 'Outfit', sans-serif;
+		font-size: 0.68rem;
 		font-weight: 900;
-		letter-spacing: 0.06em;
+		letter-spacing: 0.08em;
 		text-transform: uppercase;
 		color: var(--text-muted);
 	}
 
-	.livery-pill-group {
-		display: grid;
-		grid-template-columns: repeat(3, 1fr);
-		gap: 0.3rem;
-		width: 100%;
+	.livery-active-tag {
+		font-family: 'Outfit', sans-serif;
+		font-size: 0.65rem;
+		font-weight: 900;
+		padding: 0.2rem 0.55rem;
+		border-radius: 9999px;
+		background: var(--brand-light-bg);
+		color: var(--brand-color);
+		border: 1.5px solid var(--brand-color);
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+		transition: all 0.2s ease;
 	}
 
-	.livery-pill-btn {
+	.livery-segmented-track {
+		display: grid;
+		grid-template-columns: repeat(3, 1fr);
+		gap: 0.35rem;
+		background: var(--card-bg-subtle);
+		padding: 0.3rem;
+		border-radius: 14px;
+		border: 2px solid var(--border-color);
+		border-bottom: 3px solid var(--border-depth-color);
+		box-sizing: border-box;
+	}
+
+	.livery-segment-btn {
+		position: relative;
 		display: flex;
 		flex-direction: column;
 		align-items: center;
 		justify-content: center;
 		gap: 0.2rem;
-		padding: 0.4rem 0.2rem;
+		padding: 0.55rem 0.2rem;
 		border-radius: 10px;
-		background: var(--card-bg);
-		border: 1.5px solid var(--border-color);
-		border-bottom: 3px solid var(--border-depth-color);
+		border: 2px solid transparent;
+		border-bottom: 3px solid transparent;
+		background: transparent;
 		cursor: pointer;
 		font-family: 'Outfit', sans-serif;
-		transition: all 0.15s ease;
+		transition:
+			transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1),
+			background-color 0.15s ease,
+			border-color 0.15s ease,
+			box-shadow 0.15s ease;
 		user-select: none;
 		-webkit-tap-highlight-color: transparent;
 	}
 
-	.livery-pill-btn:hover {
+	.livery-segment-btn:not(.active):hover {
+		background: var(--hover-bg);
 		transform: translateY(-1px);
-		border-color: var(--text-muted);
 	}
 
-	.livery-pill-btn:active {
-		transform: translateY(1px);
+	.livery-segment-btn:active {
+		transform: translateY(2px);
 		border-bottom-width: 1.5px;
 	}
 
-	.livery-pill-btn.active {
-		border-color: var(--brand-color);
-		border-bottom-color: var(--brand-depth);
-		background-color: var(--brand-light-bg);
-		box-shadow: 0 2px 8px var(--brand-glow);
+	.livery-segment-btn.active.is-freccia {
+		background-color: #e21b24;
+		border-color: #a81118;
+		border-bottom-color: #7d0910;
+		color: #ffffff;
+		box-shadow: 0 4px 12px rgba(226, 27, 36, 0.45);
+		transform: translateY(-1px);
 	}
 
-	.livery-dot {
-		width: 10px;
-		height: 10px;
-		border-radius: 50%;
-		display: inline-block;
-		box-shadow: 0 0 6px rgba(0, 0, 0, 0.2);
+	.livery-segment-btn.active.is-intercity {
+		background-color: #0080da;
+		border-color: #005899;
+		border-bottom-color: #004578;
+		color: #ffffff;
+		box-shadow: 0 4px 12px rgba(0, 128, 218, 0.45);
+		transform: translateY(-1px);
 	}
 
-	.livery-name {
-		font-size: 0.65rem;
+	.livery-segment-btn.active.is-regio {
+		background-color: #58cc02;
+		border-color: #46a302;
+		border-bottom-color: #3b8a02;
+		color: #ffffff;
+		box-shadow: 0 4px 12px rgba(88, 204, 2, 0.45);
+		transform: translateY(-1px);
+	}
+
+	.segment-emoji {
+		font-size: 1.1rem;
+		line-height: 1;
+		filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.15));
+	}
+
+	.segment-name {
+		font-size: 0.64rem;
 		font-weight: 800;
 		color: var(--text-color);
-		letter-spacing: 0.02em;
+		letter-spacing: 0.03em;
+		text-transform: uppercase;
+		line-height: 1.1;
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
 		max-width: 100%;
 	}
 
-	.livery-pill-btn.active .livery-name {
-		color: var(--brand-color);
+	.livery-segment-btn.active .segment-name {
+		color: #ffffff;
 		font-weight: 900;
 	}
 
