@@ -14,6 +14,8 @@
 		createInlineImageFigureHtml
 	} from '$lib/utils/docConverter';
 
+	import { cardsStore } from '$lib/stores/cardsStore';
+	import type { Card } from '$lib/types/cards';
 	import { globalCategoryStore, matchesCategory } from '$lib/stores/globalCategoryStore';
 	import { navStore } from '$lib/stores/navStore';
 
@@ -26,6 +28,7 @@
 	})();
 
 	let notes = $state<Note[]>(seed.list);
+	let siteCards = $state<Card[]>([]);
 	let selectedNoteId = $state<string | null>(null);
 	let searchQuery = $state('');
 	let selectedCategory = $state<string>('ALL');
@@ -34,6 +37,8 @@
 	// Vault category search & picker modal
 	let isVaultCatPickerOpen = $state(false);
 	let vaultCatSearchQuery = $state('');
+	let isCreatingCustomCategory = $state(false);
+	let customCategoryInput = $state('');
 
 	// Workspace UI states
 	let isOutlineOpen = $state(false);
@@ -58,7 +63,7 @@
 	let fileInputEl = $state<HTMLInputElement | null>(null);
 	let savedRange: Range | null = null;
 
-	let saveDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+	let saveDebounceTimer = $state<ReturnType<typeof setTimeout> | null>(null);
 
 	onMount(() => {
 		notesStore.hydrate(data.initialNotes);
@@ -81,6 +86,8 @@
 			pendingSyncCount = count;
 		});
 
+		const unsubCards = cardsStore.subscribe((c) => (siteCards = c));
+
 		const unsubGlobalCat = globalCategoryStore.subscribe((cat) => {
 			if (cat) {
 				selectedCategory = cat;
@@ -89,10 +96,10 @@
 
 		const unsub = notesStore.subscribe((n) => {
 			notes = n;
-			if (!selectedNoteId && n.length > 0) {
-				const lastOpenedId = typeof localStorage !== 'undefined' ? localStorage.getItem('rf_last_opened_note_id') : null;
-				const targetNote = (lastOpenedId && n.find((x) => x.id === lastOpenedId)) || n[0];
-				selectNote(targetNote);
+			if (selectedNoteId === null && n.length > 0) {
+				const activeNote = n[0];
+				selectedNoteId = activeNote.id;
+				selectNote(activeNote);
 			}
 		});
 
@@ -100,9 +107,10 @@
 			if (typeof window !== 'undefined') {
 				window.removeEventListener('paste', handleGlobalPaste);
 			}
-			unsub();
 			unsubSync();
+			unsubCards();
 			unsubGlobalCat();
+			unsub();
 			if (saveDebounceTimer) clearTimeout(saveDebounceTimer);
 		};
 	});
@@ -141,14 +149,47 @@
 		}
 	});
 
+	let siteCategoryNames = $derived.by<string[]>(() => {
+		const set = new Set<string>();
+		for (const cat of DEFAULT_NOTE_CATEGORIES) {
+			if (cat) set.add(cat.trim());
+		}
+		for (const c of siteCards) {
+			if (c.category && c.category.trim()) {
+				set.add(c.category.trim());
+			}
+		}
+		for (const n of notes) {
+			if (n.category && n.category.trim()) {
+				set.add(n.category.trim());
+			}
+		}
+		return Array.from(set).sort((a, b) => a.localeCompare(b, 'it'));
+	});
+
 	let availableCategories = $derived.by<[string, number][]>(() => {
 		const counts = new Map<string, number>();
+		for (const catName of siteCategoryNames) {
+			counts.set(catName, 0);
+		}
 		for (const n of notes) {
 			const cat = n.category?.trim() || 'Generale & Varie';
 			counts.set(cat, (counts.get(cat) || 0) + 1);
 		}
 		return Array.from(counts.entries()).sort((a, b) => a[0].localeCompare(b[0], 'it'));
 	});
+
+	function handleConfirmCustomCategory() {
+		const trimmed = customCategoryInput.trim();
+		if (!trimmed) {
+			isCreatingCustomCategory = false;
+			return;
+		}
+		currentCategory = trimmed;
+		isCreatingCustomCategory = false;
+		triggerAutoSave();
+		toastStore.show({ message: `Nuova categoria "${trimmed}" impostata!`, type: 'success' });
+	}
 
 	let filteredVaultCategories = $derived.by<[string, number][]>(() => {
 		const q = vaultCatSearchQuery.toLowerCase().trim();
@@ -877,15 +918,61 @@
 
 					<div class="workspace-breadcrumb">
 						<span class="folder-ico">📁</span>
-						<select
-							bind:value={currentCategory}
-							onchange={triggerAutoSave}
-							class="breadcrumb-category-select"
-						>
-							{#each DEFAULT_NOTE_CATEGORIES as cat}
-								<option value={cat}>{cat}</option>
-							{/each}
-						</select>
+						{#if isCreatingCustomCategory}
+							<div class="custom-cat-input-group">
+								<input
+									type="text"
+									bind:value={customCategoryInput}
+									placeholder="Nuova categoria..."
+									class="custom-cat-input"
+									onkeydown={(e) => {
+										if (e.key === 'Enter') handleConfirmCustomCategory();
+										if (e.key === 'Escape') isCreatingCustomCategory = false;
+									}}
+								/>
+								<button
+									type="button"
+									class="custom-cat-confirm-btn"
+									onclick={handleConfirmCustomCategory}
+									title="Conferma nuova categoria"
+								>
+									✓
+								</button>
+								<button
+									type="button"
+									class="custom-cat-cancel-btn"
+									onclick={() => (isCreatingCustomCategory = false)}
+									title="Annulla"
+								>
+									✕
+								</button>
+							</div>
+						{:else}
+							<select
+								value={currentCategory}
+								onchange={(e) => {
+									const val = (e.target as HTMLSelectElement).value;
+									if (val === '__CREATE_NEW__') {
+										customCategoryInput = '';
+										isCreatingCustomCategory = true;
+									} else {
+										currentCategory = val;
+										triggerAutoSave();
+									}
+								}}
+								class="breadcrumb-category-select"
+								title="Seleziona o crea categoria nota"
+							>
+								<optgroup label="Categorie">
+									{#each siteCategoryNames as cat}
+										<option value={cat}>{cat}</option>
+									{/each}
+								</optgroup>
+								<optgroup label="Personalizzata">
+									<option value="__CREATE_NEW__">➕ Crea Nuova Categoria...</option>
+								</optgroup>
+							</select>
+						{/if}
 					</div>
 
 					<div class="save-status-pill">
@@ -2149,6 +2236,55 @@
 	.breadcrumb-category-select option {
 		background: var(--card-bg);
 		color: var(--text-color);
+	}
+
+	.custom-cat-input-group {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.25rem;
+	}
+
+	.custom-cat-input {
+		background: var(--card-bg);
+		border: 1.5px solid var(--border-color);
+		border-radius: 6px;
+		color: var(--text-color);
+		font-family: inherit;
+		font-size: 0.76rem;
+		font-weight: 800;
+		padding: 0.15rem 0.4rem;
+		outline: none;
+		max-width: 130px;
+	}
+
+	.custom-cat-input:focus {
+		border-color: var(--brand-color, var(--green-color));
+	}
+
+	.custom-cat-confirm-btn,
+	.custom-cat-cancel-btn {
+		background: var(--card-bg);
+		border: 1px solid var(--border-color);
+		border-radius: 6px;
+		color: var(--text-color);
+		font-size: 0.72rem;
+		font-weight: 800;
+		padding: 0.15rem 0.35rem;
+		cursor: pointer;
+		line-height: 1;
+		transition: all 0.12s ease;
+	}
+
+	.custom-cat-confirm-btn:hover {
+		background: var(--green-color, #58cc02);
+		color: #ffffff;
+		border-color: var(--green-depth, #46a302);
+	}
+
+	.custom-cat-cancel-btn:hover {
+		background: #ef4444;
+		color: #ffffff;
+		border-color: #b91c1c;
 	}
 
 	.save-status-pill {
