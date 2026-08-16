@@ -1,15 +1,25 @@
 <script lang="ts">
 	import { PRIVACY_POLICY, SITE_NAME } from '$lib/constants';
+	import PageHeader from '$lib/components/PageHeader.svelte';
 </script>
 
-<div class="privacy-container duo-card">
-	<div class="privacy-header">
-		<span class="duo-badge">Informazioni Legali</span>
-		<h1 class="privacy-title">{PRIVACY_POLICY.title}</h1>
-		<p class="privacy-date">Ultimo aggiornamento: {PRIVACY_POLICY.lastUpdated}</p>
-	</div>
+<div class="privacy-container">
+	<PageHeader
+		title="Privacy Policy"
+		subtitle="Informazioni legali e conformità GDPR"
+		icon="/emoji/books_3d.png"
+		variant="blue"
+		mobileOpenNav={true}
+	/>
 
-	<p class="privacy-intro">{PRIVACY_POLICY.intro}</p>
+	<div class="duo-card privacy-body-card">
+		<div class="privacy-header">
+			<span class="duo-badge">Informazioni Legali</span>
+			<h1 class="privacy-title">{PRIVACY_POLICY.title}</h1>
+			<p class="privacy-date">Ultimo aggiornamento: {PRIVACY_POLICY.lastUpdated}</p>
+		</div>
+
+		<p class="privacy-intro">{PRIVACY_POLICY.intro}</p>
 
 	<div class="privacy-sections">
 		{#each PRIVACY_POLICY.sections as section}
@@ -22,6 +32,7 @@
 
 	<div class="privacy-footer">
 		<a href="/" class="duo-btn duo-btn-green">Torna alla Home</a>
+	</div>
 	</div>
 </div>
 

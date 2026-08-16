@@ -4,6 +4,7 @@
 	import type { Card } from '$lib/types/cards';
 
 	import CardForm from '$lib/components/CardForm.svelte';
+	import PageHeader from '$lib/components/PageHeader.svelte';
 
 	let { data } = $props();
 
@@ -205,6 +206,14 @@
 </script>
 
 <div class="admin-container">
+	<PageHeader
+		title="Pannello Amministratore"
+		subtitle="Gestione schede, categorie e database"
+		icon="/emoji/star_3d.png"
+		variant="blue"
+		mobileOpenNav={true}
+	/>
+
 	{#if !user}
 		<!-- Login View -->
 		<div class="login-card">

@@ -14,6 +14,7 @@
 	} from '$lib/utils/docConverter';
 
 	import { globalCategoryStore, matchesCategory } from '$lib/stores/globalCategoryStore';
+	import { navStore } from '$lib/stores/navStore';
 
 	let { data } = $props();
 	let user = $derived(data.user);
@@ -708,6 +709,20 @@
 	>
 			<!-- Vault Explorer Header -->
 			<div class="vault-header">
+				<button
+					type="button"
+					class="mobile-vault-nav-btn"
+					onclick={() => navStore.open()}
+					aria-label="Menu navigazione"
+					title="Apri menu navigazione"
+				>
+					<span class="vault-nav-lines">
+						<span></span>
+						<span></span>
+						<span></span>
+					</span>
+				</button>
+
 				<div class="vault-title-group">
 					<span class="vault-icon">📓</span>
 					<span class="vault-name">VAULT APPUNTI</span>
@@ -1380,6 +1395,42 @@
 		border-bottom: 1.5px solid var(--border-color);
 		flex-shrink: 0;
 		gap: 0.5rem;
+	}
+
+	.mobile-vault-nav-btn {
+		display: none;
+		align-items: center;
+		justify-content: center;
+		background: var(--card-bg-subtle);
+		border: 1.5px solid var(--border-color);
+		border-radius: 8px;
+		width: 30px;
+		height: 28px;
+		cursor: pointer;
+		padding: 0;
+		flex-shrink: 0;
+	}
+
+	.vault-nav-lines {
+		display: flex;
+		flex-direction: column;
+		justify-content: space-between;
+		width: 14px;
+		height: 10px;
+	}
+
+	.vault-nav-lines span {
+		display: block;
+		width: 100%;
+		height: 1.8px;
+		background-color: var(--text-color);
+		border-radius: 2px;
+	}
+
+	@media (max-width: 1023px) {
+		.mobile-vault-nav-btn {
+			display: inline-flex;
+		}
 	}
 
 	.vault-title-group {

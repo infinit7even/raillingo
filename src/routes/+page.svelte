@@ -2,7 +2,6 @@
 	import { onMount } from 'svelte';
 	import { cardsStore } from '$lib/stores/cardsStore';
 	import { statsStore, type StatsData } from '$lib/stores/statsStore';
-	import PageHeader from '$lib/components/PageHeader.svelte';
 	import QuickAddCardModal from '$lib/components/QuickAddCardModal.svelte';
 	import type { Card } from '$lib/types/cards';
 
@@ -152,7 +151,7 @@
 								disabled={isSpinning}
 								title="Scopri un'altra parola"
 							>
-								<span class="dice-icon" class:spin={isSpinning}>🎲</span> Altra Parola
+								<span class="dice-icon" class:spin={isSpinning}>🎲</span> Random
 							</button>
 						</div>
 					</div>

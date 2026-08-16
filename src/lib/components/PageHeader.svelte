@@ -8,7 +8,7 @@
 		badge = '',
 		icon = '',
 		variant = 'green',
-		mobileOpenNav = false,
+		mobileOpenNav = true,
 		children
 	} = $props<{
 		title: string;
@@ -22,7 +22,7 @@
 	}>();
 
 	function handleClick() {
-		if (mobileOpenNav && window.innerWidth < 1024) {
+		if (mobileOpenNav && typeof window !== 'undefined' && window.innerWidth < 1024) {
 			navStore.open();
 		}
 	}
@@ -33,8 +33,17 @@
 		type="button"
 		class="page-header-banner duo-banner-{variant} mobile-tappable"
 		onclick={handleClick}
+		aria-label="Apri menu navigazione: {title}"
+		title="Tocca per aprire il menu di navigazione"
 	>
 		<div class="header-content-group">
+			<!-- ☰ Hamburger Lines on Left for Mobile -->
+			<span class="mobile-nav-hint" aria-hidden="true">
+				<span class="nav-hint-bar"></span>
+				<span class="nav-hint-bar"></span>
+				<span class="nav-hint-bar"></span>
+			</span>
+
 			{#if icon}
 				<img src={icon} alt="" width="36" height="36" decoding="async" class="header-icon-img" />
 			{/if}
@@ -49,8 +58,6 @@
 				{/if}
 			</div>
 		</div>
-
-		<span class="mobile-nav-hint" aria-hidden="true">☰</span>
 
 		{#if children}
 			<div class="header-actions-slot">
@@ -140,14 +147,27 @@
 	}
 
 	.mobile-nav-hint {
-		font-size: 1.25rem;
-		opacity: 0.85;
+		display: flex;
+		flex-direction: column;
+		justify-content: space-between;
+		width: 18px;
+		height: 14px;
 		flex-shrink: 0;
+		margin-right: 0.2rem;
+	}
+
+	.nav-hint-bar {
+		display: block;
+		width: 100%;
+		height: 2.2px;
+		background-color: currentColor;
+		border-radius: 2px;
+		opacity: 0.95;
 	}
 
 	@media (min-width: 1024px) {
 		.mobile-nav-hint {
-			display: none;
+			display: none !important;
 		}
 	}
 
@@ -238,16 +258,14 @@
 	}
 
 	@media (max-width: 1023px) {
-		.page-header-banner:not(.mobile-tappable) {
-			display: none !important;
-		}
-
 		.header-subtitle-text {
 			display: none;
 		}
 
-		.page-header-banner.mobile-tappable {
-			margin-bottom: 0.5rem;
+		.page-header-banner {
+			margin-top: 0.15rem;
+			margin-bottom: 0.65rem;
+			padding: 0.65rem 0.9rem;
 		}
 	}
 </style>
