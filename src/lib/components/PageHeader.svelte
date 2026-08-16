@@ -7,7 +7,7 @@
 		subtitle = '',
 		badge = '',
 		icon = '',
-		variant = 'brand',
+		variant = 'green',
 		mobileOpenNav = true,
 		children
 	} = $props<{
@@ -174,11 +174,17 @@
 		}
 	}
 
-	.duo-banner-brand,
 	.duo-banner-green {
-		background-color: var(--brand-color, var(--green-color));
-		border: 2px solid var(--brand-depth, var(--green-depth));
-		border-bottom: 4px solid var(--brand-depth, var(--green-depth));
+		background-color: var(--green-color, #58cc02);
+		border: 2px solid var(--green-depth, #46a302);
+		border-bottom: 4px solid var(--green-depth, #46a302);
+		color: #ffffff;
+	}
+
+	.duo-banner-brand {
+		background-color: var(--brand-color, var(--green-color, #58cc02));
+		border: 2px solid var(--brand-depth, var(--green-depth, #46a302));
+		border-bottom: 4px solid var(--brand-depth, var(--green-depth, #46a302));
 		color: #ffffff;
 	}
 
