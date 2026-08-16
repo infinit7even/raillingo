@@ -193,6 +193,8 @@
 		display: flex;
 		flex-direction: column;
 		min-height: 100vh;
+		min-height: 100dvh;
+		box-sizing: border-box;
 	}
 
 	.main-content {
@@ -200,7 +202,7 @@
 		width: 100%;
 		max-width: 600px;
 		margin: 0 auto;
-		padding: 0.6rem 0.85rem 1.5rem 0.85rem;
+		padding: 0.6rem 0.85rem 0.75rem 0.85rem;
 		box-sizing: border-box;
 		contain: layout style;
 	}

@@ -506,8 +506,9 @@ body {
 	background-color: var(--bg-color);
 	color: var(--text-color);
 	min-height: 100vh;
+	min-height: 100dvh;
 	-webkit-font-smoothing: antialiased;
-	padding-bottom: 1.5rem;
+	padding-bottom: 0;
 	overflow-x: hidden;
 	overscroll-behavior-y: none;
 }
