@@ -71,6 +71,7 @@
 	let currentIsPinned = $state(false);
 
 	let editorEl = $state<HTMLDivElement | null>(null);
+	let notesWrapperEl = $state<HTMLDivElement | null>(null);
 	let fileInputEl = $state<HTMLInputElement | null>(null);
 	let savedRange: Range | null = null;
 
@@ -137,30 +138,66 @@
 	function openNoteContextMenu(e: MouseEvent, note: Note) {
 		e.preventDefault();
 		e.stopPropagation();
-		const menuWidth = 240;
-		const menuHeight = 300;
-		const x = Math.min(e.clientX, window.innerWidth - menuWidth - 10);
-		const y = Math.min(e.clientY, window.innerHeight - menuHeight - 10);
-		contextMenu = {
-			isOpen: true,
-			x: Math.max(10, x),
-			y: Math.max(10, y),
-			targetNote: note
-		};
+		const menuWidth = 235;
+		const menuHeight = 310;
+
+		let clickX = e.clientX;
+		let clickY = e.clientY;
+
+		if (notesWrapperEl) {
+			const rect = notesWrapperEl.getBoundingClientRect();
+			clickX = e.clientX - rect.left;
+			clickY = e.clientY - rect.top;
+			const maxX = rect.width - menuWidth - 10;
+			const maxY = rect.height - menuHeight - 10;
+			contextMenu = {
+				isOpen: true,
+				x: Math.max(10, Math.min(clickX, maxX)),
+				y: Math.max(10, Math.min(clickY, maxY)),
+				targetNote: note
+			};
+		} else {
+			const maxX = window.innerWidth - menuWidth - 10;
+			const maxY = window.innerHeight - menuHeight - 10;
+			contextMenu = {
+				isOpen: true,
+				x: Math.max(10, Math.min(clickX, maxX)),
+				y: Math.max(10, Math.min(clickY, maxY)),
+				targetNote: note
+			};
+		}
 	}
 
 	function openWorkspaceContextMenu(e: MouseEvent) {
 		e.preventDefault();
-		const menuWidth = 240;
+		const menuWidth = 235;
 		const menuHeight = 260;
-		const x = Math.min(e.clientX, window.innerWidth - menuWidth - 10);
-		const y = Math.min(e.clientY, window.innerHeight - menuHeight - 10);
-		contextMenu = {
-			isOpen: true,
-			x: Math.max(10, x),
-			y: Math.max(10, y),
-			targetNote: activeNote
-		};
+
+		let clickX = e.clientX;
+		let clickY = e.clientY;
+
+		if (notesWrapperEl) {
+			const rect = notesWrapperEl.getBoundingClientRect();
+			clickX = e.clientX - rect.left;
+			clickY = e.clientY - rect.top;
+			const maxX = rect.width - menuWidth - 10;
+			const maxY = rect.height - menuHeight - 10;
+			contextMenu = {
+				isOpen: true,
+				x: Math.max(10, Math.min(clickX, maxX)),
+				y: Math.max(10, Math.min(clickY, maxY)),
+				targetNote: activeNote
+			};
+		} else {
+			const maxX = window.innerWidth - menuWidth - 10;
+			const maxY = window.innerHeight - menuHeight - 10;
+			contextMenu = {
+				isOpen: true,
+				x: Math.max(10, Math.min(clickX, maxX)),
+				y: Math.max(10, Math.min(clickY, maxY)),
+				targetNote: activeNote
+			};
+		}
 	}
 
 	function closeContextMenu() {
@@ -901,7 +938,7 @@
 	}
 </script>
 
-<div class="notes-page-wrapper">
+<div class="notes-page-wrapper" bind:this={notesWrapperEl}>
 	<div class="notes-header-container" class:is-collapsed={isVaultCollapsed}>
 		<PageHeader
 			title="Vault Appunti Cloud"
@@ -1694,6 +1731,7 @@
 		display: flex;
 		flex-direction: column;
 		box-sizing: border-box;
+		position: relative;
 	}
 
 	.notes-header-container {
@@ -3442,7 +3480,7 @@
 
 	/* 🖱️ Custom Context Menu (Tasto Destro) */
 	.notes-custom-context-menu {
-		position: fixed;
+		position: absolute;
 		z-index: 10000;
 		width: 235px;
 		background: var(--card-bg);
