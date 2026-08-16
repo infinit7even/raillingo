@@ -1,129 +1,166 @@
 import { browser } from '$app/environment';
 
-export type ThemePreset = 'dark' | 'light' | 'purple' | 'frecciarossa' | 'emerald' | 'amber';
+export type ThemeMode = 'dark' | 'light';
+export type TrainLivery = 'regionale' | 'frecciarossa' | 'intercity';
 
-export interface ThemeOption {
-	id: ThemePreset;
+export interface LiveryOption {
+	id: TrainLivery;
 	name: string;
 	desc: string;
+	trainModel: string;
 	color: string;
-	bg: string;
-	cardBg: string;
+	depth: string;
+	hoverColor: string;
+	emoji: string;
+	badgeBg: string;
 }
 
-export const THEME_OPTIONS: ThemeOption[] = [
+export const LIVERY_OPTIONS: LiveryOption[] = [
 	{
-		id: 'dark',
-		name: 'Tema Scuro',
-		desc: 'Notte blu teal iconico con bordi 3D',
-		color: '#1cb0f6',
-		bg: '#171f23',
-		cardBg: '#18252d'
-	},
-	{
-		id: 'light',
-		name: 'Tema Chiaro',
-		desc: 'Chiaro pulito ad alto contrasto',
+		id: 'regionale',
+		name: 'Regionale',
+		desc: 'Verde Trenitalia Regionale',
+		trainModel: 'Regionale Rock / Pop',
 		color: '#58cc02',
-		bg: '#ffffff',
-		cardBg: '#ffffff'
-	},
-	{
-		id: 'purple',
-		name: 'Cosmic Purple',
-		desc: 'Super viola cosmico brillante',
-		color: '#ce82ff',
-		bg: '#11091e',
-		cardBg: '#1d1033'
+		depth: '#46a302',
+		hoverColor: '#61df02',
+		emoji: '🟢',
+		badgeBg: 'rgba(88, 204, 2, 0.15)'
 	},
 	{
 		id: 'frecciarossa',
 		name: 'Frecciarossa',
-		desc: 'Rosso corsa alta velocità',
-		color: '#ff4b4b',
-		bg: '#16080a',
-		cardBg: '#261114'
+		desc: 'Rosso Corsa Alta Velocità',
+		trainModel: 'Frecciarossa ETR 1000',
+		color: '#e21b24',
+		depth: '#a81118',
+		hoverColor: '#f02c35',
+		emoji: '🔴',
+		badgeBg: 'rgba(226, 27, 36, 0.15)'
 	},
 	{
-		id: 'emerald',
-		name: 'Trazione Verde',
-		desc: 'Verde smeraldo ferroviario',
-		color: '#58cc02',
-		bg: '#051913',
-		cardBg: '#0d2d22'
-	},
-	{
-		id: 'amber',
-		name: 'Italo Gold',
-		desc: 'Ambra dorata e bronzo scuro',
-		color: '#ff9600',
-		bg: '#14100a',
-		cardBg: '#241a10'
+		id: 'intercity',
+		name: 'Intercity',
+		desc: 'Azzurro Elettrico Nuova Livrea',
+		trainModel: 'Intercity Giorno ETR 421',
+		color: '#0080da',
+		depth: '#005899',
+		hoverColor: '#1ca0f4',
+		emoji: '🔵',
+		badgeBg: 'rgba(0, 128, 218, 0.15)'
 	}
 ];
 
+export interface ThemeState {
+	theme: ThemeMode;
+	livery: TrainLivery;
+}
+
 class ThemeStore {
-	private currentTheme: ThemePreset = 'dark';
-	private listeners = new Set<(theme: ThemePreset) => void>();
+	private currentTheme: ThemeMode = 'dark';
+	private currentLivery: TrainLivery = 'regionale';
+	private listeners = new Set<(state: ThemeState) => void>();
 
 	constructor() {
 		if (browser) {
-			const saved = localStorage.getItem('rf_theme') as ThemePreset | null;
-			if (saved && THEME_OPTIONS.some((t) => t.id === saved)) {
-				this.currentTheme = saved;
+			const savedTheme = localStorage.getItem('rf_theme') as ThemeMode | null;
+			if (savedTheme === 'light' || savedTheme === 'dark') {
+				this.currentTheme = savedTheme;
 			} else {
 				const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
 				this.currentTheme = prefersDark ? 'dark' : 'light';
 			}
-			this.applyTheme(this.currentTheme);
+
+			const savedLivery = localStorage.getItem('rf_livery') as TrainLivery | null;
+			if (savedLivery && LIVERY_OPTIONS.some((l) => l.id === savedLivery)) {
+				this.currentLivery = savedLivery;
+			} else {
+				this.currentLivery = 'regionale';
+			}
+
+			this.applyDOM();
 		}
 	}
 
-	public get theme(): ThemePreset {
+	public get theme(): ThemeMode {
 		return this.currentTheme;
 	}
 
-	public subscribe(run: (theme: ThemePreset) => void): () => void {
+	public get livery(): TrainLivery {
+		return this.currentLivery;
+	}
+
+	public get state(): ThemeState {
+		return {
+			theme: this.currentTheme,
+			livery: this.currentLivery
+		};
+	}
+
+	public subscribe(run: (state: ThemeState) => void): () => void {
 		this.listeners.add(run);
-		run(this.currentTheme);
+		run({ theme: this.currentTheme, livery: this.currentLivery });
 		return () => {
 			this.listeners.delete(run);
 		};
 	}
 
-	public setTheme(theme: ThemePreset) {
+	public setTheme(theme: ThemeMode) {
 		if (this.currentTheme === theme) return;
 		this.currentTheme = theme;
 		if (browser) {
 			localStorage.setItem('rf_theme', theme);
-			this.applyTheme(theme);
+			this.applyDOM();
 		}
 		this.notify();
 	}
 
-	private applyTheme(theme: ThemePreset) {
+	public toggleTheme() {
+		this.setTheme(this.currentTheme === 'dark' ? 'light' : 'dark');
+	}
+
+	public setLivery(livery: TrainLivery) {
+		if (this.currentLivery === livery) return;
+		this.currentLivery = livery;
+		if (browser) {
+			localStorage.setItem('rf_livery', livery);
+			this.applyDOM();
+		}
+		this.notify();
+	}
+
+	public cycleLivery() {
+		const currentIndex = LIVERY_OPTIONS.findIndex((l) => l.id === this.currentLivery);
+		const nextIndex = (currentIndex + 1) % LIVERY_OPTIONS.length;
+		this.setLivery(LIVERY_OPTIONS[nextIndex].id);
+	}
+
+	private applyDOM() {
 		if (!browser) return;
 		const root = document.documentElement;
-		root.setAttribute('data-theme', theme);
 
-		const isLight = theme === 'light';
-		if (isLight) {
+		// Applica tema Dark/Light
+		root.setAttribute('data-theme', this.currentTheme);
+		if (this.currentTheme === 'light') {
 			root.classList.remove('dark');
 		} else {
 			root.classList.add('dark');
 		}
 
+		// Applica livrea ferroviaria
+		root.setAttribute('data-livery', this.currentLivery);
+
 		// Aggiorna meta theme-color per la status bar dei browser mobile
-		const themeOption = THEME_OPTIONS.find((t) => t.id === theme);
 		const metaTheme = document.querySelector('meta[name="theme-color"]');
-		if (metaTheme && themeOption) {
-			metaTheme.setAttribute('content', themeOption.bg);
+		if (metaTheme) {
+			metaTheme.setAttribute('content', this.currentTheme === 'dark' ? '#171f23' : '#ffffff');
 		}
 	}
 
 	private notify() {
+		const currentState = { theme: this.currentTheme, livery: this.currentLivery };
 		for (const listener of this.listeners) {
-			listener(this.currentTheme);
+			listener(currentState);
 		}
 	}
 }

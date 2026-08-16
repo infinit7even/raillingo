@@ -172,9 +172,9 @@
 	}
 
 	.duo-banner-green {
-		background-color: var(--green-color);
-		border: 2px solid var(--green-depth);
-		border-bottom: 4px solid var(--green-depth);
+		background-color: var(--brand-color, var(--green-color));
+		border: 2px solid var(--brand-depth, var(--green-depth));
+		border-bottom: 4px solid var(--brand-depth, var(--green-depth));
 		color: #ffffff;
 	}
 

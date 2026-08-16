@@ -376,9 +376,9 @@
 		width: 68px;
 		height: 68px;
 		border-radius: 50%;
-		background-color: var(--green-color);
-		border: 2px solid var(--green-depth);
-		border-bottom: 6px solid var(--green-depth);
+		background-color: var(--brand-color, var(--green-color));
+		border: 2px solid var(--brand-depth, var(--green-depth));
+		border-bottom: 6px solid var(--brand-depth, var(--green-depth));
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -391,8 +391,8 @@
 	}
 
 	.path-node-btn.active {
-		background-color: var(--green-color);
-		border-color: var(--green-depth);
+		background-color: var(--brand-color, var(--green-color));
+		border-color: var(--brand-depth, var(--green-depth));
 		transform: scale(1.08);
 	}
 

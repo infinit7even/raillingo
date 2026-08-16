@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { themeStore, type ThemePreset } from '$lib/stores/themeStore';
+	import { themeStore, LIVERY_OPTIONS, type TrainLivery, type ThemeMode } from '$lib/stores/themeStore';
 	import { cardsStore } from '$lib/stores/cardsStore';
 	import { pwaStore } from '$lib/stores/pwaStore';
 	import { navStore } from '$lib/stores/navStore';
@@ -10,14 +10,18 @@
 
 	let { user } = $props<{ user?: any }>();
 
-	let currentTheme = $state<ThemePreset>('dark');
+	let currentTheme = $state<ThemeMode>('dark');
+	let currentLivery = $state<TrainLivery>('regionale');
 	let cards = $state<Card[]>([]);
 	let isQuickAddOpen = $state(false);
 	let canInstall = $state(false);
 	let isNavOpen = $state(false);
 
 	onMount(() => {
-		const unTheme = themeStore.subscribe((t) => (currentTheme = t));
+		const unTheme = themeStore.subscribe((state) => {
+			currentTheme = state.theme;
+			currentLivery = state.livery;
+		});
 		const unCards = cardsStore.subscribe((c) => (cards = c));
 		const unPwa = pwaStore.subscribe(() => {
 			canInstall = pwaStore.canInstall;
@@ -119,7 +123,7 @@
 		</div>
 	</div>
 
-	<!-- Actions Bottom Drawer (Theme + Quick Add Admin Section) -->
+	<!-- Actions Bottom Drawer (Theme + Livery + Quick Add Section) -->
 	<div class="sidebar-actions">
 		{#if user && (user.isAdmin || user.role === 'admin')}
 			<button
@@ -135,12 +139,37 @@
 			</button>
 		{/if}
 
+		<!-- 🚄 Selettore Livree Ferroviarie -->
+		<div class="livery-box">
+			<div class="livery-title-row">
+				<span class="livery-section-lbl">LIVREA TRENO</span>
+			</div>
+			<div class="livery-pill-group" role="radiogroup" aria-label="Seleziona Livrea Treno">
+				{#each LIVERY_OPTIONS as liv}
+					{@const isSelected = currentLivery === liv.id}
+					<button
+						type="button"
+						class="livery-pill-btn"
+						class:active={isSelected}
+						onclick={() => themeStore.setLivery(liv.id)}
+						title="{liv.name} ({liv.trainModel})"
+						role="radio"
+						aria-checked={isSelected}
+					>
+						<span class="livery-dot" style="background-color: {liv.color};"></span>
+						<span class="livery-name">{liv.name}</span>
+					</button>
+				{/each}
+			</div>
+		</div>
+
+		<!-- 🌙 / ☀️ Toggle Tema Chiaro / Scuro -->
 		<button
 			class="duo-btn duo-btn-gray desktop-theme-btn"
-			onclick={() => themeStore.setTheme(currentTheme === 'dark' ? 'light' : 'dark')}
+			onclick={() => themeStore.toggleTheme()}
 			title="Alterna Scuro/Chiaro"
 		>
-			<span>TEMA: {currentTheme === 'dark' ? 'SCURO 🌙' : 'CHIARO ☀️'}</span>
+			<span>MODO: {currentTheme === 'dark' ? 'SCURO 🌙' : 'CHIARO ☀️'}</span>
 		</button>
 	</div>
 </nav>
@@ -222,10 +251,11 @@
 		font-family: 'Outfit', sans-serif;
 		font-size: 1.6rem;
 		font-weight: 900;
-		color: var(--green-color);
+		color: var(--brand-color, var(--green-color));
 		letter-spacing: -0.04em;
 		display: inline-flex;
 		align-items: center;
+		transition: color 0.2s ease;
 	}
 
 	.ll-track-box {
@@ -241,8 +271,6 @@
 		object-fit: contain;
 		margin: 0 -0.08em;
 	}
-
-
 
 	.nav-container {
 		flex: 1;
@@ -372,7 +400,7 @@
 	.sidebar-actions {
 		display: flex;
 		flex-direction: column;
-		gap: 0.5rem;
+		gap: 0.55rem;
 		width: 100%;
 		padding-top: 0.65rem;
 		border-top: 2px solid var(--border-color);
@@ -384,6 +412,100 @@
 		padding: 0.65rem;
 		text-align: center;
 		justify-content: center;
+	}
+
+	/* 🚄 Livery Selector Box */
+	.livery-box {
+		display: flex;
+		flex-direction: column;
+		gap: 0.35rem;
+		width: 100%;
+		background: var(--card-bg-subtle);
+		padding: 0.45rem 0.5rem;
+		border-radius: 16px;
+		border: 1.5px solid var(--border-color);
+		box-sizing: border-box;
+	}
+
+	.livery-title-row {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 0 0.2rem;
+	}
+
+	.livery-section-lbl {
+		font-size: 0.65rem;
+		font-weight: 900;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		color: var(--text-muted);
+	}
+
+	.livery-pill-group {
+		display: grid;
+		grid-template-columns: repeat(3, 1fr);
+		gap: 0.3rem;
+		width: 100%;
+	}
+
+	.livery-pill-btn {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 0.2rem;
+		padding: 0.4rem 0.2rem;
+		border-radius: 10px;
+		background: var(--card-bg);
+		border: 1.5px solid var(--border-color);
+		border-bottom: 3px solid var(--border-depth-color);
+		cursor: pointer;
+		font-family: 'Outfit', sans-serif;
+		transition: all 0.15s ease;
+		user-select: none;
+		-webkit-tap-highlight-color: transparent;
+	}
+
+	.livery-pill-btn:hover {
+		transform: translateY(-1px);
+		border-color: var(--text-muted);
+	}
+
+	.livery-pill-btn:active {
+		transform: translateY(1px);
+		border-bottom-width: 1.5px;
+	}
+
+	.livery-pill-btn.active {
+		border-color: var(--brand-color);
+		border-bottom-color: var(--brand-depth);
+		background-color: var(--brand-light-bg);
+		box-shadow: 0 2px 8px var(--brand-glow);
+	}
+
+	.livery-dot {
+		width: 10px;
+		height: 10px;
+		border-radius: 50%;
+		display: inline-block;
+		box-shadow: 0 0 6px rgba(0, 0, 0, 0.2);
+	}
+
+	.livery-name {
+		font-size: 0.65rem;
+		font-weight: 800;
+		color: var(--text-color);
+		letter-spacing: 0.02em;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		max-width: 100%;
+	}
+
+	.livery-pill-btn.active .livery-name {
+		color: var(--brand-color);
+		font-weight: 900;
 	}
 
 	.desktop-theme-btn {

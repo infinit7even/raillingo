@@ -4,8 +4,12 @@
 	import { fly, fade } from 'svelte/transition';
 	import { navStore } from '$lib/stores/navStore';
 	import { statsStore, type StatsData } from '$lib/stores/statsStore';
+	import { themeStore, LIVERY_OPTIONS, type TrainLivery } from '$lib/stores/themeStore';
 
 	let isNavOpen = $state(false);
+	let currentLivery = $state<TrainLivery>('regionale');
+	let activeLivery = $derived(LIVERY_OPTIONS.find((l) => l.id === currentLivery) ?? LIVERY_OPTIONS[0]);
+
 	let stats = $state<StatsData>({
 		cardsStudied: 0,
 		quizAnswered: 0,
@@ -23,10 +27,12 @@
 	onMount(() => {
 		const unNav = navStore.subscribe((o) => (isNavOpen = o));
 		const unStats = statsStore.subscribe((s) => (stats = s));
+		const unTheme = themeStore.subscribe((st) => (currentLivery = st.livery));
 
 		return () => {
 			unNav();
 			unStats();
+			unTheme();
 		};
 	});
 </script>
@@ -46,6 +52,18 @@
 				<span></span>
 				<span></span>
 			</div>
+		</button>
+
+		<!-- Pulsante Rapido Cambio Livrea Treno (Mobile) -->
+		<button
+			type="button"
+			class="duo-header-btn livery-quick-btn"
+			onclick={() => themeStore.cycleLivery()}
+			aria-label="Cambia livrea treno: {activeLivery.name}"
+			title="Livrea attiva: {activeLivery.name} ({activeLivery.trainModel}) — Tocca per cambiare"
+		>
+			<span class="livery-btn-dot" style="background-color: {activeLivery.color};"></span>
+			<span class="livery-btn-lbl">{activeLivery.name}</span>
 		</button>
 
 		<!-- Content Area in Header: Stats on Home ('/') -->
@@ -104,6 +122,34 @@
 		align-items: center;
 		justify-content: center;
 		flex-shrink: 0;
+	}
+
+	.livery-quick-btn {
+		padding: 0.45rem 0.65rem;
+		height: 48px;
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+		flex-shrink: 0;
+		border-color: var(--brand-depth);
+		background-color: var(--brand-light-bg);
+		border-bottom-color: var(--brand-depth);
+	}
+
+	.livery-btn-dot {
+		width: 10px;
+		height: 10px;
+		border-radius: 50%;
+		flex-shrink: 0;
+		box-shadow: 0 0 6px var(--brand-glow);
+	}
+
+	.livery-btn-lbl {
+		font-size: 0.75rem;
+		font-weight: 900;
+		color: var(--brand-color);
+		letter-spacing: 0.03em;
+		text-transform: uppercase;
 	}
 
 	.hamburger-icon {

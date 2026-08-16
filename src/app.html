@@ -13,7 +13,7 @@
 		<meta name="apple-mobile-web-app-title" content="Raillingo" />
 		<meta name="format-detection" content="telephone=no" />
 
-		<!-- ⚡ Immediate Theme Initialization (Elimina FOUC e salti di stile all'avvio) -->
+		<!-- ⚡ Immediate Theme & Livery Initialization (Elimina FOUC e salti di stile all'avvio) -->
 		<script>
 			(function () {
 				try {
@@ -27,6 +27,9 @@
 					} else {
 						document.documentElement.classList.add('dark');
 					}
+
+					var livery = localStorage.getItem('rf_livery') || 'regionale';
+					document.documentElement.setAttribute('data-livery', livery);
 				} catch (e) {}
 			})();
 		</script>
