@@ -19,6 +19,27 @@
 	let canInstall = $state(false);
 	let isNavOpen = $state(false);
 
+	let isAdmin = $derived(
+		Boolean(
+			user &&
+			(user.isAdmin === true ||
+			 user.role === 'admin' ||
+			 user.id === '691289686093725736')
+		)
+	);
+
+	function handleAddCardClick() {
+		if (isAdmin) {
+			isQuickAddOpen = true;
+			navStore.close();
+		} else {
+			toastStore.show({
+				message: 'Funzione non disponibile per il tuo utente',
+				type: 'warning'
+			});
+		}
+	}
+
 	function handleLogoClick() {
 		const nextLiveryId = themeStore.cycleLivery();
 		const liv = LIVERY_OPTIONS.find((l) => l.id === nextLiveryId) ?? LIVERY_OPTIONS[0];
@@ -139,19 +160,15 @@
 
 	<!-- Actions Bottom Drawer (Theme + Quick Add Section) -->
 	<div class="sidebar-actions">
-		{#if user && (user.isAdmin || user.role === 'admin')}
-			<button
-				type="button"
-				class="duo-btn duo-btn-green desktop-quick-add-btn"
-				onclick={() => {
-					isQuickAddOpen = true;
-					navStore.close();
-				}}
-				title="Aggiungi Scheda Rapida"
-			>
-				⚡ AGGIUNGI SCHEDA
-			</button>
-		{/if}
+		<!-- ⚡ Pulsante Aggiungi Scheda (Sempre Visibile) -->
+		<button
+			type="button"
+			class="duo-btn duo-btn-green desktop-quick-add-btn"
+			onclick={handleAddCardClick}
+			title="Aggiungi Scheda Rapida"
+		>
+			⚡ AGGIUNGI SCHEDA
+		</button>
 
 		<!-- 🌙 / ☀️ Toggle Tema Chiaro / Scuro -->
 		<button
