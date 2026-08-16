@@ -191,7 +191,7 @@
 							onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && toggleFlip(card.id)}
 						>
 							<div class="flip-card-inner" class:is-flipped={isFlipped}>
-								<!-- FRONT FACE (Visual Picture + Ambient Blurred Background + Overlay Badge) -->
+								<!-- FRONT FACE (Pure Visual Picture + Ambient Blurred Background) -->
 								<div class="face front-face">
 									<!-- Ambient blurred background -->
 									<img
@@ -201,7 +201,7 @@
 										aria-hidden="true"
 									/>
 
-									<!-- Main Visual Image -->
+									<!-- Main Visual Image (Pura immagine senza testi sovrapposti) -->
 									<div class="reel-img-wrapper">
 										<img
 											src={card.images![imgIdx]}
@@ -210,21 +210,6 @@
 											loading="lazy"
 											decoding="async"
 										/>
-									</div>
-
-									<!-- Bottom Title Badge Overlay -->
-									<div class="front-bottom-badge">
-										{#if displayTitle}
-											<h2 class="reel-title">{displayTitle}</h2>
-										{/if}
-
-										{#if hasDistinctFullName}
-											<p class="reel-fullname-sub">{card.fullName}</p>
-										{/if}
-
-										<div class="tap-hint-pill">
-											<span>👇 Tocca per girare la scheda e leggere i dettagli</span>
-										</div>
 									</div>
 								</div>
 
@@ -438,54 +423,6 @@
 		filter: drop-shadow(0 6px 20px rgba(0, 0, 0, 0.7));
 	}
 
-	.front-bottom-badge {
-		position: relative;
-		z-index: 4;
-		width: 100%;
-		background: rgba(10, 15, 25, 0.88);
-		backdrop-filter: blur(14px);
-		-webkit-backdrop-filter: blur(14px);
-		border: 1.5px solid rgba(255, 255, 255, 0.15);
-		border-radius: 16px;
-		padding: 0.5rem 0.75rem;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: 0.15rem;
-		text-align: center;
-		box-sizing: border-box;
-		flex-shrink: 0;
-		margin-top: 0.35rem;
-	}
-
-	.reel-title {
-		font-size: 1.35rem;
-		font-weight: 900;
-		color: #ffffff;
-		margin: 0;
-		line-height: 1.25;
-		letter-spacing: -0.01em;
-		display: -webkit-box;
-		-webkit-line-clamp: 2;
-		line-clamp: 2;
-		-webkit-box-orient: vertical;
-		overflow: hidden;
-		text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
-	}
-
-	.reel-fullname-sub {
-		font-size: 0.82rem;
-		font-weight: 800;
-		color: var(--green-color);
-		margin: 0;
-		line-height: 1.2;
-		display: -webkit-box;
-		-webkit-line-clamp: 1;
-		line-clamp: 1;
-		-webkit-box-orient: vertical;
-		overflow: hidden;
-	}
-
 	.tap-hint-pill {
 		margin-top: 0.25rem;
 		padding: 0.2rem 0.65rem;
@@ -624,10 +561,6 @@
 	}
 
 	@media (max-width: 600px) {
-		.reel-title {
-			font-size: 1.2rem;
-		}
-
 		.reel-card-slide {
 			padding: 0.6rem;
 		}
