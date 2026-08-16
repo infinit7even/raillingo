@@ -228,7 +228,7 @@
 		saving = true;
 		try {
 			await onSave({
-				title: t || fn || 'Scheda Visiva',
+				title: t,
 				fullName: fn || undefined,
 				description: desc,
 				category: finalCategory,

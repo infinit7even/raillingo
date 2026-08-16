@@ -63,7 +63,7 @@ export const POST: RequestHandler = async (event) => {
 	const now = new Date().toISOString();
 	const cardToSave: Card = {
 		id: newCard.id || `card-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`,
-		title: title || fullName || 'Scheda Visiva',
+		title: title,
 		fullName: fullName || undefined,
 		description: description,
 		category: category || 'Generale',
@@ -139,7 +139,7 @@ export const PUT: RequestHandler = async (event) => {
 			...oldCard,
 			...updatedCard,
 			id: oldCard.id,
-			title: title || fullName || oldCard.title || 'Scheda Visiva',
+			title: title,
 			fullName: fullName || undefined,
 			description: description,
 			category: category || oldCard.category || 'Generale',
