@@ -1166,13 +1166,6 @@
 							<div class="log-item-card duo-card animated-card">
 								<div class="log-item-header">
 									<div class="log-admin-user">
-										{#if log.userAvatar}
-											<img src={log.userAvatar} alt={log.userName} class="log-admin-avatar" />
-										{:else}
-											<div class="log-admin-avatar fallback">
-												{log.userName ? log.userName.charAt(0).toUpperCase() : 'A'}
-											</div>
-										{/if}
 										<div class="log-admin-meta">
 											<strong class="log-admin-name">{log.userName}</strong>
 											<span class="log-timestamp">
@@ -2280,24 +2273,6 @@
 		display: flex;
 		align-items: center;
 		gap: 0.55rem;
-	}
-
-	.log-admin-avatar {
-		width: 30px;
-		height: 30px;
-		border-radius: 10px;
-		object-fit: cover;
-		border: 1px solid var(--border-color);
-	}
-
-	.log-admin-avatar.fallback {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		background: var(--brand-light-bg);
-		color: var(--brand-color);
-		font-size: 0.75rem;
-		font-weight: 900;
 	}
 
 	.log-admin-meta {
