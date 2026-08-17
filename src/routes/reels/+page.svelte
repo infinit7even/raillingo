@@ -6,7 +6,7 @@
 	import { globalCategoryStore, matchesCategory } from '$lib/stores/globalCategoryStore';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import CategoryFilter from '$lib/components/CategoryFilter.svelte';
-	import type { Card } from '$lib/types/cards';
+	import { isCardVisibleInGame, type Card } from '$lib/types/cards';
 
 	interface ReelItem {
 		instanceId: string;
@@ -70,13 +70,14 @@
 		return Array.from(set).sort();
 	});
 
-	// Tutte le card valide CON immagini e NON ignorate
+	// Tutte le card valide CON immagini e NON ignorate e abilitate in reels
 	let validReelCards = $derived(
 		rawCards.filter((c) => {
 			const hasImg = c.images && c.images.length > 0;
 			const notIgnored = !ignoredIds.has(c.id);
 			const matchesCat = matchesCategory(c.category, selectedCategory);
-			return hasImg && notIgnored && matchesCat;
+			const matchesGame = isCardVisibleInGame(c, 'reels');
+			return hasImg && notIgnored && matchesCat && matchesGame;
 		})
 	);
 

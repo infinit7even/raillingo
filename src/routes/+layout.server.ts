@@ -12,6 +12,8 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 		if (dbCards && dbCards.length > 0) {
 			initialCards = dbCards.map((c) => ({
 				...c,
+				showInWiki: c.showInWiki !== false,
+				gameModes: (c.gameModes as string[]) || ['flashcard', 'quiz', 'reels', 'scrittura'],
 				createdAt: c.createdAt ? c.createdAt.toISOString() : new Date().toISOString(),
 				updatedAt: c.updatedAt ? c.updatedAt.toISOString() : new Date().toISOString()
 			}));

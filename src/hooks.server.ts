@@ -66,6 +66,7 @@ const handleAuth: Handle = async ({ event, resolve }) => {
 
 		event.locals.user = {
 			...session.user,
+			username: session.user.name,
 			isAdmin,
 			role: isAdmin ? 'admin' : session.user.role || 'user'
 		};

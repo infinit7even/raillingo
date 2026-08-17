@@ -48,6 +48,7 @@ export const globalCategoryStore = createGlobalCategoryStore();
 
 export function matchesCategory(cardCategory?: string, selectedCategory: string = 'ALL'): boolean {
 	if (!selectedCategory || selectedCategory === 'ALL') return true;
+	if (selectedCategory === '__NONE__') return false;
 	if (!cardCategory || !cardCategory.trim()) return false;
 	const selectedList = selectedCategory.split(',').map((s: string) => s.trim());
 	return selectedList.includes(cardCategory.trim());

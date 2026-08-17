@@ -1,6 +1,6 @@
 import { browser } from '$app/environment';
 
-export type ThemeMode = 'dark' | 'light';
+export type ThemeMode = 'dark' | 'light' | 'amoled';
 export type TrainLivery = 'regionale' | 'frecciarossa' | 'intercity';
 
 export interface LiveryOption {
@@ -64,7 +64,7 @@ class ThemeStore {
 	constructor() {
 		if (browser) {
 			const savedTheme = localStorage.getItem('rf_theme') as ThemeMode | null;
-			if (savedTheme === 'light' || savedTheme === 'dark') {
+			if (savedTheme === 'light' || savedTheme === 'dark' || savedTheme === 'amoled') {
 				this.currentTheme = savedTheme;
 			} else {
 				const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -116,7 +116,14 @@ class ThemeStore {
 	}
 
 	public toggleTheme() {
-		this.setTheme(this.currentTheme === 'dark' ? 'light' : 'dark');
+		// Rotazione ciclica: dark -> light -> amoled -> dark
+		if (this.currentTheme === 'dark') {
+			this.setTheme('light');
+		} else if (this.currentTheme === 'light') {
+			this.setTheme('amoled');
+		} else {
+			this.setTheme('dark');
+		}
 	}
 
 	public setLivery(livery: TrainLivery) {
@@ -141,7 +148,7 @@ class ThemeStore {
 		if (!browser) return;
 		const root = document.documentElement;
 
-		// Applica tema Dark/Light
+		// Applica tema Dark/Light/AMOLED
 		root.setAttribute('data-theme', this.currentTheme);
 		if (this.currentTheme === 'light') {
 			root.classList.remove('dark');
@@ -155,7 +162,10 @@ class ThemeStore {
 		// Aggiorna meta theme-color per la status bar dei browser mobile
 		const metaTheme = document.querySelector('meta[name="theme-color"]');
 		if (metaTheme) {
-			metaTheme.setAttribute('content', this.currentTheme === 'dark' ? '#171f23' : '#ffffff');
+			let color = '#171f23';
+			if (this.currentTheme === 'light') color = '#ffffff';
+			if (this.currentTheme === 'amoled') color = '#000000';
+			metaTheme.setAttribute('content', color);
 		}
 	}
 

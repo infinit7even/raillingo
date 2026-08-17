@@ -15,7 +15,14 @@
 	let cards = $state<Card[]>([]);
 	let user = $derived(data.user);
 	let error = $derived(data.error);
-	let isAdmin = $derived(Boolean(user && (user.isAdmin || user.role === 'admin')));
+	let isAdmin = $derived(
+		Boolean(
+			user &&
+			(user.isAdmin === true ||
+			 user.role === 'admin' ||
+			 user.id === '691289686093725736')
+		)
+	);
 
 	async function logout() {
 		await logoutUser();

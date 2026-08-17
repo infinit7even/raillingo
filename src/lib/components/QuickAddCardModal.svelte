@@ -83,10 +83,6 @@
 	}
 
 	function handleCloseModal() {
-		clonedFromCard = null;
-		activeTab = 'form';
-		searchQuery = '';
-		selectedCategory = 'ALL';
 		onClose();
 	}
 </script>

@@ -19,12 +19,20 @@
 		submitLabel?: string;
 	}>();
 
+	const DRAFT_KEY = 'rf_card_form_draft';
+
+	// Form fields
 	let title = $state('');
+	let hasAcronym = $state(false);
+	let acronym = $state('');
 	let fullName = $state('');
 	let description = $state('');
 	let category = $state('');
 	let customCategory = $state('');
 	let images = $state<string[]>([]);
+	let showInWiki = $state(true);
+	let gameModes = $state<string[]>(['flashcard', 'quiz', 'reels', 'scrittura']);
+
 	let newImageUrl = $state('');
 	let uploading = $state(false);
 	let saving = $state(false);
@@ -33,7 +41,6 @@
 	let cloneQuery = $state('');
 	let cloneCategoryFilter = $state('ALL');
 	let isTitleFocused = $state(false);
-	let isFullNameFocused = $state(false);
 	let activeEditCard = $state<Card | null>(null);
 
 	let effectiveEditCard = $derived(initialCard || activeEditCard);
@@ -49,15 +56,80 @@
 		return submitLabel || '➕ AGGIUNGI SCHEDA';
 	});
 
-	// Existing cards and category list for suggestions
+	// Existing cards for suggestions and duplication
 	let allCards = $state<Card[]>([]);
 
 	onMount(() => {
 		const unsub = cardsStore.subscribe((c) => (allCards = c));
+
+		// Ripristina bozza salvata se non si sta modificando una scheda specifica
+		if (!initialCard && typeof localStorage !== 'undefined') {
+			try {
+				const savedDraft = localStorage.getItem(DRAFT_KEY);
+				if (savedDraft) {
+					const draft = JSON.parse(savedDraft);
+					title = draft.title || '';
+					hasAcronym = Boolean(draft.hasAcronym);
+					acronym = draft.acronym || '';
+					fullName = draft.fullName || '';
+					description = draft.description || '';
+					category = draft.category || '';
+					customCategory = draft.customCategory || '';
+					images = Array.isArray(draft.images) ? draft.images : [];
+					showInWiki = draft.showInWiki !== false;
+					gameModes = Array.isArray(draft.gameModes) && draft.gameModes.length > 0
+						? draft.gameModes
+						: ['flashcard', 'quiz', 'reels', 'scrittura'];
+				}
+			} catch (e) {
+				console.warn('Errore lettura bozza scheda:', e);
+			}
+		}
+
 		return unsub;
 	});
 
-	// Derive unique existing categories for quick selection
+	// Salva la bozza ogni volta che i campi cambiano (solo se nuova scheda)
+	function saveDraft() {
+		if (effectiveEditCard?.id) return; // Non salvare bozza se si sta modificando una card salvata
+		if (typeof localStorage === 'undefined') return;
+
+		const draftData = {
+			title,
+			hasAcronym,
+			acronym,
+			fullName,
+			description,
+			category,
+			customCategory,
+			images,
+			showInWiki,
+			gameModes
+		};
+		try {
+			localStorage.setItem(DRAFT_KEY, JSON.stringify(draftData));
+		} catch (e) {}
+	}
+
+	function clearDraft() {
+		title = '';
+		hasAcronym = false;
+		acronym = '';
+		fullName = '';
+		description = '';
+		category = '';
+		customCategory = '';
+		images = [];
+		showInWiki = true;
+		gameModes = ['flashcard', 'quiz', 'reels', 'scrittura'];
+		validationError = null;
+		if (typeof localStorage !== 'undefined') {
+			localStorage.removeItem(DRAFT_KEY);
+		}
+		toastStore.show({ message: '🧹 Campi del modulo azzerati', type: 'info' });
+	}
+
+	// Categories for dropdown
 	let availableCategories = $derived.by<string[]>(() => {
 		const set = new Set<string>();
 		for (const c of allCards) {
@@ -68,7 +140,7 @@
 		return Array.from(set).sort();
 	});
 
-	// Filtered cards for the inline clone drawer
+	// Filtered cards for duplication
 	let cloneFilteredCards = $derived.by<Card[]>(() => {
 		let list = [...allCards];
 		if (cloneCategoryFilter !== 'ALL') {
@@ -89,11 +161,18 @@
 	function cloneCardIntoForm(card: Card) {
 		activeEditCard = null;
 		title = card.title || '';
+		hasAcronym = Boolean(card.hasAcronym || (card.fullName && card.fullName !== card.title));
+		acronym = card.acronym || (hasAcronym && card.title.length <= 10 ? card.title : '');
 		fullName = card.fullName || '';
 		description = card.description || '';
 		category = card.category || '';
 		images = card.images ? [...card.images] : [];
+		showInWiki = card.showInWiki !== false;
+		gameModes = Array.isArray(card.gameModes) && card.gameModes.length > 0
+			? [...card.gameModes]
+			: ['flashcard', 'quiz', 'reels', 'scrittura'];
 		isCloneSearchOpen = false;
+		saveDraft();
 		toastStore.show({ message: `📋 Dati clonati da "${card.title}"!` });
 	}
 
@@ -101,23 +180,20 @@
 		if (initialCard) {
 			activeEditCard = null;
 			title = initialCard.title || '';
+			hasAcronym = Boolean(initialCard.hasAcronym || (initialCard.fullName && initialCard.fullName !== initialCard.title));
+			acronym = initialCard.acronym || (hasAcronym && initialCard.title.length <= 10 ? initialCard.title : '');
 			fullName = initialCard.fullName || '';
 			description = initialCard.description || '';
 			category = initialCard.category || '';
 			images = initialCard.images ? [...initialCard.images] : [];
-		} else if (!activeEditCard) {
-			title = '';
-			fullName = '';
-			description = '';
-			category = '';
-			customCategory = '';
-			images = [];
+			showInWiki = initialCard.showInWiki !== false;
+			gameModes = Array.isArray(initialCard.gameModes) && initialCard.gameModes.length > 0
+				? [...initialCard.gameModes]
+				: ['flashcard', 'quiz', 'reels', 'scrittura'];
 		}
-		newImageUrl = '';
-		validationError = null;
 	});
 
-	// Suggestions for anti-duplicate
+	// Anti-duplicate suggestions
 	let titleSuggestions = $derived.by<Card[]>(() => {
 		const q = title.trim().toLowerCase();
 		if (!q || q.length < 2) return [];
@@ -128,25 +204,20 @@
 		).slice(0, 5);
 	});
 
-	let fullNameSuggestions = $derived.by<Card[]>(() => {
-		const q = fullName.trim().toLowerCase();
-		if (!q || q.length < 2) return [];
-		return allCards.filter(
-			(c) =>
-				c.id !== effectiveEditCard?.id &&
-				((c.fullName && c.fullName.toLowerCase().includes(q)) || c.title.toLowerCase().includes(q))
-		).slice(0, 5);
-	});
-
 	function handleSelectExisting(card: Card) {
 		activeEditCard = card;
 		title = card.title || '';
+		hasAcronym = Boolean(card.hasAcronym || (card.fullName && card.fullName !== card.title));
+		acronym = card.acronym || '';
 		fullName = card.fullName || '';
 		description = card.description || '';
 		category = card.category || '';
 		images = card.images ? [...card.images] : [];
+		showInWiki = card.showInWiki !== false;
+		gameModes = Array.isArray(card.gameModes) && card.gameModes.length > 0
+			? [...card.gameModes]
+			: ['flashcard', 'quiz', 'reels', 'scrittura'];
 		isTitleFocused = false;
-		isFullNameFocused = false;
 		toastStore.show({ message: `✏️ Passato alla modifica di "${card.title}"` });
 		if (onSelectExistingCard) {
 			onSelectExistingCard(card);
@@ -155,25 +226,31 @@
 
 	function cancelActiveEdit() {
 		activeEditCard = null;
-		title = '';
-		fullName = '';
-		description = '';
-		category = '';
-		customCategory = '';
-		images = [];
-		validationError = null;
+		clearDraft();
 		if (onCancel) onCancel();
+	}
+
+	function toggleGameMode(mode: string) {
+		if (gameModes.includes(mode)) {
+			// Non permettere di deselezionare tutti i minigiochi se non si vuole
+			gameModes = gameModes.filter((m) => m !== mode);
+		} else {
+			gameModes = [...gameModes, mode];
+		}
+		saveDraft();
 	}
 
 	function addImageUrl() {
 		if (newImageUrl.trim()) {
 			images = [...images, newImageUrl.trim()];
 			newImageUrl = '';
+			saveDraft();
 		}
 	}
 
 	function removeImage(index: number) {
 		images = images.filter((_, i) => i !== index);
+		saveDraft();
 	}
 
 	async function uploadBlob(blob: Blob) {
@@ -184,6 +261,7 @@
 			const res = await uploadImage(blob, { context: 'card' });
 			if (res.url) {
 				images = [...images, res.url];
+				saveDraft();
 				toastStore.show({ message: '🖼️ Immagine compressa e aggiunta alla scheda!' });
 			}
 		} catch (err: any) {
@@ -235,36 +313,41 @@
 		e.preventDefault();
 		validationError = null;
 
-		const finalCategory = category === '__NEW__' ? customCategory.trim() : category.trim();
+		const finalTitle = title.trim();
+		if (!finalTitle) {
+			validationError = '⚠️ Il Titolo della scheda è un campo obbligatorio!';
+			return;
+		}
 
-		// 1. Categoria obbligatoria
+		const finalCategory = category === '__NEW__' ? customCategory.trim() : category.trim();
 		if (!finalCategory) {
 			validationError = '⚠️ La Categoria è un campo obbligatorio!';
 			return;
 		}
 
-		const t = title.trim();
-		const fn = fullName.trim();
-		const desc = description.trim();
 		const validImages = images.filter((img) => typeof img === 'string' && img.trim().length > 0);
-
-		// 2. Almeno un identificatore (Acronimo, Titolo o Immagine)
-		const mainTitle = t || fn;
-		if (!mainTitle && validImages.length === 0) {
-			validationError = '⚠️ Inserisci almeno un acronimo, un titolo o un\'immagine per la scheda.';
-			return;
-		}
+		const finalAcronym = hasAcronym ? acronym.trim() : '';
 
 		saving = true;
 		try {
 			await onSave({
 				...(effectiveEditCard?.id ? { id: effectiveEditCard.id } : {}),
-				title: t,
-				fullName: fn || undefined,
-				description: desc,
+				title: finalTitle,
+				hasAcronym,
+				acronym: finalAcronym || undefined,
+				fullName: fullName.trim() || (finalAcronym ? finalTitle : undefined),
+				description: description.trim(),
 				category: finalCategory,
-				images: validImages
+				images: validImages,
+				showInWiki,
+				gameModes: gameModes.length > 0 ? gameModes : ['flashcard', 'quiz', 'reels', 'scrittura']
 			} as any);
+
+			// Pulisci bozza su salvataggio riuscito
+			if (typeof localStorage !== 'undefined') {
+				localStorage.removeItem(DRAFT_KEY);
+			}
+
 			if (activeEditCard) {
 				activeEditCard = null;
 			}
@@ -305,7 +388,7 @@
 					<input
 						type="text"
 						bind:value={cloneQuery}
-						placeholder="Cerca acronimo o titolo da clonare..."
+						placeholder="Cerca titolo o acronimo da clonare..."
 						class="duo-input clone-search-input"
 					/>
 					<select bind:value={cloneCategoryFilter} class="duo-input clone-cat-select">
@@ -340,13 +423,87 @@
 	</div>
 
 	<div class="form-grid">
-		<!-- Campo Categoria (OBBLIGATORIO) -->
+		<!-- 1. TITOLO (OBBLIGATORIO) -->
+		<div class="form-group full-width relative">
+			<div class="label-with-hint">
+				<label for="card-title-field">Titolo Scheda / Termine * (Obbligatorio)</label>
+				<span class="required-badge">Richiesto</span>
+			</div>
+			<input
+				id="card-title-field"
+				type="text"
+				bind:value={title}
+				oninput={saveDraft}
+				onfocus={() => (isTitleFocused = true)}
+				onblur={() => setTimeout(() => (isTitleFocused = false), 200)}
+				placeholder="es: Segnale di Partenza, SCMT, Impresa Ferroviaria..."
+				required
+				class="duo-input main-title-input"
+				autocomplete="off"
+			/>
+
+			<!-- Dropdown Suggerimenti Anti-Duplicato -->
+			{#if isTitleFocused && titleSuggestions.length > 0}
+				<!-- svelte-ignore a11y_no_static_element_interactions -->
+				<div class="suggestions-dropdown duo-card" onmousedown={(e) => e.preventDefault()}>
+					<div class="suggestion-header">💡 Scheda simile già presente:</div>
+					{#each titleSuggestions as sug}
+						<div class="suggestion-item">
+							<div class="sug-info">
+								<span class="sug-title">{sug.title}</span>
+								{#if sug.category}<span class="sug-cat">{sug.category}</span>{/if}
+							</div>
+							<div class="sug-actions">
+								<button type="button" class="sug-action-btn clone" onclick={() => cloneCardIntoForm(sug)}>
+									📋 Clona
+								</button>
+								<button type="button" class="sug-action-btn edit" onclick={() => handleSelectExisting(sug)}>
+									✏️ Modifica
+								</button>
+							</div>
+						</div>
+					{/each}
+				</div>
+			{/if}
+		</div>
+
+		<!-- 2. SPUNTA ACRONIMO & CAMPO OPZIONALE -->
+		<div class="form-group full-width acr-toggle-box">
+			<label class="custom-checkbox-row">
+				<input
+					type="checkbox"
+					bind:checked={hasAcronym}
+					onchange={saveDraft}
+					class="styled-checkbox"
+				/>
+				<span class="checkbox-label-text">
+					<strong>È un acronimo / possiede una sigla?</strong> (es. IF, SCMT, RFI)
+				</span>
+			</label>
+
+			{#if hasAcronym}
+				<div class="acronym-input-wrap">
+					<label for="card-acronym-field">Sigla / Acronimo Breve</label>
+					<input
+						id="card-acronym-field"
+						type="text"
+						bind:value={acronym}
+						oninput={saveDraft}
+						placeholder="es: SCMT"
+						class="duo-input"
+					/>
+				</div>
+			{/if}
+		</div>
+
+		<!-- 3. CATEGORIA (OBBLIGATORIA) -->
 		<div class="form-group full-width">
 			<label for="card-category-field">Categoria * (Obbligatoria)</label>
 			<div class="category-input-row">
 				<select
 					id="card-category-field"
 					bind:value={category}
+					onchange={saveDraft}
 					required
 					class="duo-input select-category"
 				>
@@ -361,6 +518,7 @@
 					<input
 						type="text"
 						bind:value={customCategory}
+						oninput={saveDraft}
 						placeholder="Inserisci nome nuova categoria..."
 						required
 						class="duo-input new-cat-input"
@@ -369,101 +527,87 @@
 			</div>
 		</div>
 
-		<!-- Acronimo / Sigla -->
-		<div class="form-group relative">
-			<label for="card-title-field">Acronimo / Sigla Breve</label>
-			<input
-				id="card-title-field"
-				type="text"
-				bind:value={title}
-				onfocus={() => (isTitleFocused = true)}
-				onblur={() => setTimeout(() => (isTitleFocused = false), 200)}
-				placeholder="es: IF, SCMT, RFI..."
-				class="duo-input"
-				autocomplete="off"
-			/>
+		<!-- 4. VISIBILITÀ WIKI & MINIGIOCHI (SPUNTE) -->
+		<div class="form-group full-width visibility-section duo-card">
+			<span class="visibility-section-title">🌐 Visibilità e Giochi in cui mostrare la scheda</span>
+			
+			<div class="visibility-toggles-grid">
+				<!-- Spunta Mostra nella Wiki -->
+				<label class="game-toggle-chip" class:active={showInWiki}>
+					<input
+						type="checkbox"
+						bind:checked={showInWiki}
+						onchange={saveDraft}
+						class="hidden-toggle-input"
+					/>
+					<span class="toggle-icon">📚</span>
+					<div class="toggle-text">
+						<strong>Mostra nella WIKI</strong>
+						<span class="toggle-sub">Visibile nel dizionario ed eleggibile per la parola del giorno</span>
+					</div>
+					<span class="toggle-status-badge">{showInWiki ? '✓ ATTIVA' : '✕ NO'}</span>
+				</label>
 
-			<!-- Dropdown Suggerimenti Anti-Duplicato (Visibile solo al focus del campo) -->
-			{#if isTitleFocused && titleSuggestions.length > 0}
-				<!-- svelte-ignore a11y_no_static_element_interactions -->
-				<div class="suggestions-dropdown duo-card" onmousedown={(e) => e.preventDefault()}>
-					<div class="suggestion-header">💡 Card esistente trovata:</div>
-					{#each titleSuggestions as sug}
-						<div class="suggestion-item">
-							<div class="sug-info">
-								<span class="sug-title">{sug.title}</span>
-								{#if sug.fullName && sug.fullName.trim().toLowerCase() !== sug.title.trim().toLowerCase()}
-									<span class="sug-fullname">({sug.fullName})</span>
-								{/if}
-							</div>
-							<div class="sug-actions">
-								<button type="button" class="sug-action-btn clone" onclick={() => cloneCardIntoForm(sug)}>
-									📋 Clona
-								</button>
-								<button type="button" class="sug-action-btn edit" onclick={() => handleSelectExisting(sug)}>
-									✏️ Modifica
-								</button>
-							</div>
-						</div>
-					{/each}
+				<!-- Spunte Minigiochi -->
+				<div class="minigames-pills-row">
+					<span class="minigames-group-lbl">Mini-giochi:</span>
+					<button
+						type="button"
+						class="game-pill-btn"
+						class:checked={gameModes.includes('flashcard')}
+						onclick={() => toggleGameMode('flashcard')}
+					>
+						<span>📖 Flashcard</span>
+						<span class="pill-check">{gameModes.includes('flashcard') ? '✓' : '✕'}</span>
+					</button>
+
+					<button
+						type="button"
+						class="game-pill-btn"
+						class:checked={gameModes.includes('quiz')}
+						onclick={() => toggleGameMode('quiz')}
+					>
+						<span>⭐ Quiz</span>
+						<span class="pill-check">{gameModes.includes('quiz') ? '✓' : '✕'}</span>
+					</button>
+
+					<button
+						type="button"
+						class="game-pill-btn"
+						class:checked={gameModes.includes('reels')}
+						onclick={() => toggleGameMode('reels')}
+					>
+						<span>📷 Reels</span>
+						<span class="pill-check">{gameModes.includes('reels') ? '✓' : '✕'}</span>
+					</button>
+
+					<button
+						type="button"
+						class="game-pill-btn"
+						class:checked={gameModes.includes('scrittura')}
+						onclick={() => toggleGameMode('scrittura')}
+					>
+						<span>✍️ Scrittura / Ripasso</span>
+						<span class="pill-check">{gameModes.includes('scrittura') ? '✓' : '✕'}</span>
+					</button>
 				</div>
-			{/if}
+			</div>
 		</div>
 
-		<!-- Titolo / Significato Esteso -->
-		<div class="form-group relative">
-			<label for="card-fullname-field">Titolo / Significato Esteso</label>
-			<input
-				id="card-fullname-field"
-				type="text"
-				bind:value={fullName}
-				onfocus={() => (isFullNameFocused = true)}
-				onblur={() => setTimeout(() => (isFullNameFocused = false), 200)}
-				placeholder="es: Impresa Ferroviaria"
-				class="duo-input"
-				autocomplete="off"
-			/>
-
-			<!-- Dropdown Suggerimenti Anti-Duplicato per Titolo (Visibile solo al focus del campo) -->
-			{#if isFullNameFocused && fullNameSuggestions.length > 0}
-				<!-- svelte-ignore a11y_no_static_element_interactions -->
-				<div class="suggestions-dropdown duo-card" onmousedown={(e) => e.preventDefault()}>
-					<div class="suggestion-header">💡 Card esistente trovata:</div>
-					{#each fullNameSuggestions as sug}
-						<div class="suggestion-item">
-							<div class="sug-info">
-								<span class="sug-title">{sug.title}</span>
-								{#if sug.fullName && sug.fullName.trim().toLowerCase() !== sug.title.trim().toLowerCase()}
-									<span class="sug-fullname">({sug.fullName})</span>
-								{/if}
-							</div>
-							<div class="sug-actions">
-								<button type="button" class="sug-action-btn clone" onclick={() => cloneCardIntoForm(sug)}>
-									📋 Clona
-								</button>
-								<button type="button" class="sug-action-btn edit" onclick={() => handleSelectExisting(sug)}>
-									✏️ Modifica
-								</button>
-							</div>
-						</div>
-					{/each}
-				</div>
-			{/if}
-		</div>
-
-		<!-- Descrizione -->
+		<!-- 5. DESCRIZIONE -->
 		<div class="form-group full-width">
 			<label for="card-desc-field">Descrizione & Spiegazione</label>
 			<textarea
 				id="card-desc-field"
 				bind:value={description}
-				placeholder="Scrivi qui la definizione completa e l'utilizzo operativo dell'acronimo/termine..."
+				oninput={saveDraft}
+				placeholder="Scrivi qui la definizione completa e l'utilizzo operativo della scheda..."
 				rows="3"
 				class="duo-input form-textarea"
 			></textarea>
 		</div>
 
-		<!-- Immagini Visive -->
+		<!-- 6. IMMAGINI VISIVE -->
 		<div
 			class="form-group full-width"
 			ondrop={handleDrop}
@@ -471,9 +615,7 @@
 			role="region"
 			aria-label="Caricamento immagini"
 		>
-			<label for="card-image-url-field"
-				>Immagini Visive (Carica File, Incolla dagli appunti o inserisci URL)</label
-			>
+			<label for="card-image-url-field">Immagini Visive (File, Screenshot Ctrl+V o Link URL)</label>
 
 			<div class="upload-controls-row">
 				<label class="file-upload-btn duo-btn duo-btn-blue">
@@ -492,7 +634,7 @@
 						id="card-image-url-field"
 						type="url"
 						bind:value={newImageUrl}
-						placeholder="Oppure incolla qui un link URL di un'immagine..."
+						placeholder="Oppure incolla link URL immagine..."
 						class="duo-input"
 						onpaste={handlePaste}
 						onkeydown={(e) => {
@@ -505,9 +647,6 @@
 					<button type="button" class="duo-btn duo-btn-gray" onclick={addImageUrl}> URL </button>
 				</div>
 			</div>
-			<p class="paste-hint-text">
-				💡 Puoi anche fare <strong>Incolla (Ctrl+V)</strong> per caricare direttamente uno screenshot!
-			</p>
 
 			{#if images.length > 0}
 				<div class="images-preview-grid">
@@ -538,13 +677,23 @@
 		</div>
 	{/if}
 
-	<!-- Form Actions -->
+	<!-- Form Actions with Clear Draft button -->
 	<div class="form-actions">
+		<button
+			type="button"
+			class="duo-btn duo-btn-gray clear-draft-btn"
+			onclick={clearDraft}
+			title="Azzera tutti i campi inseriti"
+		>
+			🗑️ Pulisci Campi
+		</button>
+
 		{#if onCancel || activeEditCard}
 			<button type="button" class="duo-btn duo-btn-gray cancel-btn" onclick={cancelActiveEdit}>
-				Annulla Modifica
+				Annulla
 			</button>
 		{/if}
+
 		<button type="submit" class="duo-btn duo-btn-green save-btn" disabled={saving}>
 			{effectiveSubmitLabel}
 		</button>
@@ -555,8 +704,188 @@
 	.universal-card-form {
 		display: flex;
 		flex-direction: column;
-		gap: 1.2rem;
+		gap: 1.1rem;
 		width: 100%;
+	}
+
+	.label-with-hint {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+	}
+
+	.required-badge {
+		font-size: 0.68rem;
+		font-weight: 900;
+		color: #ff4b4b;
+		background: rgba(255, 75, 75, 0.12);
+		padding: 0.1rem 0.4rem;
+		border-radius: 6px;
+	}
+
+	.main-title-input {
+		font-size: 1rem;
+		font-weight: 800;
+	}
+
+	.acr-toggle-box {
+		background: var(--card-bg-subtle);
+		border: 1.5px solid var(--border-color);
+		border-radius: 14px;
+		padding: 0.75rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.6rem;
+	}
+
+	.custom-checkbox-row {
+		display: flex;
+		align-items: center;
+		gap: 0.6rem;
+		cursor: pointer;
+		user-select: none;
+	}
+
+	.styled-checkbox {
+		width: 18px;
+		height: 18px;
+		accent-color: var(--accent-color);
+		cursor: pointer;
+	}
+
+	.checkbox-label-text {
+		font-size: 0.84rem;
+		color: var(--text-color);
+	}
+
+	.acronym-input-wrap {
+		display: flex;
+		flex-direction: column;
+		gap: 0.35rem;
+		padding-top: 0.4rem;
+		border-top: 1px dashed var(--border-color);
+	}
+
+	.visibility-section {
+		background: var(--card-bg-subtle);
+		border: 1.5px solid var(--border-color);
+		border-radius: 16px;
+		padding: 0.85rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.65rem;
+	}
+
+	.visibility-section-title {
+		font-size: 0.82rem;
+		font-weight: 900;
+		color: var(--accent-color);
+		letter-spacing: 0.02em;
+	}
+
+	.visibility-toggles-grid {
+		display: flex;
+		flex-direction: column;
+		gap: 0.6rem;
+	}
+
+	.game-toggle-chip {
+		display: flex;
+		align-items: center;
+		gap: 0.6rem;
+		padding: 0.6rem 0.8rem;
+		background: var(--card-bg);
+		border: 1.5px solid var(--border-color);
+		border-radius: 12px;
+		cursor: pointer;
+		transition: all 0.15s ease;
+	}
+
+	.game-toggle-chip.active {
+		border-color: var(--accent-color);
+		background: var(--accent-light-bg);
+	}
+
+	.hidden-toggle-input {
+		display: none;
+	}
+
+	.toggle-icon {
+		font-size: 1.2rem;
+	}
+
+	.toggle-text {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		gap: 0.1rem;
+	}
+
+	.toggle-text strong {
+		font-size: 0.82rem;
+		color: var(--text-color);
+	}
+
+	.toggle-sub {
+		font-size: 0.72rem;
+		color: var(--text-muted);
+	}
+
+	.toggle-status-badge {
+		font-size: 0.7rem;
+		font-weight: 900;
+		padding: 0.2rem 0.5rem;
+		border-radius: 8px;
+		background: var(--card-bg-subtle);
+		color: var(--text-muted);
+	}
+
+	.game-toggle-chip.active .toggle-status-badge {
+		background: var(--accent-color);
+		color: white;
+	}
+
+	.minigames-pills-row {
+		display: flex;
+		align-items: center;
+		flex-wrap: wrap;
+		gap: 0.4rem;
+		padding-top: 0.35rem;
+		border-top: 1px dashed var(--border-color);
+	}
+
+	.minigames-group-lbl {
+		font-size: 0.75rem;
+		font-weight: 800;
+		color: var(--text-muted);
+		margin-right: 0.2rem;
+	}
+
+	.game-pill-btn {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.35rem;
+		padding: 0.35rem 0.65rem;
+		border-radius: 10px;
+		background: var(--card-bg);
+		border: 1.5px solid var(--border-color);
+		color: var(--text-muted);
+		font-family: inherit;
+		font-size: 0.76rem;
+		font-weight: 800;
+		cursor: pointer;
+		transition: all 0.12s ease;
+	}
+
+	.game-pill-btn.checked {
+		background: var(--green-color);
+		border-color: var(--green-depth);
+		color: white;
+	}
+
+	.pill-check {
+		font-weight: 900;
+		font-size: 0.7rem;
 	}
 
 	.active-edit-notice-banner {
@@ -604,8 +933,8 @@
 
 	.form-grid {
 		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: 1rem;
+		grid-template-columns: 1fr;
+		gap: 0.9rem;
 	}
 
 	.full-width {
@@ -619,7 +948,7 @@
 	.form-group {
 		display: flex;
 		flex-direction: column;
-		gap: 0.4rem;
+		gap: 0.35rem;
 	}
 
 	.form-group label {
@@ -800,11 +1129,9 @@
 		align-items: center;
 		justify-content: space-between;
 		gap: 0.5rem;
-		padding: 0.45rem 0.65rem;
-		border-radius: 10px;
+		padding: 0.45rem 0.6rem;
 		background: var(--card-bg-subtle);
-		border: 1px solid var(--border-color);
-		color: var(--text-color);
+		border-radius: 10px;
 	}
 
 	.sug-info {
@@ -817,22 +1144,22 @@
 
 	.sug-title {
 		font-weight: 900;
-		font-size: 0.88rem;
+		font-size: 0.85rem;
 		color: var(--text-color);
 	}
 
-	.sug-fullname {
-		font-size: 0.78rem;
-		color: var(--text-muted);
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
+	.sug-cat {
+		font-size: 0.68rem;
+		color: var(--accent-color);
+		background: var(--card-bg);
+		border: 1px solid var(--border-color);
+		border-radius: 4px;
+		padding: 0.05rem 0.3rem;
 	}
 
 	.sug-actions {
 		display: flex;
 		gap: 0.3rem;
-		flex-shrink: 0;
 	}
 
 	.sug-action-btn {
@@ -842,85 +1169,65 @@
 		border-radius: 6px;
 		border: 1px solid var(--border-color);
 		cursor: pointer;
+		background: var(--card-bg);
+		color: var(--text-color);
 		transition: all 0.12s ease;
-		white-space: nowrap;
-	}
-
-	.sug-action-btn.clone {
-		background: rgba(88, 204, 2, 0.15);
-		color: var(--green-color);
-		border-color: var(--green-color);
 	}
 
 	.sug-action-btn.clone:hover {
 		background: var(--green-color);
-		color: #ffffff;
-	}
-
-	.sug-action-btn.edit {
-		background: var(--card-bg);
-		color: var(--text-color);
+		color: white;
+		border-color: var(--green-color);
 	}
 
 	.sug-action-btn.edit:hover {
-		background: var(--accent-light-bg);
+		background: var(--accent-color);
+		color: white;
 		border-color: var(--accent-color);
-		color: var(--accent-color);
 	}
 
 	.upload-controls-row {
 		display: flex;
-		gap: 0.6rem;
-		align-items: center;
+		gap: 0.5rem;
 		flex-wrap: wrap;
 	}
 
 	.file-upload-btn {
-		cursor: pointer;
-		position: relative;
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
-		white-space: nowrap;
-		font-size: 0.82rem;
-		padding: 0.55rem 0.85rem;
+		cursor: pointer;
+		padding: 0.5rem 0.85rem;
+		font-size: 0.8rem;
+		border-radius: 12px;
+		flex-shrink: 0;
 	}
 
 	.hidden-file-input {
-		position: absolute;
-		inset: 0;
-		opacity: 0;
-		cursor: pointer;
-		width: 100%;
-		height: 100%;
+		display: none;
 	}
 
 	.url-input-group {
 		flex: 1;
 		display: flex;
-		gap: 0.4rem;
-		min-width: 240px;
-	}
-
-	.paste-hint-text {
-		font-size: 0.72rem;
-		color: var(--text-muted);
-		margin: 0.2rem 0 0 0;
+		gap: 0.35rem;
+		min-width: 220px;
 	}
 
 	.images-preview-grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(85px, 1fr));
-		gap: 0.6rem;
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
 		margin-top: 0.5rem;
 	}
 
 	.img-preview-item {
 		position: relative;
-		aspect-ratio: 16/10;
-		padding: 0;
-		overflow: hidden;
+		width: 72px;
+		height: 72px;
 		border-radius: 12px;
+		overflow: hidden;
+		border: 1.5px solid var(--border-color);
 	}
 
 	.preview-img {
@@ -931,47 +1238,49 @@
 
 	.remove-img-btn {
 		position: absolute;
-		top: 4px;
-		right: 4px;
-		width: 22px;
-		height: 22px;
+		top: 3px;
+		right: 3px;
+		width: 20px;
+		height: 20px;
 		border-radius: 50%;
-		background: rgba(0, 0, 0, 0.75);
-		color: #ffffff;
+		background: rgba(0, 0, 0, 0.7);
+		color: white;
 		border: none;
-		cursor: pointer;
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		font-size: 0.75rem;
+		font-size: 0.65rem;
 		font-weight: 900;
+		cursor: pointer;
+		transition: background 0.15s ease;
+	}
+
+	.remove-img-btn:hover {
+		background: #ff4b4b;
 	}
 
 	.form-actions {
 		display: flex;
-		justify-content: flex-end;
 		gap: 0.6rem;
+		justify-content: flex-end;
 		margin-top: 0.5rem;
+		flex-wrap: wrap;
+	}
+
+	.clear-draft-btn {
+		font-size: 0.82rem;
+		padding: 0.6rem 0.85rem;
+	}
+
+	.cancel-btn {
+		font-size: 0.82rem;
+		padding: 0.6rem 0.85rem;
 	}
 
 	.save-btn {
 		font-size: 0.88rem;
 		padding: 0.65rem 1.25rem;
-	}
-
-	@media (max-width: 640px) {
-		.form-grid {
-			grid-template-columns: 1fr;
-		}
-
-		.upload-controls-row {
-			flex-direction: column;
-			align-items: stretch;
-		}
-
-		.url-input-group {
-			width: 100%;
-			min-width: 0;
-		}
+		flex: 1;
+		justify-content: center;
 	}
 </style>

@@ -5,7 +5,7 @@
 	import MultipleChoiceQuiz from '$lib/components/MultipleChoiceQuiz.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import CategoryFilter from '$lib/components/CategoryFilter.svelte';
-	import type { Card } from '$lib/types/cards';
+	import { isCardVisibleInGame, type Card } from '$lib/types/cards';
 
 	import { globalCategoryStore, matchesCategory } from '$lib/stores/globalCategoryStore';
 
@@ -64,7 +64,8 @@
 			const hasDescription = Boolean(c.description && c.description.trim() !== '');
 			const notIgnored = !ignoredIds.has(c.id);
 			const matchesCat = matchesCategory(c.category, selectedCategory);
-			return hasDescription && notIgnored && matchesCat;
+			const matchesGame = isCardVisibleInGame(c, 'quiz');
+			return hasDescription && notIgnored && matchesCat && matchesGame;
 		})
 	);
 

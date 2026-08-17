@@ -72,6 +72,8 @@ export const cards = pgTable('cards', {
 	category: text('category').notNull().default('Generale'),
 	images: jsonb('images').$type<string[]>().default([]),
 	tags: jsonb('tags').$type<string[]>().default([]),
+	showInWiki: boolean('show_in_wiki').default(true),
+	gameModes: jsonb('game_modes').$type<string[]>().default(['flashcard', 'quiz', 'reels', 'scrittura']),
 	createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 	updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
 });

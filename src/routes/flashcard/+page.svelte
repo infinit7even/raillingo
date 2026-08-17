@@ -8,7 +8,7 @@
 	import FreeWriteExercise from '$lib/components/FreeWriteExercise.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import CategoryFilter from '$lib/components/CategoryFilter.svelte';
-	import type { Card } from '$lib/types/cards';
+	import { isCardVisibleInGame, type Card } from '$lib/types/cards';
 
 	import { globalCategoryStore, matchesCategory } from '$lib/stores/globalCategoryStore';
 
@@ -95,12 +95,14 @@
 		return Array.from(set).sort();
 	});
 
-	// Filter out ignored cards & filter by category
+	// Filter out ignored cards & filter by category and minigame visibility
 	let validCards = $derived(
 		rawCards.filter((c) => {
 			const notIgnored = !ignoredIds.has(c.id);
 			const matchesCat = matchesCategory(c.category, selectedCategory);
-			return notIgnored && matchesCat;
+			const targetMode = isWritingMode ? 'scrittura' : 'flashcard';
+			const matchesGame = isCardVisibleInGame(c, targetMode);
+			return notIgnored && matchesCat && matchesGame;
 		})
 	);
 

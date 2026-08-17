@@ -20,10 +20,26 @@
 	let selectedList = $derived(
 		selectedCategory === 'ALL' || !selectedCategory
 			? []
-			: selectedCategory.split(',').map((s: string) => s.trim())
+			: selectedCategory === '__NONE__'
+				? []
+				: selectedCategory.split(',').map((s: string) => s.trim())
 	);
 
-	let isFiltered = $derived(selectedCategory !== 'ALL' && selectedList.length > 0);
+	let isFiltered = $derived(selectedCategory !== 'ALL' && Boolean(selectedCategory));
+
+	function isCategorySelected(cat: string): boolean {
+		if (selectedCategory === 'ALL' || !selectedCategory) return true;
+		if (selectedCategory === '__NONE__') return false;
+		return selectedList.includes(cat);
+	}
+
+	let activeCount = $derived(
+		selectedCategory === 'ALL' || !selectedCategory
+			? categories.length
+			: selectedCategory === '__NONE__'
+				? 0
+				: selectedList.length
+	);
 
 	let filteredCategories = $derived.by(() => {
 		const q = filterSearch.toLowerCase().trim();
@@ -32,22 +48,40 @@
 	});
 
 	function toggleCategory(cat: string) {
-		if (cat === 'ALL') {
-			globalCategoryStore.reset();
-			onSelect('ALL');
+		if (selectedCategory === 'ALL' || !selectedCategory) {
+			// Partendo da tutte attive: deseleziona inversamente solo questa categoria
+			const remaining = categories.filter((c: string) => c !== cat);
+			if (remaining.length === 0) {
+				globalCategoryStore.setCategory('__NONE__');
+				onSelect('__NONE__');
+			} else {
+				const newValue = remaining.join(',');
+				globalCategoryStore.setCategory(newValue);
+				onSelect(newValue);
+			}
+			return;
+		}
+
+		if (selectedCategory === '__NONE__') {
+			// Partendo da nessuna: attiva solo questa
+			globalCategoryStore.setCategory(cat);
+			onSelect(cat);
 			return;
 		}
 
 		let current = [...selectedList];
 		if (current.includes(cat)) {
-			current = current.filter((c) => c !== cat);
+			current = current.filter((c: string) => c !== cat);
 		} else {
 			current.push(cat);
 		}
 
-		if (current.length === 0 || current.length === categories.length) {
+		if (current.length === categories.length) {
 			globalCategoryStore.reset();
 			onSelect('ALL');
+		} else if (current.length === 0) {
+			globalCategoryStore.setCategory('__NONE__');
+			onSelect('__NONE__');
 		} else {
 			const newValue = current.join(',');
 			globalCategoryStore.setCategory(newValue);
@@ -68,6 +102,11 @@
 	function handleSelectAll() {
 		globalCategoryStore.reset();
 		onSelect('ALL');
+	}
+
+	function handleDeselectAll() {
+		globalCategoryStore.setCategory('__NONE__');
+		onSelect('__NONE__');
 	}
 </script>
 
@@ -90,7 +129,7 @@
 						{#if !isFiltered}
 							Tutte ({categories.length})
 						{:else}
-							{selectedList.length} attive
+							{activeCount} attive
 						{/if}
 					</span>
 					<span class="trigger-arrow">▾</span>
@@ -146,11 +185,7 @@
 				<div class="modal-title-text">
 					<h3 class="modal-heading">Filtro Categorie</h3>
 					<span class="modal-sub">
-						{#if !isFiltered}
-							Tutte le {categories.length} categorie attive
-						{:else}
-							{selectedList.length} di {categories.length} selezionate
-						{/if}
+						{activeCount} di {categories.length} attive
 					</span>
 				</div>
 			</div>
@@ -197,9 +232,9 @@
 			<button
 				type="button"
 				class="batch-btn"
-				onclick={handleResetAll}
+				onclick={handleDeselectAll}
 			>
-				✕ Azzera selezione
+				✕ Deseleziona tutte
 			</button>
 		</div>
 
@@ -211,7 +246,7 @@
 				</div>
 			{:else}
 				{#each filteredCategories as cat}
-					{@const isSelected = selectedList.includes(cat)}
+					{@const isSelected = isCategorySelected(cat)}
 					<button
 						type="button"
 						class="cat-check-item"

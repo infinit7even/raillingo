@@ -3,7 +3,6 @@
 	import Header from '$lib/components/Header.svelte';
 	import Navbar from '$lib/components/Navbar.svelte';
 	import Toast from '$lib/components/Toast.svelte';
-	import QuickContextMenu from '$lib/components/QuickContextMenu.svelte';
 	import CustomConfirmModal from '$lib/components/CustomConfirmModal.svelte';
 	import { goto, onNavigate } from '$app/navigation';
 	import { page } from '$app/state';
@@ -186,7 +185,6 @@
 
 	<Navbar {user} />
 	<Toast />
-	<QuickContextMenu />
 	<CustomConfirmModal />
 </div>
 

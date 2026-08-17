@@ -36,11 +36,58 @@ const socialProviders: Record<string, any> = {};
 const discordClientId = env.DISCORD_CLIENT_ID || process.env.DISCORD_CLIENT_ID;
 const discordClientSecret = env.DISCORD_CLIENT_SECRET || process.env.DISCORD_CLIENT_SECRET;
 
+async function syncDiscordUser(userId: string, accountId: string, accessToken?: string | null) {
+	try {
+		const adminIds = getAdminIds();
+		const isAdmin = adminIds.includes(String(accountId).trim());
+
+		if (accessToken) {
+			const res = await fetch('https://discord.com/api/v10/users/@me', {
+				headers: { Authorization: `Bearer ${accessToken}` }
+			});
+			if (res.ok) {
+				const profile = await res.json();
+				const newUsername = profile.username || profile.global_name || profile.name;
+				if (newUsername) {
+					await db
+						.update(schema.user)
+						.set({
+							name: newUsername,
+							...(isAdmin ? { role: 'admin' } : {}),
+							updatedAt: new Date()
+						})
+						.where(eq(schema.user.id, userId));
+					return;
+				}
+			}
+		}
+
+		if (isAdmin) {
+			await db
+				.update(schema.user)
+				.set({ role: 'admin' })
+				.where(eq(schema.user.id, userId));
+		}
+	} catch (err) {
+		console.warn('Errore durante la sincronizzazione profilo Discord:', err);
+	}
+}
+
 if (discordClientId && discordClientSecret) {
 	socialProviders.discord = {
 		clientId: discordClientId,
 		clientSecret: discordClientSecret,
-		scope: ['identify', 'email']
+		scope: ['identify', 'email'],
+		mapProfileToUser: (profile: any) => {
+			const discordUsername = profile.username || profile.global_name || profile.name || 'Utente Discord';
+			return {
+				name: discordUsername,
+				email: profile.email,
+				image: profile.avatar
+					? `https://cdn.discordapp.com/avatars/${profile.id}/${profile.avatar}.png`
+					: undefined
+			};
+		}
 	};
 }
 
@@ -111,15 +158,15 @@ export const auth = betterAuth({
 		account: {
 			create: {
 				after: async (accountData) => {
-					// Se l'account Discord corrisponde ad un admin, imposta role: 'admin'
 					if (accountData.providerId === 'discord') {
-						const adminIds = getAdminIds();
-						if (adminIds.includes(String(accountData.accountId).trim())) {
-							await db
-								.update(schema.user)
-								.set({ role: 'admin' })
-								.where(eq(schema.user.id, accountData.userId));
-						}
+						await syncDiscordUser(accountData.userId, accountData.accountId, accountData.accessToken);
+					}
+				}
+			},
+			update: {
+				after: async (accountData) => {
+					if (accountData.providerId === 'discord') {
+						await syncDiscordUser(accountData.userId, accountData.accountId, accountData.accessToken);
 					}
 				}
 			}

@@ -1,34 +1,14 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
-	import { fly, fade } from 'svelte/transition';
 	import { navStore } from '$lib/stores/navStore';
-	import { statsStore, type StatsData } from '$lib/stores/statsStore';
 
 	let isNavOpen = $state(false);
-
-	let stats = $state<StatsData>({
-		cardsStudied: 0,
-		quizAnswered: 0,
-		quizCorrect: 0,
-		streakDays: 1,
-		lastStudiedDate: '',
-		favorites: []
-	});
-
-	let totalXP = $derived(stats.quizCorrect * 15 + stats.cardsStudied * 5);
-	let gems = $derived(stats.quizCorrect * 10 + 100);
-
 	let currentPath = $derived(page.url.pathname);
 
 	onMount(() => {
 		const unNav = navStore.subscribe((o) => (isNavOpen = o));
-		const unStats = statsStore.subscribe((s) => (stats = s));
-
-		return () => {
-			unNav();
-			unStats();
-		};
+		return () => unNav();
 	});
 </script>
 
@@ -49,37 +29,9 @@
 			</div>
 		</button>
 
-		<!-- Content Area in Header: Stats on Home ('/') -->
-		<div class="header-dynamic-slot">
-			<a
-				href="/missions"
-				class="header-stats"
-				title="Clicca per aprire le Missioni ed i Dettagli"
-				in:fly={{ y: -10, duration: 250, delay: 50 }}
-				out:fade={{ duration: 100 }}
-			>
-				<div class="hstat-item streak">
-					<img src="/emoji/fire_3d.png" alt="Serie" width="22" height="22" decoding="async" class="hstat-emoji" />
-					<div class="hstat-text">
-						<span class="hstat-lbl">Serie</span>
-						<span class="hstat-val">{stats.streakDays}</span>
-					</div>
-				</div>
-				<div class="hstat-item gems">
-					<img src="/emoji/gem_stone_3d.png" alt="Gemme" width="22" height="22" decoding="async" class="hstat-emoji" />
-					<div class="hstat-text">
-						<span class="hstat-lbl">Gemme</span>
-						<span class="hstat-val">{gems}</span>
-					</div>
-				</div>
-				<div class="hstat-item hearts">
-					<img src="/emoji/high_voltage_3d.png" alt="XP" width="22" height="22" decoding="async" class="hstat-emoji" />
-					<div class="hstat-text">
-						<span class="hstat-lbl">XP</span>
-						<span class="hstat-val">{totalXP}</span>
-					</div>
-				</div>
-			</a>
+		<div class="header-brand-title">
+			<img src="/emoji/triangular_flag_3d.png" alt="Bandiera" width="24" height="24" decoding="async" />
+			<span>Rail Focus</span>
 		</div>
 	</header>
 {/if}
@@ -95,12 +47,13 @@
 		box-sizing: border-box;
 		display: flex;
 		align-items: center;
-		gap: 0.5rem;
+		gap: 0.75rem;
 	}
 
 	.menu-toggle-btn {
 		padding: 0.55rem 0.65rem;
-		height: 48px;
+		height: 44px;
+		width: 44px;
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -138,70 +91,14 @@
 		transform: translateY(-6px) rotate(-45deg);
 	}
 
-	.header-dynamic-slot {
-		flex: 1;
-		position: relative;
-		height: 48px;
+	.header-brand-title {
 		display: flex;
 		align-items: center;
-	}
-
-	.header-stats {
-		width: 100%;
-		height: 100%;
-		display: flex;
-		align-items: center;
-		justify-content: space-around;
-		gap: 0.4rem;
-		text-decoration: none;
-		background: var(--card-bg);
-		border: 2px solid var(--border-color);
-		border-bottom: 4px solid var(--border-depth-color);
-		border-radius: 18px;
-		padding: 0.35rem 0.6rem;
-		box-sizing: border-box;
-	}
-
-	.hstat-item {
-		display: flex;
-		align-items: center;
-		gap: 0.35rem;
+		gap: 0.5rem;
+		font-family: 'Outfit', sans-serif;
+		font-size: 1.15rem;
 		font-weight: 900;
-		font-size: 0.9rem;
-	}
-
-	.hstat-item.streak {
-		color: var(--orange-color);
-	}
-	.hstat-item.gems {
-		color: var(--accent-color);
-	}
-	.hstat-item.hearts {
-		color: var(--pink-color);
-	}
-
-	.hstat-emoji {
-		width: 22px;
-		height: 22px;
-		object-fit: contain;
-	}
-
-	.hstat-text {
-		display: flex;
-		flex-direction: column;
-		line-height: 1;
-	}
-
-	.hstat-lbl {
-		font-size: 0.6rem;
-		font-weight: 800;
-		text-transform: uppercase;
-		opacity: 0.8;
-	}
-
-	.hstat-val {
-		font-size: 1rem;
-		font-weight: 900;
+		color: var(--brand-color, var(--green-color));
 	}
 
 	.duo-header-btn {
@@ -213,14 +110,7 @@
 		border: 2px solid var(--border-color);
 		border-bottom: 3px solid var(--border-depth-color);
 		color: var(--text-color);
-		font-size: 0.8rem;
-		font-weight: 800;
 		cursor: pointer;
-		text-decoration: none;
-		transition:
-			transform 0.1s ease,
-			border-width 0.1s ease;
-		white-space: nowrap;
 		user-select: none;
 	}
 

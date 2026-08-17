@@ -62,8 +62,8 @@
 		return true;
 	}
 
-	// La Wiki mostra rigorosamente solo le card che possiedono un acronimo reale
-	let wikiCards = $derived(cards.filter(isAcronymCard));
+	// La Wiki mostra tutte le card abilitate con showInWiki !== false
+	let wikiCards = $derived(cards.filter((c) => c.showInWiki !== false && c.title && c.title.trim() !== ''));
 
 	let availableCategories = $derived.by<string[]>(() => {
 		const set = new Set<string>();

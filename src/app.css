@@ -96,6 +96,55 @@
 	--shadow-color: rgba(0, 0, 0, 0.08);
 }
 
+[data-theme='amoled'] {
+	color-scheme: dark;
+	/* 🖤 AMOLED Pure Black (#000000) */
+	--bg-color: #000000;
+	--header-bg: #000000;
+	--nav-bg: #000000;
+	--active-nav-bg: rgba(28, 176, 246, 0.15);
+	--card-bg: #080808;
+	--card-bg-subtle: #121212;
+	--hover-bg: #1c1c1c;
+	--border-color: #262626;
+	--border-depth-color: #121212;
+	--text-color: #ffffff;
+	--text-muted: #8e8e8e;
+
+	/* 🚆 Brand Livery Tokens (Default: Regionale) */
+	--brand-color: #58cc02;
+	--brand-depth: #46a302;
+	--brand-hover: #61df02;
+	--brand-light: #78c800;
+	--brand-light-bg: rgba(88, 204, 2, 0.15);
+	--brand-glow: rgba(88, 204, 2, 0.35);
+	--brand-text: #ffffff;
+
+	/* 🎨 Duolingo Utility Palette Colors */
+	--accent-color: #1cb0f6;
+	--accent-depth: #1899d6;
+	--accent-light: #84d8ff;
+	--accent-light-bg: rgba(28, 176, 246, 0.15);
+
+	--green-color: #58cc02;
+	--green-depth: #46a302;
+
+	--orange-color: #ff9600;
+	--orange-depth: #e58700;
+
+	--yellow-color: #ffc800;
+	--yellow-depth: #e5b200;
+
+	--purple-color: #ce82ff;
+	--purple-depth: #a560e8;
+
+	--pink-color: #ff4b4b;
+	--pink-depth: #ea2b2b;
+
+	--badge-bg: #121212;
+	--shadow-color: rgba(0, 0, 0, 0.8);
+}
+
 /* =============================================================
    🚆 Livree Ferroviarie Italiane (Regionale, Frecciarossa, Intercity)
    ============================================================= */

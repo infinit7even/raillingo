@@ -5,6 +5,7 @@
 	import { pwaStore } from '$lib/stores/pwaStore';
 	import { navStore } from '$lib/stores/navStore';
 	import { toastStore } from '$lib/stores/toastStore';
+	import { notesNavStore, type NotesNavState } from '$lib/stores/notesNavStore';
 	import QuickAddCardModal from '$lib/components/QuickAddCardModal.svelte';
 	import type { Card } from '$lib/types/cards';
 	import { onMount } from 'svelte';
@@ -18,6 +19,14 @@
 	let isQuickAddOpen = $state(false);
 	let canInstall = $state(false);
 	let isNavOpen = $state(false);
+
+	let notesNavState = $state<NotesNavState>({
+		isVaultCollapsed: false,
+		notes: [],
+		selectedNoteId: null
+	});
+
+	let isNotesPage = $derived(page.url.pathname === '/notes');
 
 	let isAdmin = $derived(
 		Boolean(
@@ -34,7 +43,7 @@
 			navStore.close();
 		} else {
 			toastStore.show({
-				message: 'Funzione non disponibile per il tuo utente',
+				message: 'Funzione riservata agli amministratori',
 				type: 'warning'
 			});
 		}
@@ -56,12 +65,14 @@
 			canInstall = pwaStore.canInstall;
 		});
 		const unNav = navStore.subscribe((o) => (isNavOpen = o));
+		const unNotesNav = notesNavStore.subscribe((s) => (notesNavState = s));
 
 		return () => {
 			unTheme();
 			unCards();
 			unPwa();
 			unNav();
+			unNotesNav();
 		};
 	});
 
@@ -125,8 +136,8 @@
 			type="button"
 			class="brand-link"
 			onclick={handleLogoClick}
-			title="Clicca per cambiare tema a rotazione"
-			aria-label="Cambia tema a rotazione"
+			title="Clicca per cambiare livrea treno"
+			aria-label="Cambia livrea treno"
 		>
 			<img src="/emoji/triangular_flag_3d.png" alt="Bandiera" width="28" height="28" decoding="async" class="brand-emoji" />
 			<span class="brand-title">
@@ -138,45 +149,108 @@
 	</div>
 
 	<div class="nav-container">
-		<div class="nav-scroll-wrapper">
-			{#each navItems as item}
-				{@const isActive = page.url.pathname === item.href}
-				<a
-					href={item.href}
-					class="nav-item"
-					class:active={isActive}
-					onclick={handleNavClick}
-					data-sveltekit-preload-data="tap"
-					data-sveltekit-preload-code="eager"
-				>
-					<div class="icon-wrapper" class:active-outline={isActive}>
-						<img src={item.emoji} alt={item.label} width="26" height="26" decoding="async" class="nav-emoji-img" />
+		{#if isNotesPage && notesNavState.isVaultCollapsed}
+			<!-- 📓 Modalità Vault Compresso: Mostra elenco note nella barra laterale -->
+			<div class="collapsed-vault-sidebar-panel">
+				<div class="collapsed-vault-header">
+					<div class="cv-title-box">
+						<span class="cv-icon">📓</span>
+						<span class="cv-title">NOTE ({notesNavState.notes.length})</span>
 					</div>
-					<span class="nav-label">{item.label}</span>
+					<button
+						type="button"
+						class="cv-expand-btn"
+						onclick={() => notesNavStore.setCollapsed(false)}
+						title="Riespandi Vault Appunti"
+					>
+						⤢ Espandi
+					</button>
+				</div>
+
+				<div class="collapsed-notes-scroll">
+					{#if notesNavState.notes.length === 0}
+						<div class="cv-empty">Nessuna nota presente</div>
+					{:else}
+						{#each notesNavState.notes as n}
+							<button
+								type="button"
+								class="cv-note-chip"
+								class:active={notesNavState.selectedNoteId === n.id}
+								onclick={() => {
+									notesNavStore.selectNote(n.id);
+									navStore.close();
+								}}
+							>
+								<span class="cv-chip-icon">{n.isPinned ? '📌' : '📄'}</span>
+								<span class="cv-chip-text">{n.title || 'Nuovo Appunto'}</span>
+							</button>
+						{/each}
+					{/if}
+				</div>
+
+				<!-- Link rapido per tornare alla navigazione principale -->
+				<a href="/" class="cv-home-back-link" onclick={handleNavClick}>
+					<span>🏠</span>
+					<span>Torna alla Home</span>
 				</a>
-			{/each}
-		</div>
+			</div>
+		{:else}
+			<div class="nav-scroll-wrapper">
+				{#each navItems as item}
+					{@const isActive = page.url.pathname === item.href}
+					<a
+						href={item.href}
+						class="nav-item"
+						class:active={isActive}
+						onclick={handleNavClick}
+						data-sveltekit-preload-data="tap"
+						data-sveltekit-preload-code="eager"
+					>
+						<div class="icon-wrapper" class:active-outline={isActive}>
+							<img src={item.emoji} alt={item.label} width="26" height="26" decoding="async" class="nav-emoji-img" />
+						</div>
+						<span class="nav-label">{item.label}</span>
+					</a>
+				{/each}
+			</div>
+		{/if}
 	</div>
 
 	<!-- Actions Bottom Drawer (Theme + Quick Add Section) -->
 	<div class="sidebar-actions">
-		<!-- ⚡ Pulsante Aggiungi Scheda (Sempre Visibile) -->
-		<button
-			type="button"
-			class="duo-btn duo-btn-green desktop-quick-add-btn"
-			onclick={handleAddCardClick}
-			title="Aggiungi Scheda Rapida"
-		>
-			⚡ AGGIUNGI SCHEDA
-		</button>
+		<!-- ⚡ Pulsante Aggiungi Scheda + ⚙️ Rotellina Impostazioni Admin sulla stessa riga -->
+		<div class="quick-add-row">
+			<button
+				type="button"
+				class="duo-btn duo-btn-green desktop-quick-add-btn"
+				onclick={handleAddCardClick}
+				title="Aggiungi Scheda Rapida"
+			>
+				⚡ AGGIUNGI SCHEDA
+			</button>
 
-		<!-- 🌙 / ☀️ Toggle Tema Chiaro / Scuro -->
+			{#if isAdmin}
+				<a
+					href="/admin"
+					class="duo-btn duo-btn-purple admin-cog-btn"
+					title="Pannello Amministrazione"
+					aria-label="Pannello Amministrazione"
+					onclick={handleNavClick}
+				>
+					⚙️
+				</a>
+			{/if}
+		</div>
+
+		<!-- 🌙 / ☀️ / 🖤 Toggle Tema Ciclico: Scuro -> Chiaro -> AMOLED -->
 		<button
 			class="duo-btn duo-btn-gray desktop-theme-btn"
 			onclick={() => themeStore.toggleTheme()}
-			title="Alterna Scuro/Chiaro"
+			title="Alterna Scuro / Chiaro / AMOLED"
 		>
-			<span>MODALITÀ: {currentTheme === 'dark' ? 'SCURO 🌙' : 'CHIARO ☀️'}</span>
+			<span>
+				MODALITÀ: {currentTheme === 'dark' ? 'SCURO 🌙' : currentTheme === 'light' ? 'CHIARO ☀️' : 'AMOLED 🖤'}
+			</span>
 		</button>
 	</div>
 </nav>
@@ -303,6 +377,8 @@
 		scrollbar-width: none;
 		padding: 0.5rem 0.25rem;
 		box-sizing: border-box;
+		display: flex;
+		flex-direction: column;
 	}
 
 	.nav-container::-webkit-scrollbar {
@@ -353,39 +429,7 @@
 		border-bottom-color: var(--accent-color);
 		background-color: var(--accent-light-bg);
 		color: var(--accent-color);
-		animation: navItemPop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 		font-weight: 900;
-	}
-
-	.nav-item.active .nav-emoji-img {
-		animation: navIconBounce 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-	}
-
-	@keyframes navItemPop {
-		0% {
-			transform: scale(0.96);
-		}
-		50% {
-			transform: scale(1.02);
-		}
-		100% {
-			transform: scale(1);
-		}
-	}
-
-	@keyframes navIconBounce {
-		0% {
-			transform: scale(1) rotate(0deg);
-		}
-		40% {
-			transform: scale(1.25) rotate(-8deg);
-		}
-		70% {
-			transform: scale(1.1) rotate(4deg);
-		}
-		100% {
-			transform: scale(1) rotate(0deg);
-		}
 	}
 
 	.icon-wrapper {
@@ -395,7 +439,6 @@
 		align-items: center;
 		justify-content: center;
 		border-radius: 12px;
-		transition: transform 0.2s ease;
 	}
 
 	.nav-emoji-img {
@@ -403,10 +446,6 @@
 		height: 26px;
 		object-fit: contain;
 		filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
-	}
-
-	.nav-item:active .nav-emoji-img {
-		transform: scale(0.9);
 	}
 
 	.nav-item:hover {
@@ -421,6 +460,134 @@
 		white-space: nowrap;
 	}
 
+	/* Collapsed Vault Panel inside Sidebar */
+	.collapsed-vault-sidebar-panel {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+		height: 100%;
+	}
+
+	.collapsed-vault-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding-bottom: 0.4rem;
+		border-bottom: 1.5px solid var(--border-color);
+	}
+
+	.cv-title-box {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+	}
+
+	.cv-icon {
+		font-size: 0.95rem;
+	}
+
+	.cv-title {
+		font-family: 'Outfit', sans-serif;
+		font-size: 0.78rem;
+		font-weight: 900;
+		color: var(--text-color);
+	}
+
+	.cv-expand-btn {
+		background: var(--card-bg-subtle);
+		border: 1px solid var(--border-color);
+		border-radius: 6px;
+		padding: 0.15rem 0.45rem;
+		font-size: 0.7rem;
+		font-weight: 800;
+		color: var(--accent-color);
+		cursor: pointer;
+	}
+
+	.cv-expand-btn:hover {
+		background: var(--accent-light-bg);
+	}
+
+	.collapsed-notes-scroll {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		gap: 0.3rem;
+		overflow-y: auto;
+		scrollbar-width: none;
+	}
+
+	.collapsed-notes-scroll::-webkit-scrollbar {
+		display: none;
+	}
+
+	.cv-empty {
+		font-size: 0.76rem;
+		color: var(--text-muted);
+		text-align: center;
+		padding: 1rem 0;
+	}
+
+	.cv-note-chip {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		padding: 0.5rem 0.65rem;
+		border-radius: 10px;
+		background: var(--card-bg-subtle);
+		border: 1.5px solid var(--border-color);
+		color: var(--text-color);
+		font-family: inherit;
+		font-size: 0.8rem;
+		font-weight: 700;
+		text-align: left;
+		cursor: pointer;
+		transition: all 0.12s ease;
+	}
+
+	.cv-note-chip:hover {
+		border-color: var(--accent-color);
+		background: var(--hover-bg);
+	}
+
+	.cv-note-chip.active {
+		border-color: var(--accent-color);
+		background: var(--accent-light-bg);
+		color: var(--accent-color);
+		font-weight: 900;
+	}
+
+	.cv-chip-icon {
+		font-size: 0.85rem;
+		flex-shrink: 0;
+	}
+
+	.cv-chip-text {
+		flex: 1;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.cv-home-back-link {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+		padding: 0.4rem 0.6rem;
+		border-radius: 8px;
+		color: var(--text-muted);
+		text-decoration: none;
+		font-size: 0.75rem;
+		font-weight: 800;
+		border-top: 1px dashed var(--border-color);
+		margin-top: 0.25rem;
+	}
+
+	.cv-home-back-link:hover {
+		color: var(--text-color);
+	}
+
+	/* Sidebar Actions */
 	.sidebar-actions {
 		display: flex;
 		flex-direction: column;
@@ -430,12 +597,31 @@
 		border-top: 2px solid var(--border-color);
 	}
 
-	.desktop-quick-add-btn {
+	.quick-add-row {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
 		width: 100%;
+	}
+
+	.desktop-quick-add-btn {
+		flex: 1;
 		font-size: 0.8rem;
 		padding: 0.65rem;
 		text-align: center;
 		justify-content: center;
+	}
+
+	.admin-cog-btn {
+		width: 44px;
+		height: 42px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 1.1rem;
+		padding: 0;
+		flex-shrink: 0;
+		text-decoration: none;
 	}
 
 	.desktop-theme-btn {
@@ -453,8 +639,6 @@
 		.drawer-backdrop {
 			display: none !important;
 		}
-
-
 
 		.duo-navigation {
 			position: fixed;

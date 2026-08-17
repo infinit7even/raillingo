@@ -13,6 +13,7 @@
 		createInlineImageFigureHtml
 	} from '$lib/utils/docConverter';
 	import { navStore } from '$lib/stores/navStore';
+	import { notesNavStore } from '$lib/stores/notesNavStore';
 	import { uploadImage } from '$lib/utils/imageUploader';
 	import { loginWithDiscord } from '$lib/auth-client';
 
@@ -28,6 +29,7 @@
 	let selectedNoteId = $state<string | null>(null);
 	let searchQuery = $state('');
 	let sortOption = $state<NoteSortOption>('custom');
+	let selectedTagFilter = $state<string | null>(null);
 
 	// Workspace UI states
 	let isOutlineOpen = $state(false);
@@ -40,22 +42,47 @@
 	// Active note local editor state
 	let currentTitle = $state('');
 	let currentContent = $state('');
+	let currentTags = $state<string[]>([]);
 	let currentImages = $state<string[]>([]);
 	let currentIsPinned = $state(false);
-	let currentIsPublic = $state(false);
+
+	let newTagInput = $state('');
+	let isAddingTag = $state(false);
 
 	let editorEl = $state<HTMLDivElement | null>(null);
+	let docCanvasEl = $state<HTMLDivElement | null>(null);
 	let notesWrapperEl = $state<HTMLDivElement | null>(null);
 	let fileInputEl = $state<HTMLInputElement | null>(null);
 	let savedRange: Range | null = null;
 
 	let saveDebounceTimer = $state<ReturnType<typeof setTimeout> | null>(null);
 
+	// Tutte le etichette create dall'utente
+	let allUserTags = $derived.by<string[]>(() => {
+		const set = new Set<string>();
+		for (const n of notes) {
+			if (n.tags && Array.isArray(n.tags)) {
+				for (const t of n.tags) {
+					if (t && t.trim()) set.add(t.trim());
+				}
+			}
+		}
+		return Array.from(set).sort();
+	});
+
 	onMount(() => {
 		notesStore.hydrate(data.initialNotes, user?.id);
 
 		const handlePasteReq = () => {
 			handleContextPaste();
+		};
+
+		const handleExternalNoteSelect = (e: any) => {
+			const id = e?.detail?.id;
+			if (id) {
+				const found = notes.find((n) => n.id === id);
+				if (found) selectNote(found);
+			}
 		};
 
 		if (typeof window !== 'undefined') {
@@ -70,12 +97,14 @@
 			// Intercetta paste globale ed eventi custom
 			window.addEventListener('paste', handleGlobalPaste);
 			window.addEventListener('rf-paste-request', handlePasteReq);
+			window.addEventListener('rf-select-note', handleExternalNoteSelect);
 		}
 
 		const unsub = notesStore.subscribe((n) => {
 			notes = n;
+			notesNavStore.syncNotes(n, selectedNoteId, isVaultCollapsed);
+
 			if (selectedNoteId === null && n.length > 0) {
-				// Se c'è una nota condivisa richiesta via URL, selezionala per prima
 				const targetId = data.sharedNoteId;
 				const matched = targetId ? n.find((note) => note.id === targetId || note.shareId === targetId) : null;
 				const activeNote = matched || n[0];
@@ -88,11 +117,18 @@
 			if (typeof window !== 'undefined') {
 				window.removeEventListener('paste', handleGlobalPaste);
 				window.removeEventListener('rf-paste-request', handlePasteReq);
+				window.removeEventListener('rf-select-note', handleExternalNoteSelect);
 			}
 			unsub();
 			if (saveDebounceTimer) clearTimeout(saveDebounceTimer);
 		};
 	});
+
+	function handleCanvasScroll() {
+		if (docCanvasEl && selectedNoteId && typeof sessionStorage !== 'undefined') {
+			sessionStorage.setItem(`rf_note_scroll_${selectedNoteId}`, String(docCanvasEl.scrollTop));
+		}
+	}
 
 	async function handleContextPaste() {
 		if (!selectedNoteId && notes.length > 0) {
@@ -136,12 +172,14 @@
 		if (typeof localStorage !== 'undefined') {
 			localStorage.setItem('rf_vault_collapsed', String(isVaultCollapsed));
 		}
+		notesNavStore.syncNotes(notes, selectedNoteId, isVaultCollapsed);
 	}
 
 	async function selectNote(note: Note) {
 		selectedNoteId = note.id;
 		currentTitle = note.title;
 		currentContent = note.content || '';
+		currentTags = note.tags ? [...note.tags] : [];
 		currentImages = note.images ? [...note.images] : [];
 		currentIsPinned = Boolean(note.isPinned);
 		isSidebarOpenMobile = false;
@@ -150,10 +188,53 @@
 			localStorage.setItem('rf_last_opened_note_id', note.id);
 		}
 
+		notesNavStore.syncNotes(notes, note.id, isVaultCollapsed);
+
 		await tick();
 		if (editorEl) {
 			editorEl.innerHTML = markdownToDocHtml(currentContent);
 		}
+
+		// Ripristina posizione di scroll memorizzata per questa nota
+		if (docCanvasEl && typeof sessionStorage !== 'undefined') {
+			const savedScroll = sessionStorage.getItem(`rf_note_scroll_${note.id}`);
+			if (savedScroll) {
+				docCanvasEl.scrollTop = Number(savedScroll);
+			}
+		}
+	}
+
+	function handleAddTag() {
+		const trimmed = newTagInput.trim();
+		if (trimmed && !currentTags.includes(trimmed)) {
+			currentTags = [...currentTags, trimmed];
+			newTagInput = '';
+			isAddingTag = false;
+			triggerAutoSave();
+			toastStore.show({ message: `🏷️ Etichetta "${trimmed}" aggiunta alla nota!` });
+		}
+	}
+
+	function handleRemoveTag(tagToRemove: string) {
+		currentTags = currentTags.filter((t) => t !== tagToRemove);
+		triggerAutoSave();
+	}
+
+	function handleHighlightText() {
+		if (!editorEl) return;
+		const sel = window.getSelection();
+		if (!sel || sel.rangeCount === 0 || sel.isCollapsed) {
+			toastStore.show({ message: '💡 Seleziona prima del testo per evidenziarlo', type: 'info' });
+			return;
+		}
+		const range = sel.getRangeAt(0);
+		const mark = document.createElement('mark');
+		mark.appendChild(range.extractContents());
+		range.insertNode(mark);
+		sel.removeAllRanges();
+		syncContentFromEditor();
+		triggerAutoSave();
+		toastStore.show({ message: '🖍️ Testo evidenziato!' });
 	}
 
 	let activeNote = $derived(notes.find((n) => n.id === selectedNoteId) || null);
@@ -166,6 +247,11 @@
 
 	let filteredNotes = $derived.by(() => {
 		let list = [...notes];
+
+		const tagFilter = selectedTagFilter;
+		if (tagFilter) {
+			list = list.filter((n) => n.tags && n.tags.includes(tagFilter));
+		}
 
 		const q = searchQuery.toLowerCase().trim();
 		if (q) {
@@ -240,6 +326,7 @@
 				id: selectedNoteId,
 				title: currentTitle.trim() || 'Appunto senza titolo',
 				content: currentContent,
+				tags: currentTags,
 				images: currentImages,
 				isPinned: currentIsPinned
 			});
@@ -258,7 +345,8 @@
 		const newNote = await notesStore.createNote({
 			title: 'Nuovo Appunto',
 			content: '',
-			category: '',
+			category: 'Generale',
+			tags: selectedTagFilter ? [selectedTagFilter] : [],
 			images: [],
 			isPinned: false
 		});
@@ -293,6 +381,7 @@
 					selectedNoteId = null;
 					currentTitle = '';
 					currentContent = '';
+					currentTags = [];
 					currentImages = [];
 					if (editorEl) editorEl.innerHTML = '';
 				}
@@ -304,19 +393,6 @@
 	async function handleTogglePin() {
 		currentIsPinned = !currentIsPinned;
 		triggerAutoSave();
-	}
-
-	async function handleShareNote() {
-		if (!selectedNoteId || !activeNote) return;
-		currentIsPublic = true;
-		await notesStore.updateNote({ id: selectedNoteId, isPublic: true });
-		const shareUrl = `${window.location.origin}/notes?id=${encodeURIComponent(selectedNoteId)}`;
-		try {
-			await navigator.clipboard.writeText(shareUrl);
-			toastStore.show({ message: '🔗 Link appunto copiato! Chiunque abbia il link può visualizzarlo.' });
-		} catch {
-			prompt("Copia questo link per condividere l'appunto:", shareUrl);
-		}
 	}
 
 	function handleEditorKeyUp(e: KeyboardEvent) {
@@ -846,6 +922,31 @@
 				{/if}
 			</div>
 
+			<!-- User Custom Tags Filter Row in Sidebar -->
+			{#if allUserTags.length > 0}
+				<div class="vault-tags-filter-row">
+					<button
+						type="button"
+						class="tag-filter-chip"
+						class:active={selectedTagFilter === null}
+						onclick={() => (selectedTagFilter = null)}
+					>
+						Tutte ({notes.length})
+					</button>
+					{#each allUserTags as tag}
+						{@const tagCount = notes.filter((n) => n.tags && n.tags.includes(tag)).length}
+						<button
+							type="button"
+							class="tag-filter-chip"
+							class:active={selectedTagFilter === tag}
+							onclick={() => (selectedTagFilter = selectedTagFilter === tag ? null : tag)}
+						>
+							🏷️ {tag} ({tagCount})
+						</button>
+					{/each}
+				</div>
+			{/if}
+
 			<!-- Notes List Explorer -->
 			<div class="vault-files-list">
 				{#if filteredNotes.length === 0}
@@ -876,6 +977,17 @@
 								</span>
 							</div>
 
+							{#if note.tags && note.tags.length > 0}
+								<div class="file-tags-row">
+									{#each note.tags.slice(0, 3) as tag}
+										<span class="file-tag-mini">🏷️ {tag}</span>
+									{/each}
+									{#if note.tags.length > 3}
+										<span class="file-tag-mini">+{note.tags.length - 3}</span>
+									{/if}
+								</div>
+							{/if}
+
 							<div class="file-item-meta">
 								<span class="file-date">
 									{new Date(note.updatedAt || note.createdAt).toLocaleDateString('it-IT', {
@@ -891,7 +1003,7 @@
 			</div>
 		</aside>
 
-	<!-- 📝 2. CENTER MAIN WORKSPACE (EDITOR VISUALE WORD-STYLE CON IMMAGINI INTEGRATE NEL TESTO) -->
+	<!-- 📝 2. CENTER MAIN WORKSPACE -->
 	<main
 		class="note-workspace-pane duo-card"
 		class:mobile-hidden={isSidebarOpenMobile && selectedNoteId !== null}
@@ -927,20 +1039,9 @@
 							<span class="saved-txt">💾 {lastSavedTime ? `Salvato ${lastSavedTime}` : 'Salvato'}</span>
 						{/if}
 					</div>
-
 				</div>
 
 				<div class="workspace-quick-actions">
-					<button
-						type="button"
-						class="action-icon-btn action-share-btn"
-						class:shared={currentIsPublic}
-						onclick={handleShareNote}
-						title="Condividi link appunto (Copia URL pubblico)"
-					>
-						🔗
-					</button>
-
 					<button
 						type="button"
 						class="action-icon-btn action-pin-btn"
@@ -1006,6 +1107,14 @@
 					title="Corsivo (Ctrl+I)"
 				>
 					<em>I</em>
+				</button>
+				<button
+					type="button"
+					class="ribbon-btn highlight-btn"
+					onclick={handleHighlightText}
+					title="Evidenzia testo (==testo==)"
+				>
+					🖍️ Evidenzia
 				</button>
 				<button
 					type="button"
@@ -1086,9 +1195,58 @@
 				/>
 			</div>
 
+			<!-- User Custom Tags Bar for Active Note -->
+			<div class="note-tags-bar">
+				<span class="tags-bar-label">🏷️ Etichette:</span>
+				{#each currentTags as tag}
+					<span class="note-tag-chip">
+						<span>{tag}</span>
+						<button
+							type="button"
+							class="remove-tag-btn"
+							onclick={() => handleRemoveTag(tag)}
+							title="Rimuovi etichetta"
+						>
+							✕
+						</button>
+					</span>
+				{/each}
+				{#if isAddingTag}
+					<div class="add-tag-input-wrap">
+						<input
+							type="text"
+							bind:value={newTagInput}
+							placeholder="Nuova etichetta..."
+							class="add-tag-input"
+							onkeydown={(e) => {
+								if (e.key === 'Enter') {
+									e.preventDefault();
+									handleAddTag();
+								} else if (e.key === 'Escape') {
+									isAddingTag = false;
+								}
+							}}
+						/>
+						<button type="button" class="confirm-tag-btn" onclick={handleAddTag}>✓</button>
+						<button type="button" class="cancel-tag-btn" onclick={() => (isAddingTag = false)}>✕</button>
+					</div>
+				{:else}
+					<button
+						type="button"
+						class="add-tag-trigger-btn"
+						onclick={() => (isAddingTag = true)}
+						title="Aggiungi etichetta personalizzata"
+					>
+						➕ Aggiungi
+					</button>
+				{/if}
+			</div>
+
 			<!-- Word-style Live Document Canvas with Inline Images -->
 			<div
+				bind:this={docCanvasEl}
 				class="document-canvas-container"
+				onscroll={handleCanvasScroll}
 				ondrop={handleDrop}
 				ondragover={(e) => e.preventDefault()}
 				role="region"
@@ -2670,5 +2828,187 @@
 		font-size: 0.78rem !important;
 		border-radius: 10px !important;
 		white-space: nowrap;
+	}
+
+	/* 🏷️ Stili Etichette / Tag Note */
+	.vault-tags-filter-row {
+		display: flex;
+		align-items: center;
+		gap: 0.3rem;
+		overflow-x: auto;
+		scrollbar-width: none;
+		padding: 0.1rem 0;
+		flex-shrink: 0;
+	}
+
+	.vault-tags-filter-row::-webkit-scrollbar {
+		display: none;
+	}
+
+	.tag-filter-chip {
+		display: inline-flex;
+		align-items: center;
+		padding: 0.25rem 0.55rem;
+		border-radius: 8px;
+		background: var(--card-bg-subtle);
+		border: 1px solid var(--border-color);
+		color: var(--text-muted);
+		font-family: inherit;
+		font-size: 0.72rem;
+		font-weight: 800;
+		cursor: pointer;
+		white-space: nowrap;
+		transition: all 0.12s ease;
+	}
+
+	.tag-filter-chip:hover {
+		border-color: var(--accent-color);
+		color: var(--text-color);
+	}
+
+	.tag-filter-chip.active {
+		background: var(--accent-light-bg);
+		border-color: var(--accent-color);
+		color: var(--accent-color);
+		font-weight: 900;
+	}
+
+	.file-tags-row {
+		display: flex;
+		align-items: center;
+		flex-wrap: wrap;
+		gap: 0.25rem;
+		margin-top: 0.2rem;
+	}
+
+	.file-tag-mini {
+		font-size: 0.65rem;
+		font-weight: 800;
+		color: var(--accent-color);
+		background: var(--card-bg-subtle);
+		padding: 0.05rem 0.35rem;
+		border-radius: 4px;
+		border: 1px solid var(--border-color);
+	}
+
+	.note-tags-bar {
+		display: flex;
+		align-items: center;
+		flex-wrap: wrap;
+		gap: 0.4rem;
+		padding: 0.4rem 0.2rem 0.6rem 0.2rem;
+		flex-shrink: 0;
+	}
+
+	.tags-bar-label {
+		font-size: 0.76rem;
+		font-weight: 800;
+		color: var(--text-muted);
+	}
+
+	.note-tag-chip {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.3rem;
+		padding: 0.2rem 0.5rem;
+		background: var(--card-bg);
+		border: 1px solid var(--border-color);
+		border-radius: 8px;
+		font-size: 0.76rem;
+		font-weight: 800;
+		color: var(--accent-color);
+	}
+
+	.remove-tag-btn {
+		background: none;
+		border: none;
+		color: var(--text-muted);
+		font-size: 0.7rem;
+		cursor: pointer;
+		padding: 0;
+		display: inline-flex;
+		align-items: center;
+	}
+
+	.remove-tag-btn:hover {
+		color: #ff4b4b;
+	}
+
+	.add-tag-trigger-btn {
+		background: var(--card-bg-subtle);
+		border: 1px dashed var(--border-color);
+		border-radius: 8px;
+		padding: 0.2rem 0.5rem;
+		font-size: 0.72rem;
+		font-weight: 800;
+		color: var(--text-muted);
+		cursor: pointer;
+	}
+
+	.add-tag-trigger-btn:hover {
+		border-color: var(--accent-color);
+		color: var(--accent-color);
+	}
+
+	.add-tag-input-wrap {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.25rem;
+	}
+
+	.add-tag-input {
+		background: var(--card-bg);
+		border: 1px solid var(--accent-color);
+		border-radius: 6px;
+		padding: 0.2rem 0.45rem;
+		font-size: 0.75rem;
+		color: var(--text-color);
+		outline: none;
+		width: 110px;
+	}
+
+	.confirm-tag-btn,
+	.cancel-tag-btn {
+		background: var(--card-bg);
+		border: 1px solid var(--border-color);
+		border-radius: 6px;
+		padding: 0.15rem 0.35rem;
+		font-size: 0.72rem;
+		cursor: pointer;
+		font-weight: 900;
+	}
+
+	.confirm-tag-btn {
+		color: var(--green-color);
+	}
+
+	.cancel-tag-btn {
+		color: var(--pink-color);
+	}
+
+	/* 🖍️ Evidenziatore Stile Word */
+	.word-document-editor :global(mark) {
+		background-color: rgba(255, 200, 0, 0.35);
+		color: inherit;
+		border-radius: 4px;
+		padding: 0.1em 0.25em;
+		border-bottom: 1.5px solid var(--yellow-color, #ffc800);
+	}
+
+	.highlight-btn {
+		background: rgba(255, 200, 0, 0.15);
+		border-color: var(--yellow-color);
+	}
+
+	/* 🖥️ Desktop Banner Removal */
+	@media (min-width: 1024px) {
+		.notes-header-container {
+			display: none !important;
+		}
+
+		.obsidian-workspace {
+			height: calc(100vh - 40px) !important;
+			height: calc(100dvh - 40px) !important;
+		}
 	}
 </style>

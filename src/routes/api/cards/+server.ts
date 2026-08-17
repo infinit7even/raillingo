@@ -17,6 +17,8 @@ export const GET: RequestHandler = async () => {
 			category: c.category,
 			images: (c.images as string[]) || [],
 			tags: (c.tags as string[]) || [],
+			showInWiki: c.showInWiki !== false,
+			gameModes: (c.gameModes as string[]) || ['flashcard', 'quiz', 'reels', 'scrittura'],
 			createdAt: c.createdAt ? c.createdAt.toISOString() : new Date().toISOString(),
 			updatedAt: c.updatedAt ? c.updatedAt.toISOString() : new Date().toISOString()
 		}));
@@ -49,6 +51,10 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			? newCard.images.filter((img): img is string => typeof img === 'string' && img.trim().length > 0)
 			: [];
 		const tags = Array.isArray(newCard.tags) ? newCard.tags : [];
+		const showInWiki = newCard.showInWiki !== false;
+		const gameModes = Array.isArray(newCard.gameModes) && newCard.gameModes.length > 0
+			? newCard.gameModes
+			: ['flashcard', 'quiz', 'reels', 'scrittura'];
 
 		const mainTitle = title || fullName;
 		if (!mainTitle && images.length === 0) {
@@ -73,6 +79,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 				category: category || 'Generale',
 				images,
 				tags,
+				showInWiki,
+				gameModes,
 				createdAt: now,
 				updatedAt: now
 			})
@@ -85,6 +93,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 					category: category || 'Generale',
 					images,
 					tags,
+					showInWiki,
+					gameModes,
 					updatedAt: now
 				}
 			})
@@ -98,6 +108,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			category: inserted.category,
 			images: (inserted.images as string[]) || [],
 			tags: (inserted.tags as string[]) || [],
+			showInWiki: inserted.showInWiki !== false,
+			gameModes: (inserted.gameModes as string[]) || ['flashcard', 'quiz', 'reels', 'scrittura'],
 			createdAt: inserted.createdAt.toISOString(),
 			updatedAt: inserted.updatedAt.toISOString()
 		};
@@ -137,6 +149,8 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
 			category: oldCard.category,
 			images: (oldCard.images as string[]) || [],
 			tags: (oldCard.tags as string[]) || [],
+			showInWiki: oldCard.showInWiki !== false,
+			gameModes: (oldCard.gameModes as string[]) || ['flashcard', 'quiz', 'reels', 'scrittura'],
 			createdAt: oldCard.createdAt.toISOString(),
 			updatedAt: oldCard.updatedAt.toISOString()
 		};
@@ -149,6 +163,10 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
 			? updatedCard.images.filter((img): img is string => typeof img === 'string' && img.trim().length > 0)
 			: (oldCard.images as string[]) || [];
 		const tags = Array.isArray(updatedCard.tags) ? updatedCard.tags : (oldCard.tags as string[]) || [];
+		const showInWiki = updatedCard.showInWiki !== undefined ? updatedCard.showInWiki : (oldCard.showInWiki !== false);
+		const gameModes = Array.isArray(updatedCard.gameModes) && updatedCard.gameModes.length > 0
+			? updatedCard.gameModes
+			: ((oldCard.gameModes as string[]) || ['flashcard', 'quiz', 'reels', 'scrittura']);
 
 		const now = new Date();
 		const [updated] = await db
@@ -160,6 +178,8 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
 				category: category || oldCard.category || 'Generale',
 				images,
 				tags,
+				showInWiki,
+				gameModes,
 				updatedAt: now
 			})
 			.where(eq(cards.id, updatedCard.id))
@@ -173,6 +193,8 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
 			category: updated.category,
 			images: (updated.images as string[]) || [],
 			tags: (updated.tags as string[]) || [],
+			showInWiki: updated.showInWiki !== false,
+			gameModes: (updated.gameModes as string[]) || ['flashcard', 'quiz', 'reels', 'scrittura'],
 			createdAt: updated.createdAt.toISOString(),
 			updatedAt: updated.updatedAt.toISOString()
 		};
