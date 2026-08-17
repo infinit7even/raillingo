@@ -1,9 +1,9 @@
 /**
- * Utilità bidirezionale per la conversione perfetta tra Markdown e HTML per l'editor delle note.
+ * Utilità bidirezionale per la conversione perfetta tra Markdown e HTML per l'editor delle note stile Obsidian.
  * Supporta:
  * - Titoli (#, ##, ###)
  * - Liste numerate (1. , 2. ) e puntate (- , * )
- * - Paragrafi, ritorni a capo singoli (<br>) e righe vuote (<p><br></p>)
+ * - Paragrafi, ritorni a capo singoli e righe vuote
  * - Formattazione inline: Grassetto (**), Corsivo (*), Evidenziatore (==), Codice (`), Barrato (~~), Link ([text](url))
  * - Immagini inline con ridimensionamento e allineamento
  */
@@ -48,11 +48,11 @@ export function createInlineImageFigureHtml(
 	const cssW = rawW.includes('%') ? rawW : `${rawW}px`;
 	const safeAlign = ['left', 'center', 'right'].includes(align) ? align : 'center';
 
-	return `<figure class="doc-inline-image" contenteditable="false" draggable="true" data-url="${safeUrl}" data-width="${rawW}" data-align="${safeAlign}"><div class="doc-image-wrapper align-${safeAlign}" style="max-width: ${cssW};"><img src="${safeUrl}" alt="${safeAlt}" class="doc-img-element" loading="lazy" /><div class="resize-handle handle-se" title="Trascina per ridimensionare"></div><div class="resize-handle handle-sw" title="Trascina per ridimensionare"></div><div class="doc-image-toolbar"><button type="button" class="img-btn-move" data-move="up" title="Sposta prima del paragrafo precedente">▲</button><button type="button" class="img-btn-move" data-move="down" title="Sposta dopo il paragrafo successivo">▼</button><span class="img-tool-sep"></span><button type="button" class="img-btn-align ${safeAlign === 'left' ? 'active' : ''}" data-align="left" title="Allinea a Sinistra">⬅️</button><button type="button" class="img-btn-align ${safeAlign === 'center' ? 'active' : ''}" data-align="center" title="Centra">⏺️</button><button type="button" class="img-btn-align ${safeAlign === 'right' ? 'active' : ''}" data-align="right" title="Allinea a Destra">➡️</button><span class="img-tool-sep"></span><a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="img-btn-view" title="Apri a dimensione intera">🔍</a><button type="button" class="img-btn-del" title="Rimuovi immagine">✕</button></div></div></figure>`;
+	return `<figure class="doc-inline-image" contenteditable="false" draggable="true" data-url="${safeUrl}" data-width="${rawW}" data-align="${safeAlign}"><div class="doc-image-wrapper align-${safeAlign}" style="max-width: ${cssW};"><img src="${safeUrl}" alt="${safeAlt}" class="doc-img-element" loading="lazy" /><div class="resize-handle handle-se" title="Trascina per ridimensionare"></div><div class="resize-handle handle-sw" title="Trascina per ridimensionare"></div><div class="doc-image-toolbar"><button type="button" class="img-btn-move" data-move="up" title="Sposta su">▲</button><button type="button" class="img-btn-move" data-move="down" title="Sposta giù">▼</button><span class="img-tool-sep"></span><button type="button" class="img-btn-align ${safeAlign === 'left' ? 'active' : ''}" data-align="left" title="Allinea a Sinistra">⬅️</button><button type="button" class="img-btn-align ${safeAlign === 'center' ? 'active' : ''}" data-align="center" title="Centra">⏺️</button><button type="button" class="img-btn-align ${safeAlign === 'right' ? 'active' : ''}" data-align="right" title="Allinea a Destra">➡️</button><span class="img-tool-sep"></span><a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="img-btn-view" title="Apri intera">🔍</a><button type="button" class="img-btn-del" title="Elimina">✕</button></div></div></figure>`;
 }
 
 /**
- * Converte Markdown in HTML per l'editor contenteditable, preservando spazi e formattazione
+ * Converte Markdown in HTML per l'editor contenteditable, con corrispondenza 1:1 dei ritorni a capo
  */
 export function markdownToDocHtml(md: string): string {
 	if (!md || typeof md !== 'string') return '<p><br></p>';
@@ -61,24 +61,15 @@ export function markdownToDocHtml(md: string): string {
 	const lines = normalized.split('\n');
 	const htmlParts: string[] = [];
 
-	let currentListType: 'ul' | 'ol' | null = null;
-	let currentListItems: string[] = [];
-	let currentParagraphLines: string[] = [];
-
-	function flushParagraph() {
-		if (currentParagraphLines.length > 0) {
-			const pContent = currentParagraphLines.map((l) => parseInlineMd(l)).join('<br>');
-			htmlParts.push(`<p>${pContent || '<br>'}</p>`);
-			currentParagraphLines = [];
-		}
-	}
+	let inList: 'ul' | 'ol' | null = null;
+	let listItems: string[] = [];
 
 	function flushList() {
-		if (currentListType && currentListItems.length > 0) {
-			const itemsHtml = currentListItems.map((li) => `<li>${parseInlineMd(li)}</li>`).join('');
-			htmlParts.push(`<${currentListType}>${itemsHtml}</${currentListType}>`);
-			currentListType = null;
-			currentListItems = [];
+		if (inList && listItems.length > 0) {
+			const itemsHtml = listItems.map((li) => `<li>${parseInlineMd(li)}</li>`).join('');
+			htmlParts.push(`<${inList}>${itemsHtml}</${inList}>`);
+			inList = null;
+			listItems = [];
 		}
 	}
 
@@ -89,7 +80,6 @@ export function markdownToDocHtml(md: string): string {
 		// Riconoscimento Immagine Markdown: ![alt|width|align](url)
 		const imgMatch = trimmed.match(/^!\[([^\]|]*)(\|([^\]|]+))?(\|([^\]]+))?\]\(([^)]+)\)$/);
 		if (imgMatch) {
-			flushParagraph();
 			flushList();
 			const alt = imgMatch[1] || 'immagine';
 			const width = imgMatch[3] ? imgMatch[3].trim() : '400';
@@ -100,76 +90,73 @@ export function markdownToDocHtml(md: string): string {
 		}
 
 		// Riconoscimento Headings (#, ##, ###)
-		if (/^#{1,3}\s/.test(trimmed)) {
-			flushParagraph();
+		if (/^#{1,3}\s/.test(trimmed) || /^#{1,3}[^\s#]/.test(trimmed)) {
 			flushList();
-			if (trimmed.startsWith('### ')) {
-				htmlParts.push(`<h3>${parseInlineMd(trimmed.substring(4))}</h3>`);
-			} else if (trimmed.startsWith('## ')) {
-				htmlParts.push(`<h2>${parseInlineMd(trimmed.substring(3))}</h2>`);
-			} else if (trimmed.startsWith('# ')) {
-				htmlParts.push(`<h1>${parseInlineMd(trimmed.substring(2))}</h1>`);
+			if (trimmed.startsWith('### ') || trimmed.startsWith('###')) {
+				const text = trimmed.startsWith('### ') ? trimmed.substring(4) : trimmed.substring(3);
+				htmlParts.push(`<h3>${parseInlineMd(text)}</h3>`);
+			} else if (trimmed.startsWith('## ') || trimmed.startsWith('##')) {
+				const text = trimmed.startsWith('## ') ? trimmed.substring(3) : trimmed.substring(2);
+				htmlParts.push(`<h2>${parseInlineMd(text)}</h2>`);
+			} else if (trimmed.startsWith('# ') || trimmed.startsWith('#')) {
+				const text = trimmed.startsWith('# ') ? trimmed.substring(2) : trimmed.substring(1);
+				htmlParts.push(`<h1>${parseInlineMd(text)}</h1>`);
 			}
 			continue;
 		}
 
 		// Riconoscimento Blockquote (> )
-		if (trimmed.startsWith('> ')) {
-			flushParagraph();
+		if (trimmed.startsWith('>')) {
 			flushList();
-			htmlParts.push(`<blockquote>${parseInlineMd(trimmed.substring(2))}</blockquote>`);
+			const text = trimmed.startsWith('> ') ? trimmed.substring(2) : trimmed.substring(1);
+			htmlParts.push(`<blockquote>${parseInlineMd(text)}</blockquote>`);
 			continue;
 		}
 
 		// Riconoscimento Lista Puntata (- o * )
 		const bulletMatch = line.match(/^(\s*)([-*])\s+(.*)$/);
 		if (bulletMatch) {
-			flushParagraph();
-			if (currentListType && currentListType !== 'ul') {
+			if (inList && inList !== 'ul') {
 				flushList();
 			}
-			currentListType = 'ul';
-			currentListItems.push(bulletMatch[3]);
+			inList = 'ul';
+			listItems.push(bulletMatch[3]);
 			continue;
 		}
 
 		// Riconoscimento Lista Numerata (1. , 2. , etc.)
 		const orderedMatch = line.match(/^(\s*)(\d+)\.\s+(.*)$/);
 		if (orderedMatch) {
-			flushParagraph();
-			if (currentListType && currentListType !== 'ol') {
+			if (inList && inList !== 'ol') {
 				flushList();
 			}
-			currentListType = 'ol';
-			currentListItems.push(orderedMatch[3]);
+			inList = 'ol';
+			listItems.push(orderedMatch[3]);
 			continue;
 		}
 
-		// Se eravamo in una lista e la riga non è un elemento di lista:
-		if (currentListType) {
+		// Chiudi eventuale lista se la riga corrente non è un elemento di lista
+		if (inList) {
 			flushList();
 		}
 
-		// Riga vuota
+		// Riga vuota intenzionale
 		if (trimmed === '') {
-			flushParagraph();
-			// Aggiungi un paragrafo vuoto per rappresentare la riga vuota
 			htmlParts.push('<p><br></p>');
 			continue;
 		}
 
-		// Riga di paragrafo standard
-		currentParagraphLines.push(line);
+		// Riga standard (1 paragrafo = 1 riga esatta)
+		htmlParts.push(`<p>${parseInlineMd(line)}</p>`);
 	}
 
-	flushParagraph();
 	flushList();
 
 	return htmlParts.join('\n') || '<p><br></p>';
 }
 
 /**
- * Converte l'albero DOM contenteditable in Markdown pulito, preservando spazi e numeri
+ * Converte l'albero DOM contenteditable in Markdown pulito, preservando esattamente 1 ritorno a capo per paragrafo
  */
 export function docHtmlToMarkdown(rootEl: HTMLElement): string {
 	if (!rootEl) return '';
@@ -225,13 +212,13 @@ export function docHtmlToMarkdown(rootEl: HTMLElement): string {
 		return out;
 	}
 
-	const blocks: string[] = [];
+	const lines: string[] = [];
 
 	for (const child of Array.from(rootEl.childNodes)) {
 		if (child.nodeType === Node.TEXT_NODE) {
 			const t = child.textContent;
 			if (t && t.trim()) {
-				blocks.push(t);
+				lines.push(t);
 			}
 			continue;
 		}
@@ -248,66 +235,60 @@ export function docHtmlToMarkdown(rootEl: HTMLElement): string {
 			const alt = el.querySelector('img')?.getAttribute('alt') || 'immagine';
 			if (url) {
 				if (align && align !== 'center') {
-					blocks.push(`![${alt}|${width}|${align}](${url})`);
+					lines.push(`![${alt}|${width}|${align}](${url})`);
 				} else {
-					blocks.push(`![${alt}|${width}](${url})`);
+					lines.push(`![${alt}|${width}](${url})`);
 				}
 			}
 			continue;
 		}
 
 		if (tag === 'h1') {
-			blocks.push(`# ${serializeInline(el).trim()}`);
+			lines.push(`# ${serializeInline(el).trim()}`);
 			continue;
 		}
 		if (tag === 'h2') {
-			blocks.push(`## ${serializeInline(el).trim()}`);
+			lines.push(`## ${serializeInline(el).trim()}`);
 			continue;
 		}
 		if (tag === 'h3') {
-			blocks.push(`### ${serializeInline(el).trim()}`);
+			lines.push(`### ${serializeInline(el).trim()}`);
 			continue;
 		}
 
 		if (tag === 'ul') {
-			const items: string[] = [];
 			el.querySelectorAll(':scope > li').forEach((li) => {
-				items.push(`- ${serializeInline(li)}`);
+				lines.push(`- ${serializeInline(li)}`);
 			});
-			if (items.length > 0) blocks.push(items.join('\n'));
 			continue;
 		}
 
 		if (tag === 'ol') {
-			const items: string[] = [];
 			let idx = 1;
 			el.querySelectorAll(':scope > li').forEach((li) => {
-				items.push(`${idx}. ${serializeInline(li)}`);
+				lines.push(`${idx}. ${serializeInline(li)}`);
 				idx++;
 			});
-			if (items.length > 0) blocks.push(items.join('\n'));
 			continue;
 		}
 
 		if (tag === 'blockquote') {
-			blocks.push(`> ${serializeInline(el).trim()}`);
+			lines.push(`> ${serializeInline(el).trim()}`);
 			continue;
 		}
 
 		if (tag === 'p' || tag === 'div') {
-			// Se il paragrafo è vuoto (<br> o solo whitespace vuoto)
 			if (el.innerHTML === '<br>' || el.innerHTML === '' || el.textContent === '') {
-				blocks.push('');
+				lines.push('');
 			} else {
-				const text = serializeInline(el);
-				blocks.push(text);
+				lines.push(serializeInline(el));
 			}
 			continue;
 		}
 
 		const fallback = serializeInline(el);
-		if (fallback) blocks.push(fallback);
+		if (fallback) lines.push(fallback);
 	}
 
-	return blocks.join('\n\n');
+	return lines.join('\n');
 }

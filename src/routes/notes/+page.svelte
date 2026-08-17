@@ -1,13 +1,12 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
 	import { notesStore } from '$lib/stores/notesStore';
-	import { parseMarkdown, getMarkdownStats, extractHeadings, type HeadingItem } from '$lib/utils/markdown';
+	import { getMarkdownStats, extractHeadings } from '$lib/utils/markdown';
 	import type { Note, NoteSortOption } from '$lib/types/notes';
 	import { toastStore } from '$lib/stores/toastStore';
-	import { confirmModalStore } from '$lib/stores/confirmModalStore';
 	import { fade } from 'svelte/transition';
 	import PageHeader from '$lib/components/PageHeader.svelte';
-	import { navStore } from '$lib/stores/navStore';
+	import { markdownToDocHtml, docHtmlToMarkdown, createInlineImageFigureHtml, parseInlineMd } from '$lib/utils/docConverter';
 	import { notesNavStore } from '$lib/stores/notesNavStore';
 	import { uploadImage } from '$lib/utils/imageUploader';
 	import { loginWithDiscord } from '$lib/auth-client';
@@ -43,10 +42,7 @@
 	let isUploadingImage = $state(false);
 	let lastSavedTime = $state<string>('');
 
-	// View mode: 'write' (solo editor), 'preview' (solo anteprima), 'split' (affiancato su desktop)
-	let viewMode = $state<'write' | 'preview' | 'split'>('write');
-
-	// Active note local editor state (Pure Markdown source of truth)
+	// Active note local editor state
 	let currentTitle = $state('');
 	let currentContent = $state('');
 	let currentTags = $state<string[]>([]);
@@ -55,9 +51,11 @@
 	let newTagInput = $state('');
 	let isAddingTag = $state(false);
 
-	let textareaEl = $state<HTMLTextAreaElement | null>(null);
+	let editorEl = $state<HTMLDivElement | null>(null);
+	let docCanvasEl = $state<HTMLDivElement | null>(null);
 	let fileInputEl = $state<HTMLInputElement | null>(null);
 	let saveDebounceTimer = $state<ReturnType<typeof setTimeout> | null>(null);
+	let draggedFigure: HTMLElement | null = null;
 
 	// Tutte le etichette create dall'utente
 	let allUserTags = $derived.by<string[]>(() => {
@@ -137,7 +135,6 @@
 		if (typeof window !== 'undefined') {
 			if (window.innerWidth >= 1024) {
 				isSidebarOpenMobile = false;
-				viewMode = 'split'; // Default affiancato su desktop grande
 			}
 			const savedCollapsed = localStorage.getItem('rf_vault_collapsed');
 			if (savedCollapsed === 'true') {
@@ -196,6 +193,16 @@
 		}
 
 		notesNavStore.syncNotes(notes, note.id, isVaultCollapsed);
+
+		await tick();
+		if (editorEl) {
+			editorEl.innerHTML = markdownToDocHtml(currentContent);
+		}
+	}
+
+	function syncContentFromEditor() {
+		if (!editorEl) return;
+		currentContent = docHtmlToMarkdown(editorEl);
 	}
 
 	function handleAddTag() {
@@ -218,37 +225,113 @@
 	let headingsOutline = $derived(extractHeadings(currentContent));
 	let docStats = $derived(getMarkdownStats(currentContent));
 
-	// Markdown Insertion Helpers
-	function insertMarkdownWrap(before: string, after: string, defaultPlaceholder = '') {
-		if (!textareaEl) return;
-		const start = textareaEl.selectionStart;
-		const end = textareaEl.selectionEnd;
-		const text = textareaEl.value;
-		const selected = text.substring(start, end) || defaultPlaceholder;
-		const replacement = before + selected + after;
-
-		textareaEl.value = text.substring(0, start) + replacement + text.substring(end);
-		currentContent = textareaEl.value;
-		triggerAutoSave();
-
-		const newPos = selected ? start + replacement.length : start + before.length;
-		textareaEl.focus();
-		textareaEl.setSelectionRange(newPos, newPos);
+	function restoreCursorToEnd(targetEl: HTMLElement) {
+		const range = document.createRange();
+		const sel = window.getSelection();
+		range.selectNodeContents(targetEl);
+		range.collapse(false);
+		sel?.removeAllRanges();
+		sel?.addRange(range);
 	}
 
-	function insertMarkdownPrefix(prefix: string) {
-		if (!textareaEl) return;
-		const start = textareaEl.selectionStart;
-		const text = textareaEl.value;
-		const lineStart = text.lastIndexOf('\n', start - 1) + 1;
+	// Rilevamento in tempo reale dei titoli e blocchi Markdown stile Obsidian
+	function checkLiveBlockAutoFormat() {
+		if (!editorEl) return;
+		const sel = window.getSelection();
+		if (!sel || sel.rangeCount === 0) return;
+		const node = sel.anchorNode;
+		if (!node) return;
 
-		textareaEl.value = text.substring(0, lineStart) + prefix + text.substring(lineStart);
-		currentContent = textareaEl.value;
+		let blockEl = (node.nodeType === Node.TEXT_NODE ? node.parentElement : node) as HTMLElement;
+		while (blockEl && blockEl.parentElement !== editorEl && blockEl !== editorEl) {
+			blockEl = blockEl.parentElement as HTMLElement;
+		}
+
+		if (!blockEl || blockEl === editorEl) return;
+
+		const tag = blockEl.tagName.toLowerCase();
+		const text = blockEl.textContent || '';
+
+		// Titolo 1: # ...
+		if (tag !== 'h1' && (text.startsWith('# ') || text.startsWith('#'))) {
+			const cleanText = text.startsWith('# ') ? text.substring(2) : text.substring(1);
+			const h1 = document.createElement('h1');
+			h1.innerHTML = parseInlineMd(cleanText) || '<br>';
+			editorEl.replaceChild(h1, blockEl);
+			restoreCursorToEnd(h1);
+			return;
+		}
+
+		// Titolo 2: ## ...
+		if (tag !== 'h2' && (text.startsWith('## ') || text.startsWith('##'))) {
+			const cleanText = text.startsWith('## ') ? text.substring(3) : text.substring(2);
+			const h2 = document.createElement('h2');
+			h2.innerHTML = parseInlineMd(cleanText) || '<br>';
+			editorEl.replaceChild(h2, blockEl);
+			restoreCursorToEnd(h2);
+			return;
+		}
+
+		// Titolo 3: ### ...
+		if (tag !== 'h3' && (text.startsWith('### ') || text.startsWith('###'))) {
+			const cleanText = text.startsWith('### ') ? text.substring(4) : text.substring(3);
+			const h3 = document.createElement('h3');
+			h3.innerHTML = parseInlineMd(cleanText) || '<br>';
+			editorEl.replaceChild(h3, blockEl);
+			restoreCursorToEnd(h3);
+			return;
+		}
+
+		// Blockquote: > ...
+		if (tag !== 'blockquote' && text.startsWith('>')) {
+			const cleanText = text.startsWith('> ') ? text.substring(2) : text.substring(1);
+			const bq = document.createElement('blockquote');
+			bq.innerHTML = parseInlineMd(cleanText) || '<br>';
+			editorEl.replaceChild(bq, blockEl);
+			restoreCursorToEnd(bq);
+			return;
+		}
+
+		// Lista puntata: - o *
+		if (tag !== 'ul' && (text.startsWith('- ') || text.startsWith('* '))) {
+			const cleanText = text.substring(2);
+			const ul = document.createElement('ul');
+			const li = document.createElement('li');
+			li.innerHTML = parseInlineMd(cleanText) || '<br>';
+			ul.appendChild(li);
+			editorEl.replaceChild(ul, blockEl);
+			restoreCursorToEnd(li);
+			return;
+		}
+	}
+
+	function handleEditorInput() {
+		checkLiveBlockAutoFormat();
+		syncContentFromEditor();
 		triggerAutoSave();
+	}
 
-		textareaEl.focus();
-		const newPos = start + prefix.length;
-		textareaEl.setSelectionRange(newPos, newPos);
+	function handleFormat(command: string, value: string | undefined = undefined) {
+		document.execCommand(command, false, value);
+		syncContentFromEditor();
+		triggerAutoSave();
+	}
+
+	function handleHighlightText() {
+		if (!editorEl) return;
+		const sel = window.getSelection();
+		if (!sel || sel.rangeCount === 0 || sel.isCollapsed) {
+			toastStore.show({ message: '💡 Seleziona prima del testo per evidenziarlo', type: 'info' });
+			return;
+		}
+		const range = sel.getRangeAt(0);
+		const mark = document.createElement('mark');
+		mark.appendChild(range.extractContents());
+		range.insertNode(mark);
+		sel.removeAllRanges();
+		syncContentFromEditor();
+		triggerAutoSave();
+		toastStore.show({ message: '🖍️ Testo evidenziato!' });
 	}
 
 	async function uploadAndInsertImage(file: Blob | File) {
@@ -256,16 +339,11 @@
 		try {
 			const res = await uploadImage(file as File);
 			if (res && res.url) {
-				const imgMd = `\n![${res.filename || 'immagine'}](${res.url})\n`;
-				if (textareaEl) {
-					const start = textareaEl.selectionStart;
-					const end = textareaEl.selectionEnd;
-					const text = textareaEl.value;
-					textareaEl.value = text.substring(0, start) + imgMd + text.substring(end);
-					currentContent = textareaEl.value;
-					triggerAutoSave();
-				} else {
-					currentContent += imgMd;
+				const figHtml = createInlineImageFigureHtml(res.url, '450', 'center', res.filename || 'immagine');
+				if (editorEl) {
+					editorEl.focus();
+					document.execCommand('insertHTML', false, figHtml);
+					syncContentFromEditor();
 					triggerAutoSave();
 				}
 				toastStore.show({ message: '📷 Immagine caricata e inserita!' });
@@ -286,7 +364,7 @@
 		}
 	}
 
-	function handleTextareaPaste(e: ClipboardEvent) {
+	function handleEditorPaste(e: ClipboardEvent) {
 		if (e.clipboardData && e.clipboardData.items) {
 			for (const item of Array.from(e.clipboardData.items)) {
 				if (item.type.startsWith('image/')) {
@@ -299,10 +377,13 @@
 				}
 			}
 		}
-		triggerAutoSave();
+		setTimeout(() => {
+			syncContentFromEditor();
+			triggerAutoSave();
+		}, 10);
 	}
 
-	function handleTextareaDrop(e: DragEvent) {
+	function handleEditorDrop(e: DragEvent) {
 		if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
 			const file = e.dataTransfer.files[0];
 			if (file.type.startsWith('image/')) {
@@ -312,7 +393,7 @@
 		}
 	}
 
-	function handleTextareaKeyDown(e: KeyboardEvent) {
+	function handleEditorKeyDown(e: KeyboardEvent) {
 		if ((e.ctrlKey || e.metaKey) && e.key === 's') {
 			e.preventDefault();
 			triggerAutoSave();
@@ -321,24 +402,107 @@
 		}
 		if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
 			e.preventDefault();
-			insertMarkdownWrap('**', '**', 'testo in grassetto');
+			handleFormat('bold');
 			return;
 		}
 		if ((e.ctrlKey || e.metaKey) && e.key === 'i') {
 			e.preventDefault();
-			insertMarkdownWrap('*', '*', 'testo in corsivo');
+			handleFormat('italic');
 			return;
 		}
 		if ((e.ctrlKey || e.metaKey) && e.key === 'h') {
 			e.preventDefault();
-			insertMarkdownWrap('==', '==', 'testo evidenziato');
+			handleHighlightText();
 			return;
 		}
-		if (e.key === 'Tab') {
-			e.preventDefault();
-			insertMarkdownWrap('  ', '');
+	}
+
+	// Gestione interattiva pulsanti e ridimensionamento immagini nel testo
+	function handleEditorClick(e: MouseEvent) {
+		const target = e.target as HTMLElement;
+		if (!target) return;
+
+		// Pulsante elimina immagine
+		if (target.classList.contains('img-btn-del')) {
+			const figure = target.closest('figure.doc-inline-image');
+			if (figure) {
+				figure.remove();
+				syncContentFromEditor();
+				triggerAutoSave();
+				toastStore.show({ message: '✕ Immagine rimossa' });
+			}
 			return;
 		}
+
+		// Pulsante allinea immagine
+		if (target.classList.contains('img-btn-align')) {
+			const align = target.getAttribute('data-align') || 'center';
+			const figure = target.closest('figure.doc-inline-image');
+			if (figure) {
+				figure.setAttribute('data-align', align);
+				const wrapper = figure.querySelector('.doc-image-wrapper');
+				if (wrapper) {
+					wrapper.className = `doc-image-wrapper align-${align}`;
+				}
+				figure.querySelectorAll('.img-btn-align').forEach((btn) => btn.classList.remove('active'));
+				target.classList.add('active');
+				syncContentFromEditor();
+				triggerAutoSave();
+			}
+			return;
+		}
+
+		// Pulsanti sposta immagine su / giù
+		if (target.classList.contains('img-btn-move')) {
+			const move = target.getAttribute('data-move');
+			const figure = target.closest('figure.doc-inline-image') as HTMLElement;
+			if (figure && editorEl) {
+				if (move === 'up' && figure.previousElementSibling) {
+					editorEl.insertBefore(figure, figure.previousElementSibling);
+				} else if (move === 'down' && figure.nextElementSibling) {
+					editorEl.insertBefore(figure.nextElementSibling, figure);
+				}
+				syncContentFromEditor();
+				triggerAutoSave();
+			}
+			return;
+		}
+	}
+
+	function handleResizeMouseDown(e: MouseEvent) {
+		const target = e.target as HTMLElement;
+		if (!target || !target.classList.contains('resize-handle')) return;
+
+		e.preventDefault();
+		e.stopPropagation();
+
+		const figure = target.closest('figure.doc-inline-image') as HTMLElement;
+		if (!figure) return;
+		const wrapper = figure.querySelector('.doc-image-wrapper') as HTMLElement;
+		if (!wrapper) return;
+
+		const startX = e.clientX;
+		const startWidth = wrapper.offsetWidth;
+		const isSouthWest = target.classList.contains('handle-sw');
+
+		function onMouseMove(moveEvent: MouseEvent) {
+			const delta = isSouthWest ? startX - moveEvent.clientX : moveEvent.clientX - startX;
+			const maxContainerWidth = (editorEl?.clientWidth || 700) - 20;
+			const newWidth = Math.max(120, Math.min(maxContainerWidth, Math.round(startWidth + delta)));
+
+			wrapper.style.maxWidth = `${newWidth}px`;
+			figure.setAttribute('data-width', String(newWidth));
+		}
+
+		function onMouseUp() {
+			window.removeEventListener('mousemove', onMouseMove);
+			window.removeEventListener('mouseup', onMouseUp);
+			syncContentFromEditor();
+			triggerAutoSave();
+		}
+
+		window.addEventListener('mousemove', onMouseMove);
+		window.addEventListener('mouseup', onMouseUp);
 	}
 
 	function triggerAutoSave() {
@@ -348,6 +512,7 @@
 		if (saveDebounceTimer) clearTimeout(saveDebounceTimer);
 		saveDebounceTimer = setTimeout(async () => {
 			if (!selectedNoteId) return;
+			syncContentFromEditor();
 			try {
 				await notesStore.updateNote({
 					id: selectedNoteId,
@@ -383,7 +548,10 @@
 			isSidebarOpenMobile = false;
 			toastStore.show({ message: '✨ Nuovo appunto creato nel Vault!' });
 			await tick();
-			if (textareaEl) textareaEl.focus();
+			if (editorEl) {
+				editorEl.innerHTML = '<p><br></p>';
+				editorEl.focus();
+			}
 		} catch (err: any) {
 			console.error('Errore creazione appunto:', err);
 			toastStore.show({ message: `⚠️ ${err.message || 'Errore creazione appunto'}` });
@@ -452,12 +620,14 @@
 	}
 
 	function copyMarkdown() {
+		syncContentFromEditor();
 		if (!currentContent && !currentTitle) return;
 		navigator.clipboard.writeText(`# ${currentTitle}\n\n${currentContent}`);
 		toastStore.show({ message: '📋 Testo Markdown copiato negli appunti!' });
 	}
 
 	function downloadFile() {
+		syncContentFromEditor();
 		const filename = `${currentTitle.replace(/[^a-zA-Z0-9_-]/g, '_').toLowerCase() || 'appunto'}.md`;
 		const fullText = `# ${currentTitle}\n\n${currentContent}`;
 		const blob = new Blob([fullText], { type: 'text/markdown;charset=utf-8;' });
@@ -696,7 +866,7 @@
 				</div>
 			</aside>
 
-			<!-- 📝 2. CENTER MAIN WORKSPACE -->
+			<!-- 📝 2. CENTER OBSIDIAN LIVE CANVAS WORKSPACE -->
 			<main
 				class="note-workspace-pane duo-card"
 				class:mobile-hidden={isSidebarOpenMobile && (selectedNoteId !== null || selectedTrashNote !== null)}
@@ -731,8 +901,8 @@
 
 						<div class="trash-note-canvas">
 							<h1 class="trash-note-title">{selectedTrashNote.title}</h1>
-							<div class="md-rendered-view">
-								{@html parseMarkdown(selectedTrashNote.content)}
+							<div class="obsidian-live-editor">
+								{@html markdownToDocHtml(selectedTrashNote.content)}
 							</div>
 						</div>
 					</div>
@@ -770,37 +940,6 @@
 						</div>
 
 						<div class="workspace-quick-actions">
-							<!-- Switcher Modalità Scrittura / Anteprima / Split -->
-							<div class="view-mode-toggle-group">
-								<button
-									type="button"
-									class="mode-pill-btn"
-									class:active={viewMode === 'write'}
-									onclick={() => (viewMode = 'write')}
-									title="Modalità Scrittura Markdown"
-								>
-									✏️ Scrivi
-								</button>
-								<button
-									type="button"
-									class="mode-pill-btn hide-on-small"
-									class:active={viewMode === 'split'}
-									onclick={() => (viewMode = 'split')}
-									title="Modalità Affiancata Live"
-								>
-									⚡ Split
-								</button>
-								<button
-									type="button"
-									class="mode-pill-btn"
-									class:active={viewMode === 'preview'}
-									onclick={() => (viewMode = 'preview')}
-									title="Modalità Anteprima Renderizzata"
-								>
-									👁️ Anteprima
-								</button>
-							</div>
-
 							<button
 								type="button"
 								class="action-icon-btn action-fullscreen-btn"
@@ -859,12 +998,12 @@
 						</div>
 					</div>
 
-					<!-- Markdown Formatting Ribbon Toolbar -->
+					<!-- Markdown Ribbon Toolbar -->
 					<div class="obsidian-ribbon-bar">
 						<button
 							type="button"
 							class="ribbon-btn"
-							onclick={() => insertMarkdownWrap('**', '**', 'grassetto')}
+							onclick={() => handleFormat('bold')}
 							title="Grassetto (Ctrl+B)"
 						>
 							<strong>B</strong>
@@ -872,7 +1011,7 @@
 						<button
 							type="button"
 							class="ribbon-btn"
-							onclick={() => insertMarkdownWrap('*', '*', 'corsivo')}
+							onclick={() => handleFormat('italic')}
 							title="Corsivo (Ctrl+I)"
 						>
 							<em>I</em>
@@ -880,7 +1019,7 @@
 						<button
 							type="button"
 							class="ribbon-btn highlight-btn"
-							onclick={() => insertMarkdownWrap('==', '==', 'testo evidenziato')}
+							onclick={handleHighlightText}
 							title="Evidenzia testo (Ctrl+H)"
 						>
 							🖍️ Evidenzia
@@ -888,7 +1027,7 @@
 						<button
 							type="button"
 							class="ribbon-btn"
-							onclick={() => insertMarkdownPrefix('# ')}
+							onclick={() => handleFormat('formatBlock', 'h1')}
 							title="Titolo H1 (# Titolo)"
 						>
 							<strong>H1</strong>
@@ -896,7 +1035,7 @@
 						<button
 							type="button"
 							class="ribbon-btn"
-							onclick={() => insertMarkdownPrefix('## ')}
+							onclick={() => handleFormat('formatBlock', 'h2')}
 							title="Titolo H2 (## Titolo)"
 						>
 							<strong>H2</strong>
@@ -904,7 +1043,7 @@
 						<button
 							type="button"
 							class="ribbon-btn"
-							onclick={() => insertMarkdownPrefix('### ')}
+							onclick={() => handleFormat('formatBlock', 'h3')}
 							title="Titolo H3 (### Titolo)"
 						>
 							<strong>H3</strong>
@@ -913,24 +1052,24 @@
 						<button
 							type="button"
 							class="ribbon-btn"
-							onclick={() => insertMarkdownPrefix('- ')}
-							title="Elenco puntato"
+							onclick={() => handleFormat('insertUnorderedList')}
+							title="Elenco puntato (- )"
 						>
 							• Lista
 						</button>
 						<button
 							type="button"
 							class="ribbon-btn"
-							onclick={() => insertMarkdownPrefix('1. ')}
-							title="Elenco numerato"
+							onclick={() => handleFormat('insertOrderedList')}
+							title="Elenco numerato (1. )"
 						>
 							1. Num
 						</button>
 						<button
 							type="button"
 							class="ribbon-btn"
-							onclick={() => insertMarkdownPrefix('> ')}
-							title="Citazione / Box"
+							onclick={() => handleFormat('formatBlock', 'blockquote')}
+							title="Citazione / Box (> )"
 						>
 							💡 Box
 						</button>
@@ -1011,38 +1150,29 @@
 						{/if}
 					</div>
 
-					<!-- Markdown Editor & Preview Canvas -->
-					<div class="document-canvas-container mode-{viewMode}">
-						{#if viewMode === 'write' || viewMode === 'split'}
-							<div class="markdown-editor-pane">
-								<textarea
-									bind:this={textareaEl}
-									bind:value={currentContent}
-									oninput={triggerAutoSave}
-									onkeydown={handleTextareaKeyDown}
-									onpaste={handleTextareaPaste}
-									ondrop={handleTextareaDrop}
-									ondragover={(e) => e.preventDefault()}
-									placeholder="Scrivi qui il tuo appunto in Markdown... Usa # Titolo, **grassetto**, *corsivo*, ==evidenziato== o incolla immagini con Ctrl+V"
-									class="markdown-textarea"
-									spellcheck="false"
-								></textarea>
-							</div>
-						{/if}
-
-						{#if viewMode === 'preview' || viewMode === 'split'}
-							<div class="markdown-preview-pane">
-								<div class="md-rendered-view">
-									{#if !currentContent.trim()}
-										<div class="empty-preview-hint">
-											<span>Anteprima live dell'appunto... Inizia a digitare a sinistra per vederlo formattato.</span>
-										</div>
-									{:else}
-										{@html parseMarkdown(currentContent)}
-									{/if}
-								</div>
-							</div>
-						{/if}
+					<!-- Obsidian Unified Live Document Canvas -->
+					<div
+						bind:this={docCanvasEl}
+						class="document-canvas-container"
+						ondrop={handleEditorDrop}
+						ondragover={(e) => e.preventDefault()}
+						role="region"
+						aria-label="Area di scrittura live Obsidian"
+					>
+						<div
+							bind:this={editorEl}
+							contenteditable="true"
+							class="obsidian-live-editor"
+							oninput={handleEditorInput}
+							onkeydown={handleEditorKeyDown}
+							onpaste={handleEditorPaste}
+							onclick={handleEditorClick}
+							onmousedown={handleResizeMouseDown}
+							role="textbox"
+							tabindex="0"
+							aria-multiline="true"
+							spellcheck="false"
+						></div>
 					</div>
 
 					<!-- Workspace Footer Status Info -->
@@ -1055,7 +1185,7 @@
 							<span>🔤 {docStats.charCount} caratteri</span>
 						</div>
 						<div class="doc-stats-right">
-							<span>Supporto nativo Markdown • Incolla immagini con <strong>Ctrl+V</strong></span>
+							<span>Live Markdown • Incolla immagini con <strong>Ctrl+V</strong></span>
 						</div>
 					</div>
 				{:else}
@@ -1183,15 +1313,15 @@
 			<span class="ctx-ico">📷</span>
 			<span>Inserisci Immagine</span>
 		</button>
-		<button type="button" class="ctx-item" onclick={() => { isNotesContextMenuOpen = false; insertMarkdownWrap('==', '==', 'testo evidenziato'); }}>
+		<button type="button" class="ctx-item" onclick={() => { isNotesContextMenuOpen = false; handleHighlightText(); }}>
 			<span class="ctx-ico">🖍️</span>
 			<span>Evidenzia Testo</span>
 		</button>
-		<button type="button" class="ctx-item" onclick={() => { isNotesContextMenuOpen = false; insertMarkdownWrap('**', '**', 'grassetto'); }}>
+		<button type="button" class="ctx-item" onclick={() => { isNotesContextMenuOpen = false; handleFormat('bold'); }}>
 			<span class="ctx-ico"><strong>B</strong></span>
 			<span>Grassetto</span>
 		</button>
-		<button type="button" class="ctx-item" onclick={() => { isNotesContextMenuOpen = false; insertMarkdownWrap('*', '*', 'corsivo'); }}>
+		<button type="button" class="ctx-item" onclick={() => { isNotesContextMenuOpen = false; handleFormat('italic'); }}>
 			<span class="ctx-ico"><em>I</em></span>
 			<span>Corsivo</span>
 		</button>
@@ -1679,33 +1809,6 @@
 		flex-wrap: wrap;
 	}
 
-	.view-mode-toggle-group {
-		display: flex;
-		background: var(--card-bg-subtle);
-		border: 1.5px solid var(--border-color);
-		border-radius: 9px;
-		padding: 0.15rem;
-		gap: 0.15rem;
-	}
-
-	.mode-pill-btn {
-		background: none;
-		border: none;
-		border-radius: 6px;
-		padding: 0.25rem 0.55rem;
-		font-size: 0.74rem;
-		font-weight: 800;
-		color: var(--text-muted);
-		cursor: pointer;
-		transition: all 0.12s ease;
-	}
-
-	.mode-pill-btn.active {
-		background: var(--card-bg);
-		color: var(--accent-color);
-		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-	}
-
 	.action-icon-btn {
 		background: var(--card-bg-subtle);
 		border: 1.5px solid var(--border-color);
@@ -1865,129 +1968,211 @@
 		cursor: pointer;
 	}
 
-	/* Document Canvas Container */
+	/* Obsidian Live Document Canvas Container */
 	.document-canvas-container {
 		flex: 1;
-		display: flex;
-		overflow: hidden;
+		overflow-y: auto;
 		position: relative;
 		border-top: 1px solid var(--border-color);
+		padding: 1.25rem 1.5rem;
+		scrollbar-width: thin;
+		cursor: text;
 	}
 
-	.markdown-editor-pane,
-	.markdown-preview-pane {
-		flex: 1;
-		height: 100%;
-		overflow-y: auto;
-		box-sizing: border-box;
-		position: relative;
-	}
-
-	.mode-split .markdown-editor-pane {
-		border-right: 1.5px solid var(--border-color);
-	}
-
-	.markdown-textarea {
-		width: 100%;
-		height: 100%;
+	.obsidian-live-editor {
 		min-height: 100%;
-		padding: 1.15rem 1.35rem;
-		box-sizing: border-box;
-		background: transparent;
-		border: none;
 		outline: none;
-		resize: none;
-		font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-		font-size: 0.92rem;
-		line-height: 1.6;
+		font-size: 0.96rem;
+		line-height: 1.7;
 		color: var(--text-color);
-		tab-size: 2;
+		font-family: inherit;
+		box-sizing: border-box;
 	}
 
-	.markdown-preview-pane {
-		padding: 1.15rem 1.35rem;
-		background: var(--card-bg);
-	}
-
-	.empty-preview-hint {
-		color: var(--text-muted);
-		font-size: 0.88rem;
-		font-style: italic;
-		text-align: center;
-		padding: 2rem 0;
-	}
-
-	/* Markdown Rendered Typography */
-	:global(.md-rendered-view) {
-		font-size: 0.94rem;
-		line-height: 1.65;
-		color: var(--text-color);
-	}
-
-	:global(.md-rendered-view h1, .md-rendered-view .md-h1) {
-		font-size: 1.6rem;
+	/* Obsidian Live Headings Styling */
+	.obsidian-live-editor :global(h1) {
+		font-family: 'Outfit', sans-serif;
+		font-size: 1.75rem;
 		font-weight: 900;
 		color: var(--accent-color);
-		margin: 1.25rem 0 0.6rem 0;
+		margin: 1rem 0 0.45rem 0;
 		border-bottom: 1.5px solid var(--border-color);
 		padding-bottom: 0.35rem;
 	}
 
-	:global(.md-rendered-view h2, .md-rendered-view .md-h2) {
-		font-size: 1.3rem;
+	.obsidian-live-editor :global(h2) {
+		font-family: 'Outfit', sans-serif;
+		font-size: 1.35rem;
 		font-weight: 900;
 		color: var(--accent-color);
-		margin: 1.1rem 0 0.5rem 0;
-	}
-
-	:global(.md-rendered-view h3, .md-rendered-view .md-h3) {
-		font-size: 1.1rem;
-		font-weight: 800;
-		color: var(--text-color);
 		margin: 0.9rem 0 0.4rem 0;
 	}
 
-	:global(.md-rendered-view p, .md-rendered-view .md-paragraph) {
-		margin: 0.6rem 0;
+	.obsidian-live-editor :global(h3) {
+		font-family: 'Outfit', sans-serif;
+		font-size: 1.15rem;
+		font-weight: 800;
+		color: var(--accent-color);
+		margin: 0.75rem 0 0.35rem 0;
 	}
 
-	:global(.md-rendered-view mark, .md-rendered-view .md-highlight) {
-		background: rgba(234, 179, 8, 0.25);
+	.obsidian-live-editor :global(p) {
+		margin: 0.35rem 0;
+		min-height: 1.25em;
+	}
+
+	.obsidian-live-editor :global(mark) {
+		background: rgba(234, 179, 8, 0.28);
 		color: var(--text-color);
 		padding: 0.1rem 0.35rem;
 		border-radius: 4px;
 		font-weight: 700;
 	}
 
-	:global(.md-rendered-view .md-image-container) {
-		margin: 0.85rem 0;
-		display: flex;
-		justify-content: center;
+	.obsidian-live-editor :global(strong),
+	.obsidian-live-editor :global(b) {
+		font-weight: 900;
+		color: var(--text-color);
 	}
 
-	:global(.md-rendered-view .md-image) {
-		max-width: 100%;
-		border-radius: 12px;
-		border: 1px solid var(--border-color);
-		box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
-	}
-
-	:global(.md-rendered-view ul, .md-rendered-view ol) {
-		padding-left: 1.4rem;
-		margin: 0.5rem 0;
-	}
-
-	:global(.md-rendered-view li) {
-		margin: 0.25rem 0;
-	}
-
-	:global(.md-rendered-view blockquote) {
+	.obsidian-live-editor :global(blockquote) {
 		border-left: 4px solid var(--accent-color);
 		background: var(--card-bg-subtle);
 		padding: 0.65rem 1rem;
 		border-radius: 0 10px 10px 0;
-		margin: 0.75rem 0;
+		margin: 0.65rem 0;
 		font-style: italic;
+	}
+
+	.obsidian-live-editor :global(ul),
+	.obsidian-live-editor :global(ol) {
+		padding-left: 1.5rem;
+		margin: 0.45rem 0;
+	}
+
+	.obsidian-live-editor :global(li) {
+		margin: 0.2rem 0;
+	}
+
+	.obsidian-live-editor :global(code) {
+		background: var(--card-bg-subtle);
+		border: 1px solid var(--border-color);
+		border-radius: 4px;
+		padding: 0.1rem 0.35rem;
+		font-family: monospace;
+		font-size: 0.85em;
+		color: var(--accent-color);
+	}
+
+	/* Inline Image Figure Styling in Obsidian Live Editor */
+	.obsidian-live-editor :global(figure.doc-inline-image) {
+		margin: 0.85rem 0;
+		user-select: none;
+	}
+
+	.obsidian-live-editor :global(.doc-image-wrapper) {
+		position: relative;
+		display: inline-block;
+		border-radius: 12px;
+		overflow: visible;
+		border: 1.5px solid var(--border-color);
+		box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+	}
+
+	.obsidian-live-editor :global(.doc-image-wrapper.align-center) {
+		display: block;
+		margin: 0 auto;
+	}
+
+	.obsidian-live-editor :global(.doc-image-wrapper.align-left) {
+		display: block;
+		margin-right: auto;
+	}
+
+	.obsidian-live-editor :global(.doc-image-wrapper.align-right) {
+		display: block;
+		margin-left: auto;
+	}
+
+	.obsidian-live-editor :global(.doc-img-element) {
+		width: 100%;
+		display: block;
+		border-radius: 11px;
+	}
+
+	.obsidian-live-editor :global(.doc-image-toolbar) {
+		position: absolute;
+		top: -38px;
+		left: 50%;
+		transform: translateX(-50%);
+		background: var(--card-bg);
+		border: 1px solid var(--border-color);
+		border-radius: 8px;
+		padding: 0.15rem 0.35rem;
+		display: flex;
+		align-items: center;
+		gap: 0.25rem;
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+		opacity: 0;
+		pointer-events: none;
+		transition: opacity 0.15s ease;
+		z-index: 10;
+	}
+
+	.obsidian-live-editor :global(figure.doc-inline-image:hover .doc-image-toolbar) {
+		opacity: 1;
+		pointer-events: auto;
+	}
+
+	.obsidian-live-editor :global(.doc-image-toolbar button),
+	.obsidian-live-editor :global(.doc-image-toolbar a) {
+		background: var(--card-bg-subtle);
+		border: 1px solid var(--border-color);
+		border-radius: 5px;
+		padding: 0.15rem 0.35rem;
+		font-size: 0.72rem;
+		cursor: pointer;
+		color: var(--text-color);
+		text-decoration: none;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.obsidian-live-editor :global(.doc-image-toolbar button:hover),
+	.obsidian-live-editor :global(.doc-image-toolbar a:hover) {
+		border-color: var(--accent-color);
+		color: var(--accent-color);
+	}
+
+	.obsidian-live-editor :global(.doc-image-toolbar .img-btn-del:hover) {
+		border-color: #ef4444;
+		color: #ef4444;
+	}
+
+	.obsidian-live-editor :global(.doc-image-toolbar .img-tool-sep) {
+		width: 1px;
+		height: 14px;
+		background: var(--border-color);
+		margin: 0 0.1rem;
+	}
+
+	.obsidian-live-editor :global(.resize-handle) {
+		position: absolute;
+		width: 12px;
+		height: 12px;
+		background: var(--accent-color);
+		border: 2px solid #ffffff;
+		border-radius: 50%;
+		bottom: -5px;
+		right: -5px;
+		cursor: se-resize;
+		opacity: 0;
+		transition: opacity 0.15s ease;
+	}
+
+	.obsidian-live-editor :global(figure.doc-inline-image:hover .resize-handle) {
+		opacity: 1;
 	}
 
 	.workspace-footer {
@@ -2171,10 +2356,6 @@
 			width: 100% !important;
 			min-width: 0 !important;
 			max-width: none !important;
-		}
-
-		.hide-on-small {
-			display: none !important;
 		}
 	}
 
