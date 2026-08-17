@@ -26,6 +26,15 @@
 		selectedNoteId: null
 	});
 
+	let sortedCollapsedNotes = $derived(
+		[...notesNavState.notes].sort((a, b) => {
+			if (Boolean(a.isPinned) !== Boolean(b.isPinned)) {
+				return a.isPinned ? -1 : 1;
+			}
+			return new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime();
+		})
+	);
+
 	let isNotesPage = $derived(page.url.pathname === '/notes');
 
 	let isAdmin = $derived(
@@ -152,10 +161,10 @@
 			<!-- 📓 Modalità Vault Compresso: Mostra unicamente elenco note nella barra laterale -->
 			<div class="collapsed-vault-sidebar-panel">
 				<div class="collapsed-notes-scroll">
-					{#if notesNavState.notes.length === 0}
+					{#if sortedCollapsedNotes.length === 0}
 						<div class="cv-empty">Nessun appunto presente</div>
 					{:else}
-						{#each notesNavState.notes as n}
+						{#each sortedCollapsedNotes as n}
 							<button
 								type="button"
 								class="cv-note-chip"

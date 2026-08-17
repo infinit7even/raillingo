@@ -671,11 +671,24 @@
 		}
 	}
 
-	async function handleTogglePin() {
-		if (!selectedNoteId) return;
-		currentIsPinned = !currentIsPinned;
-		triggerAutoSave();
-		toastStore.show({ message: currentIsPinned ? '📌 Nota fissata in evidenza' : '📌 Pin rimosso' });
+	async function handleTogglePin(targetNoteId?: string) {
+		const id = targetNoteId || selectedNoteId;
+		if (!id) return;
+
+		const target = notes.find((n) => n.id === id);
+		if (!target) return;
+
+		const newPinnedState = !target.isPinned;
+		if (id === selectedNoteId) {
+			currentIsPinned = newPinnedState;
+		}
+
+		await notesStore.updateNote({
+			id,
+			isPinned: newPinnedState
+		});
+
+		toastStore.show({ message: newPinnedState ? '📌 Appunto fissato in evidenza!' : '📌 Pin rimosso' });
 	}
 
 	async function selectTrashNote(note: Note) {
@@ -712,11 +725,30 @@
 		}
 	}
 
+	async function handleEmptyTrash() {
+		if (trashNotes.length === 0) return;
+		if (confirm(`Sei sicuro di voler svuotare il cestino? (${trashNotes.length} note eliminate per sempre)`)) {
+			try {
+				for (const tn of trashNotes) {
+					await notesStore.permanentDeleteNote(tn.id);
+				}
+				trashNotes = [];
+				selectedTrashNote = null;
+				toastStore.show({ message: '🧹 Cestino svuotato' });
+			} catch (err: any) {
+				console.error('Errore svuotamento cestino:', err);
+				toastStore.show({ message: `⚠️ ${err.message || 'Errore svuotamento cestino'}` });
+			}
+		}
+	}
+
 	function copyMarkdown() {
 		syncContentFromEditor();
-		if (!currentContent && !currentTitle) return;
-		navigator.clipboard.writeText(`# ${currentTitle}\n\n${currentContent}`);
-		toastStore.show({ message: '📋 Testo Markdown copiato negli appunti!' });
+		const fullText = `# ${currentTitle}\n\n${currentContent}`;
+		if (navigator?.clipboard) {
+			navigator.clipboard.writeText(fullText);
+			toastStore.show({ message: '📋 Testo Markdown copiato negli appunti!' });
+		}
 	}
 
 	function downloadFile() {
@@ -734,12 +766,27 @@
 	}
 
 	let filteredNotes = $derived(
-		notes.filter((n) => {
-			const matchesTag = !selectedTagFilter || (n.tags && n.tags.includes(selectedTagFilter));
-			const q = searchQuery.toLowerCase().trim();
-			const matchesQuery = !q || n.title.toLowerCase().includes(q) || n.content.toLowerCase().includes(q);
-			return matchesTag && matchesQuery;
-		})
+		[...notes]
+			.filter((n) => {
+				const matchesTag = !selectedTagFilter || (n.tags && n.tags.includes(selectedTagFilter));
+				const q = searchQuery.toLowerCase().trim();
+				const matchesQuery = !q || n.title.toLowerCase().includes(q) || n.content.toLowerCase().includes(q);
+				return matchesTag && matchesQuery;
+			})
+			.sort((a, b) => {
+				// 1. Note fissate sempre in cima
+				if (Boolean(a.isPinned) !== Boolean(b.isPinned)) {
+					return a.isPinned ? -1 : 1;
+				}
+				// 2. Ordinamento secondario
+				if (sortOption === 'title-asc') {
+					return a.title.localeCompare(b.title, 'it', { sensitivity: 'base' });
+				} else if (sortOption === 'date-asc') {
+					return new Date(a.updatedAt || a.createdAt).getTime() - new Date(b.updatedAt || b.createdAt).getTime();
+				}
+				// Default 'custom' o 'date-desc'
+				return new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime();
+			})
 	);
 
 	let filteredTrashNotes = $derived(
@@ -938,6 +985,18 @@
 											{/if}
 											{note.title || 'Senza titolo'}
 										</span>
+										<button
+											type="button"
+											class="file-pin-trigger-btn"
+											class:active={note.isPinned}
+											onclick={(e) => {
+												e.stopPropagation();
+												handleTogglePin(note.id);
+											}}
+											title={note.isPinned ? 'Rimuovi pin' : 'Fissa in evidenza'}
+										>
+											📌
+										</button>
 									</div>
 
 									{#if note.tags && note.tags.length > 0}
@@ -1055,7 +1114,7 @@
 								type="button"
 								class="action-icon-btn action-pin-btn"
 								class:pinned={currentIsPinned}
-								onclick={handleTogglePin}
+								onclick={() => handleTogglePin()}
 								title={currentIsPinned ? 'Rimuovi pin' : 'Fissa in alto'}
 							>
 								📌
@@ -1978,6 +2037,7 @@
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
+		gap: 0.35rem;
 	}
 
 	.file-title {
@@ -1987,6 +2047,29 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
+		flex: 1;
+		min-width: 0;
+	}
+
+	.file-pin-trigger-btn {
+		background: none;
+		border: none;
+		font-size: 0.72rem;
+		opacity: 0.35;
+		cursor: pointer;
+		padding: 0.1rem 0.25rem;
+		border-radius: 4px;
+		transition: all 0.12s ease;
+		flex-shrink: 0;
+	}
+
+	.vault-file-item:hover .file-pin-trigger-btn,
+	.file-pin-trigger-btn.active {
+		opacity: 1;
+	}
+
+	.file-pin-trigger-btn:hover {
+		transform: scale(1.2);
 	}
 
 	.pin-ico {
