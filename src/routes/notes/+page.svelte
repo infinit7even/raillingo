@@ -2438,15 +2438,15 @@
 		display: flex;
 		align-items: center;
 		gap: 0.45rem;
-		padding: 0.4rem 0.85rem;
-		margin: 0.75rem 1.25rem 0.35rem 1.25rem;
+		padding: 0.35rem 0.65rem;
+		margin: 0.55rem 0.85rem 0.25rem 0.85rem;
 		border: 1.5px solid var(--border-color);
 		border-radius: 14px;
 		background: var(--card-bg-subtle);
 		overflow-x: auto;
 		scrollbar-width: none;
 		flex-shrink: 0;
-		min-height: 42px;
+		min-height: 40px;
 		box-sizing: border-box;
 	}
 
@@ -2526,7 +2526,7 @@
 	}
 
 	.note-document-title-box {
-		padding: 0.45rem 1.25rem 0.15rem 1.25rem;
+		padding: 0.35rem 0.85rem 0.1rem 0.85rem;
 		width: 100%;
 		box-sizing: border-box;
 		flex-shrink: 0;
@@ -2538,7 +2538,7 @@
 		border: none;
 		outline: none;
 		font-family: 'Outfit', sans-serif;
-		font-size: 1.7rem;
+		font-size: 1.6rem;
 		font-weight: 900;
 		color: var(--text-color);
 		padding: 0;
@@ -2555,7 +2555,7 @@
 		display: flex;
 		align-items: center;
 		gap: 0.35rem;
-		padding: 0.2rem 1.25rem 0.35rem 1.25rem;
+		padding: 0.15rem 0.85rem 0.35rem 0.85rem;
 		flex-wrap: wrap;
 		flex-shrink: 0;
 		position: relative;
@@ -2703,8 +2703,8 @@
 		background: var(--card-bg-subtle);
 		border: 1.5px solid var(--border-color);
 		border-radius: 16px;
-		margin: 0.35rem 1.25rem 0.75rem 1.25rem;
-		padding: 1.25rem 1.4rem;
+		margin: 0.25rem 0.85rem 0.65rem 0.85rem;
+		padding: 0.75rem 0.85rem;
 		box-sizing: border-box;
 		scrollbar-width: thin;
 		scrollbar-color: var(--border-color) transparent;
@@ -2959,7 +2959,7 @@
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		padding: 0.75rem 1.25rem;
+		padding: 0.55rem 0.85rem;
 		border-top: 1.5px solid var(--border-color);
 		background: transparent;
 		font-size: 0.76rem;
