@@ -52,7 +52,7 @@
 	let saveDebounceTimer = $state<ReturnType<typeof setTimeout> | null>(null);
 
 	onMount(() => {
-		notesStore.hydrate(data.initialNotes);
+		notesStore.hydrate(data.initialNotes, user?.id);
 
 		const handlePasteReq = () => {
 			handleContextPaste();

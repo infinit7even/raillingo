@@ -43,12 +43,12 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			}
 		}
 
-		// 2. Carica le note dell'utente se autenticato
+		// 2. Carica le note ESCLUSIVAMENTE dell'utente se autenticato
 		if (user) {
 			const dbList = await db
 				.select()
 				.from(notes)
-				.where(or(eq(notes.userId, user.id), eq(notes.userId, '691289686093725736')))
+				.where(eq(notes.userId, user.id))
 				.orderBy(desc(notes.order), desc(notes.createdAt));
 
 			initialNotes = dbList.map((n) => ({

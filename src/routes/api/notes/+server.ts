@@ -54,7 +54,7 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 			list = await db
 				.select()
 				.from(notes)
-				.where(or(eq(notes.userId, user.id), eq(notes.userId, '691289686093725736')))
+				.where(eq(notes.userId, user.id))
 				.orderBy(desc(notes.order), desc(notes.createdAt));
 		} else {
 			list = await db
@@ -282,6 +282,7 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
 };
 
 export const DELETE: RequestHandler = async ({ url, locals }) => {
+	const user = locals.user;
 	const id = url.searchParams.get('id');
 	if (!id) {
 		return json({ error: 'Parametro id mancante.' }, { status: 400 });
@@ -291,6 +292,10 @@ export const DELETE: RequestHandler = async ({ url, locals }) => {
 		const existing = await db.select().from(notes).where(eq(notes.id, id)).limit(1);
 		if (existing.length > 0) {
 			const n = existing[0];
+			if (n.userId && user && n.userId !== user.id && user.role !== 'admin' && !user.isAdmin) {
+				return json({ error: 'Non autorizzato ad eliminare questa nota.' }, { status: 403 });
+			}
+
 			const noteType: Note = {
 				id: n.id,
 				userId: n.userId || undefined,
@@ -317,7 +322,8 @@ export const DELETE: RequestHandler = async ({ url, locals }) => {
 	}
 };
 
-export const PATCH: RequestHandler = async ({ request }) => {
+export const PATCH: RequestHandler = async ({ request, locals }) => {
+	const user = locals.user;
 	try {
 		const payload: { items: { id: string; order: number }[] } = await request.json();
 		if (!payload || !Array.isArray(payload.items)) {
@@ -325,7 +331,14 @@ export const PATCH: RequestHandler = async ({ request }) => {
 		}
 
 		for (const item of payload.items) {
-			await db.update(notes).set({ order: item.order }).where(eq(notes.id, item.id));
+			if (user?.role === 'admin' || user?.isAdmin) {
+				await db.update(notes).set({ order: item.order }).where(eq(notes.id, item.id));
+			} else if (user) {
+				await db
+					.update(notes)
+					.set({ order: item.order })
+					.where(and(eq(notes.id, item.id), eq(notes.userId, user.id)));
+			}
 		}
 
 		return json({ success: true });

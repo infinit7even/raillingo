@@ -2,31 +2,43 @@ import { browser } from '$app/environment';
 import type { Note } from '$lib/types/notes';
 import { toastStore } from '$lib/stores/toastStore';
 
-const STORAGE_KEY = 'rf_notes_vault';
+const BASE_STORAGE_KEY = 'rf_notes_vault';
 const PENDING_KEY = 'rf_notes_pending_sync';
 
 class NotesStore {
 	private notes: Note[] = [];
 	private listeners = new Set<(notes: Note[]) => void>();
+	private currentUserId: string | null = null;
 	private hydrated = false;
 
-	public hydrate(initialNotes: Note[] | null | undefined) {
-		if (this.hydrated) return;
-		this.hydrated = true;
+	private getStorageKey(): string {
+		return `${BASE_STORAGE_KEY}_${this.currentUserId || 'guest'}`;
+	}
 
-		// 1. Dati SSR
-		if (initialNotes && Array.isArray(initialNotes) && initialNotes.length > 0) {
-			this.notes = initialNotes;
-			this.saveToStorage();
-			this.notify();
-		} else {
-			// 2. Fallback offline
-			this.loadFromStorage();
+	public hydrate(initialNotes: Note[] | null | undefined, userId?: string | null) {
+		const newUserId = userId || 'guest';
+		const userChanged = this.currentUserId !== newUserId;
+
+		if (userChanged) {
+			this.currentUserId = newUserId;
+			this.hydrated = false;
+		}
+
+		if (!this.hydrated || userChanged) {
+			this.hydrated = true;
+
+			if (initialNotes && Array.isArray(initialNotes)) {
+				this.notes = initialNotes;
+				this.saveToStorage();
+				this.notify();
+			} else {
+				this.loadFromStorage();
+			}
 		}
 
 		if (browser) {
-			// Sincronizza in background all'avvio e quando torna online
 			this.syncPending();
+			window.removeEventListener('online', () => this.syncPending());
 			window.addEventListener('online', () => this.syncPending());
 		}
 	}
@@ -46,14 +58,17 @@ class NotesStore {
 	private loadFromStorage() {
 		if (!browser) return;
 		try {
-			const raw = localStorage.getItem(STORAGE_KEY);
+			const raw = localStorage.getItem(this.getStorageKey());
 			if (raw) {
 				const parsed = JSON.parse(raw);
 				if (Array.isArray(parsed)) {
 					this.notes = parsed;
 					this.notify();
+					return;
 				}
 			}
+			this.notes = [];
+			this.notify();
 		} catch (e) {
 			console.warn('Errore lettura note locali:', e);
 		}
@@ -62,7 +77,7 @@ class NotesStore {
 	private saveToStorage() {
 		if (browser) {
 			try {
-				localStorage.setItem(STORAGE_KEY, JSON.stringify(this.notes));
+				localStorage.setItem(this.getStorageKey(), JSON.stringify(this.notes));
 			} catch (e) {
 				console.warn('Errore salvataggio note locali:', e);
 			}
