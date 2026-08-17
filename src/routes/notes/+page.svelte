@@ -2227,6 +2227,7 @@
 		border: 2px solid var(--border-color);
 		border-bottom: 4px solid var(--border-depth-color);
 		min-width: 0;
+		padding: 0;
 	}
 
 	/* Top Workspace Header Bar */
@@ -2704,7 +2705,7 @@
 		border: 1.5px solid var(--border-color);
 		border-radius: 16px;
 		margin: 0.25rem 0.85rem 0.65rem 0.85rem;
-		padding: 0.75rem 0.85rem;
+		padding: 0.65rem 0.8rem;
 		box-sizing: border-box;
 		scrollbar-width: thin;
 		scrollbar-color: var(--border-color) transparent;
