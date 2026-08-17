@@ -162,37 +162,33 @@ class CardsStore {
 	}
 
 	public async updateCategoryBatch(oldCategory: string, newCategory: string): Promise<number> {
-		let count = 0;
-		const updatedCards: Card[] = [];
+		const oldCat = oldCategory.trim();
+		const newCat = newCategory.trim();
 
-		for (const c of this.cards) {
-			if (c.category === oldCategory) {
-				count++;
-				const updated = { ...c, category: newCategory, updatedAt: new Date().toISOString() };
-				updatedCards.push(updated);
-			} else {
-				updatedCards.push(c);
-			}
+		if (!oldCat || !newCat || oldCat === newCat) return 0;
+
+		const res = await fetch('/api/admin/categories', {
+			method: 'PUT',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ oldCategory: oldCat, newCategory: newCat })
+		});
+
+		if (!res.ok) {
+			const errData = await res.json().catch(() => ({ error: 'Errore durante la modifica della categoria' }));
+			throw new Error(errData.error || `Errore rinomina categoria (${res.status})`);
 		}
 
-		if (count > 0) {
-			this.cards = updatedCards;
-			this.saveToStorage();
-			this.notify();
+		const result = await res.json();
+		const count: number = result.count || 0;
 
-			// Bulk sync to API if available
-			for (const updated of updatedCards.filter((c) => c.category === newCategory)) {
-				try {
-					await fetch('/api/cards', {
-						method: 'PUT',
-						headers: { 'Content-Type': 'application/json' },
-						body: JSON.stringify(updated)
-					});
-				} catch (e) {
-					console.warn('Errore sync categoria batch API:', e);
-				}
-			}
-		}
+		// Aggiorna lo stato locale
+		this.cards = this.cards.map((c) =>
+			(c.category || '').trim() === oldCat
+				? { ...c, category: newCat, updatedAt: new Date().toISOString() }
+				: c
+		);
+		this.saveToStorage();
+		this.notify();
 
 		return count;
 	}

@@ -31,13 +31,9 @@
 	let categoryToRename = $state<string | null>(null);
 	let newCategoryName = $state('');
 	let renamingInProgress = $state(false);
+	let categorySearchQuery = $state('');
 
-	onMount(() => {
-		const unsubscribe = cardsStore.subscribe((c) => (cards = c));
-		return unsubscribe;
-	});
-
-	// Derive category stats map
+	// Derived category stats map
 	let categoryStats = $derived.by<{ category: string; count: number }[]>(() => {
 		const map = new Map<string, number>();
 		for (const c of cards) {
@@ -47,6 +43,17 @@
 		return Array.from(map.entries())
 			.map(([category, count]) => ({ category, count }))
 			.sort((a, b) => b.count - a.count);
+	});
+
+	let filteredCategoryStats = $derived.by(() => {
+		const q = categorySearchQuery.toLowerCase().trim();
+		if (!q) return categoryStats;
+		return categoryStats.filter((s) => s.category.toLowerCase().includes(q));
+	});
+
+	onMount(() => {
+		const unsubscribe = cardsStore.subscribe((c) => (cards = c));
+		return unsubscribe;
 	});
 
 	function resetForm() {
@@ -122,16 +129,49 @@
 		}
 	}
 
+	function filterCardsByCategory(catName: string) {
+		selectedCategoryFilter = catName;
+		const listSection = document.querySelector('.list-section');
+		if (listSection) {
+			listSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+		}
+	}
+
 	async function handleBatchRenameCategory(oldCat: string) {
-		if (!newCategoryName.trim()) return;
-		renamingInProgress = true;
-		try {
-			const count = await cardsStore.updateCategoryBatch(oldCat, newCategoryName.trim());
-			alert(`Aggiornate ${count} schede con la nuova categoria "${newCategoryName.trim()}".`);
+		const trimmedNew = newCategoryName.trim();
+		if (!trimmedNew) return;
+		if (trimmedNew === oldCat) {
 			categoryToRename = null;
 			newCategoryName = '';
-		} catch (err) {
-			console.error('Errore durante la modifica in blocco della categoria:', err);
+			return;
+		}
+
+		// Se la categoria di destinazione esiste già, chiedi conferma per l'unione
+		const destinationExists = categoryStats.some(
+			(s) => s.category.toLowerCase() === trimmedNew.toLowerCase() && s.category !== oldCat
+		);
+
+		if (destinationExists) {
+			if (
+				!confirm(
+					`La categoria "${trimmedNew}" esiste già.\n\nVuoi unire le schede di "${oldCat}" nella categoria "${trimmedNew}"?`
+				)
+			) {
+				return;
+			}
+		}
+
+		renamingInProgress = true;
+		try {
+			const count = await cardsStore.updateCategoryBatch(oldCat, trimmedNew);
+			toastStore.show({
+				message: `🏷️ Aggiornate ${count} schede con la nuova categoria "${trimmedNew}"`
+			});
+			categoryToRename = null;
+			newCategoryName = '';
+		} catch (err: any) {
+			console.error('Errore durante la modifica della categoria:', err);
+			toastStore.show({ message: `⚠️ ${err.message || 'Errore modifica categoria'}` });
 		} finally {
 			renamingInProgress = false;
 		}
@@ -314,14 +354,30 @@
 
 			<!-- Sezione Gestione Categorie in Blocco -->
 			<div class="categories-admin-card duo-card">
-				<h2 class="section-title">🏷️ Gestione Categorie & Conteggio Card</h2>
-				<p class="section-subtitle">
-					Visualizza il numero di schede per ciascuna categoria e modificala in blocco.
-				</p>
+				<div class="categories-header-row">
+					<div>
+						<h2 class="section-title">🏷️ Gestione Categorie & Conteggio Card ({categoryStats.length})</h2>
+						<p class="section-subtitle">
+							Rinomina una categoria in blocco o unisci schede tra categorie esistenti.
+						</p>
+					</div>
+
+					<div class="category-search-box">
+						<input
+							type="text"
+							bind:value={categorySearchQuery}
+							placeholder="Cerca categoria..."
+							class="duo-input cat-search-input"
+						/>
+					</div>
+				</div>
 
 				<div class="category-stats-grid">
-					{#each categoryStats as stat}
-						<div class="category-stat-item duo-card">
+					{#each filteredCategoryStats as stat}
+						<div
+							class="category-stat-item duo-card"
+							class:is-renaming-active={categoryToRename === stat.category}
+						>
 							<div class="stat-main">
 								<span class="category-name">{stat.category}</span>
 								<span class="category-count-badge">{stat.count} card</span>
@@ -329,39 +385,77 @@
 
 							{#if categoryToRename === stat.category}
 								<div class="rename-inline-box">
-									<input
-										type="text"
-										bind:value={newCategoryName}
-										placeholder="Nuovo nome categoria..."
-										class="duo-input rename-input"
-									/>
-									<button
-										class="duo-btn duo-btn-green"
-										disabled={renamingInProgress}
-										onclick={() => handleBatchRenameCategory(stat.category)}
-									>
-										Salva
-									</button>
-									<button
-										class="duo-btn duo-btn-gray"
-										onclick={() => {
-											categoryToRename = null;
-											newCategoryName = '';
-										}}
-									>
-										Annulla
-									</button>
+									<div class="rename-fields-wrapper">
+										<input
+											type="text"
+											bind:value={newCategoryName}
+											placeholder="Nuovo nome categoria..."
+											class="duo-input rename-input"
+											onkeydown={(e) => {
+												if (e.key === 'Enter') {
+													e.preventDefault();
+													handleBatchRenameCategory(stat.category);
+												} else if (e.key === 'Escape') {
+													categoryToRename = null;
+													newCategoryName = '';
+												}
+											}}
+										/>
+
+										<!-- Quick Merge Select Dropdown -->
+										<select
+											bind:value={newCategoryName}
+											class="duo-input quick-merge-select"
+											title="Oppure seleziona una categoria esistente in cui unire le schede"
+										>
+											<option value={newCategoryName} disabled>-- Oppure unisci a esistente --</option>
+											{#each categoryStats.filter((s) => s.category !== stat.category) as targetStat}
+												<option value={targetStat.category}>
+													Unisci in "{targetStat.category}" ({targetStat.count} card)
+												</option>
+											{/each}
+										</select>
+									</div>
+
+									<div class="rename-actions-row">
+										<button
+											class="duo-btn duo-btn-green save-cat-btn"
+											disabled={renamingInProgress || !newCategoryName.trim()}
+											onclick={() => handleBatchRenameCategory(stat.category)}
+										>
+											{renamingInProgress ? '⏳ Salvo...' : '💾 Salva'}
+										</button>
+										<button
+											class="duo-btn duo-btn-gray cancel-cat-btn"
+											onclick={() => {
+												categoryToRename = null;
+												newCategoryName = '';
+											}}
+										>
+											✕ Annulla
+										</button>
+									</div>
 								</div>
 							{:else}
-								<button
-									class="rename-cat-btn"
-									onclick={() => {
-										categoryToRename = stat.category;
-										newCategoryName = stat.category;
-									}}
-								>
-									✏️ Rinomina
-								</button>
+								<div class="category-card-actions">
+									<button
+										class="cat-action-btn filter"
+										onclick={() => filterCardsByCategory(stat.category)}
+										title="Visualizza solo le schede appartenenti a questa categoria"
+									>
+										🔍 Filtra schede
+									</button>
+									<button
+										class="cat-action-btn rename"
+										onclick={() => {
+											categoryToRename = stat.category;
+											newCategoryName = stat.category;
+										}}
+										title="Rinomina in blocco questa categoria"
+									>
+										✏️ Rinomina
+									</button>
+								</div>
 							{/if}
 						</div>
 					{/each}
@@ -662,45 +756,58 @@
 		padding: 1.5rem;
 		display: flex;
 		flex-direction: column;
+		gap: 1.25rem;
+	}
+
+	.categories-header-row {
+		display: flex;
+		justify-content: space-between;
+		align-items: flex-start;
 		gap: 1rem;
+		flex-wrap: wrap;
 	}
 
-	.section-title {
-		font-size: 1.3rem;
-		font-weight: 900;
-		margin: 0;
-	}
-
-	.section-subtitle {
-		font-size: 0.85rem;
-		color: var(--text-muted);
-		margin: 0;
+	.cat-search-input {
+		font-size: 0.82rem;
+		padding: 0.45rem 0.75rem;
+		min-width: 180px;
 	}
 
 	.category-stats-grid {
 		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-		gap: 0.75rem;
+		grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+		gap: 0.85rem;
 	}
 
 	.category-stat-item {
 		padding: 1rem;
 		display: flex;
 		flex-direction: column;
-		gap: 0.6rem;
+		gap: 0.75rem;
 		background: var(--card-bg-subtle);
+		border: 1px solid var(--border-color);
+		border-radius: 16px;
+		transition: border-color 0.2s ease, box-shadow 0.2s ease;
+	}
+
+	.category-stat-item.is-renaming-active {
+		border-color: var(--accent-color);
+		box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-color) 30%, transparent);
+		grid-column: span 1;
 	}
 
 	.stat-main {
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
+		gap: 0.5rem;
 	}
 
 	.category-name {
 		font-weight: 900;
 		font-size: 0.95rem;
 		color: var(--text-color);
+		word-break: break-word;
 	}
 
 	.category-count-badge {
@@ -708,31 +815,86 @@
 		font-weight: 800;
 		background: var(--accent-color);
 		color: #ffffff;
-		padding: 0.2rem 0.55rem;
+		padding: 0.2rem 0.6rem;
 		border-radius: 12px;
+		white-space: nowrap;
 	}
 
-	.rename-cat-btn {
-		background: transparent;
-		border: 1px dashed var(--border-color);
-		color: var(--accent-color);
-		font-size: 0.78rem;
+	.category-card-actions {
+		display: flex;
+		gap: 0.4rem;
+	}
+
+	.cat-action-btn {
+		flex: 1;
+		font-size: 0.76rem;
 		font-weight: 800;
-		padding: 0.35rem 0.6rem;
+		padding: 0.35rem 0.5rem;
 		border-radius: 8px;
 		cursor: pointer;
-		text-align: left;
+		transition: all 0.15s ease;
+		text-align: center;
+	}
+
+	.cat-action-btn.filter {
+		background: var(--card-bg);
+		border: 1px solid var(--border-color);
+		color: var(--text-muted);
+	}
+
+	.cat-action-btn.filter:hover {
+		color: var(--accent-color);
+		border-color: var(--accent-color);
+		background: var(--accent-light-bg);
+	}
+
+	.cat-action-btn.rename {
+		background: var(--card-bg);
+		border: 1px dashed var(--border-color);
+		color: var(--accent-color);
+	}
+
+	.cat-action-btn.rename:hover {
+		background: var(--accent-color);
+		color: #ffffff;
+		border-style: solid;
 	}
 
 	.rename-inline-box {
 		display: flex;
-		gap: 0.35rem;
-		align-items: center;
+		flex-direction: column;
+		gap: 0.5rem;
+		width: 100%;
+	}
+
+	.rename-fields-wrapper {
+		display: flex;
+		flex-direction: column;
+		gap: 0.4rem;
 	}
 
 	.rename-input {
-		font-size: 0.8rem;
+		font-size: 0.85rem;
+		padding: 0.45rem 0.6rem;
+		font-weight: 700;
+	}
+
+	.quick-merge-select {
+		font-size: 0.75rem;
 		padding: 0.35rem 0.5rem;
+		color: var(--text-muted);
+	}
+
+	.rename-actions-row {
+		display: flex;
+		gap: 0.4rem;
+	}
+
+	.save-cat-btn,
+	.cancel-cat-btn {
+		flex: 1;
+		padding: 0.4rem 0.6rem;
+		font-size: 0.8rem;
 	}
 
 	/* List Section */
