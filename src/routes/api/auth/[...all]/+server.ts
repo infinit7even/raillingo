@@ -1,6 +1,10 @@
 import { auth } from '$lib/server/auth';
 import type { RequestHandler } from '@sveltejs/kit';
 
+export const fallback: RequestHandler = async ({ request }) => {
+	return auth.handler(request);
+};
+
 export const GET: RequestHandler = async ({ request }) => {
 	return auth.handler(request);
 };

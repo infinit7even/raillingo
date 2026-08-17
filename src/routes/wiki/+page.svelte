@@ -7,6 +7,7 @@
 	import type { Card } from '$lib/types/cards';
 
 	import { toastStore } from '$lib/stores/toastStore';
+	import { loginWithDiscord } from '$lib/auth-client';
 
 	let { data } = $props();
 	let user = $derived(data?.user);
@@ -213,10 +214,11 @@
 				{/if}
 
 				{#if !user}
-					<a
-						href="/api/auth/login"
+					<button
+						type="button"
 						class="duo-btn sync-btn discord-sync-btn discord-wiki-login-btn"
 						title="Accedi con Discord"
+						onclick={() => loginWithDiscord('/wiki')}
 					>
 						<svg
 							class="discord-icon-mini"
@@ -229,7 +231,7 @@
 							/>
 						</svg>
 						<span class="action-btn-label">ACCEDI</span>
-					</a>
+					</button>
 				{/if}
 			</div>
 		</div>

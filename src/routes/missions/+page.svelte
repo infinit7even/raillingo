@@ -3,6 +3,7 @@
 	import { statsStore, type StatsData } from '$lib/stores/statsStore';
 	import { toastStore } from '$lib/stores/toastStore';
 	import PageHeader from '$lib/components/PageHeader.svelte';
+	import { loginWithDiscord, logoutUser } from '$lib/auth-client';
 
 	let { data } = $props<{ data?: { user?: { username: string; email?: string } | null } }>();
 	let user = $derived(data?.user || null);
@@ -73,8 +74,7 @@
 	]);
 
 	async function logout() {
-		await fetch('/api/auth/logout', { method: 'POST' });
-		window.location.href = '/';
+		await logoutUser();
 	}
 
 	function claimReward(missionId: string) {
@@ -122,7 +122,7 @@
 						Accedi con Discord per sincronizzare serie, gemme e XP su tutti i tuoi dispositivi.
 					</span>
 				</div>
-				<a href="/api/auth/login?returnUrl=/missions" class="discord-sync-btn">
+				<button type="button" class="discord-sync-btn" onclick={() => loginWithDiscord('/missions')}>
 					<svg
 						class="discord-icon-mini"
 						xmlns="http://www.w3.org/2000/svg"
@@ -134,7 +134,7 @@
 						/>
 					</svg>
 					<span>ACCEDI CON DISCORD</span>
-				</a>
+				</button>
 			</div>
 		{/if}
 	</div>

@@ -6,6 +6,7 @@
 	import type { Card } from '$lib/types/cards';
 
 	import { pwaStore } from '$lib/stores/pwaStore';
+	import { loginWithDiscord, logoutUser } from '$lib/auth-client';
 
 	let { data } = $props();
 
@@ -310,7 +311,7 @@
 						🚪 LOGOUT ({user.username})
 					</button>
 				{:else}
-					<a href="/api/auth/login" class="duo-btn sync-btn discord-sync-btn flex-btn">
+					<button type="button" class="duo-btn sync-btn discord-sync-btn flex-btn" onclick={() => loginWithDiscord('/')}>
 						<svg
 							class="discord-icon-mini"
 							xmlns="http://www.w3.org/2000/svg"
@@ -324,7 +325,7 @@
 							/>
 						</svg>
 						<span>ACCEDI CON DISCORD</span>
-					</a>
+					</button>
 				{/if}
 				<a
 					href="https://ko-fi.com/infinit7even"

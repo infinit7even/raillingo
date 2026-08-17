@@ -14,6 +14,7 @@
 	} from '$lib/utils/docConverter';
 	import { navStore } from '$lib/stores/navStore';
 	import { uploadImage } from '$lib/utils/imageUploader';
+	import { loginWithDiscord } from '$lib/auth-client';
 
 	let { data } = $props();
 	let user = $derived(data.user);
@@ -1232,7 +1233,7 @@
 			</div>
 
 			<div class="notes-action-zone">
-				<a href="/api/auth/login?returnUrl=/notes" class="duo-btn discord-login-btn hero-action-btn">
+				<button type="button" class="duo-btn discord-login-btn hero-action-btn" onclick={() => loginWithDiscord('/notes')}>
 					<svg
 						class="discord-svg"
 						xmlns="http://www.w3.org/2000/svg"
@@ -1244,7 +1245,7 @@
 						/>
 					</svg>
 					<span>ACCEDI CON DISCORD PER SALVARE GLI APPUNTI</span>
-				</a>
+				</button>
 			</div>
 		</div>
 	</div>
