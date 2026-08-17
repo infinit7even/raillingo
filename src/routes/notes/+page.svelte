@@ -62,7 +62,6 @@
 	let docCanvasEl = $state<HTMLDivElement | null>(null);
 	let fileInputEl = $state<HTMLInputElement | null>(null);
 	let saveDebounceTimer = $state<ReturnType<typeof setTimeout> | null>(null);
-	let draggedFigure: HTMLElement | null = null;
 
 	// Tutte le etichette create dall'utente
 	let allUserTags = $derived.by<string[]>(() => {
@@ -303,7 +302,7 @@
 	}
 
 	let activeNote = $derived(notes.find((n) => n.id === selectedNoteId) || null);
-	let headingsOutline = $derived(extractHeadings(currentContent));
+	let headingsOutline = $derived(isOutlineOpen ? extractHeadings(currentContent) : []);
 	let docStats = $derived(getMarkdownStats(currentContent));
 
 	function restoreCursorToEnd(targetEl: HTMLElement) {
@@ -776,8 +775,7 @@
 			>
 				<div class="vault-header">
 					<div class="vault-title-group">
-						<span class="vault-icon">📓</span>
-						<span class="vault-name">ELENCO APPUNTI</span>
+						<span class="vault-name">I MIEI APPUNTI</span>
 						<span class="vault-badge">{notes.length}</span>
 					</div>
 

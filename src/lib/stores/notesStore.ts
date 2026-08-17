@@ -15,6 +15,10 @@ class NotesStore {
 		return `${BASE_STORAGE_KEY}_${this.currentUserId || 'guest'}`;
 	}
 
+	private handleOnline = () => {
+		this.syncPending();
+	};
+
 	public hydrate(initialNotes: Note[] | null | undefined, userId?: string | null) {
 		const newUserId = userId || 'guest';
 		const userChanged = this.currentUserId !== newUserId;
@@ -38,8 +42,8 @@ class NotesStore {
 
 		if (browser) {
 			this.syncPending();
-			window.removeEventListener('online', () => this.syncPending());
-			window.addEventListener('online', () => this.syncPending());
+			window.removeEventListener('online', this.handleOnline);
+			window.addEventListener('online', this.handleOnline);
 		}
 	}
 

@@ -2,10 +2,10 @@
 	import { onMount } from 'svelte';
 	import { cardsStore } from '$lib/stores/cardsStore';
 	import { ignoredCardsStore } from '$lib/stores/ignoredCardsStore';
+	import { globalCategoryStore, matchesCategory } from '$lib/stores/globalCategoryStore';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import CategoryFilter from '$lib/components/CategoryFilter.svelte';
 	import type { Card } from '$lib/types/cards';
-
 	import { toastStore } from '$lib/stores/toastStore';
 	import { loginWithDiscord } from '$lib/auth-client';
 
@@ -13,7 +13,6 @@
 	let user = $derived(data?.user);
 
 	let cards = $state<Card[]>([]);
-	import { globalCategoryStore, matchesCategory } from '$lib/stores/globalCategoryStore';
 
 	let ignoredIds = $state<Set<string>>(new Set());
 	let searchQuery = $state('');
