@@ -327,16 +327,6 @@
 						<span>ACCEDI CON DISCORD</span>
 					</button>
 				{/if}
-				<a
-					href="https://ko-fi.com/infinit7even"
-					target="_blank"
-					rel="noopener noreferrer"
-					class="duo-btn duo-btn-green flex-btn"
-				>
-					<img src="/emoji/sparkles_3d.png" alt="Splendore" width="20" height="20" decoding="async" class="btn-emoji-img" />
-					SOSTIENI IL PROGETTO
-				</a>
-
 				{#if user && (user.isAdmin || user.role === 'admin')}
 					<a href="/admin" class="duo-btn duo-btn-purple flex-btn"> 🔐 PANNELLO ADMIN </a>
 				{/if}
@@ -781,12 +771,6 @@
 
 	.install-app-btn:hover:not(:disabled) {
 		background-color: #ff7370;
-	}
-
-	.btn-emoji-img {
-		width: 20px;
-		height: 20px;
-		object-fit: contain;
 	}
 
 	.sidebar-privacy-footer {
