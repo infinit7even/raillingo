@@ -1975,49 +1975,59 @@
 	/* Obsidian Live Document Canvas Container */
 	.document-canvas-container {
 		flex: 1;
+		min-height: 0;
+		display: flex;
 		overflow-y: auto;
 		position: relative;
-		border-top: 1px solid var(--border-color);
-		padding: 1.25rem 1.5rem;
+		background: var(--card-bg-subtle);
+		border: 1.5px solid var(--border-color);
+		border-radius: 14px;
+		padding: 1.25rem 1.6rem;
+		margin: 0.5rem 0.85rem 0.85rem 0.85rem;
+		box-sizing: border-box;
 		scrollbar-width: thin;
 		cursor: text;
 	}
 
 	.obsidian-live-editor {
+		width: 100%;
 		min-height: 100%;
 		outline: none;
 		font-size: 0.96rem;
-		line-height: 1.7;
+		line-height: 1.6;
 		color: var(--text-color);
 		font-family: inherit;
 		box-sizing: border-box;
+		word-break: break-word;
 	}
 
 	/* Obsidian Live Headings Styling */
 	.obsidian-live-editor :global(h1) {
 		font-family: 'Outfit', sans-serif;
-		font-size: 1.75rem;
+		font-size: 1.55rem;
 		font-weight: 900;
 		color: var(--accent-color);
-		margin: 1rem 0 0.45rem 0;
-		border-bottom: 1.5px solid var(--border-color);
-		padding-bottom: 0.35rem;
+		margin: 0.75rem 0 0.25rem 0;
+		border-bottom: none;
+		padding-bottom: 0;
 	}
 
 	.obsidian-live-editor :global(h2) {
 		font-family: 'Outfit', sans-serif;
-		font-size: 1.35rem;
+		font-size: 1.3rem;
 		font-weight: 900;
 		color: var(--accent-color);
-		margin: 0.9rem 0 0.4rem 0;
+		margin: 0.65rem 0 0.2rem 0;
+		border-bottom: none;
 	}
 
 	.obsidian-live-editor :global(h3) {
 		font-family: 'Outfit', sans-serif;
-		font-size: 1.15rem;
+		font-size: 1.12rem;
 		font-weight: 800;
 		color: var(--accent-color);
-		margin: 0.75rem 0 0.35rem 0;
+		margin: 0.55rem 0 0.18rem 0;
+		border-bottom: none;
 	}
 
 	.obsidian-live-editor :global(p) {
