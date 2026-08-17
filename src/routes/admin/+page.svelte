@@ -180,22 +180,6 @@
 		}
 	}
 
-	async function clearAllLogs() {
-		if (!confirm('Vuoi eliminare TUTTI i log delle azioni degli admin? Questa azione non può essere annullata.')) {
-			return;
-		}
-
-		try {
-			const res = await fetch('/api/admin/logs', { method: 'DELETE' });
-			if (res.ok) {
-				logs = [];
-				toastStore.show({ message: '🧹 Registro log svuotato con successo!' });
-			}
-		} catch (err) {
-			console.error('Errore svuotamento log:', err);
-		}
-	}
-
 	function getActionBadge(action: string) {
 		switch (action) {
 			case 'create_card':
@@ -587,35 +571,15 @@
 			</button>
 		</div>
 	{:else}
-		<!-- Banner Header in alto visibile SOLO su Mobile -->
+		<!-- Banner Header in alto visibile SOLO su Mobile (Azzurro come la Wiki) -->
 		<div class="mobile-only-header">
 			<PageHeader
 				title="Pannello Admin"
 				subtitle="Gestione schede, utenti e registro attività"
 				icon="/emoji/shield_3d.png"
-				variant="brand"
+				variant="blue"
 				mobileOpenNav={true}
 			/>
-		</div>
-
-		<!-- Dashboard Desktop Header (visibile solo su Desktop) -->
-		<div class="desktop-admin-header duo-card">
-			<div class="desktop-header-left">
-				<img src="/emoji/shield_3d.png" alt="" width="40" height="40" class="admin-header-icon" />
-				<div>
-					<h1 class="desktop-admin-title">Pannello Amministratore</h1>
-					<p class="desktop-admin-subtitle">Gestione schede ferroviarie, permessi utenti, registro e manutenzione.</p>
-				</div>
-			</div>
-			<div class="desktop-header-actions">
-				<button
-					type="button"
-					class="duo-btn duo-btn-theme add-card-top-btn"
-					onclick={() => (isCreatingCard = !isCreatingCard)}
-				>
-					{isCreatingCard ? '✕ Chiudi' : '✨ Nuova Scheda'}
-				</button>
-			</div>
 		</div>
 
 		<!-- Box Creazione Nuova Scheda -->
@@ -907,7 +871,7 @@
 				}}
 			>
 				<span class="tab-emoji">📜</span>
-				<span class="tab-label">Log Azioni</span>
+				<span class="tab-label"><span class="tab-label-full">Log Azioni</span><span class="tab-label-short">Log</span></span>
 				<span class="tab-count-chip">{logs.length}</span>
 			</button>
 			<button
@@ -1087,19 +1051,6 @@
 						{#each filteredUsers as u (u.id)}
 							<div class="user-card-item duo-card animated-card" class:is-admin={u.role === 'admin'}>
 								<div class="user-card-header">
-									<div class="user-avatar-wrap">
-										{#if u.image}
-											<img src={u.image} alt={u.name} class="user-avatar-img" />
-										{:else}
-											<div class="user-avatar-fallback">
-												{u.name ? u.name.charAt(0).toUpperCase() : '👤'}
-											</div>
-										{/if}
-										{#if u.role === 'admin'}
-											<span class="admin-crown-badge" title="Amministratore">👑</span>
-										{/if}
-									</div>
-
 									<div class="user-meta-info">
 										<div class="user-name-row">
 											<strong class="user-display-name">{u.name || 'Utente Senza Nome'}</strong>
@@ -1196,11 +1147,6 @@
 						<button type="button" class="duo-btn duo-btn-subtle refresh-btn" onclick={loadLogs} disabled={logsLoading}>
 							{logsLoading ? '⏳' : '🔄'} Aggiorna
 						</button>
-						{#if logs.length > 0}
-							<button type="button" class="duo-btn duo-btn-red clear-logs-btn" onclick={clearAllLogs}>
-								🧹 Svuota Registro
-							</button>
-						{/if}
 					</div>
 				</div>
 
@@ -1420,50 +1366,6 @@
 			display: block;
 			margin-bottom: 0.25rem;
 		}
-	}
-
-	/* 💻 Desktop Header (Nascosto su Mobile) */
-	.desktop-admin-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		padding: 1.15rem 1.35rem;
-		background: var(--card-bg);
-		border-radius: 20px;
-		border: 2px solid var(--border-color);
-		box-shadow: 0 4px 14px var(--shadow-color);
-	}
-
-	@media (max-width: 1023px) {
-		.desktop-admin-header {
-			display: none;
-		}
-	}
-
-	.desktop-header-left {
-		display: flex;
-		align-items: center;
-		gap: 0.85rem;
-	}
-
-	.desktop-admin-title {
-		font-family: 'Outfit', sans-serif;
-		font-size: 1.35rem;
-		font-weight: 900;
-		color: var(--text-color);
-		margin: 0;
-	}
-
-	.desktop-admin-subtitle {
-		font-size: 0.82rem;
-		color: var(--text-muted);
-		margin: 0.15rem 0 0 0;
-	}
-
-	.add-card-top-btn {
-		font-size: 0.88rem;
-		padding: 0.6rem 1.15rem;
-		white-space: nowrap;
 	}
 
 	/* 🆕 Box Creazione Scheda */
@@ -1821,28 +1723,23 @@
 
 	/* 🧭 Unified Tab Navigation Bar */
 	.admin-tabs-nav {
-		display: flex;
+		display: grid;
+		grid-template-columns: repeat(4, 1fr);
 		gap: 0.4rem;
 		background: var(--card-bg-subtle);
 		padding: 0.35rem;
 		border-radius: 18px;
 		border: 2px solid var(--border-color);
-		overflow-x: auto;
-		scrollbar-width: none;
-	}
-
-	.admin-tabs-nav::-webkit-scrollbar {
-		display: none;
+		box-sizing: border-box;
+		width: 100%;
 	}
 
 	.admin-tab-item {
-		flex: 1;
-		min-width: 100px;
 		display: flex;
 		align-items: center;
 		justify-content: center;
 		gap: 0.4rem;
-		padding: 0.65rem 0.8rem;
+		padding: 0.65rem 0.5rem;
 		font-size: 0.85rem;
 		font-weight: 900;
 		border-radius: 14px;
@@ -1852,6 +1749,16 @@
 		cursor: pointer;
 		transition: all 0.18s ease;
 		white-space: nowrap;
+		min-width: 0;
+		box-sizing: border-box;
+	}
+
+	.admin-tab-item .tab-label-short {
+		display: none;
+	}
+
+	.admin-tab-item .tab-label-full {
+		display: inline;
 	}
 
 	.admin-tab-item:hover {
@@ -1893,6 +1800,7 @@
 		background: rgba(0, 0, 0, 0.2);
 		padding: 0.1rem 0.4rem;
 		border-radius: 999px;
+		flex-shrink: 0;
 	}
 
 	.admin-tab-item.active .tab-count-chip {
@@ -2203,40 +2111,6 @@
 		gap: 0.85rem;
 	}
 
-	.user-avatar-wrap {
-		position: relative;
-		flex-shrink: 0;
-	}
-
-	.user-avatar-img,
-	.user-avatar-fallback {
-		width: 44px;
-		height: 44px;
-		border-radius: 14px;
-		object-fit: cover;
-		border: 1.5px solid var(--border-color);
-	}
-
-	.user-avatar-fallback {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		background: var(--brand-light-bg);
-		color: var(--brand-color);
-		font-weight: 900;
-		font-size: 1.2rem;
-	}
-
-	.admin-crown-badge {
-		position: absolute;
-		bottom: -4px;
-		right: -4px;
-		font-size: 0.85rem;
-		background: var(--card-bg);
-		border-radius: 50%;
-		box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
-	}
-
 	.user-meta-info {
 		display: flex;
 		flex-direction: column;
@@ -2370,11 +2244,6 @@
 		display: flex;
 		justify-content: flex-end;
 		gap: 0.5rem;
-	}
-
-	.clear-logs-btn {
-		font-size: 0.78rem;
-		padding: 0.5rem 0.85rem;
 	}
 
 	.logs-timeline-list {
@@ -2717,6 +2586,36 @@
 	@media (max-width: 640px) {
 		.admin-container {
 			padding: 0.35rem 0.5rem 3rem 0.5rem;
+		}
+
+		.admin-tabs-nav {
+			gap: 0.25rem;
+			padding: 0.25rem;
+			border-radius: 15px;
+		}
+
+		.admin-tab-item {
+			padding: 0.48rem 0.2rem;
+			font-size: 0.75rem;
+			gap: 0.2rem;
+			border-radius: 11px;
+		}
+
+		.admin-tab-item .tab-emoji {
+			font-size: 0.88rem;
+		}
+
+		.admin-tab-item .tab-label-full {
+			display: none;
+		}
+
+		.admin-tab-item .tab-label-short {
+			display: inline;
+		}
+
+		.admin-tab-item .tab-count-chip {
+			font-size: 0.62rem;
+			padding: 0.05rem 0.3rem;
 		}
 
 		.users-summary-grid {
