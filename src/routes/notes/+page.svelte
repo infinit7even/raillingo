@@ -1347,106 +1347,6 @@
 						/>
 					</div>
 
-					<!-- Archived Note Banner -->
-					{#if currentIsArchived}
-						<div class="archived-banner duo-card" in:fade={{ duration: 150 }}>
-							<div class="archived-banner-info">
-								<span class="archived-icon">📦</span>
-								<div>
-									<strong>Questo appunto è in Archivio</strong>
-									<span class="archived-sub">Puoi visualizzarlo, modificarlo o ripristinarlo nei tuoi appunti principali</span>
-								</div>
-							</div>
-							<button
-								type="button"
-								class="duo-btn duo-btn-theme unarchive-btn"
-								onclick={() => handleToggleArchive()}
-								title="Ripristina negli appunti principali"
-							>
-								📂 Disarchivia
-							</button>
-						</div>
-					{/if}
-
-					<!-- Note Title Input -->
-					<div class="note-document-title-box">
-						<input
-							type="text"
-							bind:value={currentTitle}
-							oninput={triggerAutoSave}
-							placeholder="Titolo dell'appunto..."
-							class="obsidian-title-input"
-						/>
-					</div>
-
-					<!-- User Custom Tags Bar for Active Note -->
-					<div class="note-tags-bar">
-						<span class="tags-bar-label">🏷️ Etichette:</span>
-						{#each currentTags as tag}
-							<span class="note-tag-chip">
-								<span>{tag}</span>
-								<button
-									type="button"
-									class="remove-tag-btn"
-									onclick={() => handleRemoveTag(tag)}
-									title="Rimuovi etichetta da questa nota"
-								>
-									✕
-								</button>
-							</span>
-						{/each}
-
-						{#if isAddingTag}
-							<div class="add-tag-popover duo-card" transition:fade={{ duration: 100 }}>
-								<div class="add-tag-input-wrap">
-									<input
-										type="text"
-										bind:value={newTagInput}
-										placeholder="Nuova etichetta..."
-										class="add-tag-input"
-										onkeydown={(e) => {
-											if (e.key === 'Enter') {
-												e.preventDefault();
-												handleAddTag();
-											} else if (e.key === 'Escape') {
-												isAddingTag = false;
-											}
-										}}
-									/>
-									<button type="button" class="confirm-tag-btn" onclick={() => handleAddTag()}>✓</button>
-									<button type="button" class="cancel-tag-btn" onclick={() => (isAddingTag = false)}>✕</button>
-								</div>
-
-								{#if unassignedUserTags.length > 0}
-									<div class="tag-quick-picker">
-										<span class="quick-picker-title">Assegna esistente:</span>
-										<div class="quick-picker-chips">
-											{#each unassignedUserTags as existingTag}
-												<button
-													type="button"
-													class="quick-tag-pick-btn"
-													onclick={() => handleAddTag(existingTag)}
-													title="Assegna etichetta {existingTag}"
-												>
-													+ {existingTag}
-												</button>
-											{/each}
-										</div>
-									</div>
-								{/if}
-							</div>
-						{:else}
-							<button
-								type="button"
-								class="add-tag-trigger-btn"
-								onclick={() => (isAddingTag = true)}
-								title="Aggiungi o assegna etichetta"
-							>
-								➕ Aggiungi
-							</button>
-						{/if}
-					</div>
-
 					<!-- Obsidian Unified Live Document Canvas -->
 					<div
 						bind:this={docCanvasEl}
@@ -1456,20 +1356,123 @@
 						role="region"
 						aria-label="Area di scrittura live Obsidian"
 					>
-						<div
-							bind:this={editorEl}
-							contenteditable="true"
-							class="obsidian-live-editor"
-							oninput={handleEditorInput}
-							onkeydown={handleEditorKeyDown}
-							onpaste={handleEditorPaste}
-							onclick={handleEditorClick}
-							onmousedown={handleResizeMouseDown}
-							role="textbox"
-							tabindex="0"
-							aria-multiline="true"
-							spellcheck="false"
-						></div>
+						<div class="document-inner-content">
+							<!-- Archived Note Banner -->
+							{#if currentIsArchived}
+								<div class="archived-banner duo-card" in:fade={{ duration: 150 }}>
+									<div class="archived-banner-info">
+										<span class="archived-icon">📦</span>
+										<div>
+											<strong>Questo appunto è in Archivio</strong>
+											<span class="archived-sub">Puoi visualizzarlo, modificarlo o ripristinarlo nei tuoi appunti principali</span>
+										</div>
+									</div>
+									<button
+										type="button"
+										class="duo-btn duo-btn-theme unarchive-btn"
+										onclick={() => handleToggleArchive()}
+										title="Ripristina negli appunti principali"
+									>
+										📂 Disarchivia
+									</button>
+								</div>
+							{/if}
+
+							<!-- Note Title Input -->
+							<div class="note-document-title-box">
+								<input
+									type="text"
+									bind:value={currentTitle}
+									oninput={triggerAutoSave}
+									placeholder="Titolo dell'appunto..."
+									class="obsidian-title-input"
+								/>
+							</div>
+
+							<!-- User Custom Tags Bar for Active Note -->
+							<div class="note-tags-bar">
+								<span class="tags-bar-label">🏷️ Etichette:</span>
+								{#each currentTags as tag}
+									<span class="note-tag-chip">
+										<span>{tag}</span>
+										<button
+											type="button"
+											class="remove-tag-btn"
+											onclick={() => handleRemoveTag(tag)}
+											title="Rimuovi etichetta da questa nota"
+										>
+											✕
+										</button>
+									</span>
+								{/each}
+
+								{#if isAddingTag}
+									<div class="add-tag-popover duo-card" transition:fade={{ duration: 100 }}>
+										<div class="add-tag-input-wrap">
+											<input
+												type="text"
+												bind:value={newTagInput}
+												placeholder="Nuova etichetta..."
+												class="add-tag-input"
+												onkeydown={(e) => {
+													if (e.key === 'Enter') {
+														e.preventDefault();
+														handleAddTag();
+													} else if (e.key === 'Escape') {
+														isAddingTag = false;
+													}
+												}}
+											/>
+											<button type="button" class="confirm-tag-btn" onclick={() => handleAddTag()}>✓</button>
+											<button type="button" class="cancel-tag-btn" onclick={() => (isAddingTag = false)}>✕</button>
+										</div>
+
+										{#if unassignedUserTags.length > 0}
+											<div class="tag-quick-picker">
+												<span class="quick-picker-title">Assegna esistente:</span>
+												<div class="quick-picker-chips">
+													{#each unassignedUserTags as existingTag}
+														<button
+															type="button"
+															class="quick-tag-pick-btn"
+															onclick={() => handleAddTag(existingTag)}
+															title="Assegna etichetta {existingTag}"
+														>
+															+ {existingTag}
+														</button>
+													{/each}
+												</div>
+											</div>
+										{/if}
+									</div>
+								{:else}
+									<button
+										type="button"
+										class="add-tag-trigger-btn"
+										onclick={() => (isAddingTag = true)}
+										title="Aggiungi o assegna etichetta"
+									>
+										➕ Aggiungi
+									</button>
+								{/if}
+							</div>
+
+							<!-- Live Text Editor -->
+							<div
+								bind:this={editorEl}
+								contenteditable="true"
+								class="obsidian-live-editor"
+								oninput={handleEditorInput}
+								onkeydown={handleEditorKeyDown}
+								onpaste={handleEditorPaste}
+								onclick={handleEditorClick}
+								onmousedown={handleResizeMouseDown}
+								role="textbox"
+								tabindex="0"
+								aria-multiline="true"
+								spellcheck="false"
+							></div>
+						</div>
 					</div>
 
 					<!-- Workspace Footer Status Info -->
@@ -2451,10 +2454,8 @@
 		display: flex;
 		align-items: center;
 		gap: 0.4rem;
-		padding: 0.4rem 0.65rem;
-		margin: 0.45rem 0.85rem 0.15rem 0.85rem;
-		border: 1.5px solid var(--border-color);
-		border-radius: 14px;
+		padding: 0.4rem 1.25rem;
+		border-bottom: 1.5px solid var(--border-color);
 		background: var(--card-bg-subtle);
 		overflow-x: auto;
 		scrollbar-width: none;
@@ -2549,8 +2550,35 @@
 		flex-shrink: 0;
 	}
 
+	/* Obsidian Live Document Canvas Container */
+	.document-canvas-container {
+		flex: 1;
+		min-height: 0;
+		display: flex;
+		flex-direction: column;
+		overflow-y: auto;
+		position: relative;
+		background: var(--card-bg);
+		padding: 1.25rem 1.5rem 2.5rem 1.5rem;
+		box-sizing: border-box;
+		scrollbar-width: thin;
+		scrollbar-color: var(--border-color) transparent;
+		cursor: text;
+	}
+
+	.document-inner-content {
+		max-width: 860px;
+		width: 100%;
+		margin: 0 auto;
+		display: flex;
+		flex-direction: column;
+		flex: 1;
+		min-height: 100%;
+	}
+
 	.note-document-title-box {
-		padding: 0.65rem 1.15rem 0.25rem 1.15rem;
+		padding: 0 0 0.4rem 0;
+		width: 100%;
 		flex-shrink: 0;
 	}
 
@@ -2560,16 +2588,23 @@
 		border: none;
 		outline: none;
 		font-family: 'Outfit', sans-serif;
-		font-size: 1.5rem;
+		font-size: 1.65rem;
 		font-weight: 900;
 		color: var(--text-color);
+		padding: 0;
+		box-sizing: border-box;
+	}
+
+	.obsidian-title-input::placeholder {
+		color: var(--text-muted);
+		opacity: 0.6;
 	}
 
 	.note-tags-bar {
 		display: flex;
 		align-items: center;
 		gap: 0.4rem;
-		padding: 0.25rem 1.15rem 0.5rem 1.15rem;
+		padding: 0 0 1rem 0;
 		flex-wrap: wrap;
 		flex-shrink: 0;
 		position: relative;
@@ -2625,6 +2660,10 @@
 		box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
 		min-width: 230px;
 		max-width: 320px;
+		position: absolute;
+		top: 100%;
+		left: 0;
+		z-index: 10;
 	}
 
 	.add-tag-input-wrap {
@@ -2702,24 +2741,6 @@
 		transform: translateY(-1px);
 	}
 
-	/* Obsidian Live Document Canvas Container */
-	.document-canvas-container {
-		flex: 1;
-		min-height: 0;
-		display: flex;
-		overflow-y: auto;
-		position: relative;
-		background: var(--card-bg-subtle);
-		border: 1.5px solid var(--border-color);
-		border-radius: 14px;
-		padding: 1.25rem 1.6rem;
-		margin: 0.5rem 0.85rem 0.85rem 0.85rem;
-		box-sizing: border-box;
-		scrollbar-width: thin;
-		scrollbar-color: var(--border-color) transparent;
-		cursor: text;
-	}
-
 	.document-canvas-container::-webkit-scrollbar {
 		width: 7px;
 	}
@@ -2739,14 +2760,16 @@
 
 	.obsidian-live-editor {
 		width: 100%;
-		min-height: 100%;
+		min-height: 250px;
+		flex: 1;
 		outline: none;
-		font-size: 0.96rem;
-		line-height: 1.6;
+		font-size: 0.98rem;
+		line-height: 1.65;
 		color: var(--text-color);
 		font-family: inherit;
 		box-sizing: border-box;
 		word-break: break-word;
+		padding: 0;
 	}
 
 	/* Obsidian Live Headings Styling */
@@ -3108,6 +3131,22 @@
 			width: 100% !important;
 			min-width: 0 !important;
 			max-width: none !important;
+		}
+
+		.document-canvas-container {
+			padding: 1rem 1rem 2rem 1rem;
+		}
+
+		.obsidian-ribbon-bar {
+			padding: 0.35rem 0.75rem;
+		}
+
+		.workspace-header-bar {
+			padding: 0.5rem 0.75rem;
+		}
+
+		.workspace-footer {
+			padding: 0.35rem 0.75rem;
 		}
 	}
 
