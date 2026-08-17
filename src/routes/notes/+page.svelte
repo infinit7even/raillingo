@@ -2267,7 +2267,7 @@
 		background: var(--card-bg-subtle);
 		border: 1.5px solid var(--border-color);
 		border-bottom: 2.5px solid var(--border-depth-color);
-		border-radius: 8px;
+		border-radius: 12px;
 		padding: 0.3rem 0.65rem;
 		font-size: 0.74rem;
 		font-weight: 800;
@@ -2301,8 +2301,8 @@
 		font-weight: 800;
 		color: var(--text-muted);
 		background: var(--card-bg-subtle);
-		padding: 0.28rem 0.6rem;
-		border-radius: 8px;
+		padding: 0.28rem 0.65rem;
+		border-radius: 12px;
 		border: 1.5px solid var(--border-color);
 		height: 32px;
 		box-sizing: border-box;
@@ -2350,7 +2350,7 @@
 		background: var(--card-bg-subtle);
 		border: 1.5px solid var(--border-color);
 		border-bottom: 2.5px solid var(--border-depth-color);
-		border-radius: 8px;
+		border-radius: 10px;
 		width: 32px;
 		height: 32px;
 		display: inline-flex;
@@ -2450,9 +2450,11 @@
 	.obsidian-ribbon-bar {
 		display: flex;
 		align-items: center;
-		gap: 0.35rem;
-		padding: 0.4rem 0.85rem;
-		border-bottom: 1.5px solid var(--border-color);
+		gap: 0.4rem;
+		padding: 0.4rem 0.65rem;
+		margin: 0.45rem 0.85rem 0.15rem 0.85rem;
+		border: 1.5px solid var(--border-color);
+		border-radius: 14px;
 		background: var(--card-bg-subtle);
 		overflow-x: auto;
 		scrollbar-width: none;
@@ -2468,16 +2470,19 @@
 	.ribbon-group {
 		display: flex;
 		align-items: center;
-		gap: 0.25rem;
+		gap: 0.2rem;
+		background: var(--card-bg);
+		border: 1px solid var(--border-color);
+		border-radius: 10px;
+		padding: 0.15rem 0.25rem;
 		flex-shrink: 0;
 	}
 
 	.ribbon-btn {
-		background: var(--card-bg);
-		border: 1.5px solid var(--border-color);
-		border-bottom: 2.5px solid var(--border-depth-color);
-		border-radius: 7px;
-		padding: 0.25rem 0.55rem;
+		background: transparent;
+		border: 1px solid transparent;
+		border-radius: 8px;
+		padding: 0.25rem 0.5rem;
 		font-size: 0.75rem;
 		font-weight: 800;
 		color: var(--text-color);
@@ -2488,7 +2493,7 @@
 		align-items: center;
 		justify-content: center;
 		gap: 0.3rem;
-		height: 29px;
+		height: 27px;
 		box-sizing: border-box;
 		flex-shrink: 0;
 	}
@@ -2502,13 +2507,12 @@
 
 	.ribbon-btn:active {
 		transform: translateY(1.5px);
-		border-bottom-width: 1.5px;
 	}
 
 	.ribbon-btn.format-bold,
 	.ribbon-btn.format-italic {
-		min-width: 29px;
-		padding: 0.25rem 0.4rem;
+		min-width: 27px;
+		padding: 0.25rem 0.35rem;
 	}
 
 	.ribbon-btn.highlight-btn {
@@ -2522,11 +2526,11 @@
 
 	.ribbon-btn.heading-btn {
 		font-size: 0.72rem;
-		min-width: 32px;
+		min-width: 30px;
 	}
 
 	.ribbon-btn.image-ribbon-btn {
-		border-color: rgba(59, 130, 246, 0.4);
+		color: #3b82f6;
 	}
 
 	.ribbon-btn.image-ribbon-btn:hover {
@@ -2537,10 +2541,11 @@
 
 	.ribbon-sep {
 		width: 1.5px;
-		height: 18px;
+		height: 16px;
 		background: var(--border-color);
-		margin: 0 0.15rem;
+		margin: 0 0.1rem;
 		border-radius: 1px;
+		opacity: 0.6;
 		flex-shrink: 0;
 	}
 
