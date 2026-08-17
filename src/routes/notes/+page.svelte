@@ -415,11 +415,22 @@
 		const target = e.target as HTMLElement;
 		if (!target) return;
 
+		// Gestione click su immagine per mantenerla selezionata con toolbar fissa
+		const figure = target.closest('figure.doc-inline-image');
+		if (editorEl) {
+			editorEl.querySelectorAll('figure.doc-inline-image').forEach((f) => {
+				if (f !== figure) f.classList.remove('selected-img');
+			});
+		}
+		if (figure) {
+			figure.classList.add('selected-img');
+		}
+
 		// Pulsante elimina immagine
 		if (target.classList.contains('img-btn-del')) {
-			const figure = target.closest('figure.doc-inline-image');
-			if (figure) {
-				figure.remove();
+			const fig = target.closest('figure.doc-inline-image');
+			if (fig) {
+				fig.remove();
 				syncContentFromEditor();
 				triggerAutoSave();
 				toastStore.show({ message: '✕ Immagine rimossa' });
@@ -430,14 +441,14 @@
 		// Pulsante allinea immagine
 		if (target.classList.contains('img-btn-align')) {
 			const align = target.getAttribute('data-align') || 'center';
-			const figure = target.closest('figure.doc-inline-image');
-			if (figure) {
-				figure.setAttribute('data-align', align);
-				const wrapper = figure.querySelector('.doc-image-wrapper');
+			const fig = target.closest('figure.doc-inline-image');
+			if (fig) {
+				fig.setAttribute('data-align', align);
+				const wrapper = fig.querySelector('.doc-image-wrapper');
 				if (wrapper) {
 					wrapper.className = `doc-image-wrapper align-${align}`;
 				}
-				figure.querySelectorAll('.img-btn-align').forEach((btn) => btn.classList.remove('active'));
+				fig.querySelectorAll('.img-btn-align').forEach((btn) => btn.classList.remove('active'));
 				target.classList.add('active');
 				syncContentFromEditor();
 				triggerAutoSave();
@@ -448,12 +459,12 @@
 		// Pulsanti sposta immagine su / giù
 		if (target.classList.contains('img-btn-move')) {
 			const move = target.getAttribute('data-move');
-			const figure = target.closest('figure.doc-inline-image') as HTMLElement;
-			if (figure && editorEl) {
-				if (move === 'up' && figure.previousElementSibling) {
-					editorEl.insertBefore(figure, figure.previousElementSibling);
-				} else if (move === 'down' && figure.nextElementSibling) {
-					editorEl.insertBefore(figure.nextElementSibling, figure);
+			const fig = target.closest('figure.doc-inline-image') as HTMLElement;
+			if (fig && editorEl) {
+				if (move === 'up' && fig.previousElementSibling) {
+					editorEl.insertBefore(fig, fig.previousElementSibling);
+				} else if (move === 'down' && fig.nextElementSibling) {
+					editorEl.insertBefore(fig.nextElementSibling, fig);
 				}
 				syncContentFromEditor();
 				triggerAutoSave();
@@ -474,14 +485,16 @@
 		const wrapper = figure.querySelector('.doc-image-wrapper') as HTMLElement;
 		if (!wrapper) return;
 
+		figure.classList.add('selected-img');
+
 		const startX = e.clientX;
-		const startWidth = wrapper.offsetWidth;
+		const startWidth = wrapper.getBoundingClientRect().width;
 		const isSouthWest = target.classList.contains('handle-sw');
 
 		function onMouseMove(moveEvent: MouseEvent) {
 			const delta = isSouthWest ? startX - moveEvent.clientX : moveEvent.clientX - startX;
-			const maxContainerWidth = (editorEl?.clientWidth || 700) - 20;
-			const newWidth = Math.max(120, Math.min(maxContainerWidth, Math.round(startWidth + delta)));
+			const maxContainerWidth = Math.max(200, (editorEl?.clientWidth || 700) - 30);
+			const newWidth = Math.max(100, Math.min(maxContainerWidth, Math.round(startWidth + delta)));
 
 			wrapper.style.maxWidth = `${newWidth}px`;
 			figure.setAttribute('data-width', String(newWidth));
@@ -2099,24 +2112,37 @@
 
 	.obsidian-live-editor :global(.doc-image-toolbar) {
 		position: absolute;
-		top: -38px;
+		top: -42px;
 		left: 50%;
 		transform: translateX(-50%);
 		background: var(--card-bg);
-		border: 1px solid var(--border-color);
-		border-radius: 8px;
-		padding: 0.15rem 0.35rem;
+		border: 1.5px solid var(--border-color);
+		border-radius: 9px;
+		padding: 0.2rem 0.4rem;
 		display: flex;
 		align-items: center;
 		gap: 0.25rem;
-		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+		box-shadow: 0 6px 20px rgba(0, 0, 0, 0.22);
 		opacity: 0;
 		pointer-events: none;
 		transition: opacity 0.15s ease;
-		z-index: 10;
+		z-index: 25;
+		white-space: nowrap;
 	}
 
-	.obsidian-live-editor :global(figure.doc-inline-image:hover .doc-image-toolbar) {
+	/* Bridge invisibile per non perdere l'hover muovendo il mouse tra immagine e toolbar */
+	.obsidian-live-editor :global(.doc-image-toolbar::after) {
+		content: '';
+		position: absolute;
+		top: 100%;
+		left: 0;
+		width: 100%;
+		height: 20px;
+		background: transparent;
+	}
+
+	.obsidian-live-editor :global(figure.doc-inline-image:hover .doc-image-toolbar),
+	.obsidian-live-editor :global(figure.doc-inline-image.selected-img .doc-image-toolbar) {
 		opacity: 1;
 		pointer-events: auto;
 	}
@@ -2156,19 +2182,31 @@
 
 	.obsidian-live-editor :global(.resize-handle) {
 		position: absolute;
-		width: 12px;
-		height: 12px;
+		width: 14px;
+		height: 14px;
 		background: var(--accent-color);
 		border: 2px solid #ffffff;
 		border-radius: 50%;
-		bottom: -5px;
-		right: -5px;
-		cursor: se-resize;
+		box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
 		opacity: 0;
-		transition: opacity 0.15s ease;
+		transition: opacity 0.15s ease, transform 0.15s ease;
+		z-index: 20;
 	}
 
-	.obsidian-live-editor :global(figure.doc-inline-image:hover .resize-handle) {
+	.obsidian-live-editor :global(.resize-handle.handle-se) {
+		bottom: -6px;
+		right: -6px;
+		cursor: nwse-resize;
+	}
+
+	.obsidian-live-editor :global(.resize-handle.handle-sw) {
+		bottom: -6px;
+		left: -6px;
+		cursor: nesw-resize;
+	}
+
+	.obsidian-live-editor :global(figure.doc-inline-image:hover .resize-handle),
+	.obsidian-live-editor :global(figure.doc-inline-image.selected-img .resize-handle) {
 		opacity: 1;
 	}
 
