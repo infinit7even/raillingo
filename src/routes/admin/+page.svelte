@@ -9,12 +9,39 @@
 	import { toastStore } from '$lib/stores/toastStore';
 	import { matchesCategory } from '$lib/stores/globalCategoryStore';
 
+	interface AdminUser {
+		id: string;
+		name: string;
+		email: string;
+		image?: string | null;
+		role: 'admin' | 'user';
+		isHardcodedAdmin: boolean;
+		discordId?: string | null;
+		notesCount: number;
+		stats?: Record<string, any>;
+		createdAt: string;
+		updatedAt: string;
+	}
+
+	interface AdminLogItem {
+		id: string;
+		userId: string;
+		userName: string;
+		userAvatar?: string | null;
+		action: string;
+		targetType: string;
+		targetId?: string | null;
+		targetTitle?: string | null;
+		details?: Record<string, any>;
+		createdAt: string;
+	}
+
 	let { data } = $props();
 
 	// Local state
 	let cards = $state<Card[]>([]);
 	let trashCards = $state<Card[]>([]);
-	let activeTab = $state<'active' | 'trash'>('active');
+	let activeTab = $state<'active' | 'users' | 'logs' | 'trash'>('active');
 
 	let user = $derived(data.user);
 	let error = $derived(data.error);
@@ -26,6 +53,17 @@
 			 user.id === '691289686093725736')
 		)
 	);
+
+	// Users state
+	let users = $state<AdminUser[]>([]);
+	let usersLoading = $state(false);
+	let usersSearchQuery = $state('');
+
+	// Logs state
+	let logs = $state<AdminLogItem[]>([]);
+	let logsLoading = $state(false);
+	let logsActionFilter = $state('ALL');
+	let logsSearchQuery = $state('');
 
 	// Form state for editing card inline
 	let editingCard = $state<Card | null>(null);
@@ -68,11 +106,113 @@
 		trashCards = await cardsStore.fetchTrash();
 	}
 
+	async function loadUsers() {
+		usersLoading = true;
+		try {
+			const res = await fetch('/api/admin/users');
+			if (res.ok) {
+				users = await res.json();
+			}
+		} catch (err) {
+			console.error('Errore caricamento utenti:', err);
+		} finally {
+			usersLoading = false;
+		}
+	}
+
+	async function toggleUserRole(targetUser: AdminUser) {
+		const newRole = targetUser.role === 'admin' ? 'user' : 'admin';
+		const actionText = newRole === 'admin' ? 'promuovere ad AMMINISTRATORE' : 'revocare i permessi di amministratore a';
+
+		if (!confirm(`Sei sicuro di voler ${actionText} "${targetUser.name}" (${targetUser.email})?`)) {
+			return;
+		}
+
+		try {
+			const res = await fetch('/api/admin/users', {
+				method: 'PATCH',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ userId: targetUser.id, role: newRole })
+			});
+
+			if (!res.ok) {
+				const errData = await res.json();
+				throw new Error(errData.error || 'Errore modifica ruolo');
+			}
+
+			toastStore.show({ message: `👑 Ruolo di ${targetUser.name} aggiornato a: ${newRole}` });
+			await loadUsers();
+			await loadLogs();
+		} catch (err: any) {
+			console.error('Errore toggle ruolo:', err);
+			toastStore.show({ message: `❌ ${err.message || 'Errore modifica ruolo'}` });
+		}
+	}
+
+	async function loadLogs() {
+		logsLoading = true;
+		try {
+			const res = await fetch('/api/admin/logs');
+			if (res.ok) {
+				logs = await res.json();
+			}
+		} catch (err) {
+			console.error('Errore caricamento log admin:', err);
+		} finally {
+			logsLoading = false;
+		}
+	}
+
+	async function clearAllLogs() {
+		if (!confirm('Vuoi eliminare TUTTI i log delle azioni degli admin? Questa azione non può essere annullata.')) {
+			return;
+		}
+
+		try {
+			const res = await fetch('/api/admin/logs', { method: 'DELETE' });
+			if (res.ok) {
+				logs = [];
+				toastStore.show({ message: '🧹 Registro log svuotato con successo!' });
+			}
+		} catch (err) {
+			console.error('Errore svuotamento log:', err);
+		}
+	}
+
+	function getActionBadge(action: string) {
+		switch (action) {
+			case 'create_card':
+				return { label: 'Creazione Scheda', icon: '✨', color: '#22c55e', bg: 'rgba(34, 197, 94, 0.12)' };
+			case 'update_card':
+				return { label: 'Modifica Scheda', icon: '✏️', color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.12)' };
+			case 'trash_card':
+				return { label: 'Spostata nel Cestino', icon: '🗑️', color: '#f97316', bg: 'rgba(249, 115, 22, 0.12)' };
+			case 'restore_card':
+				return { label: 'Ripristino Scheda', icon: '♻️', color: '#10b981', bg: 'rgba(16, 185, 129, 0.12)' };
+			case 'permanent_delete_card':
+				return { label: 'Eliminazione Definitiva', icon: '✕', color: '#ef4444', bg: 'rgba(239, 68, 68, 0.14)' };
+			case 'set_role_admin':
+				return { label: 'Promozione Admin', icon: '👑', color: '#eab308', bg: 'rgba(234, 179, 8, 0.16)' };
+			case 'remove_role_admin':
+				return { label: 'Revoca Admin', icon: '👤', color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.14)' };
+			case 'rename_category':
+				return { label: 'Rinomina Categoria', icon: '🏷️', color: '#06b6d4', bg: 'rgba(6, 182, 212, 0.12)' };
+			case 'import_cards':
+				return { label: 'Importazione Backup', icon: '📥', color: '#a855f7', bg: 'rgba(168, 85, 247, 0.14)' };
+			case 'clean_media':
+				return { label: 'Pulizia Media', icon: '🧹', color: '#ec4899', bg: 'rgba(236, 72, 153, 0.12)' };
+			default:
+				return { label: action, icon: '⚡', color: '#64748b', bg: 'rgba(100, 116, 139, 0.12)' };
+		}
+	}
+
 	onMount(() => {
 		const unsubscribe = cardsStore.subscribe((c) => {
 			cards = c;
 		});
 		loadTrash();
+		loadUsers();
+		loadLogs();
 		return unsubscribe;
 	});
 
@@ -369,6 +509,32 @@
 			);
 		})
 	);
+
+	let filteredUsers = $derived(
+		users.filter((u) => {
+			const q = usersSearchQuery.toLowerCase().trim();
+			if (!q) return true;
+			return (
+				u.name.toLowerCase().includes(q) ||
+				u.email.toLowerCase().includes(q) ||
+				(u.discordId && u.discordId.includes(q)) ||
+				u.id.toLowerCase().includes(q)
+			);
+		})
+	);
+
+	let filteredLogs = $derived(
+		logs.filter((l) => {
+			const matchesAction = logsActionFilter === 'ALL' || l.action === logsActionFilter;
+			const q = logsSearchQuery.toLowerCase().trim();
+			const matchesQuery =
+				!q ||
+				l.userName.toLowerCase().includes(q) ||
+				(l.targetTitle && l.targetTitle.toLowerCase().includes(q)) ||
+				l.action.toLowerCase().includes(q);
+			return matchesAction && matchesQuery;
+		})
+	);
 </script>
 
 <div class="admin-container">
@@ -570,14 +736,34 @@
 				{/if}
 			</div>
 
-			<!-- Navigazione Tab: Schede Attive / Cestino -->
+			<!-- Navigazione Tab Admin -->
 			<div class="admin-tabs-row">
 				<button
 					class="admin-tab-btn"
 					class:active={activeTab === 'active'}
 					onclick={() => (activeTab = 'active')}
 				>
-					📋 Schede Attive ({cards.length})
+					📋 Schede ({cards.length})
+				</button>
+				<button
+					class="admin-tab-btn users-tab"
+					class:active={activeTab === 'users'}
+					onclick={() => {
+						activeTab = 'users';
+						loadUsers();
+					}}
+				>
+					👥 Utenti ({users.length})
+				</button>
+				<button
+					class="admin-tab-btn logs-tab"
+					class:active={activeTab === 'logs'}
+					onclick={() => {
+						activeTab = 'logs';
+						loadLogs();
+					}}
+				>
+					📜 Log Azioni ({logs.length})
 				</button>
 				<button
 					class="admin-tab-btn trash-tab"
@@ -650,27 +836,32 @@
 													{#if card.acronym}
 														<span class="acronym-badge">[{card.acronym}]</span>
 													{/if}
-													{#if card.fullName && card.fullName.trim().toLowerCase() !== card.title.trim().toLowerCase()}
-														<span class="fullname-badge">{card.fullName}</span>
-													{/if}
 													{#if card.category}
 														<span class="category-pill">{card.category}</span>
 													{/if}
-													{#if card.images && card.images.length > 0}
-														<span class="img-count-pill">📷 {card.images.length}</span>
-													{/if}
-													{#if card.showInWiki === false}
-														<span class="wiki-hidden-pill">🚫 No Wiki</span>
+													{#if !card.showInWiki}
+														<span class="hidden-wiki-badge">Nascosta in Wiki</span>
 													{/if}
 												</div>
+												{#if card.fullName}
+													<div class="full-name-preview">{card.fullName}</div>
+												{/if}
 												<p class="card-item-desc">{card.description}</p>
 											</div>
 
 											<div class="item-actions">
-												<button class="duo-btn duo-btn-theme edit-btn" onclick={() => startEdit(card)}>
+												<button
+													class="duo-btn duo-btn-blue edit-btn"
+													onclick={() => startEdit(card)}
+													title="Modifica scheda"
+												>
 													✏️ Modifica
 												</button>
-												<button class="duo-btn duo-btn-gray delete-btn" onclick={() => handleDeleteCard(card.id)} title="Sposta nel cestino">
+												<button
+													class="duo-btn duo-btn-red delete-btn"
+													onclick={() => handleDeleteCard(card.id)}
+													title="Sposta scheda nel cestino"
+												>
 													🗑️ Cestina
 												</button>
 											</div>
@@ -681,11 +872,255 @@
 						{/if}
 					</div>
 				</div>
-			{:else}
+			{:else if activeTab === 'users'}
+				<!-- Sezione Gestione Utenti -->
+				<div class="users-section" in:fade={{ duration: 150 }}>
+					<!-- Quick Stats Grid -->
+					<div class="users-summary-grid">
+						<div class="user-summary-card duo-card">
+							<span class="us-val">{users.length}</span>
+							<span class="us-lbl">👥 Utenti Registrati</span>
+						</div>
+						<div class="user-summary-card duo-card gold">
+							<span class="us-val">{users.filter((u) => u.role === 'admin').length}</span>
+							<span class="us-lbl">👑 Amministratori</span>
+						</div>
+						<div class="user-summary-card duo-card blue">
+							<span class="us-val">{users.reduce((acc, u) => acc + (u.notesCount || 0), 0)}</span>
+							<span class="us-lbl">📝 Note Salvate</span>
+						</div>
+					</div>
+
+					<!-- Search & Refresh Toolbar -->
+					<div class="users-toolbar">
+						<div class="search-wrap">
+							<span class="search-ico">🔍</span>
+							<input
+								type="text"
+								bind:value={usersSearchQuery}
+								placeholder="Cerca utente per nome, email o Discord ID..."
+								class="duo-input user-search-input"
+							/>
+							{#if usersSearchQuery}
+								<button type="button" class="clear-search-btn" onclick={() => (usersSearchQuery = '')}>✕</button>
+							{/if}
+						</div>
+						<button type="button" class="duo-btn duo-btn-subtle refresh-btn" onclick={loadUsers} disabled={usersLoading}>
+							{usersLoading ? '⏳' : '🔄'} Aggiorna
+						</button>
+					</div>
+
+					<!-- Users List -->
+					{#if usersLoading && users.length === 0}
+						<div class="empty-list-box duo-card">
+							⏳ Caricamento elenco utenti in corso...
+						</div>
+					{:else if filteredUsers.length === 0}
+						<div class="empty-list-box duo-card">
+							Nessun utente trovato con i filtri correnti.
+						</div>
+					{:else}
+						<div class="users-list-grid">
+							{#each filteredUsers as u (u.id)}
+								<div class="user-card-item duo-card animated-card" class:is-admin={u.role === 'admin'}>
+									<div class="user-card-header">
+										<div class="user-avatar-wrap">
+											{#if u.image}
+												<img src={u.image} alt={u.name} class="user-avatar-img" />
+											{:else}
+												<div class="user-avatar-fallback">
+													{u.name ? u.name.charAt(0).toUpperCase() : '👤'}
+												</div>
+											{/if}
+											{#if u.role === 'admin'}
+												<span class="admin-crown-badge" title="Amministratore">👑</span>
+											{/if}
+										</div>
+
+										<div class="user-meta-info">
+											<div class="user-name-row">
+												<strong class="user-display-name">{u.name || 'Utente Senza Nome'}</strong>
+												{#if u.role === 'admin'}
+													<span class="role-chip admin">👑 Admin</span>
+												{:else}
+													<span class="role-chip user">👤 Utente</span>
+												{/if}
+											</div>
+											<span class="user-email-text">{u.email}</span>
+											{#if u.discordId}
+												<span class="user-discord-tag">Discord ID: <code>{u.discordId}</code></span>
+											{/if}
+										</div>
+									</div>
+
+									<div class="user-card-stats-row">
+										<span class="user-stat-chip">
+											📝 {u.notesCount} {u.notesCount === 1 ? 'appunto' : 'appunti'}
+										</span>
+										{#if u.stats?.cardsStudied}
+											<span class="user-stat-chip">
+												🃏 {u.stats.cardsStudied} studiate
+											</span>
+										{/if}
+										<span class="user-date-chip">
+											Registrato: {new Date(u.createdAt).toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' })}
+										</span>
+									</div>
+
+									<div class="user-card-actions">
+										{#if u.isHardcodedAdmin}
+											<span class="protected-admin-pill" title="Definito in DISCORD_ADMIN_IDS">
+												🛡️ Admin Principale (Protetto)
+											</span>
+										{:else if u.role === 'admin'}
+											<button
+												type="button"
+												class="duo-btn duo-btn-red toggle-role-btn"
+												onclick={() => toggleUserRole(u)}
+											>
+												👤 Revoca Permessi Admin
+											</button>
+										{:else}
+											<button
+												type="button"
+												class="duo-btn duo-btn-theme toggle-role-btn"
+												onclick={() => toggleUserRole(u)}
+											>
+												👑 Assegna Ruolo Admin
+											</button>
+										{/if}
+									</div>
+								</div>
+							{/each}
+						</div>
+					{/if}
+				</div>
+			{:else if activeTab === 'logs'}
+				<!-- Sezione Log Azioni Amministratori -->
+				<div class="logs-section" in:fade={{ duration: 150 }}>
+					<!-- Toolbar Filtri & Azioni Log -->
+					<div class="logs-toolbar duo-card">
+						<div class="logs-filters-row">
+							<select bind:value={logsActionFilter} class="duo-input log-action-select">
+								<option value="ALL">Tutte le Azioni ({logs.length})</option>
+								<option value="create_card">✨ Creazione Scheda</option>
+								<option value="update_card">✏️ Modifica Scheda</option>
+								<option value="trash_card">🗑️ Cestinamento Scheda</option>
+								<option value="restore_card">♻️ Ripristino Scheda</option>
+								<option value="permanent_delete_card">✕ Eliminazione Definitiva</option>
+								<option value="set_role_admin">👑 Promozione Admin</option>
+								<option value="remove_role_admin">👤 Revoca Admin</option>
+								<option value="rename_category">🏷️ Rinomina Categoria</option>
+								<option value="import_cards">📥 Importazione Backup</option>
+								<option value="clean_media">🧹 Pulizia Media</option>
+							</select>
+
+							<div class="search-wrap log-search-wrap">
+								<span class="search-ico">🔍</span>
+								<input
+									type="text"
+									bind:value={logsSearchQuery}
+									placeholder="Cerca nei log..."
+									class="duo-input log-search-input"
+								/>
+								{#if logsSearchQuery}
+									<button type="button" class="clear-search-btn" onclick={() => (logsSearchQuery = '')}>✕</button>
+								{/if}
+							</div>
+						</div>
+
+						<div class="logs-buttons-row">
+							<button type="button" class="duo-btn duo-btn-subtle refresh-btn" onclick={loadLogs} disabled={logsLoading}>
+								{logsLoading ? '⏳' : '🔄'} Aggiorna
+							</button>
+							{#if logs.length > 0}
+								<button type="button" class="duo-btn duo-btn-red clear-logs-btn" onclick={clearAllLogs}>
+									🧹 Svuota Registro
+								</button>
+							{/if}
+						</div>
+					</div>
+
+					<!-- Logs Timeline List -->
+					{#if logsLoading && logs.length === 0}
+						<div class="empty-list-box duo-card">
+							⏳ Caricamento registro log in corso...
+						</div>
+					{:else if filteredLogs.length === 0}
+						<div class="empty-list-box duo-card">
+							Nessuna azione registrata con i filtri correnti.
+						</div>
+					{:else}
+						<div class="logs-timeline-list">
+							{#each filteredLogs as log (log.id)}
+								{@const badge = getActionBadge(log.action)}
+								<div class="log-item-card duo-card animated-card">
+									<div class="log-item-header">
+										<div class="log-admin-user">
+											{#if log.userAvatar}
+												<img src={log.userAvatar} alt={log.userName} class="log-admin-avatar" />
+											{:else}
+												<div class="log-admin-avatar fallback">
+													{log.userName ? log.userName.charAt(0).toUpperCase() : 'A'}
+												</div>
+											{/if}
+											<div class="log-admin-meta">
+												<strong class="log-admin-name">{log.userName}</strong>
+												<span class="log-timestamp">
+													{new Date(log.createdAt).toLocaleString('it-IT', {
+														day: '2-digit',
+														month: 'short',
+														year: 'numeric',
+														hour: '2-digit',
+														minute: '2-digit',
+														second: '2-digit'
+													})}
+												</span>
+											</div>
+										</div>
+
+										<div
+											class="log-action-badge"
+											style="color: {badge.color}; background: {badge.bg}; border-color: {badge.color}40;"
+										>
+											<span>{badge.icon}</span>
+											<span>{badge.label}</span>
+										</div>
+									</div>
+
+									{#if log.targetTitle}
+										<div class="log-target-row">
+											<span class="target-prefix">Target:</span>
+											<strong class="target-title">"{log.targetTitle}"</strong>
+											{#if log.targetType}
+												<span class="target-type-pill">({log.targetType})</span>
+											{/if}
+										</div>
+									{/if}
+
+									{#if log.details && Object.keys(log.details).length > 0}
+										<div class="log-details-accordion">
+											<div class="log-details-pills">
+												{#each Object.entries(log.details) as [key, val]}
+													{#if val !== undefined && val !== null && typeof val !== 'object'}
+														<span class="detail-pill">
+															<strong>{key}:</strong> {val}
+														</span>
+													{/if}
+												{/each}
+											</div>
+										</div>
+									{/if}
+								</div>
+							{/each}
+						</div>
+					{/if}
+				</div>
+			{:else if activeTab === 'trash'}
 				<!-- List Sezione Cestino -->
 				<div class="list-section" in:fade={{ duration: 150 }}>
-					<div class="trash-banner duo-card">
-						<span>🗑️ Gli elementi nel cestino rimangono conservati finché non vengono eliminati manualmente.</span>
+					<div class="trash-banner">
+						⚠️ Le schede nel cestino non sono visibili nell'apprendimento. Puoi ripristinarle o eliminarle per sempre.
 					</div>
 
 					<div class="list-header">
@@ -693,14 +1128,14 @@
 							type="text"
 							bind:value={searchQuery}
 							placeholder="Cerca nel cestino..."
-							class="search-input duo-input full-width-search"
+							class="search-input duo-input full-width"
 						/>
 					</div>
 
 					<div class="cards-list">
 						{#if filteredTrashCards.length === 0}
 							<div class="empty-list-box duo-card">
-								✨ Il cestino è vuoto. Nessuna scheda eliminata.
+								✨ Il cestino è vuoto.
 							</div>
 						{:else}
 							{#each filteredTrashCards as card (card.id)}
@@ -1077,14 +1512,20 @@
 
 	/* Tabs */
 	.admin-tabs-row {
-		display: flex;
+		display: grid;
+		grid-template-columns: repeat(4, 1fr);
 		gap: 0.5rem;
+		overflow-x: auto;
+		scrollbar-width: none;
+	}
+
+	.admin-tabs-row::-webkit-scrollbar {
+		display: none;
 	}
 
 	.admin-tab-btn {
-		flex: 1;
-		padding: 0.7rem 1rem;
-		font-size: 0.85rem;
+		padding: 0.7rem 0.6rem;
+		font-size: 0.82rem;
 		font-weight: 900;
 		border-radius: 14px;
 		background: var(--card-bg);
@@ -1092,6 +1533,13 @@
 		color: var(--text-muted);
 		cursor: pointer;
 		transition: all 0.15s ease;
+		white-space: nowrap;
+		text-align: center;
+	}
+
+	.admin-tab-btn:hover {
+		border-color: var(--text-muted);
+		color: var(--text-color);
 	}
 
 	.admin-tab-btn.active {
@@ -1100,10 +1548,481 @@
 		color: var(--accent-color);
 	}
 
+	.admin-tab-btn.users-tab.active {
+		border-color: #06b6d4;
+		background: rgba(6, 182, 212, 0.12);
+		color: #06b6d4;
+	}
+
+	.admin-tab-btn.logs-tab.active {
+		border-color: #8b5cf6;
+		background: rgba(139, 92, 246, 0.12);
+		color: #8b5cf6;
+	}
+
 	.admin-tab-btn.trash-tab.active {
 		border-color: #ef4444;
 		background: rgba(239, 68, 68, 0.12);
 		color: #ef4444;
+	}
+
+	/* 👥 Users Section Styles */
+	.users-section {
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+	}
+
+	.users-summary-grid {
+		display: grid;
+		grid-template-columns: repeat(3, 1fr);
+		gap: 0.75rem;
+	}
+
+	.user-summary-card {
+		padding: 0.85rem 1rem;
+		border-radius: 14px;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		text-align: center;
+		gap: 0.25rem;
+		background: var(--card-bg-subtle);
+	}
+
+	.user-summary-card.gold .us-val {
+		color: #eab308;
+	}
+
+	.user-summary-card.blue .us-val {
+		color: #3b82f6;
+	}
+
+	.us-val {
+		font-size: 1.4rem;
+		font-weight: 900;
+		color: var(--text-color);
+	}
+
+	.us-lbl {
+		font-size: 0.75rem;
+		font-weight: 800;
+		color: var(--text-muted);
+	}
+
+	.users-toolbar {
+		display: flex;
+		gap: 0.65rem;
+		align-items: center;
+	}
+
+	.search-wrap {
+		flex: 1;
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+		background: var(--card-bg);
+		border: 1.5px solid var(--border-color);
+		border-radius: 12px;
+		padding: 0.4rem 0.75rem;
+		position: relative;
+	}
+
+	.search-wrap .search-ico {
+		font-size: 0.85rem;
+		color: var(--text-muted);
+	}
+
+	.user-search-input,
+	.log-search-input {
+		flex: 1;
+		background: transparent;
+		border: none;
+		outline: none;
+		color: var(--text-color);
+		font-size: 0.85rem;
+		font-weight: 700;
+		padding: 0;
+	}
+
+	.clear-search-btn {
+		background: none;
+		border: none;
+		color: var(--text-muted);
+		font-size: 0.8rem;
+		cursor: pointer;
+		padding: 0 0.2rem;
+	}
+
+	.refresh-btn {
+		font-size: 0.8rem;
+		padding: 0.55rem 0.85rem;
+		white-space: nowrap;
+		flex-shrink: 0;
+	}
+
+	.users-list-grid {
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+	}
+
+	.user-card-item {
+		padding: 1rem;
+		border-radius: 16px;
+		background: var(--card-bg);
+		border: 1.5px solid var(--border-color);
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+		transition: all 0.15s ease;
+	}
+
+	.user-card-item:hover {
+		border-color: var(--accent-color);
+		transform: translateY(-1px);
+	}
+
+	.user-card-item.is-admin {
+		border-color: rgba(234, 179, 8, 0.4);
+		background: linear-gradient(to right, rgba(234, 179, 8, 0.04), var(--card-bg));
+	}
+
+	.user-card-header {
+		display: flex;
+		align-items: center;
+		gap: 0.85rem;
+	}
+
+	.user-avatar-wrap {
+		position: relative;
+		flex-shrink: 0;
+	}
+
+	.user-avatar-img,
+	.user-avatar-fallback {
+		width: 44px;
+		height: 44px;
+		border-radius: 12px;
+		object-fit: cover;
+		border: 1.5px solid var(--border-color);
+	}
+
+	.user-avatar-fallback {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: var(--accent-light-bg);
+		color: var(--accent-color);
+		font-weight: 900;
+		font-size: 1.2rem;
+	}
+
+	.admin-crown-badge {
+		position: absolute;
+		bottom: -4px;
+		right: -4px;
+		font-size: 0.85rem;
+		background: var(--card-bg);
+		border-radius: 50%;
+		box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+	}
+
+	.user-meta-info {
+		display: flex;
+		flex-direction: column;
+		gap: 0.15rem;
+		flex: 1;
+		min-width: 0;
+	}
+
+	.user-name-row {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		flex-wrap: wrap;
+	}
+
+	.user-display-name {
+		font-size: 0.95rem;
+		font-weight: 900;
+		color: var(--text-color);
+	}
+
+	.role-chip {
+		font-size: 0.68rem;
+		font-weight: 900;
+		padding: 0.15rem 0.45rem;
+		border-radius: 6px;
+	}
+
+	.role-chip.admin {
+		background: rgba(234, 179, 8, 0.16);
+		color: #eab308;
+		border: 1px solid rgba(234, 179, 8, 0.35);
+	}
+
+	.role-chip.user {
+		background: var(--card-bg-subtle);
+		color: var(--text-muted);
+		border: 1px solid var(--border-color);
+	}
+
+	.user-email-text {
+		font-size: 0.78rem;
+		color: var(--text-muted);
+		word-break: break-all;
+	}
+
+	.user-discord-tag {
+		font-size: 0.7rem;
+		color: var(--text-muted);
+	}
+
+	.user-discord-tag code {
+		background: var(--card-bg-subtle);
+		padding: 0.1rem 0.3rem;
+		border-radius: 4px;
+		font-size: 0.68rem;
+	}
+
+	.user-card-stats-row {
+		display: flex;
+		align-items: center;
+		gap: 0.45rem;
+		flex-wrap: wrap;
+	}
+
+	.user-stat-chip,
+	.user-date-chip {
+		font-size: 0.72rem;
+		font-weight: 750;
+		color: var(--text-muted);
+		background: var(--card-bg-subtle);
+		padding: 0.2rem 0.5rem;
+		border-radius: 8px;
+		border: 1px solid var(--border-color);
+	}
+
+	.user-card-actions {
+		display: flex;
+		justify-content: flex-end;
+		gap: 0.5rem;
+		padding-top: 0.35rem;
+		border-top: 1px solid var(--border-color);
+	}
+
+	.protected-admin-pill {
+		font-size: 0.75rem;
+		font-weight: 800;
+		color: #eab308;
+		background: rgba(234, 179, 8, 0.12);
+		border: 1px solid rgba(234, 179, 8, 0.3);
+		padding: 0.4rem 0.8rem;
+		border-radius: 10px;
+	}
+
+	.toggle-role-btn {
+		font-size: 0.78rem;
+		padding: 0.45rem 0.9rem;
+	}
+
+	/* 📜 Logs Section Styles */
+	.logs-section {
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+	}
+
+	.logs-toolbar {
+		padding: 0.85rem 1rem;
+		border-radius: 16px;
+		background: var(--card-bg);
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+	}
+
+	.logs-filters-row {
+		display: flex;
+		gap: 0.65rem;
+		flex-wrap: wrap;
+	}
+
+	.log-action-select {
+		flex: 1;
+		min-width: 180px;
+		font-size: 0.82rem;
+		padding: 0.45rem 0.75rem;
+	}
+
+	.log-search-wrap {
+		flex: 1.5;
+		min-width: 200px;
+	}
+
+	.logs-buttons-row {
+		display: flex;
+		justify-content: flex-end;
+		gap: 0.5rem;
+	}
+
+	.clear-logs-btn {
+		font-size: 0.78rem;
+		padding: 0.5rem 0.85rem;
+	}
+
+	.logs-timeline-list {
+		display: flex;
+		flex-direction: column;
+		gap: 0.65rem;
+	}
+
+	.log-item-card {
+		padding: 0.85rem 1rem;
+		border-radius: 14px;
+		background: var(--card-bg);
+		border: 1.5px solid var(--border-color);
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+		transition: transform 0.12s ease;
+	}
+
+	.log-item-card:hover {
+		transform: translateY(-1px);
+		border-color: var(--accent-color);
+	}
+
+	.log-item-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		gap: 0.65rem;
+		flex-wrap: wrap;
+	}
+
+	.log-admin-user {
+		display: flex;
+		align-items: center;
+		gap: 0.55rem;
+	}
+
+	.log-admin-avatar {
+		width: 28px;
+		height: 28px;
+		border-radius: 8px;
+		object-fit: cover;
+	}
+
+	.log-admin-avatar.fallback {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: var(--accent-light-bg);
+		color: var(--accent-color);
+		font-size: 0.75rem;
+		font-weight: 900;
+	}
+
+	.log-admin-meta {
+		display: flex;
+		flex-direction: column;
+		gap: 0.05rem;
+	}
+
+	.log-admin-name {
+		font-size: 0.82rem;
+		font-weight: 850;
+		color: var(--text-color);
+	}
+
+	.log-timestamp {
+		font-size: 0.68rem;
+		color: var(--text-muted);
+		font-weight: 600;
+	}
+
+	.log-action-badge {
+		font-size: 0.72rem;
+		font-weight: 900;
+		padding: 0.2rem 0.55rem;
+		border-radius: 8px;
+		border: 1px solid transparent;
+		display: inline-flex;
+		align-items: center;
+		gap: 0.3rem;
+		white-space: nowrap;
+	}
+
+	.log-target-row {
+		display: flex;
+		align-items: center;
+		gap: 0.35rem;
+		font-size: 0.8rem;
+		color: var(--text-color);
+		background: var(--card-bg-subtle);
+		padding: 0.3rem 0.6rem;
+		border-radius: 8px;
+		flex-wrap: wrap;
+	}
+
+	.target-prefix {
+		color: var(--text-muted);
+		font-weight: 700;
+		font-size: 0.72rem;
+	}
+
+	.target-title {
+		color: var(--text-color);
+	}
+
+	.target-type-pill {
+		font-size: 0.68rem;
+		color: var(--text-muted);
+		font-weight: 700;
+	}
+
+	.log-details-pills {
+		display: flex;
+		gap: 0.35rem;
+		flex-wrap: wrap;
+	}
+
+	.detail-pill {
+		font-size: 0.68rem;
+		background: var(--card-bg-subtle);
+		border: 1px solid var(--border-color);
+		padding: 0.15rem 0.4rem;
+		border-radius: 6px;
+		color: var(--text-muted);
+	}
+
+	.detail-pill strong {
+		color: var(--text-color);
+	}
+
+	/* Responsive Mobile Queries */
+	@media (max-width: 640px) {
+		.admin-tabs-row {
+			grid-template-columns: repeat(2, 1fr);
+		}
+
+		.users-summary-grid {
+			grid-template-columns: 1fr;
+		}
+
+		.user-card-actions {
+			justify-content: stretch;
+		}
+
+		.user-card-actions button {
+			width: 100%;
+		}
+
+		.logs-filters-row {
+			flex-direction: column;
+		}
 	}
 
 	/* List Section */
@@ -1144,7 +2063,7 @@
 		font-size: 0.82rem;
 	}
 
-	.full-width-search {
+	.search-input.full-width {
 		width: 100%;
 	}
 
@@ -1212,15 +2131,14 @@
 		color: var(--accent-color);
 	}
 
-	.fullname-badge {
+	.full-name-preview {
 		font-size: 0.78rem;
 		color: var(--text-muted);
 		font-weight: 700;
 	}
 
 	.category-pill,
-	.img-count-pill,
-	.wiki-hidden-pill,
+	.hidden-wiki-badge,
 	.trash-date-pill {
 		font-size: 0.7rem;
 		font-weight: 800;
@@ -1231,7 +2149,7 @@
 		border: 1px solid var(--border-color);
 	}
 
-	.wiki-hidden-pill {
+	.hidden-wiki-badge {
 		color: #ef4444;
 		border-color: rgba(239, 68, 68, 0.4);
 		background: rgba(239, 68, 68, 0.08);

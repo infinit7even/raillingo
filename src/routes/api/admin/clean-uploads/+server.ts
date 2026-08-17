@@ -6,6 +6,7 @@ import { isSameOriginRequest } from '$lib/server/csrf';
 import { db } from '$lib/server/db';
 import { cards as cardsTable, notes as notesTable } from '$lib/server/db/schema';
 import { extractMediaFilenames } from '$lib/server/mediaCleanup';
+import { logAdminAction } from '$lib/server/adminLogger';
 
 async function getUploadDirectoryInfo() {
 	const staticUploadDir = path.resolve('static/uploads');
@@ -127,6 +128,20 @@ export const POST: RequestHandler = async (event) => {
 			freedBytes > 1024 * 1024
 				? `${(freedBytes / (1024 * 1024)).toFixed(2)} MB`
 				: `${(freedBytes / 1024).toFixed(1)} KB`;
+
+		await logAdminAction({
+			userId: locals.user?.id || 'admin',
+			userName: locals.user?.name || locals.user?.username || 'Admin',
+			userAvatar: locals.user?.image,
+			action: 'clean_media',
+			targetType: 'media',
+			targetTitle: `Pulizia ${deletedCount} file orfani`,
+			details: {
+				deletedCount,
+				freedBytes,
+				freedFormatted
+			}
+		});
 
 		return json({
 			success: true,

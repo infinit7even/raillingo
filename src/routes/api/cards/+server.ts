@@ -3,6 +3,7 @@ import { db } from '$lib/server/db';
 import { cards } from '$lib/server/db/schema';
 import { eq, desc, and } from 'drizzle-orm';
 import { isAuthorizedAdmin } from '$lib/server/auth';
+import { logAdminAction } from '$lib/server/adminLogger';
 import {
 	moveImagesToTrash,
 	restoreImagesFromTrash,
@@ -143,6 +144,17 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			updatedAt: inserted.updatedAt.toISOString()
 		};
 
+		await logAdminAction({
+			userId: locals.user?.id || 'admin',
+			userName: locals.user?.name || locals.user?.username || 'Admin',
+			userAvatar: locals.user?.image,
+			action: 'create_card',
+			targetType: 'card',
+			targetId: formatted.id,
+			targetTitle: formatted.title || formatted.acronym || 'Nuova scheda',
+			details: { category: formatted.category }
+		});
+
 		return json(formatted, { status: 201 });
 	} catch (err: any) {
 		console.error('Errore inserimento scheda nel database:', err);
@@ -243,6 +255,20 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
 		// Pulisci le immagini rimosse in background
 		await cleanupUnusedImagesOnCardUpdate(oldCardType, formatted).catch(() => {});
 
+		await logAdminAction({
+			userId: locals.user?.id || 'admin',
+			userName: locals.user?.name || locals.user?.username || 'Admin',
+			userAvatar: locals.user?.image,
+			action: 'update_card',
+			targetType: 'card',
+			targetId: formatted.id,
+			targetTitle: formatted.title || formatted.acronym || 'Scheda',
+			details: {
+				category: formatted.category,
+				titleChanged: oldCard.title !== formatted.title
+			}
+		});
+
 		return json(formatted);
 	} catch (err: any) {
 		console.error('Errore aggiornamento scheda nel database:', err);
@@ -275,6 +301,16 @@ export const PATCH: RequestHandler = async ({ request, locals }) => {
 				})
 				.where(eq(cards.id, id))
 				.returning();
+
+			await logAdminAction({
+				userId: locals.user?.id || 'admin',
+				userName: locals.user?.name || locals.user?.username || 'Admin',
+				userAvatar: locals.user?.image,
+				action: 'restore_card',
+				targetType: 'card',
+				targetId: id,
+				targetTitle: restored.title || restored.acronym || 'Scheda'
+			});
 
 			return json({ success: true, card: restored });
 		}
@@ -313,6 +349,17 @@ export const DELETE: RequestHandler = async ({ url, locals }) => {
 			// Eliminazione definitiva: rimuovi immagini dal disco ed elimina riga da Postgres
 			await permanentlyDeleteImages(old).catch(() => {});
 			await db.delete(cards).where(eq(cards.id, id));
+
+			await logAdminAction({
+				userId: locals.user?.id || 'admin',
+				userName: locals.user?.name || locals.user?.username || 'Admin',
+				userAvatar: locals.user?.image,
+				action: 'permanent_delete_card',
+				targetType: 'card',
+				targetId: id,
+				targetTitle: old.title || old.acronym || 'Scheda'
+			});
+
 			return json({ success: true, id, permanent: true });
 		} else {
 			// Soft-delete: sposta nel cestino e sposta immagini nella cartella trash
@@ -325,6 +372,16 @@ export const DELETE: RequestHandler = async ({ url, locals }) => {
 					updatedAt: new Date()
 				})
 				.where(eq(cards.id, id));
+
+			await logAdminAction({
+				userId: locals.user?.id || 'admin',
+				userName: locals.user?.name || locals.user?.username || 'Admin',
+				userAvatar: locals.user?.image,
+				action: 'trash_card',
+				targetType: 'card',
+				targetId: id,
+				targetTitle: old.title || old.acronym || 'Scheda'
+			});
 
 			return json({ success: true, id, trash: true });
 		}

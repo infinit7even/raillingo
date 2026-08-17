@@ -4,6 +4,7 @@ import { cards } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
 import { isAuthorizedAdmin } from '$lib/server/auth';
 import { isSameOriginRequest } from '$lib/server/csrf';
+import { logAdminAction } from '$lib/server/adminLogger';
 
 export const PUT: RequestHandler = async (event) => {
 	const { request, locals } = event;
@@ -42,6 +43,20 @@ export const PUT: RequestHandler = async (event) => {
 			})
 			.where(eq(cards.category, oldCat))
 			.returning();
+
+		await logAdminAction({
+			userId: locals.user?.id || 'admin',
+			userName: locals.user?.name || locals.user?.username || 'Admin',
+			userAvatar: locals.user?.image,
+			action: 'rename_category',
+			targetType: 'category',
+			targetTitle: `${oldCat} ➔ ${newCat}`,
+			details: {
+				oldCategory: oldCat,
+				newCategory: newCat,
+				affectedCards: updated.length
+			}
+		});
 
 		return json({
 			success: true,

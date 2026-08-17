@@ -1145,9 +1145,10 @@
 								type="button"
 								class="vault-collapse-btn desktop-only"
 								onclick={toggleVaultCollapse}
-								title={isVaultCollapsed ? 'Espandi Appunti' : 'Comprimi Appunti'}
+								title={isVaultCollapsed ? 'Espandi barra laterale' : 'Comprimi barra laterale'}
 							>
-								{isVaultCollapsed ? '⤢ Espandi Appunti' : '⤡ Comprimi Appunti'}
+								<span>{isVaultCollapsed ? '⤢' : '⤡'}</span>
+								<span>{isVaultCollapsed ? 'Espandi' : 'Comprimi'}</span>
 							</button>
 
 							<button
@@ -1158,12 +1159,15 @@
 								← Appunti
 							</button>
 
-							<div class="save-status-pill">
-								{#if isAutoSaving}
-									<span class="saving-txt">⏳ Salvataggio...</span>
-								{:else}
-									<span class="saved-txt">💾 {lastSavedTime ? `Salvato ${lastSavedTime}` : 'Salvato'}</span>
-								{/if}
+							<div class="save-status-pill" class:is-saving={isAutoSaving}>
+								<span class="status-dot" class:saving={isAutoSaving} class:saved={!isAutoSaving}></span>
+								<span class="status-text">
+									{#if isAutoSaving}
+										Salvataggio...
+									{:else}
+										{lastSavedTime ? `Salvato alle ${lastSavedTime}` : 'Salvato'}
+									{/if}
+								</span>
 							</div>
 						</div>
 
@@ -1173,7 +1177,7 @@
 								class="action-icon-btn action-fullscreen-btn"
 								class:pinned={isFullscreen}
 								onclick={toggleFullscreen}
-								title={isFullscreen ? 'Disattiva Schermo Intero' : 'Modalità Schermo Intero (F11)'}
+								title={isFullscreen ? 'Disattiva Schermo Intero' : 'Schermo Intero (F11)'}
 							>
 								{isFullscreen ? '✕' : '⛶'}
 							</button>
@@ -1201,6 +1205,7 @@
 							<button
 								type="button"
 								class="action-icon-btn action-outline-btn"
+								class:active={isOutlineOpen}
 								onclick={() => (isOutlineOpen = !isOutlineOpen)}
 								title="Indice contenuti (TOC)"
 							>
@@ -1211,7 +1216,7 @@
 								type="button"
 								class="action-icon-btn action-copy-btn"
 								onclick={copyMarkdown}
-								title="Copia Markdown"
+								title="Copia Markdown negli appunti"
 							>
 								📋
 							</button>
@@ -1220,7 +1225,7 @@
 								type="button"
 								class="action-icon-btn action-export-btn"
 								onclick={downloadFile}
-								title="Esporta file .md"
+								title="Scarica file .md"
 							>
 								📥
 							</button>
@@ -1229,7 +1234,7 @@
 								type="button"
 								class="action-icon-btn action-delete-btn delete-btn"
 								onclick={handleDeleteActiveNote}
-								title="Elimina nota"
+								title="Sposta appunto nel cestino"
 							>
 								🗑️
 							</button>
@@ -1238,89 +1243,110 @@
 
 					<!-- Markdown Ribbon Toolbar -->
 					<div class="obsidian-ribbon-bar">
-						<button
-							type="button"
-							class="ribbon-btn"
-							onclick={() => handleFormat('bold')}
-							title="Grassetto (Ctrl+B)"
-						>
-							<strong>B</strong>
-						</button>
-						<button
-							type="button"
-							class="ribbon-btn"
-							onclick={() => handleFormat('italic')}
-							title="Corsivo (Ctrl+I)"
-						>
-							<em>I</em>
-						</button>
-						<button
-							type="button"
-							class="ribbon-btn highlight-btn"
-							onclick={handleHighlightText}
-							title="Evidenzia testo (Ctrl+H)"
-						>
-							🖍️ Evidenzia
-						</button>
-						<button
-							type="button"
-							class="ribbon-btn"
-							onclick={() => handleFormat('formatBlock', 'h1')}
-							title="Titolo H1 (# Titolo)"
-						>
-							<strong>H1</strong>
-						</button>
-						<button
-							type="button"
-							class="ribbon-btn"
-							onclick={() => handleFormat('formatBlock', 'h2')}
-							title="Titolo H2 (## Titolo)"
-						>
-							<strong>H2</strong>
-						</button>
-						<button
-							type="button"
-							class="ribbon-btn"
-							onclick={() => handleFormat('formatBlock', 'h3')}
-							title="Titolo H3 (### Titolo)"
-						>
-							<strong>H3</strong>
-						</button>
+						<div class="ribbon-group">
+							<button
+								type="button"
+								class="ribbon-btn format-bold"
+								onclick={() => handleFormat('bold')}
+								title="Grassetto (Ctrl+B)"
+							>
+								<strong>B</strong>
+							</button>
+							<button
+								type="button"
+								class="ribbon-btn format-italic"
+								onclick={() => handleFormat('italic')}
+								title="Corsivo (Ctrl+I)"
+							>
+								<em>I</em>
+							</button>
+							<button
+								type="button"
+								class="ribbon-btn highlight-btn"
+								onclick={handleHighlightText}
+								title="Evidenzia testo (Ctrl+H)"
+							>
+								<span>🖍️</span>
+								<span>Evidenzia</span>
+							</button>
+						</div>
+
 						<span class="ribbon-sep"></span>
-						<button
-							type="button"
-							class="ribbon-btn"
-							onclick={() => handleFormat('insertUnorderedList')}
-							title="Elenco puntato (- )"
-						>
-							• Lista
-						</button>
-						<button
-							type="button"
-							class="ribbon-btn"
-							onclick={() => handleFormat('insertOrderedList')}
-							title="Elenco numerato (1. )"
-						>
-							1. Num
-						</button>
-						<button
-							type="button"
-							class="ribbon-btn"
-							onclick={() => handleFormat('formatBlock', 'blockquote')}
-							title="Citazione / Box (> )"
-						>
-							💡 Box
-						</button>
+
+						<div class="ribbon-group">
+							<button
+								type="button"
+								class="ribbon-btn heading-btn"
+								onclick={() => handleFormat('formatBlock', 'h1')}
+								title="Titolo H1 (# Titolo)"
+							>
+								<strong>H1</strong>
+							</button>
+							<button
+								type="button"
+								class="ribbon-btn heading-btn"
+								onclick={() => handleFormat('formatBlock', 'h2')}
+								title="Titolo H2 (## Titolo)"
+							>
+								<strong>H2</strong>
+							</button>
+							<button
+								type="button"
+								class="ribbon-btn heading-btn"
+								onclick={() => handleFormat('formatBlock', 'h3')}
+								title="Titolo H3 (### Titolo)"
+							>
+								<strong>H3</strong>
+							</button>
+						</div>
+
 						<span class="ribbon-sep"></span>
-						<button
-							type="button"
-							class="ribbon-btn image-ribbon-btn"
-							onclick={() => fileInputEl?.click()}
-							disabled={isUploadingImage}
-							title="Allega o incolla (Ctrl+V) immagine"
-						>
-							{isUploadingImage ? '⏳ Caricamento...' : '🖼️ Immagine'}
-						</button>
+
+						<div class="ribbon-group">
+							<button
+								type="button"
+								class="ribbon-btn"
+								onclick={() => handleFormat('insertUnorderedList')}
+								title="Elenco puntato (- )"
+							>
+								<span>•</span>
+								<span>Lista</span>
+							</button>
+							<button
+								type="button"
+								class="ribbon-btn"
+								onclick={() => handleFormat('insertOrderedList')}
+								title="Elenco numerato (1. )"
+							>
+								<span>1.</span>
+								<span>Num</span>
+							</button>
+							<button
+								type="button"
+								class="ribbon-btn box-btn"
+								onclick={() => handleFormat('formatBlock', 'blockquote')}
+								title="Citazione / Box (> )"
+							>
+								<span>💡</span>
+								<span>Box</span>
+							</button>
+						</div>
+
+						<span class="ribbon-sep"></span>
+
+						<div class="ribbon-group">
+							<button
+								type="button"
+								class="ribbon-btn image-ribbon-btn"
+								onclick={() => fileInputEl?.click()}
+								disabled={isUploadingImage}
+								title="Allega o incolla (Ctrl+V) immagine"
+							>
+								<span>🖼️</span>
+								<span>{isUploadingImage ? 'Caricamento...' : 'Immagine'}</span>
+							</button>
+						</div>
+
 						<input
 							bind:this={fileInputEl}
 							type="file"
@@ -2253,39 +2279,108 @@
 		min-width: 0;
 	}
 
-	.workspace-header {
+	/* Top Workspace Header Bar */
+	.workspace-header-bar {
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		padding: 0.6rem 0.85rem;
+		padding: 0.55rem 0.85rem;
 		border-bottom: 1.5px solid var(--border-color);
 		background: var(--card-bg);
 		flex-shrink: 0;
-		gap: 0.5rem;
-		flex-wrap: wrap;
+		gap: 0.65rem;
+		min-height: 48px;
+		box-sizing: border-box;
 	}
 
 	.workspace-header-left {
 		display: flex;
 		align-items: center;
 		gap: 0.45rem;
+		flex-shrink: 0;
+	}
+
+	.vault-collapse-btn {
+		background: var(--card-bg-subtle);
+		border: 1.5px solid var(--border-color);
+		border-bottom: 2.5px solid var(--border-depth-color);
+		border-radius: 8px;
+		padding: 0.3rem 0.65rem;
+		font-size: 0.74rem;
+		font-weight: 800;
+		color: var(--text-color);
+		cursor: pointer;
+		display: inline-flex;
+		align-items: center;
+		gap: 0.35rem;
+		transition: all 0.12s ease;
+		height: 32px;
+		box-sizing: border-box;
+	}
+
+	.vault-collapse-btn:hover {
+		border-color: var(--accent-color);
+		background: var(--hover-bg);
+		color: var(--accent-color);
+		transform: translateY(-1px);
+	}
+
+	.vault-collapse-btn:active {
+		transform: translateY(1.5px);
+		border-bottom-width: 1.5px;
 	}
 
 	.save-status-pill {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.4rem;
 		font-size: 0.72rem;
 		font-weight: 800;
 		color: var(--text-muted);
 		background: var(--card-bg-subtle);
-		padding: 0.25rem 0.55rem;
-		border-radius: 6px;
-		border: 1px solid var(--border-color);
+		padding: 0.28rem 0.6rem;
+		border-radius: 8px;
+		border: 1.5px solid var(--border-color);
+		height: 32px;
+		box-sizing: border-box;
+		white-space: nowrap;
+		transition: all 0.15s ease;
+	}
+
+	.status-dot {
+		width: 7px;
+		height: 7px;
+		border-radius: 50%;
+		flex-shrink: 0;
+		display: inline-block;
+	}
+
+	.status-dot.saved {
+		background: #22c55e;
+		box-shadow: 0 0 6px rgba(34, 197, 94, 0.6);
+	}
+
+	.status-dot.saving {
+		background: #f59e0b;
+		box-shadow: 0 0 6px rgba(245, 158, 11, 0.6);
+		animation: pulse-save 1s infinite alternate;
+	}
+
+	@keyframes pulse-save {
+		from { opacity: 0.4; transform: scale(0.85); }
+		to { opacity: 1; transform: scale(1.15); }
+	}
+
+	.status-text {
+		font-size: 0.72rem;
+		font-weight: 750;
 	}
 
 	.workspace-quick-actions {
 		display: flex;
 		align-items: center;
 		gap: 0.35rem;
-		flex-wrap: wrap;
+		flex-shrink: 0;
 	}
 
 	.action-icon-btn {
@@ -2295,33 +2390,53 @@
 		border-radius: 8px;
 		width: 32px;
 		height: 32px;
-		display: flex;
+		display: inline-flex;
 		align-items: center;
 		justify-content: center;
 		font-size: 0.85rem;
 		color: var(--text-color);
 		cursor: pointer;
 		transition: all 0.12s ease;
+		flex-shrink: 0;
 	}
 
 	.action-icon-btn:hover {
 		border-color: var(--accent-color);
 		background: var(--hover-bg);
+		transform: translateY(-1px);
+	}
+
+	.action-icon-btn:active {
+		transform: translateY(1.5px);
+		border-bottom-width: 1.5px;
 	}
 
 	.action-icon-btn.pinned {
 		border-color: #f59e0b;
-		background: rgba(245, 158, 11, 0.15);
+		border-bottom-color: #d97706;
+		background: rgba(245, 158, 11, 0.16);
+		color: #d97706;
 	}
 
 	.action-icon-btn.action-archive-btn.pinned {
 		border-color: #8b5cf6;
-		background: rgba(139, 92, 246, 0.15);
+		border-bottom-color: #7c3aed;
+		background: rgba(139, 92, 246, 0.16);
+		color: #7c3aed;
+	}
+
+	.action-icon-btn.action-outline-btn.active {
+		border-color: var(--accent-color);
+		border-bottom-color: var(--accent-dark-color, var(--border-depth-color));
+		background: var(--accent-light-bg);
+		color: var(--accent-color);
 	}
 
 	.action-icon-btn.delete-btn:hover {
 		border-color: #ef4444;
-		background: rgba(239, 68, 68, 0.12);
+		border-bottom-color: #dc2626;
+		background: rgba(239, 68, 68, 0.14);
+		color: #ef4444;
 	}
 
 	.archived-banner {
@@ -2368,41 +2483,102 @@
 		flex-shrink: 0;
 	}
 
+	/* Markdown Ribbon Formatting Toolbar */
 	.obsidian-ribbon-bar {
 		display: flex;
 		align-items: center;
-		gap: 0.3rem;
+		gap: 0.35rem;
 		padding: 0.4rem 0.85rem;
 		border-bottom: 1.5px solid var(--border-color);
 		background: var(--card-bg-subtle);
 		overflow-x: auto;
 		scrollbar-width: none;
 		flex-shrink: 0;
+		min-height: 42px;
+		box-sizing: border-box;
+	}
+
+	.obsidian-ribbon-bar::-webkit-scrollbar {
+		display: none;
+	}
+
+	.ribbon-group {
+		display: flex;
+		align-items: center;
+		gap: 0.25rem;
+		flex-shrink: 0;
 	}
 
 	.ribbon-btn {
 		background: var(--card-bg);
-		border: 1px solid var(--border-color);
-		border-radius: 6px;
-		padding: 0.25rem 0.5rem;
-		font-size: 0.76rem;
+		border: 1.5px solid var(--border-color);
+		border-bottom: 2.5px solid var(--border-depth-color);
+		border-radius: 7px;
+		padding: 0.25rem 0.55rem;
+		font-size: 0.75rem;
 		font-weight: 800;
 		color: var(--text-color);
 		cursor: pointer;
 		white-space: nowrap;
 		transition: all 0.12s ease;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.3rem;
+		height: 29px;
+		box-sizing: border-box;
+		flex-shrink: 0;
 	}
 
 	.ribbon-btn:hover {
 		border-color: var(--accent-color);
 		color: var(--accent-color);
+		background: var(--hover-bg);
+		transform: translateY(-1px);
+	}
+
+	.ribbon-btn:active {
+		transform: translateY(1.5px);
+		border-bottom-width: 1.5px;
+	}
+
+	.ribbon-btn.format-bold,
+	.ribbon-btn.format-italic {
+		min-width: 29px;
+		padding: 0.25rem 0.4rem;
+	}
+
+	.ribbon-btn.highlight-btn {
+		color: #eab308;
+	}
+
+	.ribbon-btn.highlight-btn:hover {
+		border-color: #eab308;
+		background: rgba(234, 179, 8, 0.12);
+	}
+
+	.ribbon-btn.heading-btn {
+		font-size: 0.72rem;
+		min-width: 32px;
+	}
+
+	.ribbon-btn.image-ribbon-btn {
+		border-color: rgba(59, 130, 246, 0.4);
+	}
+
+	.ribbon-btn.image-ribbon-btn:hover {
+		border-color: #3b82f6;
+		background: rgba(59, 130, 246, 0.1);
+		color: #3b82f6;
 	}
 
 	.ribbon-sep {
-		width: 1px;
+		width: 1.5px;
 		height: 18px;
 		background: var(--border-color);
 		margin: 0 0.15rem;
+		border-radius: 1px;
+		flex-shrink: 0;
 	}
 
 	.note-document-title-box {

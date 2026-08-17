@@ -101,6 +101,19 @@ async function runMigration() {
 				updated_at timestamptz NOT NULL DEFAULT now()
 			);
 
+			CREATE TABLE IF NOT EXISTS "admin_logs" (
+				id text PRIMARY KEY,
+				user_id text NOT NULL,
+				user_name text NOT NULL DEFAULT 'Admin',
+				user_avatar text,
+				action text NOT NULL,
+				target_type text NOT NULL DEFAULT 'card',
+				target_id text,
+				target_title text,
+				details jsonb DEFAULT '{}'::jsonb,
+				created_at timestamptz NOT NULL DEFAULT now()
+			);
+
 			ALTER TABLE "notes" DROP CONSTRAINT IF EXISTS "notes_user_id_fkey";
 			ALTER TABLE "notes" DROP CONSTRAINT IF EXISTS "notes_user_id_user_id_fk";
 

@@ -3,6 +3,7 @@ import { db } from '$lib/server/db';
 import { cards } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
 import { isAuthorizedAdmin } from '$lib/server/auth';
+import { logAdminAction } from '$lib/server/adminLogger';
 import type { Card } from '$lib/types/cards';
 
 export const POST: RequestHandler = async (event) => {
@@ -88,6 +89,21 @@ export const POST: RequestHandler = async (event) => {
 			});
 			insertedCount++;
 		}
+
+		await logAdminAction({
+			userId: locals.user?.id || 'admin',
+			userName: locals.user?.name || locals.user?.username || 'Admin',
+			userAvatar: locals.user?.image,
+			action: 'import_cards',
+			targetType: 'system',
+			targetTitle: `Importazione ${mode === 'replace' ? 'Sostitutiva' : 'Unione'}`,
+			details: {
+				mode,
+				insertedCount,
+				updatedCount,
+				totalProcessed: importedCards.length
+			}
+		});
 
 		return json({
 			success: true,

@@ -104,8 +104,24 @@ export const notes = pgTable('notes', {
 	updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
 });
 
+// ─── ADMIN LOGS SCHEMA (Tracciamento Azioni Amministratori) ──────────────
+
+export const adminLogs = pgTable('admin_logs', {
+	id: text('id').primaryKey(),
+	userId: text('user_id').notNull(),
+	userName: text('user_name').notNull().default('Admin'),
+	userAvatar: text('user_avatar'),
+	action: text('action').notNull(),
+	targetType: text('target_type').notNull().default('card'),
+	targetId: text('target_id'),
+	targetTitle: text('target_title'),
+	details: jsonb('details').$type<Record<string, any>>().default({}),
+	createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
+});
+
 export type User = typeof user.$inferSelect;
 export type Session = typeof session.$inferSelect;
 export type Account = typeof account.$inferSelect;
 export type DbCard = typeof cards.$inferSelect;
 export type DbNote = typeof notes.$inferSelect;
+export type DbAdminLog = typeof adminLogs.$inferSelect;
