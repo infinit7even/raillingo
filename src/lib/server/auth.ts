@@ -1,12 +1,20 @@
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { sveltekitCookies } from 'better-auth/svelte-kit';
-import { env } from '$env/dynamic/private';
 import { getRequestEvent } from '$app/server';
 import { db } from '$lib/server/db';
 import * as schema from '$lib/server/db/schema';
-
 import { eq } from 'drizzle-orm';
+
+let env: Record<string, string | undefined> = process.env;
+try {
+	const dynamicEnv = await import('$env/dynamic/private');
+	if (dynamicEnv?.env) {
+		env = { ...process.env, ...dynamicEnv.env };
+	}
+} catch {
+	// Standalone script mode
+}
 
 export const DEFAULT_ADMIN_ID = '691289686093725736';
 
@@ -25,16 +33,42 @@ export function getAdminIds(): string[] {
 
 const socialProviders: Record<string, any> = {};
 
-if (env.DISCORD_CLIENT_ID && env.DISCORD_CLIENT_SECRET) {
+const discordClientId = env.DISCORD_CLIENT_ID || process.env.DISCORD_CLIENT_ID;
+const discordClientSecret = env.DISCORD_CLIENT_SECRET || process.env.DISCORD_CLIENT_SECRET;
+
+if (discordClientId && discordClientSecret) {
 	socialProviders.discord = {
-		clientId: env.DISCORD_CLIENT_ID,
-		clientSecret: env.DISCORD_CLIENT_SECRET,
+		clientId: discordClientId,
+		clientSecret: discordClientSecret,
 		scope: ['identify', 'email']
 	};
 }
 
 export const auth = betterAuth({
-	baseURL: env.BETTER_AUTH_URL || env.SITE_URL || 'http://raillingo.7fx.it:3099',
+	baseURL: env.ORIGIN || env.BETTER_AUTH_URL || env.SITE_URL || 'https://raillingo.7fx.it',
+	trustedOrigins: async (request) => {
+		const origins: string[] = [
+			'https://raillingo.7fx.it',
+			'http://raillingo.7fx.it',
+			'http://raillingo.7fx.it:3099',
+			'https://raillingo.7fx.it:3099',
+			'http://localhost:5173',
+			'http://localhost:4009',
+			'http://localhost:3099',
+			'http://localhost:3000'
+		];
+		if (env.ORIGIN) origins.push(env.ORIGIN);
+		if (env.BETTER_AUTH_URL) origins.push(env.BETTER_AUTH_URL);
+		if (env.SITE_URL) origins.push(env.SITE_URL);
+		const host = request?.headers.get('host');
+		if (host) {
+			const proto = request?.headers.get('x-forwarded-proto') || 'https';
+			origins.push(`${proto}://${host}`);
+			origins.push(`http://${host}`);
+			origins.push(`https://${host}`);
+		}
+		return Array.from(new Set(origins));
+	},
 	secret: env.BETTER_AUTH_SECRET || 'raillingo_better_auth_secret_key_8f9a0b1c2d3e4f5a6b7c8d9e',
 	database: drizzleAdapter(db, {
 		provider: 'pg',
