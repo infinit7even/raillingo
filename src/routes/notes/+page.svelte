@@ -1968,7 +1968,7 @@
 	}
 
 	.vault-tab-pill.archive.active {
-		color: #8b5cf6;
+		color: #f59e0b;
 	}
 
 	.vault-tab-pill.trash.active {
@@ -2289,11 +2289,11 @@
 		gap: 0.35rem;
 		font-size: 0.74rem;
 		font-weight: 800;
-		color: #c4b5fd;
-		background: rgba(139, 92, 246, 0.12);
+		color: #22c55e;
+		background: rgba(34, 197, 94, 0.12);
 		padding: 0.25rem 0.65rem;
 		border-radius: 9px;
-		border: 1.5px solid rgba(139, 92, 246, 0.3);
+		border: 1.5px solid rgba(34, 197, 94, 0.3);
 		height: 32px;
 		box-sizing: border-box;
 		white-space: nowrap;
@@ -2372,10 +2372,10 @@
 	}
 
 	.action-icon-btn.action-archive-btn.pinned {
-		border-color: #8b5cf6;
-		border-bottom-color: #7c3aed;
-		background: rgba(139, 92, 246, 0.16);
-		color: #7c3aed;
+		border-color: #f59e0b;
+		border-bottom-color: #d97706;
+		background: rgba(245, 158, 11, 0.16);
+		color: #d97706;
 	}
 
 	.action-icon-btn.action-outline-btn.active {
@@ -2398,8 +2398,8 @@
 		justify-content: space-between;
 		gap: 0.8rem;
 		padding: 0.6rem 1rem;
-		background: rgba(139, 92, 246, 0.08);
-		border-bottom: 1.5px solid rgba(139, 92, 246, 0.25);
+		background: rgba(245, 158, 11, 0.08);
+		border-bottom: 1.5px solid rgba(245, 158, 11, 0.25);
 		border-radius: 0;
 		flex-shrink: 0;
 	}

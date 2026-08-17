@@ -1874,10 +1874,10 @@
 	}
 
 	.admin-tab-item.logs-tab.active {
-		background: var(--purple-color);
+		background: var(--orange-color);
 		color: #ffffff;
-		border-bottom: 3px solid var(--purple-depth);
-		box-shadow: 0 4px 12px rgba(206, 130, 255, 0.25);
+		border-bottom: 3px solid var(--orange-depth);
+		box-shadow: 0 4px 12px rgba(255, 150, 0, 0.25);
 	}
 
 	.admin-tab-item.trash-tab.active {
