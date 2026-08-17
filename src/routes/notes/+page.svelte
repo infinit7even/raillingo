@@ -13,7 +13,6 @@
 		createInlineImageFigureHtml
 	} from '$lib/utils/docConverter';
 	import { navStore } from '$lib/stores/navStore';
-	import { notesNavStore } from '$lib/stores/notesNavStore';
 	import { uploadImage } from '$lib/utils/imageUploader';
 	import { loginWithDiscord } from '$lib/auth-client';
 
@@ -148,7 +147,6 @@
 
 		const unsub = notesStore.subscribe((n) => {
 			notes = n;
-			notesNavStore.syncNotes(n, selectedNoteId, isVaultCollapsed);
 
 			if (selectedNoteId === null && n.length > 0) {
 				const targetId = data.sharedNoteId;
@@ -220,7 +218,6 @@
 		if (typeof localStorage !== 'undefined') {
 			localStorage.setItem('rf_vault_collapsed', String(isVaultCollapsed));
 		}
-		notesNavStore.syncNotes(notes, selectedNoteId, isVaultCollapsed);
 	}
 
 	async function selectNote(note: Note) {
@@ -235,8 +232,6 @@
 		if (typeof localStorage !== 'undefined') {
 			localStorage.setItem('rf_last_opened_note_id', note.id);
 		}
-
-		notesNavStore.syncNotes(notes, note.id, isVaultCollapsed);
 
 		await tick();
 		if (editorEl) {
@@ -1191,6 +1186,26 @@
 			<!-- Workspace Top Header Bar -->
 			<div class="workspace-header">
 				<div class="workspace-header-left">
+					{#if isVaultCollapsed}
+						<button
+							type="button"
+							class="expand-vault-btn"
+							onclick={toggleVaultCollapse}
+							title="Espandi Vault Appunti"
+						>
+							▶ Vault ({notes.length})
+						</button>
+					{/if}
+
+					<button
+						type="button"
+						class="mobile-back-btn"
+						onclick={() => (isSidebarOpenMobile = true)}
+						title="Torna all'elenco appunti"
+					>
+						← Vault
+					</button>
+
 					<div class="save-status-pill">
 						{#if isAutoSaving}
 							<span class="saving-txt">⏳ Salvataggio...</span>

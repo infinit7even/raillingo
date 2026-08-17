@@ -5,7 +5,6 @@
 	import { pwaStore } from '$lib/stores/pwaStore';
 	import { navStore } from '$lib/stores/navStore';
 	import { toastStore } from '$lib/stores/toastStore';
-	import { notesNavStore, type NotesNavState } from '$lib/stores/notesNavStore';
 	import QuickAddCardModal from '$lib/components/QuickAddCardModal.svelte';
 	import type { Card } from '$lib/types/cards';
 	import { onMount } from 'svelte';
@@ -19,14 +18,6 @@
 	let isQuickAddOpen = $state(false);
 	let canInstall = $state(false);
 	let isNavOpen = $state(false);
-
-	let notesNavState = $state<NotesNavState>({
-		isVaultCollapsed: false,
-		notes: [],
-		selectedNoteId: null
-	});
-
-	let isNotesPage = $derived(page.url.pathname === '/notes');
 
 	let isAdmin = $derived(
 		Boolean(
@@ -64,14 +55,12 @@
 			canInstall = pwaStore.canInstall;
 		});
 		const unNav = navStore.subscribe((o) => (isNavOpen = o));
-		const unNotesNav = notesNavStore.subscribe((s) => (notesNavState = s));
 
 		return () => {
 			unTheme();
 			unCards();
 			unPwa();
 			unNav();
-			unNotesNav();
 		};
 	});
 
@@ -148,71 +137,24 @@
 	</div>
 
 	<div class="nav-container">
-		{#if isNotesPage && notesNavState.isVaultCollapsed}
-			<!-- 📓 Modalità Vault Compresso: Mostra elenco note nella barra laterale -->
-			<div class="collapsed-vault-sidebar-panel">
-				<div class="collapsed-vault-header">
-					<div class="cv-title-box">
-						<span class="cv-icon">📓</span>
-						<span class="cv-title">NOTE ({notesNavState.notes.length})</span>
+		<div class="nav-scroll-wrapper">
+			{#each navItems as item}
+				{@const isActive = page.url.pathname === item.href}
+				<a
+					href={item.href}
+					class="nav-item"
+					class:active={isActive}
+					onclick={handleNavClick}
+					data-sveltekit-preload-data="tap"
+					data-sveltekit-preload-code="eager"
+				>
+					<div class="icon-wrapper" class:active-outline={isActive}>
+						<img src={item.emoji} alt={item.label} width="26" height="26" decoding="async" class="nav-emoji-img" />
 					</div>
-					<button
-						type="button"
-						class="cv-expand-btn"
-						onclick={() => notesNavStore.setCollapsed(false)}
-						title="Riespandi Vault Appunti"
-					>
-						⤢ Espandi
-					</button>
-				</div>
-
-				<div class="collapsed-notes-scroll">
-					{#if notesNavState.notes.length === 0}
-						<div class="cv-empty">Nessuna nota presente</div>
-					{:else}
-						{#each notesNavState.notes as n}
-							<button
-								type="button"
-								class="cv-note-chip"
-								class:active={notesNavState.selectedNoteId === n.id}
-								onclick={() => {
-									notesNavStore.selectNote(n.id);
-									navStore.close();
-								}}
-							>
-								<span class="cv-chip-icon">{n.isPinned ? '📌' : '📄'}</span>
-								<span class="cv-chip-text">{n.title || 'Nuovo Appunto'}</span>
-							</button>
-						{/each}
-					{/if}
-				</div>
-
-				<!-- Link rapido per tornare alla navigazione principale -->
-				<a href="/" class="cv-home-back-link" onclick={handleNavClick}>
-					<span>🏠</span>
-					<span>Torna alla Home</span>
+					<span class="nav-label">{item.label}</span>
 				</a>
-			</div>
-		{:else}
-			<div class="nav-scroll-wrapper">
-				{#each navItems as item}
-					{@const isActive = page.url.pathname === item.href}
-					<a
-						href={item.href}
-						class="nav-item"
-						class:active={isActive}
-						onclick={handleNavClick}
-						data-sveltekit-preload-data="tap"
-						data-sveltekit-preload-code="eager"
-					>
-						<div class="icon-wrapper" class:active-outline={isActive}>
-							<img src={item.emoji} alt={item.label} width="26" height="26" decoding="async" class="nav-emoji-img" />
-						</div>
-						<span class="nav-label">{item.label}</span>
-					</a>
-				{/each}
-			</div>
-		{/if}
+			{/each}
+		</div>
 	</div>
 
 	<!-- Actions Bottom Drawer (Theme + Quick Add Section) -->
@@ -457,133 +399,6 @@
 		font-size: 0.85rem;
 		letter-spacing: 0.04em;
 		white-space: nowrap;
-	}
-
-	/* Collapsed Vault Panel inside Sidebar */
-	.collapsed-vault-sidebar-panel {
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-		height: 100%;
-	}
-
-	.collapsed-vault-header {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		padding-bottom: 0.4rem;
-		border-bottom: 1.5px solid var(--border-color);
-	}
-
-	.cv-title-box {
-		display: flex;
-		align-items: center;
-		gap: 0.4rem;
-	}
-
-	.cv-icon {
-		font-size: 0.95rem;
-	}
-
-	.cv-title {
-		font-family: 'Outfit', sans-serif;
-		font-size: 0.78rem;
-		font-weight: 900;
-		color: var(--text-color);
-	}
-
-	.cv-expand-btn {
-		background: var(--card-bg-subtle);
-		border: 1px solid var(--border-color);
-		border-radius: 6px;
-		padding: 0.15rem 0.45rem;
-		font-size: 0.7rem;
-		font-weight: 800;
-		color: var(--accent-color);
-		cursor: pointer;
-	}
-
-	.cv-expand-btn:hover {
-		background: var(--accent-light-bg);
-	}
-
-	.collapsed-notes-scroll {
-		flex: 1;
-		display: flex;
-		flex-direction: column;
-		gap: 0.3rem;
-		overflow-y: auto;
-		scrollbar-width: none;
-	}
-
-	.collapsed-notes-scroll::-webkit-scrollbar {
-		display: none;
-	}
-
-	.cv-empty {
-		font-size: 0.76rem;
-		color: var(--text-muted);
-		text-align: center;
-		padding: 1rem 0;
-	}
-
-	.cv-note-chip {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		padding: 0.5rem 0.65rem;
-		border-radius: 10px;
-		background: var(--card-bg-subtle);
-		border: 1.5px solid var(--border-color);
-		color: var(--text-color);
-		font-family: inherit;
-		font-size: 0.8rem;
-		font-weight: 700;
-		text-align: left;
-		cursor: pointer;
-		transition: all 0.12s ease;
-	}
-
-	.cv-note-chip:hover {
-		border-color: var(--accent-color);
-		background: var(--hover-bg);
-	}
-
-	.cv-note-chip.active {
-		border-color: var(--accent-color);
-		background: var(--accent-light-bg);
-		color: var(--accent-color);
-		font-weight: 900;
-	}
-
-	.cv-chip-icon {
-		font-size: 0.85rem;
-		flex-shrink: 0;
-	}
-
-	.cv-chip-text {
-		flex: 1;
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
-
-	.cv-home-back-link {
-		display: flex;
-		align-items: center;
-		gap: 0.4rem;
-		padding: 0.4rem 0.6rem;
-		border-radius: 8px;
-		color: var(--text-muted);
-		text-decoration: none;
-		font-size: 0.75rem;
-		font-weight: 800;
-		border-top: 1px dashed var(--border-color);
-		margin-top: 0.25rem;
-	}
-
-	.cv-home-back-link:hover {
-		color: var(--text-color);
 	}
 
 	/* Sidebar Actions */
