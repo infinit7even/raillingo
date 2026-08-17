@@ -67,7 +67,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			.insert(cards)
 			.values({
 				id: cardId,
-				title: title || fullName || 'Scheda Visiva',
+				title: title,
 				fullName: fullName || null,
 				description,
 				category: category || 'Generale',
@@ -79,7 +79,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			.onConflictDoUpdate({
 				target: cards.id,
 				set: {
-					title: title || fullName || 'Scheda Visiva',
+					title: title,
 					fullName: fullName || null,
 					description,
 					category: category || 'Generale',
@@ -154,7 +154,7 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
 		const [updated] = await db
 			.update(cards)
 			.set({
-				title: title || fullName || oldCard.title || 'Scheda Visiva',
+				title: title,
 				fullName: fullName || null,
 				description,
 				category: category || oldCard.category || 'Generale',
