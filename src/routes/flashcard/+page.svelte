@@ -7,7 +7,6 @@
 	import FlashCard from '$lib/components/FlashCard.svelte';
 	import FreeWriteExercise from '$lib/components/FreeWriteExercise.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
-	import ModeTabs from '$lib/components/ModeTabs.svelte';
 	import CategoryFilter from '$lib/components/CategoryFilter.svelte';
 	import type { Card } from '$lib/types/cards';
 

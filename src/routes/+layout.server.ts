@@ -2,7 +2,6 @@ import type { LayoutServerLoad } from './$types';
 import { db } from '$lib/server/db';
 import { cards } from '$lib/server/db/schema';
 import { desc } from 'drizzle-orm';
-import { readCards } from '$lib/server/dataCache';
 
 export const load: LayoutServerLoad = async ({ locals }) => {
 	const user = locals.user || null;
@@ -16,15 +15,10 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 				createdAt: c.createdAt ? c.createdAt.toISOString() : new Date().toISOString(),
 				updatedAt: c.updatedAt ? c.updatedAt.toISOString() : new Date().toISOString()
 			}));
-		} else {
-			initialCards = await readCards<any[]>();
 		}
-	} catch {
-		try {
-			initialCards = await readCards<any[]>();
-		} catch {
-			initialCards = [];
-		}
+	} catch (e) {
+		console.error('Errore caricamento cards dal DB:', e);
+		initialCards = [];
 	}
 
 	return { user, initialCards };

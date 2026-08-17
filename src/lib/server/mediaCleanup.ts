@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { readCards, readNotes } from '$lib/server/dataCache';
+import { db } from '$lib/server/db';
+import { cards, notes } from '$lib/server/db/schema';
 import type { Card } from '$lib/types/cards';
 import type { Note } from '$lib/types/notes';
 
@@ -42,7 +43,7 @@ export function extractMediaFilenames(sources: (string | string[] | undefined | 
 }
 
 /**
- * Verifica se un file immagine è ancora referenziato da altre card o altre note nel sistema.
+ * Verifica se un file immagine è ancora referenziato da altre card o altre note nel database.
  */
 export async function isImageReferencedElsewhere(
 	filename: string,
@@ -53,30 +54,42 @@ export async function isImageReferencedElsewhere(
 	const cleanFilename = path.basename(filename.split('?')[0].trim());
 	if (!cleanFilename) return false;
 
-	const [allCards, allNotes] = await Promise.all([
-		readCards<Card[]>(),
-		readNotes<Note[]>()
-	]);
+	try {
+		const [allCards, allNotes] = await Promise.all([
+			db.select().from(cards),
+			db.select().from(notes)
+		]);
 
-	// Controlla le altre card
-	for (const c of allCards) {
-		if (options?.excludeCardId && c.id === options.excludeCardId) continue;
-		const cardFiles = extractMediaFilenames([c.images, c.description, c.title, c.fullName]);
-		if (cardFiles.has(cleanFilename)) return true;
-	}
+		for (const c of allCards) {
+			if (options?.excludeCardId && c.id === options.excludeCardId) continue;
+			const cardFiles = extractMediaFilenames([
+				(c.images as string[]) || [],
+				c.description,
+				c.title,
+				c.fullName
+			]);
+			if (cardFiles.has(cleanFilename)) return true;
+		}
 
-	// Controlla le altre note
-	for (const n of allNotes) {
-		if (options?.excludeNoteId && n.id === options.excludeNoteId) continue;
-		const noteFiles = extractMediaFilenames([n.images, n.content, n.title]);
-		if (noteFiles.has(cleanFilename)) return true;
+		for (const n of allNotes) {
+			if (options?.excludeNoteId && n.id === options.excludeNoteId) continue;
+			const noteFiles = extractMediaFilenames([
+				(n.images as string[]) || [],
+				n.content,
+				n.title
+			]);
+			if (noteFiles.has(cleanFilename)) return true;
+		}
+	} catch (e) {
+		console.error('Errore verifica referenze immagine:', e);
+		return true; // Per sicurezza, non cancellare se c'è un errore di query
 	}
 
 	return false;
 }
 
 /**
- * Elimina fisicamente il file dal disco (data/uploads e static/uploads) se non è referenziato altrove.
+ * Elimina fisicamente il file dal disco se non è referenziato altrove.
  */
 export async function deleteMediaFileIfUnused(
 	imgUrlOrFilename: string,
@@ -89,7 +102,6 @@ export async function deleteMediaFileIfUnused(
 
 	const isUsed = await isImageReferencedElsewhere(filename, options);
 	if (isUsed) {
-		// Il file è ancora usato da un'altra card o nota, non cancellare
 		return false;
 	}
 
