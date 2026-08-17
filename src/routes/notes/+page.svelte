@@ -1253,20 +1253,6 @@
 							</button>
 							<button
 								type="button"
-								class="ribbon-btn highlight-btn"
-								onclick={handleHighlightText}
-								title="Evidenzia testo (Ctrl+H)"
-							>
-								<span>🖍️</span>
-								<span>Evidenzia</span>
-							</button>
-						</div>
-
-						<span class="ribbon-sep"></span>
-
-						<div class="ribbon-group">
-							<button
-								type="button"
 								class="ribbon-btn heading-btn"
 								onclick={() => handleFormat('formatBlock', 'h1')}
 								title="Titolo H1 (# Titolo)"
@@ -1300,8 +1286,7 @@
 								onclick={() => handleFormat('insertUnorderedList')}
 								title="Elenco puntato (- )"
 							>
-								<span>•</span>
-								<span>Lista</span>
+								<span>• Lista</span>
 							</button>
 							<button
 								type="button"
@@ -1309,17 +1294,20 @@
 								onclick={() => handleFormat('insertOrderedList')}
 								title="Elenco numerato (1. )"
 							>
-								<span>1.</span>
-								<span>Num</span>
+								<span>1. Num</span>
 							</button>
+						</div>
+
+						<span class="ribbon-sep"></span>
+
+						<div class="ribbon-group">
 							<button
 								type="button"
 								class="ribbon-btn box-btn"
 								onclick={() => handleFormat('formatBlock', 'blockquote')}
 								title="Citazione / Box (> )"
 							>
-								<span>💡</span>
-								<span>Box</span>
+								<span>💡 Box</span>
 							</button>
 						</div>
 
@@ -1333,8 +1321,7 @@
 								disabled={isUploadingImage}
 								title="Allega o incolla (Ctrl+V) immagine"
 							>
-								<span>🖼️</span>
-								<span>{isUploadingImage ? 'Caricamento...' : 'Immagine'}</span>
+								<span>🖼️ Immagine</span>
 							</button>
 						</div>
 
@@ -1347,7 +1334,107 @@
 						/>
 					</div>
 
-					<!-- Obsidian Unified Live Document Canvas -->
+					<!-- Archived Note Banner -->
+					{#if currentIsArchived}
+						<div class="archived-banner duo-card" in:fade={{ duration: 150 }}>
+							<div class="archived-banner-info">
+								<span class="archived-icon">📦</span>
+								<div>
+									<strong>Questo appunto è in Archivio</strong>
+									<span class="archived-sub">Puoi visualizzarlo, modificarlo o ripristinarlo nei tuoi appunti principali</span>
+								</div>
+							</div>
+							<button
+								type="button"
+								class="duo-btn duo-btn-theme unarchive-btn"
+								onclick={() => handleToggleArchive()}
+								title="Ripristina negli appunti principali"
+							>
+								📂 Disarchivia
+							</button>
+						</div>
+					{/if}
+
+					<!-- Note Title Input -->
+					<div class="note-document-title-box">
+						<input
+							type="text"
+							bind:value={currentTitle}
+							oninput={triggerAutoSave}
+							placeholder="Nuovo Appunto"
+							class="obsidian-title-input"
+						/>
+					</div>
+
+					<!-- User Custom Tags Bar for Active Note -->
+					<div class="note-tags-bar">
+						<span class="tags-bar-label">🏷️ Etichette:</span>
+						{#each currentTags as tag}
+							<span class="note-tag-chip">
+								<span>{tag}</span>
+								<button
+									type="button"
+									class="remove-tag-btn"
+									onclick={() => handleRemoveTag(tag)}
+									title="Rimuovi etichetta da questa nota"
+								>
+									✕
+								</button>
+							</span>
+						{/each}
+
+						{#if isAddingTag}
+							<div class="add-tag-popover duo-card" transition:fade={{ duration: 100 }}>
+								<div class="add-tag-input-wrap">
+									<input
+										type="text"
+										bind:value={newTagInput}
+										placeholder="Nuova etichetta..."
+										class="add-tag-input"
+										onkeydown={(e) => {
+											if (e.key === 'Enter') {
+												e.preventDefault();
+												handleAddTag();
+											} else if (e.key === 'Escape') {
+												isAddingTag = false;
+											}
+										}}
+									/>
+									<button type="button" class="confirm-tag-btn" onclick={() => handleAddTag()}>✓</button>
+									<button type="button" class="cancel-tag-btn" onclick={() => (isAddingTag = false)}>✕</button>
+								</div>
+
+								{#if unassignedUserTags.length > 0}
+									<div class="tag-quick-picker">
+										<span class="quick-picker-title">Assegna esistente:</span>
+										<div class="quick-picker-chips">
+											{#each unassignedUserTags as existingTag}
+												<button
+													type="button"
+													class="quick-tag-pick-btn"
+													onclick={() => handleAddTag(existingTag)}
+													title="Assegna etichetta {existingTag}"
+												>
+													+ {existingTag}
+												</button>
+											{/each}
+										</div>
+									</div>
+								{/if}
+							</div>
+						{:else}
+							<button
+								type="button"
+								class="add-tag-trigger-btn"
+								onclick={() => (isAddingTag = true)}
+								title="Aggiungi o assegna etichetta"
+							>
+								➕ Aggiungi
+							</button>
+						{/if}
+					</div>
+
+					<!-- Obsidian Live Document Canvas -->
 					<div
 						bind:this={docCanvasEl}
 						class="document-canvas-container"
@@ -1356,136 +1443,33 @@
 						role="region"
 						aria-label="Area di scrittura live Obsidian"
 					>
-						<div class="document-inner-content">
-							<!-- Archived Note Banner -->
-							{#if currentIsArchived}
-								<div class="archived-banner duo-card" in:fade={{ duration: 150 }}>
-									<div class="archived-banner-info">
-										<span class="archived-icon">📦</span>
-										<div>
-											<strong>Questo appunto è in Archivio</strong>
-											<span class="archived-sub">Puoi visualizzarlo, modificarlo o ripristinarlo nei tuoi appunti principali</span>
-										</div>
-									</div>
-									<button
-										type="button"
-										class="duo-btn duo-btn-theme unarchive-btn"
-										onclick={() => handleToggleArchive()}
-										title="Ripristina negli appunti principali"
-									>
-										📂 Disarchivia
-									</button>
-								</div>
-							{/if}
-
-							<!-- Note Title Input -->
-							<div class="note-document-title-box">
-								<input
-									type="text"
-									bind:value={currentTitle}
-									oninput={triggerAutoSave}
-									placeholder="Titolo dell'appunto..."
-									class="obsidian-title-input"
-								/>
-							</div>
-
-							<!-- User Custom Tags Bar for Active Note -->
-							<div class="note-tags-bar">
-								<span class="tags-bar-label">🏷️ Etichette:</span>
-								{#each currentTags as tag}
-									<span class="note-tag-chip">
-										<span>{tag}</span>
-										<button
-											type="button"
-											class="remove-tag-btn"
-											onclick={() => handleRemoveTag(tag)}
-											title="Rimuovi etichetta da questa nota"
-										>
-											✕
-										</button>
-									</span>
-								{/each}
-
-								{#if isAddingTag}
-									<div class="add-tag-popover duo-card" transition:fade={{ duration: 100 }}>
-										<div class="add-tag-input-wrap">
-											<input
-												type="text"
-												bind:value={newTagInput}
-												placeholder="Nuova etichetta..."
-												class="add-tag-input"
-												onkeydown={(e) => {
-													if (e.key === 'Enter') {
-														e.preventDefault();
-														handleAddTag();
-													} else if (e.key === 'Escape') {
-														isAddingTag = false;
-													}
-												}}
-											/>
-											<button type="button" class="confirm-tag-btn" onclick={() => handleAddTag()}>✓</button>
-											<button type="button" class="cancel-tag-btn" onclick={() => (isAddingTag = false)}>✕</button>
-										</div>
-
-										{#if unassignedUserTags.length > 0}
-											<div class="tag-quick-picker">
-												<span class="quick-picker-title">Assegna esistente:</span>
-												<div class="quick-picker-chips">
-													{#each unassignedUserTags as existingTag}
-														<button
-															type="button"
-															class="quick-tag-pick-btn"
-															onclick={() => handleAddTag(existingTag)}
-															title="Assegna etichetta {existingTag}"
-														>
-															+ {existingTag}
-														</button>
-													{/each}
-												</div>
-											</div>
-										{/if}
-									</div>
-								{:else}
-									<button
-										type="button"
-										class="add-tag-trigger-btn"
-										onclick={() => (isAddingTag = true)}
-										title="Aggiungi o assegna etichetta"
-									>
-										➕ Aggiungi
-									</button>
-								{/if}
-							</div>
-
-							<!-- Live Text Editor -->
-							<div
-								bind:this={editorEl}
-								contenteditable="true"
-								class="obsidian-live-editor"
-								oninput={handleEditorInput}
-								onkeydown={handleEditorKeyDown}
-								onpaste={handleEditorPaste}
-								onclick={handleEditorClick}
-								onmousedown={handleResizeMouseDown}
-								role="textbox"
-								tabindex="0"
-								aria-multiline="true"
-								spellcheck="false"
-							></div>
-						</div>
+						<div
+							bind:this={editorEl}
+							contenteditable="true"
+							class="obsidian-live-editor"
+							oninput={handleEditorInput}
+							onkeydown={handleEditorKeyDown}
+							onpaste={handleEditorPaste}
+							onclick={handleEditorClick}
+							onmousedown={handleResizeMouseDown}
+							role="textbox"
+							tabindex="0"
+							aria-multiline="true"
+							spellcheck="false"
+						></div>
 					</div>
 
 					<!-- Workspace Footer Status Info -->
 					<div class="workspace-footer">
 						<div class="doc-stats-left">
 							<span>📝 {docStats.wordCount} parole</span>
-							<span>•</span>
-							<span>⏱️ ~{docStats.readingTimeMinutes} min lettura</span>
-							<span>•</span>
+							<span class="footer-dot">•</span>
+							<span>⏰ ~{docStats.readingTimeMinutes} min lettura</span>
+							<span class="footer-dot">•</span>
 							<span>🔤 {docStats.charCount} caratteri</span>
 						</div>
 						<div class="doc-stats-right">
-							<span>Live Markdown • Incolla immagini con <strong>Ctrl+V</strong></span>
+							<span>Incolla con <strong>Ctrl+V</strong> per inserire immagini nel testo</span>
 						</div>
 					</div>
 				{:else}
@@ -2299,14 +2283,14 @@
 	.save-status-pill {
 		display: inline-flex;
 		align-items: center;
-		gap: 0.4rem;
-		font-size: 0.72rem;
+		gap: 0.35rem;
+		font-size: 0.74rem;
 		font-weight: 800;
-		color: var(--text-muted);
-		background: var(--card-bg-subtle);
-		padding: 0.28rem 0.65rem;
-		border-radius: 12px;
-		border: 1.5px solid var(--border-color);
+		color: #c4b5fd;
+		background: rgba(139, 92, 246, 0.12);
+		padding: 0.25rem 0.65rem;
+		border-radius: 9px;
+		border: 1.5px solid rgba(139, 92, 246, 0.3);
 		height: 32px;
 		box-sizing: border-box;
 		white-space: nowrap;
@@ -2453,9 +2437,11 @@
 	.obsidian-ribbon-bar {
 		display: flex;
 		align-items: center;
-		gap: 0.4rem;
-		padding: 0.4rem 1.25rem;
-		border-bottom: 1.5px solid var(--border-color);
+		gap: 0.45rem;
+		padding: 0.4rem 0.85rem;
+		margin: 0.75rem 1.25rem 0.35rem 1.25rem;
+		border: 1.5px solid var(--border-color);
+		border-radius: 14px;
 		background: var(--card-bg-subtle);
 		overflow-x: auto;
 		scrollbar-width: none;
@@ -2471,20 +2457,19 @@
 	.ribbon-group {
 		display: flex;
 		align-items: center;
-		gap: 0.2rem;
-		background: var(--card-bg);
-		border: 1px solid var(--border-color);
-		border-radius: 10px;
-		padding: 0.15rem 0.25rem;
+		gap: 0.4rem;
+		background: transparent;
+		border: none;
+		padding: 0;
 		flex-shrink: 0;
 	}
 
 	.ribbon-btn {
 		background: transparent;
-		border: 1px solid transparent;
-		border-radius: 8px;
-		padding: 0.25rem 0.5rem;
-		font-size: 0.75rem;
+		border: none;
+		border-radius: 6px;
+		padding: 0.2rem 0.45rem;
+		font-size: 0.8rem;
 		font-weight: 800;
 		color: var(--text-color);
 		cursor: pointer;
@@ -2493,92 +2478,57 @@
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
-		gap: 0.3rem;
+		gap: 0.25rem;
 		height: 27px;
 		box-sizing: border-box;
 		flex-shrink: 0;
 	}
 
 	.ribbon-btn:hover {
-		border-color: var(--accent-color);
-		color: var(--accent-color);
+		color: var(--brand-color);
 		background: var(--hover-bg);
 		transform: translateY(-1px);
 	}
 
 	.ribbon-btn:active {
-		transform: translateY(1.5px);
+		transform: translateY(1px);
 	}
 
 	.ribbon-btn.format-bold,
 	.ribbon-btn.format-italic {
-		min-width: 27px;
-		padding: 0.25rem 0.35rem;
-	}
-
-	.ribbon-btn.highlight-btn {
-		color: #eab308;
-	}
-
-	.ribbon-btn.highlight-btn:hover {
-		border-color: #eab308;
-		background: rgba(234, 179, 8, 0.12);
+		min-width: 25px;
+		padding: 0.2rem 0.35rem;
 	}
 
 	.ribbon-btn.heading-btn {
-		font-size: 0.72rem;
-		min-width: 30px;
+		font-size: 0.75rem;
+		min-width: 28px;
 	}
 
 	.ribbon-btn.image-ribbon-btn {
-		color: #3b82f6;
+		color: #38bdf8;
+		font-weight: 800;
 	}
 
 	.ribbon-btn.image-ribbon-btn:hover {
-		border-color: #3b82f6;
-		background: rgba(59, 130, 246, 0.1);
-		color: #3b82f6;
+		color: #60a5fa;
+		background: rgba(56, 189, 248, 0.12);
 	}
 
 	.ribbon-sep {
 		width: 1.5px;
 		height: 16px;
 		background: var(--border-color);
-		margin: 0 0.1rem;
+		margin: 0 0.15rem;
 		border-radius: 1px;
 		opacity: 0.6;
 		flex-shrink: 0;
 	}
 
-	/* Obsidian Live Document Canvas Container */
-	.document-canvas-container {
-		flex: 1;
-		min-height: 0;
-		display: flex;
-		flex-direction: column;
-		overflow-y: auto;
-		position: relative;
-		background: var(--card-bg);
-		padding: 1.25rem 1.5rem 2.5rem 1.5rem;
-		box-sizing: border-box;
-		scrollbar-width: thin;
-		scrollbar-color: var(--border-color) transparent;
-		cursor: text;
-	}
-
-	.document-inner-content {
-		max-width: 860px;
-		width: 100%;
-		margin: 0 auto;
-		display: flex;
-		flex-direction: column;
-		flex: 1;
-		min-height: 100%;
-	}
-
 	.note-document-title-box {
-		padding: 0 0 0.4rem 0;
+		padding: 0.45rem 1.25rem 0.15rem 1.25rem;
 		width: 100%;
+		box-sizing: border-box;
 		flex-shrink: 0;
 	}
 
@@ -2588,11 +2538,12 @@
 		border: none;
 		outline: none;
 		font-family: 'Outfit', sans-serif;
-		font-size: 1.65rem;
+		font-size: 1.7rem;
 		font-weight: 900;
 		color: var(--text-color);
 		padding: 0;
 		box-sizing: border-box;
+		letter-spacing: -0.01em;
 	}
 
 	.obsidian-title-input::placeholder {
@@ -2603,8 +2554,8 @@
 	.note-tags-bar {
 		display: flex;
 		align-items: center;
-		gap: 0.4rem;
-		padding: 0 0 1rem 0;
+		gap: 0.35rem;
+		padding: 0.2rem 1.25rem 0.35rem 1.25rem;
 		flex-wrap: wrap;
 		flex-shrink: 0;
 		position: relative;
@@ -2741,6 +2692,25 @@
 		transform: translateY(-1px);
 	}
 
+	/* Obsidian Live Document Canvas Container */
+	.document-canvas-container {
+		flex: 1;
+		min-height: 200px;
+		display: flex;
+		flex-direction: column;
+		overflow-y: auto;
+		position: relative;
+		background: var(--card-bg-subtle);
+		border: 1.5px solid var(--border-color);
+		border-radius: 16px;
+		margin: 0.35rem 1.25rem 0.75rem 1.25rem;
+		padding: 1.25rem 1.4rem;
+		box-sizing: border-box;
+		scrollbar-width: thin;
+		scrollbar-color: var(--border-color) transparent;
+		cursor: text;
+	}
+
 	.document-canvas-container::-webkit-scrollbar {
 		width: 7px;
 	}
@@ -2760,7 +2730,7 @@
 
 	.obsidian-live-editor {
 		width: 100%;
-		min-height: 250px;
+		min-height: 100%;
 		flex: 1;
 		outline: none;
 		font-size: 0.98rem;
@@ -2989,18 +2959,35 @@
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		padding: 0.4rem 1rem;
+		padding: 0.75rem 1.25rem;
 		border-top: 1.5px solid var(--border-color);
-		background: var(--card-bg-subtle);
-		font-size: 0.72rem;
+		background: transparent;
+		font-size: 0.76rem;
 		font-weight: 700;
 		color: var(--text-muted);
 		flex-shrink: 0;
+		gap: 0.75rem;
 	}
 
 	.doc-stats-left {
 		display: flex;
-		gap: 0.4rem;
+		align-items: center;
+		gap: 0.35rem;
+		color: var(--text-muted);
+	}
+
+	.footer-dot {
+		margin: 0 0.2rem;
+		opacity: 0.5;
+	}
+
+	.doc-stats-right {
+		font-size: 0.76rem;
+		color: var(--text-muted);
+	}
+
+	.doc-stats-right strong {
+		color: var(--text-color);
 	}
 
 	/* 📑 TOC Outline Panel */
