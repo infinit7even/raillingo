@@ -35,6 +35,7 @@
 
 	// 📋 Global Context Menu State
 	let isContextMenuOpen = $state(false);
+	let contextMenuMode = $state<'navigation' | 'notes'>('navigation');
 	let contextMenuX = $state(0);
 	let contextMenuY = $state(0);
 
@@ -51,9 +52,24 @@
 
 	function handleGlobalContextMenu(e: MouseEvent) {
 		e.preventDefault();
-		const isNotes = page.url.pathname === '/notes';
-		const menuWidth = 220;
-		const menuHeight = isNotes ? 480 : 340;
+		const target = e.target as HTMLElement | null;
+		const isInsideNoteContext = Boolean(
+			target &&
+			(target.closest('.document-canvas-container') ||
+			 target.closest('.obsidian-live-editor') ||
+			 target.closest('.note-document-title-box') ||
+			 target.closest('.note-tags-bar') ||
+			 target.closest('.vault-file-item'))
+		);
+
+		if (isInsideNoteContext && page.url.pathname === '/notes') {
+			contextMenuMode = 'notes';
+		} else {
+			contextMenuMode = 'navigation';
+		}
+
+		const menuWidth = 210;
+		const menuHeight = contextMenuMode === 'notes' ? 290 : (isAdmin ? 370 : 330);
 
 		let x = e.clientX;
 		let y = e.clientY;
@@ -273,7 +289,7 @@
 			role="menu"
 			tabindex="0"
 		>
-			{#if page.url.pathname === '/notes'}
+			{#if contextMenuMode === 'notes'}
 				<div class="ctx-section-label">STRUMENTI APPUNTI</div>
 				<button type="button" class="ctx-item" onclick={() => triggerNotesAction('image')}>
 					<span class="ctx-ico">📷</span>
@@ -299,68 +315,68 @@
 					<span class="ctx-ico">📌</span>
 					<span>Fissa / Sfissa</span>
 				</button>
+				<div class="ctx-divider"></div>
 				<button type="button" class="ctx-item danger" onclick={() => triggerNotesAction('delete')}>
 					<span class="ctx-ico">🗑️</span>
 					<span>Sposta nel Cestino</span>
 				</button>
-				<div class="ctx-divider"></div>
-			{/if}
-
-			<div class="ctx-section-label">NAVIGAZIONE RAPIDA</div>
-			<a href="/" class="ctx-item" onclick={() => (isContextMenuOpen = false)}>
-				<span class="ctx-ico">🏠</span>
-				<span>Home</span>
-			</a>
-			<a href="/flashcard" class="ctx-item" onclick={() => (isContextMenuOpen = false)}>
-				<span class="ctx-ico">🗂️</span>
-				<span>Flashcard</span>
-			</a>
-			<a href="/quiz" class="ctx-item" onclick={() => (isContextMenuOpen = false)}>
-				<span class="ctx-ico">🎯</span>
-				<span>Quiz</span>
-			</a>
-			<a href="/reels" class="ctx-item" onclick={() => (isContextMenuOpen = false)}>
-				<span class="ctx-ico">🎬</span>
-				<span>Reels</span>
-			</a>
-			<a href="/wiki" class="ctx-item" onclick={() => (isContextMenuOpen = false)}>
-				<span class="ctx-ico">📚</span>
-				<span>Wiki & Dizionario</span>
-			</a>
-			<a href="/notes" class="ctx-item" onclick={() => (isContextMenuOpen = false)}>
-				<span class="ctx-ico">📓</span>
-				<span>Appunti</span>
-			</a>
-			{#if isAdmin}
-				<a href="/admin" class="ctx-item" onclick={() => (isContextMenuOpen = false)}>
-					<span class="ctx-ico">⚙️</span>
-					<span>Pannello Admin</span>
+			{:else}
+				<div class="ctx-section-label">NAVIGAZIONE RAPIDA</div>
+				<a href="/" class="ctx-item" onclick={() => (isContextMenuOpen = false)}>
+					<span class="ctx-ico">🏠</span>
+					<span>Home</span>
 				</a>
-			{/if}
+				<a href="/flashcard" class="ctx-item" onclick={() => (isContextMenuOpen = false)}>
+					<span class="ctx-ico">🗂️</span>
+					<span>Flashcard</span>
+				</a>
+				<a href="/quiz" class="ctx-item" onclick={() => (isContextMenuOpen = false)}>
+					<span class="ctx-ico">🎯</span>
+					<span>Quiz</span>
+				</a>
+				<a href="/reels" class="ctx-item" onclick={() => (isContextMenuOpen = false)}>
+					<span class="ctx-ico">🎬</span>
+					<span>Reels</span>
+				</a>
+				<a href="/wiki" class="ctx-item" onclick={() => (isContextMenuOpen = false)}>
+					<span class="ctx-ico">📚</span>
+					<span>Wiki & Dizionario</span>
+				</a>
+				<a href="/notes" class="ctx-item" onclick={() => (isContextMenuOpen = false)}>
+					<span class="ctx-ico">📓</span>
+					<span>Appunti</span>
+				</a>
+				{#if isAdmin}
+					<a href="/admin" class="ctx-item" onclick={() => (isContextMenuOpen = false)}>
+						<span class="ctx-ico">⚙️</span>
+						<span>Pannello Admin</span>
+					</a>
+				{/if}
 
-			<div class="ctx-divider"></div>
-			<button
-				type="button"
-				class="ctx-item"
-				onclick={() => {
-					isContextMenuOpen = false;
-					themeStore.toggleTheme();
-				}}
-			>
-				<span class="ctx-ico">🌓</span>
-				<span>Cambia Tema</span>
-			</button>
-			<button
-				type="button"
-				class="ctx-item"
-				onclick={() => {
-					isContextMenuOpen = false;
-					toggleFullscreen();
-				}}
-			>
-				<span class="ctx-ico">⛶</span>
-				<span>Schermo Intero</span>
-			</button>
+				<div class="ctx-divider"></div>
+				<button
+					type="button"
+					class="ctx-item"
+					onclick={() => {
+						isContextMenuOpen = false;
+						themeStore.toggleTheme();
+					}}
+				>
+					<span class="ctx-ico">🌓</span>
+					<span>Cambia Tema</span>
+				</button>
+				<button
+					type="button"
+					class="ctx-item"
+					onclick={() => {
+						isContextMenuOpen = false;
+						toggleFullscreen();
+					}}
+				>
+					<span class="ctx-ico">⛶</span>
+					<span>Schermo Intero</span>
+				</button>
+			{/if}
 		</div>
 	{/if}
 </div>
