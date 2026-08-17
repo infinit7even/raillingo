@@ -5,6 +5,7 @@
 	import type { Card } from '$lib/types/cards';
 
 	import CardForm from '$lib/components/CardForm.svelte';
+	import PageHeader from '$lib/components/PageHeader.svelte';
 	import { loginWithDiscord } from '$lib/auth-client';
 	import { toastStore } from '$lib/stores/toastStore';
 	import { matchesCategory } from '$lib/stores/globalCategoryStore';
@@ -54,6 +55,13 @@
 		)
 	);
 
+	// Creating card state
+	let isCreatingCard = $state(false);
+
+	// Tools Accordion state
+	let isToolsAccordionOpen = $state(false);
+	let toolsActiveSubTab = $state<'categories' | 'media' | 'backup'>('categories');
+
 	// Users state
 	let users = $state<AdminUser[]>([]);
 	let usersLoading = $state(false);
@@ -71,11 +79,20 @@
 	let selectedCategoryFilter = $state('ALL');
 
 	// Category batch edit state
-	let isCategoryAccordionOpen = $state(false);
 	let categoryToRename = $state<string | null>(null);
 	let newCategoryName = $state('');
 	let renamingInProgress = $state(false);
 	let categorySearchQuery = $state('');
+
+	// Media Cleaner state
+	let mediaLoading = $state(false);
+	let mediaInfo = $state<{
+		totalFiles: number;
+		totalBytes: number;
+		referencedFiles: number;
+		orphanedCount: number;
+		orphanedBytes: number;
+	} | null>(null);
 
 	// Import Modal state
 	let isImportModalOpen = $state(false);
@@ -182,27 +199,27 @@
 	function getActionBadge(action: string) {
 		switch (action) {
 			case 'create_card':
-				return { label: 'Creazione Scheda', icon: '✨', color: '#22c55e', bg: 'rgba(34, 197, 94, 0.12)' };
+				return { label: 'Creazione Scheda', icon: '✨', color: 'var(--brand-color)', bg: 'var(--brand-light-bg)' };
 			case 'update_card':
-				return { label: 'Modifica Scheda', icon: '✏️', color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.12)' };
+				return { label: 'Modifica Scheda', icon: '✏️', color: 'var(--accent-color)', bg: 'var(--accent-light-bg)' };
 			case 'trash_card':
-				return { label: 'Spostata nel Cestino', icon: '🗑️', color: '#f97316', bg: 'rgba(249, 115, 22, 0.12)' };
+				return { label: 'Cestinata', icon: '🗑️', color: 'var(--orange-color)', bg: 'rgba(255, 150, 0, 0.12)' };
 			case 'restore_card':
-				return { label: 'Ripristino Scheda', icon: '♻️', color: '#10b981', bg: 'rgba(16, 185, 129, 0.12)' };
+				return { label: 'Ripristino Scheda', icon: '♻️', color: 'var(--brand-color)', bg: 'var(--brand-light-bg)' };
 			case 'permanent_delete_card':
 				return { label: 'Eliminazione Definitiva', icon: '✕', color: '#ef4444', bg: 'rgba(239, 68, 68, 0.14)' };
 			case 'set_role_admin':
-				return { label: 'Promozione Admin', icon: '👑', color: '#eab308', bg: 'rgba(234, 179, 8, 0.16)' };
+				return { label: 'Promozione Admin', icon: '👑', color: 'var(--yellow-color)', bg: 'rgba(255, 200, 0, 0.16)' };
 			case 'remove_role_admin':
-				return { label: 'Revoca Admin', icon: '👤', color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.14)' };
+				return { label: 'Revoca Admin', icon: '👤', color: 'var(--purple-color)', bg: 'rgba(206, 130, 255, 0.14)' };
 			case 'rename_category':
-				return { label: 'Rinomina Categoria', icon: '🏷️', color: '#06b6d4', bg: 'rgba(6, 182, 212, 0.12)' };
+				return { label: 'Rinomina Categoria', icon: '🏷️', color: 'var(--accent-color)', bg: 'var(--accent-light-bg)' };
 			case 'import_cards':
-				return { label: 'Importazione Backup', icon: '📥', color: '#a855f7', bg: 'rgba(168, 85, 247, 0.14)' };
+				return { label: 'Importazione Backup', icon: '📥', color: 'var(--purple-color)', bg: 'rgba(206, 130, 255, 0.14)' };
 			case 'clean_media':
-				return { label: 'Pulizia Media', icon: '🧹', color: '#ec4899', bg: 'rgba(236, 72, 153, 0.12)' };
+				return { label: 'Pulizia Media', icon: '🧹', color: 'var(--pink-color)', bg: 'rgba(255, 75, 75, 0.12)' };
 			default:
-				return { label: action, icon: '⚡', color: '#64748b', bg: 'rgba(100, 116, 139, 0.12)' };
+				return { label: action, icon: '⚡', color: 'var(--text-muted)', bg: 'var(--card-bg-subtle)' };
 		}
 	}
 
@@ -249,6 +266,7 @@
 			} else {
 				await cardsStore.addCard(cardData as any);
 				resetForm();
+				isCreatingCard = false;
 				toastStore.show({ message: '✨ Nuova scheda creata con successo!' });
 			}
 		} catch (err: any) {
@@ -298,60 +316,59 @@
 
 	function filterCardsByCategory(catName: string) {
 		selectedCategoryFilter = catName;
-		const listSection = document.querySelector('.list-section');
-		if (listSection) {
-			listSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-		}
+		activeTab = 'active';
+		toastStore.show({ message: `Filtro impostato su: ${catName}` });
 	}
 
 	async function handleBatchRenameCategory(oldCat: string) {
-		const trimmedNew = newCategoryName.trim();
-		if (!trimmedNew) return;
-		if (trimmedNew === oldCat) {
+		const newCat = newCategoryName.trim();
+		if (!newCat) {
+			alert('Inserisci un nome valido per la categoria.');
+			return;
+		}
+
+		if (newCat === oldCat) {
 			categoryToRename = null;
 			newCategoryName = '';
 			return;
 		}
 
-		const destinationExists = categoryStats.some(
-			(s) => s.category.toLowerCase() === trimmedNew.toLowerCase() && s.category !== oldCat
-		);
-
-		if (destinationExists) {
-			if (
-				!confirm(
-					`La categoria "${trimmedNew}" esiste già.\n\nVuoi unire le schede di "${oldCat}" nella categoria "${trimmedNew}"?`
-				)
-			) {
-				return;
-			}
+		if (
+			!confirm(
+				`Vuoi rinominare la categoria "${oldCat}" in "${newCat}" per tutte le schede associate?`
+			)
+		) {
+			return;
 		}
 
 		renamingInProgress = true;
 		try {
-			const count = await cardsStore.updateCategoryBatch(oldCat, trimmedNew);
-			toastStore.show({
-				message: `🏷️ Aggiornate ${count} schede con la nuova categoria "${trimmedNew}"`
+			const res = await fetch('/api/admin/categories', {
+				method: 'PUT',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ oldCategory: oldCat, newCategory: newCat })
 			});
+
+			if (!res.ok) {
+				const data = await res.json();
+				throw new Error(data.error || 'Errore durante la rinomina');
+			}
+
+			const result = await res.json();
+			toastStore.show({
+				message: `✨ Categoria aggiornata per ${result.count} schede!`
+			});
+
 			categoryToRename = null;
 			newCategoryName = '';
+			await cardsStore.loadFromStorageOrApi();
 		} catch (err: any) {
-			console.error('Errore durante la modifica della categoria:', err);
-			toastStore.show({ message: `⚠️ ${err.message || 'Errore modifica categoria'}` });
+			console.error('Errore rinomina categoria:', err);
+			toastStore.show({ message: `⚠️ ${err.message || 'Errore rinomina'}` });
 		} finally {
 			renamingInProgress = false;
 		}
 	}
-
-	// Media cleanup state
-	let mediaLoading = $state(false);
-	let mediaInfo = $state<{
-		totalFiles: number;
-		totalBytes: number;
-		referencedFiles: number;
-		orphanedCount: number;
-		orphanedBytes: number;
-	} | null>(null);
 
 	async function scanMedia() {
 		mediaLoading = true;
@@ -570,576 +587,411 @@
 			</button>
 		</div>
 	{:else}
-		<!-- Admin Panel Dashboard -->
-		<div class="admin-panel" in:fade={{ duration: 180 }}>
-			<!-- Compact Collapsible Sezione Gestione Categorie -->
-			<div class="categories-accordion-card duo-card">
+		<!-- Banner Header in alto visibile SOLO su Mobile -->
+		<div class="mobile-only-header">
+			<PageHeader
+				title="Pannello Admin"
+				subtitle="Gestione schede, utenti e registro attività"
+				icon="/emoji/shield_3d.png"
+				variant="brand"
+				mobileOpenNav={true}
+			/>
+		</div>
+
+		<!-- Dashboard Desktop Header (visibile solo su Desktop) -->
+		<div class="desktop-admin-header duo-card">
+			<div class="desktop-header-left">
+				<img src="/emoji/shield_3d.png" alt="" width="40" height="40" class="admin-header-icon" />
+				<div>
+					<h1 class="desktop-admin-title">Pannello Amministratore</h1>
+					<p class="desktop-admin-subtitle">Gestione schede ferroviarie, permessi utenti, registro e manutenzione.</p>
+				</div>
+			</div>
+			<div class="desktop-header-actions">
 				<button
 					type="button"
-					class="accordion-toggle-btn"
-					onclick={() => (isCategoryAccordionOpen = !isCategoryAccordionOpen)}
+					class="duo-btn duo-btn-theme add-card-top-btn"
+					onclick={() => (isCreatingCard = !isCreatingCard)}
 				>
-					<div class="accordion-title-group">
-						<span class="accordion-icon">🏷️</span>
-						<span class="accordion-title">Gestione Categorie ({categoryStats.length})</span>
-					</div>
-					<span class="accordion-arrow">{isCategoryAccordionOpen ? '▲ Riduci' : '▼ Espandi'}</span>
+					{isCreatingCard ? '✕ Chiudi' : '✨ Nuova Scheda'}
 				</button>
-
-				{#if isCategoryAccordionOpen}
-					<div class="accordion-content" transition:slide={{ duration: 180 }}>
-						<div class="category-search-box">
-							<input
-								type="text"
-								bind:value={categorySearchQuery}
-								placeholder="Cerca tra le categorie..."
-								class="duo-input cat-search-input"
-							/>
-						</div>
-
-						<div class="category-chips-scroll">
-							{#each filteredCategoryStats as stat}
-								<div
-									class="category-stat-item duo-card"
-									class:is-renaming-active={categoryToRename === stat.category}
-								>
-									<div class="stat-main">
-										<span class="category-name">{stat.category}</span>
-										<span class="category-count-badge">{stat.count} card</span>
-									</div>
-
-									{#if categoryToRename === stat.category}
-										<div class="rename-inline-box">
-											<div class="rename-fields-wrapper">
-												<input
-													type="text"
-													bind:value={newCategoryName}
-													placeholder="Nuovo nome categoria..."
-													class="duo-input rename-input"
-													onkeydown={(e) => {
-														if (e.key === 'Enter') {
-															e.preventDefault();
-															handleBatchRenameCategory(stat.category);
-														} else if (e.key === 'Escape') {
-															categoryToRename = null;
-															newCategoryName = '';
-														}
-													}}
-												/>
-
-												<select
-													bind:value={newCategoryName}
-													class="duo-input quick-merge-select"
-													title="Unisci in un'altra categoria esistente"
-												>
-													<option value={newCategoryName} disabled>-- Unisci a esistente --</option>
-													{#each categoryStats.filter((s) => s.category !== stat.category) as targetStat}
-														<option value={targetStat.category}>
-															Unisci in "{targetStat.category}" ({targetStat.count} card)
-														</option>
-													{/each}
-												</select>
-											</div>
-
-											<div class="rename-actions-row">
-												<button
-													class="duo-btn duo-btn-green save-cat-btn"
-													disabled={renamingInProgress || !newCategoryName.trim()}
-													onclick={() => handleBatchRenameCategory(stat.category)}
-												>
-													{renamingInProgress ? '⏳...' : '💾 Salva'}
-												</button>
-												<button
-													class="duo-btn duo-btn-gray cancel-cat-btn"
-													onclick={() => {
-														categoryToRename = null;
-														newCategoryName = '';
-													}}
-												>
-													✕
-												</button>
-											</div>
-										</div>
-									{:else}
-										<div class="category-card-actions">
-											<button
-												class="cat-action-btn filter"
-												onclick={() => filterCardsByCategory(stat.category)}
-												title="Filtra schede"
-											>
-												🔍 Filtra
-											</button>
-											<button
-												class="cat-action-btn rename"
-												onclick={() => {
-													categoryToRename = stat.category;
-													newCategoryName = stat.category;
-												}}
-												title="Rinomina categoria"
-											>
-												✏️ Rinomina
-											</button>
-										</div>
-									{/if}
-								</div>
-							{/each}
-						</div>
-					</div>
-				{/if}
 			</div>
+		</div>
 
-			<!-- Media Cleaner Panel -->
-			<div class="media-cleaner-card duo-card">
-				<div class="cleaner-header">
-					<div>
-						<h2 class="section-title">🧹 Pulizia File & Immagini Non Utilizzate</h2>
-						<p class="section-subtitle">
-							Scansiona la cartella degli upload per eliminare i file non collegati alle schede.
-						</p>
+		<!-- Box Creazione Nuova Scheda -->
+		{#if isCreatingCard}
+			<div class="create-card-wrapper duo-card" transition:slide={{ duration: 200 }}>
+				<div class="create-card-header">
+					<div class="create-title">
+						<span>✨ Crea Nuova Scheda Ferroviaria</span>
 					</div>
-					<button class="duo-btn duo-btn-blue scan-btn" disabled={mediaLoading} onclick={scanMedia}>
-						{mediaLoading ? '⏳ Scansione...' : '🔍 Scansiona'}
+					<button type="button" class="close-create-btn" onclick={() => (isCreatingCard = false)}>
+						✕
 					</button>
 				</div>
 
-				{#if mediaInfo}
-					<div class="media-stats-grid" transition:slide={{ duration: 160 }}>
-						<div class="media-stat-box">
-							<span class="m-val">{mediaInfo.totalFiles}</span>
-							<span class="m-lbl">File Totali ({((mediaInfo.totalBytes || 0) / 1024 / 1024).toFixed(2)} MB)</span>
-						</div>
-						<div class="media-stat-box success">
-							<span class="m-val">{mediaInfo.referencedFiles}</span>
-							<span class="m-lbl">In Uso</span>
-						</div>
-						<div class="media-stat-box warning">
-							<span class="m-val">{mediaInfo.orphanedCount}</span>
-							<span class="m-lbl">Orfani ({((mediaInfo.orphanedBytes || 0) / 1024 / 1024).toFixed(2)} MB)</span>
-						</div>
+				<CardForm
+					initialCard={null}
+					onSave={async (data) => {
+						await handleSaveCard(data);
+						isCreatingCard = false;
+					}}
+					onCancel={() => (isCreatingCard = false)}
+					submitLabel="✨ Crea Scheda"
+				/>
+			</div>
+		{/if}
+
+		<!-- Sezione Strumenti & Manutenzione (Compatta e Richiudibile) -->
+		<div class="tools-accordion-card duo-card">
+			<button
+				type="button"
+				class="tools-toggle-btn"
+				onclick={() => (isToolsAccordionOpen = !isToolsAccordionOpen)}
+			>
+				<div class="tools-title-group">
+					<span class="tools-icon">⚙️</span>
+					<div class="tools-text">
+						<strong class="tools-title">Strumenti & Manutenzione</strong>
+						<span class="tools-subtitle">Categorie ({categoryStats.length}), Pulizia Media e Backup Database</span>
+					</div>
+				</div>
+				<span class="tools-arrow">{isToolsAccordionOpen ? '▲ Riduci' : '▼ Espandi'}</span>
+			</button>
+
+			{#if isToolsAccordionOpen}
+				<div class="tools-content-box" transition:slide={{ duration: 180 }}>
+					<!-- Sotto-navigazione strumenti -->
+					<div class="tools-subtabs-row">
+						<button
+							type="button"
+							class="tool-subtab-btn"
+							class:active={toolsActiveSubTab === 'categories'}
+							onclick={() => (toolsActiveSubTab = 'categories')}
+						>
+							🏷️ Categorie ({categoryStats.length})
+						</button>
+						<button
+							type="button"
+							class="tool-subtab-btn"
+							class:active={toolsActiveSubTab === 'media'}
+							onclick={() => {
+								toolsActiveSubTab = 'media';
+								if (!mediaInfo) scanMedia();
+							}}
+						>
+							🧹 Pulizia Media
+						</button>
+						<button
+							type="button"
+							class="tool-subtab-btn"
+							class:active={toolsActiveSubTab === 'backup'}
+							onclick={() => (toolsActiveSubTab = 'backup')}
+						>
+							💾 Backup & Ripristino
+						</button>
 					</div>
 
-					{#if mediaInfo.orphanedCount > 0}
-						<div class="clean-action-box" transition:slide={{ duration: 160 }}>
-							<button
-								class="duo-btn duo-btn-red clean-btn"
-								disabled={mediaLoading}
-								onclick={cleanOrphanedMedia}
-							>
-								{mediaLoading
-									? '⏳ Eliminazione...'
-									: `🗑️ Elimina Definitivamente ${mediaInfo.orphanedCount} File Orfani`}
-							</button>
-						</div>
-					{:else}
-						<p class="all-clean-text">✨ Tutti i file multimediali sono collegati e in uso!</p>
-					{/if}
-				{/if}
-			</div>
+					<!-- Sotto-scheda Categorie -->
+					{#if toolsActiveSubTab === 'categories'}
+						<div class="tool-subpanel" transition:fade={{ duration: 120 }}>
+							<div class="category-search-box">
+								<input
+									type="text"
+									bind:value={categorySearchQuery}
+									placeholder="Cerca tra le categorie..."
+									class="duo-input cat-search-input"
+								/>
+							</div>
 
-			<!-- Navigazione Tab Admin -->
-			<div class="admin-tabs-row">
-				<button
-					class="admin-tab-btn"
-					class:active={activeTab === 'active'}
-					onclick={() => (activeTab = 'active')}
-				>
-					📋 Schede ({cards.length})
-				</button>
-				<button
-					class="admin-tab-btn users-tab"
-					class:active={activeTab === 'users'}
-					onclick={() => {
-						activeTab = 'users';
-						loadUsers();
-					}}
-				>
-					👥 Utenti ({users.length})
-				</button>
-				<button
-					class="admin-tab-btn logs-tab"
-					class:active={activeTab === 'logs'}
-					onclick={() => {
-						activeTab = 'logs';
-						loadLogs();
-					}}
-				>
-					📜 Log Azioni ({logs.length})
-				</button>
-				<button
-					class="admin-tab-btn trash-tab"
-					class:active={activeTab === 'trash'}
-					onclick={() => {
-						activeTab = 'trash';
-						loadTrash();
-					}}
-				>
-					🗑️ Cestino ({trashCards.length})
-				</button>
-			</div>
+							<div class="category-chips-scroll">
+								{#each filteredCategoryStats as stat}
+									<div
+										class="category-stat-item duo-card"
+										class:is-renaming-active={categoryToRename === stat.category}
+									>
+										<div class="stat-main">
+											<span class="category-name">{stat.category}</span>
+											<span class="category-count-badge">{stat.count} card</span>
+										</div>
 
-			{#if activeTab === 'active'}
-				<!-- List Sezione Schede Attive -->
-				<div class="list-section" in:fade={{ duration: 150 }}>
-					<div class="list-header">
-						<div class="list-filters">
-							<select bind:value={selectedCategoryFilter} class="duo-input category-select-filter">
-								<option value="ALL">Tutte le Categorie ({categoryStats.length})</option>
-								{#each categoryStats as stat}
-									<option value={stat.category}>{stat.category} ({stat.count})</option>
+										{#if categoryToRename === stat.category}
+											<div class="rename-inline-box">
+												<div class="rename-fields-wrapper">
+													<input
+														type="text"
+														bind:value={newCategoryName}
+														placeholder="Nuovo nome categoria..."
+														class="duo-input rename-input"
+														onkeydown={(e) => {
+															if (e.key === 'Enter') {
+																e.preventDefault();
+																handleBatchRenameCategory(stat.category);
+															} else if (e.key === 'Escape') {
+																categoryToRename = null;
+																newCategoryName = '';
+															}
+														}}
+													/>
+
+													<select
+														bind:value={newCategoryName}
+														class="duo-input quick-merge-select"
+														title="Unisci in un'altra categoria esistente"
+													>
+														<option value={newCategoryName} disabled>-- Unisci a esistente --</option>
+														{#each categoryStats.filter((s) => s.category !== stat.category) as targetStat}
+															<option value={targetStat.category}>
+																Unisci in "{targetStat.category}" ({targetStat.count} card)
+															</option>
+														{/each}
+													</select>
+												</div>
+
+												<div class="rename-actions-row">
+													<button
+														class="duo-btn duo-btn-green save-cat-btn"
+														disabled={renamingInProgress || !newCategoryName.trim()}
+														onclick={() => handleBatchRenameCategory(stat.category)}
+													>
+														{renamingInProgress ? '⏳...' : '💾 Salva'}
+													</button>
+													<button
+														class="duo-btn duo-btn-gray cancel-cat-btn"
+														onclick={() => {
+															categoryToRename = null;
+															newCategoryName = '';
+														}}
+													>
+														✕
+													</button>
+												</div>
+											</div>
+										{:else}
+											<div class="category-card-actions">
+												<button
+													class="cat-action-btn filter"
+													onclick={() => filterCardsByCategory(stat.category)}
+													title="Filtra schede"
+												>
+													🔍 Filtra
+												</button>
+												<button
+													class="cat-action-btn rename"
+													onclick={() => {
+														categoryToRename = stat.category;
+														newCategoryName = stat.category;
+													}}
+													title="Rinomina categoria"
+												>
+													✏️ Rinomina
+												</button>
+											</div>
+										{/if}
+									</div>
 								{/each}
-							</select>
+							</div>
+						</div>
+					{:else if toolsActiveSubTab === 'media'}
+						<!-- Sotto-scheda Pulizia Media -->
+						<div class="tool-subpanel" transition:fade={{ duration: 120 }}>
+							<div class="cleaner-header">
+								<div>
+									<h3 class="section-title">🧹 Pulizia File & Immagini Non Utilizzate</h3>
+									<p class="section-subtitle">
+										Scansiona la cartella uploads per eliminare file orfani non collegati a schede o note.
+									</p>
+								</div>
+								<button class="duo-btn duo-btn-blue scan-btn" disabled={mediaLoading} onclick={scanMedia}>
+									{mediaLoading ? '⏳ Scansione...' : '🔍 Scansiona'}
+								</button>
+							</div>
 
+							{#if mediaInfo}
+								<div class="media-stats-grid" transition:slide={{ duration: 160 }}>
+									<div class="media-stat-box">
+										<span class="m-val">{mediaInfo.totalFiles}</span>
+										<span class="m-lbl">Totali ({((mediaInfo.totalBytes || 0) / 1024 / 1024).toFixed(2)} MB)</span>
+									</div>
+									<div class="media-stat-box success">
+										<span class="m-val">{mediaInfo.referencedFiles}</span>
+										<span class="m-lbl">In Uso</span>
+									</div>
+									<div class="media-stat-box warning">
+										<span class="m-val">{mediaInfo.orphanedCount}</span>
+										<span class="m-lbl">Orfani ({((mediaInfo.orphanedBytes || 0) / 1024 / 1024).toFixed(2)} MB)</span>
+									</div>
+								</div>
+
+								{#if mediaInfo.orphanedCount > 0}
+									<div class="clean-action-box" transition:slide={{ duration: 160 }}>
+										<button
+											class="duo-btn duo-btn-red clean-btn"
+											disabled={mediaLoading}
+											onclick={cleanOrphanedMedia}
+										>
+											{mediaLoading
+												? '⏳ Eliminazione...'
+												: `🗑️ Elimina Definitivamente ${mediaInfo.orphanedCount} File Orfani`}
+										</button>
+									</div>
+								{:else}
+									<p class="all-clean-text">✨ Tutti i file multimediali sono collegati e in uso!</p>
+								{/if}
+							{/if}
+						</div>
+					{:else if toolsActiveSubTab === 'backup'}
+						<!-- Sotto-scheda Backup & Ripristino -->
+						<div class="tool-subpanel" transition:fade={{ duration: 120 }}>
+							<div class="backup-header">
+								<div>
+									<h3 class="section-title">💾 Backup & Ripristino Database</h3>
+									<p class="section-subtitle">Esporta o ripristina l'intero archivio schede in formato JSON.</p>
+								</div>
+
+								<div class="backup-buttons-row">
+									<button type="button" class="duo-btn duo-btn-blue backup-action-btn" onclick={exportJSON}>
+										📥 Esporta Backup JSON
+									</button>
+
+									<label class="duo-btn duo-btn-purple backup-action-btn import-label-btn">
+										<span>📤 Importa Backup JSON</span>
+										<input
+											type="file"
+											accept=".json,application/json"
+											bind:this={fileInputRef}
+											onchange={handleImportFileSelect}
+											class="hidden-file-input"
+										/>
+									</label>
+								</div>
+							</div>
+						</div>
+					{/if}
+				</div>
+			{/if}
+		</div>
+
+		<!-- Navigazione Tab Principale -->
+		<div class="admin-tabs-nav">
+			<button
+				type="button"
+				class="admin-tab-item"
+				class:active={activeTab === 'active'}
+				onclick={() => (activeTab = 'active')}
+			>
+				<span class="tab-emoji">📋</span>
+				<span class="tab-label">Schede</span>
+				<span class="tab-count-chip">{cards.length}</span>
+			</button>
+			<button
+				type="button"
+				class="admin-tab-item users-tab"
+				class:active={activeTab === 'users'}
+				onclick={() => {
+					activeTab = 'users';
+					loadUsers();
+				}}
+			>
+				<span class="tab-emoji">👥</span>
+				<span class="tab-label">Utenti</span>
+				<span class="tab-count-chip">{users.length}</span>
+			</button>
+			<button
+				type="button"
+				class="admin-tab-item logs-tab"
+				class:active={activeTab === 'logs'}
+				onclick={() => {
+					activeTab = 'logs';
+					loadLogs();
+				}}
+			>
+				<span class="tab-emoji">📜</span>
+				<span class="tab-label">Log Azioni</span>
+				<span class="tab-count-chip">{logs.length}</span>
+			</button>
+			<button
+				type="button"
+				class="admin-tab-item trash-tab"
+				class:active={activeTab === 'trash'}
+				onclick={() => {
+					activeTab = 'trash';
+					loadTrash();
+				}}
+			>
+				<span class="tab-emoji">🗑️</span>
+				<span class="tab-label">Cestino</span>
+				<span class="tab-count-chip">{trashCards.length}</span>
+			</button>
+		</div>
+
+		<!-- Contenuto Tab -->
+		{#if activeTab === 'active'}
+			<!-- 📋 Schede Attive -->
+			<div class="tab-content-panel" in:fade={{ duration: 150 }}>
+				<div class="list-filters-toolbar duo-card">
+					<div class="filters-left">
+						<select bind:value={selectedCategoryFilter} class="duo-input category-select-filter">
+							<option value="ALL">Tutte le Categorie ({categoryStats.length})</option>
+							{#each categoryStats as stat}
+								<option value={stat.category}>{stat.category} ({stat.count})</option>
+							{/each}
+						</select>
+
+						<div class="search-input-wrap">
+							<span class="search-icon">🔍</span>
 							<input
 								type="text"
 								bind:value={searchQuery}
 								placeholder="Cerca schede..."
-								class="search-input duo-input"
+								class="duo-input search-box-input"
 							/>
-						</div>
-					</div>
-
-					<div class="cards-list">
-						{#if filteredCards.length === 0}
-							<div class="empty-list-box duo-card">
-								Nessuna scheda trovata con i filtri correnti.
-							</div>
-						{:else}
-							{#each filteredCards as card (card.id)}
-								<div
-									id={`admin-card-${card.id}`}
-									class="admin-card-item duo-card animated-card"
-									class:is-editing-this={editingCard?.id === card.id}
-								>
-									{#if editingCard?.id === card.id}
-										<div class="inline-edit-wrapper" transition:slide={{ duration: 200 }}>
-											<div class="inline-edit-header">
-												<div class="inline-edit-title">
-													<span>✏️ Modifica Scheda: <strong>"{card.title}"</strong></span>
-												</div>
-												<button type="button" class="close-inline-btn" onclick={resetForm}>
-													✕ Chiudi
-												</button>
-											</div>
-
-											<CardForm
-												initialCard={editingCard}
-												onSave={handleSaveCard}
-												onCancel={resetForm}
-												submitLabel="💾 Salva Modifiche"
-											/>
-										</div>
-									{:else}
-										<div class="card-row-wrapper">
-											<div class="card-main-info">
-												<div class="item-title-row">
-													<h3 class="card-item-title">{card.title}</h3>
-													{#if card.acronym}
-														<span class="acronym-badge">[{card.acronym}]</span>
-													{/if}
-													{#if card.category}
-														<span class="category-pill">{card.category}</span>
-													{/if}
-													{#if !card.showInWiki}
-														<span class="hidden-wiki-badge">Nascosta in Wiki</span>
-													{/if}
-												</div>
-												{#if card.fullName}
-													<div class="full-name-preview">{card.fullName}</div>
-												{/if}
-												<p class="card-item-desc">{card.description}</p>
-											</div>
-
-											<div class="item-actions">
-												<button
-													class="duo-btn duo-btn-blue edit-btn"
-													onclick={() => startEdit(card)}
-													title="Modifica scheda"
-												>
-													✏️ Modifica
-												</button>
-												<button
-													class="duo-btn duo-btn-red delete-btn"
-													onclick={() => handleDeleteCard(card.id)}
-													title="Sposta scheda nel cestino"
-												>
-													🗑️ Cestina
-												</button>
-											</div>
-										</div>
-									{/if}
-								</div>
-							{/each}
-						{/if}
-					</div>
-				</div>
-			{:else if activeTab === 'users'}
-				<!-- Sezione Gestione Utenti -->
-				<div class="users-section" in:fade={{ duration: 150 }}>
-					<!-- Quick Stats Grid -->
-					<div class="users-summary-grid">
-						<div class="user-summary-card duo-card">
-							<span class="us-val">{users.length}</span>
-							<span class="us-lbl">👥 Utenti Registrati</span>
-						</div>
-						<div class="user-summary-card duo-card gold">
-							<span class="us-val">{users.filter((u) => u.role === 'admin').length}</span>
-							<span class="us-lbl">👑 Amministratori</span>
-						</div>
-						<div class="user-summary-card duo-card blue">
-							<span class="us-val">{users.reduce((acc, u) => acc + (u.notesCount || 0), 0)}</span>
-							<span class="us-lbl">📝 Note Salvate</span>
-						</div>
-					</div>
-
-					<!-- Search & Refresh Toolbar -->
-					<div class="users-toolbar">
-						<div class="search-wrap">
-							<span class="search-ico">🔍</span>
-							<input
-								type="text"
-								bind:value={usersSearchQuery}
-								placeholder="Cerca utente per nome, email o Discord ID..."
-								class="duo-input user-search-input"
-							/>
-							{#if usersSearchQuery}
-								<button type="button" class="clear-search-btn" onclick={() => (usersSearchQuery = '')}>✕</button>
-							{/if}
-						</div>
-						<button type="button" class="duo-btn duo-btn-subtle refresh-btn" onclick={loadUsers} disabled={usersLoading}>
-							{usersLoading ? '⏳' : '🔄'} Aggiorna
-						</button>
-					</div>
-
-					<!-- Users List -->
-					{#if usersLoading && users.length === 0}
-						<div class="empty-list-box duo-card">
-							⏳ Caricamento elenco utenti in corso...
-						</div>
-					{:else if filteredUsers.length === 0}
-						<div class="empty-list-box duo-card">
-							Nessun utente trovato con i filtri correnti.
-						</div>
-					{:else}
-						<div class="users-list-grid">
-							{#each filteredUsers as u (u.id)}
-								<div class="user-card-item duo-card animated-card" class:is-admin={u.role === 'admin'}>
-									<div class="user-card-header">
-										<div class="user-avatar-wrap">
-											{#if u.image}
-												<img src={u.image} alt={u.name} class="user-avatar-img" />
-											{:else}
-												<div class="user-avatar-fallback">
-													{u.name ? u.name.charAt(0).toUpperCase() : '👤'}
-												</div>
-											{/if}
-											{#if u.role === 'admin'}
-												<span class="admin-crown-badge" title="Amministratore">👑</span>
-											{/if}
-										</div>
-
-										<div class="user-meta-info">
-											<div class="user-name-row">
-												<strong class="user-display-name">{u.name || 'Utente Senza Nome'}</strong>
-												{#if u.role === 'admin'}
-													<span class="role-chip admin">👑 Admin</span>
-												{:else}
-													<span class="role-chip user">👤 Utente</span>
-												{/if}
-											</div>
-											<span class="user-email-text">{u.email}</span>
-											{#if u.discordId}
-												<span class="user-discord-tag">Discord ID: <code>{u.discordId}</code></span>
-											{/if}
-										</div>
-									</div>
-
-									<div class="user-card-stats-row">
-										<span class="user-stat-chip">
-											📝 {u.notesCount} {u.notesCount === 1 ? 'appunto' : 'appunti'}
-										</span>
-										{#if u.stats?.cardsStudied}
-											<span class="user-stat-chip">
-												🃏 {u.stats.cardsStudied} studiate
-											</span>
-										{/if}
-										<span class="user-date-chip">
-											Registrato: {new Date(u.createdAt).toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' })}
-										</span>
-									</div>
-
-									<div class="user-card-actions">
-										{#if u.isHardcodedAdmin}
-											<span class="protected-admin-pill" title="Definito in DISCORD_ADMIN_IDS">
-												🛡️ Admin Principale (Protetto)
-											</span>
-										{:else if u.role === 'admin'}
-											<button
-												type="button"
-												class="duo-btn duo-btn-red toggle-role-btn"
-												onclick={() => toggleUserRole(u)}
-											>
-												👤 Revoca Permessi Admin
-											</button>
-										{:else}
-											<button
-												type="button"
-												class="duo-btn duo-btn-theme toggle-role-btn"
-												onclick={() => toggleUserRole(u)}
-											>
-												👑 Assegna Ruolo Admin
-											</button>
-										{/if}
-									</div>
-								</div>
-							{/each}
-						</div>
-					{/if}
-				</div>
-			{:else if activeTab === 'logs'}
-				<!-- Sezione Log Azioni Amministratori -->
-				<div class="logs-section" in:fade={{ duration: 150 }}>
-					<!-- Toolbar Filtri & Azioni Log -->
-					<div class="logs-toolbar duo-card">
-						<div class="logs-filters-row">
-							<select bind:value={logsActionFilter} class="duo-input log-action-select">
-								<option value="ALL">Tutte le Azioni ({logs.length})</option>
-								<option value="create_card">✨ Creazione Scheda</option>
-								<option value="update_card">✏️ Modifica Scheda</option>
-								<option value="trash_card">🗑️ Cestinamento Scheda</option>
-								<option value="restore_card">♻️ Ripristino Scheda</option>
-								<option value="permanent_delete_card">✕ Eliminazione Definitiva</option>
-								<option value="set_role_admin">👑 Promozione Admin</option>
-								<option value="remove_role_admin">👤 Revoca Admin</option>
-								<option value="rename_category">🏷️ Rinomina Categoria</option>
-								<option value="import_cards">📥 Importazione Backup</option>
-								<option value="clean_media">🧹 Pulizia Media</option>
-							</select>
-
-							<div class="search-wrap log-search-wrap">
-								<span class="search-ico">🔍</span>
-								<input
-									type="text"
-									bind:value={logsSearchQuery}
-									placeholder="Cerca nei log..."
-									class="duo-input log-search-input"
-								/>
-								{#if logsSearchQuery}
-									<button type="button" class="clear-search-btn" onclick={() => (logsSearchQuery = '')}>✕</button>
-								{/if}
-							</div>
-						</div>
-
-						<div class="logs-buttons-row">
-							<button type="button" class="duo-btn duo-btn-subtle refresh-btn" onclick={loadLogs} disabled={logsLoading}>
-								{logsLoading ? '⏳' : '🔄'} Aggiorna
-							</button>
-							{#if logs.length > 0}
-								<button type="button" class="duo-btn duo-btn-red clear-logs-btn" onclick={clearAllLogs}>
-									🧹 Svuota Registro
-								</button>
+							{#if searchQuery}
+								<button class="clear-search-btn" onclick={() => (searchQuery = '')}>✕</button>
 							{/if}
 						</div>
 					</div>
 
-					<!-- Logs Timeline List -->
-					{#if logsLoading && logs.length === 0}
+					<button
+						type="button"
+						class="duo-btn duo-btn-theme mobile-add-card-btn"
+						onclick={() => (isCreatingCard = !isCreatingCard)}
+					>
+						{isCreatingCard ? '✕ Chiudi' : '✨ Nuova Scheda'}
+					</button>
+				</div>
+
+				<div class="cards-list-grid">
+					{#if filteredCards.length === 0}
 						<div class="empty-list-box duo-card">
-							⏳ Caricamento registro log in corso...
-						</div>
-					{:else if filteredLogs.length === 0}
-						<div class="empty-list-box duo-card">
-							Nessuna azione registrata con i filtri correnti.
+							Nessuna scheda trovata con i filtri correnti.
 						</div>
 					{:else}
-						<div class="logs-timeline-list">
-							{#each filteredLogs as log (log.id)}
-								{@const badge = getActionBadge(log.action)}
-								<div class="log-item-card duo-card animated-card">
-									<div class="log-item-header">
-										<div class="log-admin-user">
-											{#if log.userAvatar}
-												<img src={log.userAvatar} alt={log.userName} class="log-admin-avatar" />
-											{:else}
-												<div class="log-admin-avatar fallback">
-													{log.userName ? log.userName.charAt(0).toUpperCase() : 'A'}
-												</div>
-											{/if}
-											<div class="log-admin-meta">
-												<strong class="log-admin-name">{log.userName}</strong>
-												<span class="log-timestamp">
-													{new Date(log.createdAt).toLocaleString('it-IT', {
-														day: '2-digit',
-														month: 'short',
-														year: 'numeric',
-														hour: '2-digit',
-														minute: '2-digit',
-														second: '2-digit'
-													})}
-												</span>
+						{#each filteredCards as card (card.id)}
+							<div
+								id={`admin-card-${card.id}`}
+								class="admin-card-item duo-card animated-card"
+								class:is-editing-this={editingCard?.id === card.id}
+							>
+								{#if editingCard?.id === card.id}
+									<div class="inline-edit-wrapper" transition:slide={{ duration: 200 }}>
+										<div class="inline-edit-header">
+											<div class="inline-edit-title">
+												<span>✏️ Modifica Scheda: <strong>"{card.title}"</strong></span>
 											</div>
+											<button type="button" class="close-inline-btn" onclick={resetForm}>
+												✕ Chiudi
+											</button>
 										</div>
 
-										<div
-											class="log-action-badge"
-											style="color: {badge.color}; background: {badge.bg}; border-color: {badge.color}40;"
-										>
-											<span>{badge.icon}</span>
-											<span>{badge.label}</span>
-										</div>
+										<CardForm
+											initialCard={editingCard}
+											onSave={handleSaveCard}
+											onCancel={resetForm}
+											submitLabel="💾 Salva Modifiche"
+										/>
 									</div>
-
-									{#if log.targetTitle}
-										<div class="log-target-row">
-											<span class="target-prefix">Target:</span>
-											<strong class="target-title">"{log.targetTitle}"</strong>
-											{#if log.targetType}
-												<span class="target-type-pill">({log.targetType})</span>
-											{/if}
-										</div>
-									{/if}
-
-									{#if log.details && Object.keys(log.details).length > 0}
-										<div class="log-details-accordion">
-											<div class="log-details-pills">
-												{#each Object.entries(log.details) as [key, val]}
-													{#if val !== undefined && val !== null && typeof val !== 'object'}
-														<span class="detail-pill">
-															<strong>{key}:</strong> {val}
-														</span>
-													{/if}
-												{/each}
-											</div>
-										</div>
-									{/if}
-								</div>
-							{/each}
-						</div>
-					{/if}
-				</div>
-			{:else if activeTab === 'trash'}
-				<!-- List Sezione Cestino -->
-				<div class="list-section" in:fade={{ duration: 150 }}>
-					<div class="trash-banner">
-						⚠️ Le schede nel cestino non sono visibili nell'apprendimento. Puoi ripristinarle o eliminarle per sempre.
-					</div>
-
-					<div class="list-header">
-						<input
-							type="text"
-							bind:value={searchQuery}
-							placeholder="Cerca nel cestino..."
-							class="search-input duo-input full-width"
-						/>
-					</div>
-
-					<div class="cards-list">
-						{#if filteredTrashCards.length === 0}
-							<div class="empty-list-box duo-card">
-								✨ Il cestino è vuoto.
-							</div>
-						{:else}
-							{#each filteredTrashCards as card (card.id)}
-								<div class="admin-card-item duo-card in-trash animated-card">
+								{:else}
 									<div class="card-row-wrapper">
 										<div class="card-main-info">
 											<div class="item-title-row">
@@ -1150,62 +1002,351 @@
 												{#if card.category}
 													<span class="category-pill">{card.category}</span>
 												{/if}
-												<span class="trash-date-pill">Eliminata</span>
+												{#if !card.showInWiki}
+													<span class="hidden-wiki-badge">Nascosta in Wiki</span>
+												{/if}
 											</div>
+											{#if card.fullName}
+												<div class="full-name-preview">{card.fullName}</div>
+											{/if}
 											<p class="card-item-desc">{card.description}</p>
 										</div>
 
 										<div class="item-actions">
 											<button
-												class="duo-btn duo-btn-green restore-btn"
-												onclick={() => handleRestoreCard(card.id)}
-												title="Ripristina la scheda nelle schede attive"
+												class="duo-btn duo-btn-theme edit-btn"
+												onclick={() => startEdit(card)}
+												title="Modifica scheda"
 											>
-												♻️ Ripristina
+												✏️ Modifica
 											</button>
 											<button
-												class="duo-btn duo-btn-red perm-delete-btn"
-												onclick={() => handlePermanentDeleteCard(card.id)}
-												title="Elimina definitivamente la scheda e le sue immagini"
+												class="duo-btn duo-btn-red delete-btn"
+												onclick={() => handleDeleteCard(card.id)}
+												title="Sposta scheda nel cestino"
 											>
-												✕ Elimina Definitivamente
+												🗑️ Cestina
 											</button>
 										</div>
 									</div>
+								{/if}
+							</div>
+						{/each}
+					{/if}
+				</div>
+			</div>
+		{:else if activeTab === 'users'}
+			<!-- 👥 Gestione Utenti -->
+			<div class="tab-content-panel" in:fade={{ duration: 150 }}>
+				<!-- Quick Stats Grid -->
+				<div class="users-summary-grid">
+					<div class="user-summary-card duo-card">
+						<span class="us-val">{users.length}</span>
+						<span class="us-lbl">👥 Utenti Registrati</span>
+					</div>
+					<div class="user-summary-card duo-card gold">
+						<span class="us-val">{users.filter((u) => u.role === 'admin').length}</span>
+						<span class="us-lbl">👑 Amministratori</span>
+					</div>
+					<div class="user-summary-card duo-card blue">
+						<span class="us-val">{users.reduce((acc, u) => acc + (u.notesCount || 0), 0)}</span>
+						<span class="us-lbl">📝 Note Salvate</span>
+					</div>
+				</div>
+
+				<!-- Search Toolbar -->
+				<div class="list-filters-toolbar duo-card">
+					<div class="search-input-wrap full-width">
+						<span class="search-icon">🔍</span>
+						<input
+							type="text"
+							bind:value={usersSearchQuery}
+							placeholder="Cerca utente per nome, email o Discord ID..."
+							class="duo-input search-box-input"
+						/>
+						{#if usersSearchQuery}
+							<button class="clear-search-btn" onclick={() => (usersSearchQuery = '')}>✕</button>
+						{/if}
+					</div>
+					<button type="button" class="duo-btn duo-btn-subtle refresh-btn" onclick={loadUsers} disabled={usersLoading}>
+						{usersLoading ? '⏳' : '🔄'} Aggiorna
+					</button>
+				</div>
+
+				<!-- Users List -->
+				{#if usersLoading && users.length === 0}
+					<div class="empty-list-box duo-card">
+						⏳ Caricamento elenco utenti in corso...
+					</div>
+				{:else if filteredUsers.length === 0}
+					<div class="empty-list-box duo-card">
+						Nessun utente trovato con i filtri correnti.
+					</div>
+				{:else}
+					<div class="users-list-grid">
+						{#each filteredUsers as u (u.id)}
+							<div class="user-card-item duo-card animated-card" class:is-admin={u.role === 'admin'}>
+								<div class="user-card-header">
+									<div class="user-avatar-wrap">
+										{#if u.image}
+											<img src={u.image} alt={u.name} class="user-avatar-img" />
+										{:else}
+											<div class="user-avatar-fallback">
+												{u.name ? u.name.charAt(0).toUpperCase() : '👤'}
+											</div>
+										{/if}
+										{#if u.role === 'admin'}
+											<span class="admin-crown-badge" title="Amministratore">👑</span>
+										{/if}
+									</div>
+
+									<div class="user-meta-info">
+										<div class="user-name-row">
+											<strong class="user-display-name">{u.name || 'Utente Senza Nome'}</strong>
+											{#if u.role === 'admin'}
+												<span class="role-chip admin">👑 Admin</span>
+											{:else}
+												<span class="role-chip user">👤 Utente</span>
+											{/if}
+										</div>
+										<span class="user-email-text">{u.email}</span>
+										{#if u.discordId}
+											<span class="user-discord-tag">Discord ID: <code>{u.discordId}</code></span>
+										{/if}
+									</div>
 								</div>
-							{/each}
+
+								<div class="user-card-stats-row">
+									<span class="user-stat-chip">
+										📝 {u.notesCount} {u.notesCount === 1 ? 'appunto' : 'appunti'}
+									</span>
+									{#if u.stats?.cardsStudied}
+										<span class="user-stat-chip">
+											🃏 {u.stats.cardsStudied} studiate
+										</span>
+									{/if}
+									<span class="user-date-chip">
+										Registrato: {new Date(u.createdAt).toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' })}
+									</span>
+								</div>
+
+								<div class="user-card-actions">
+									{#if u.isHardcodedAdmin}
+										<span class="protected-admin-pill" title="Definito in DISCORD_ADMIN_IDS">
+											🛡️ Admin Principale (Protetto)
+										</span>
+									{:else if u.role === 'admin'}
+										<button
+											type="button"
+											class="duo-btn duo-btn-red toggle-role-btn"
+											onclick={() => toggleUserRole(u)}
+										>
+											👤 Revoca Permessi Admin
+										</button>
+									{:else}
+										<button
+											type="button"
+											class="duo-btn duo-btn-theme toggle-role-btn"
+											onclick={() => toggleUserRole(u)}
+										>
+											👑 Promuovi ad Admin
+										</button>
+									{/if}
+								</div>
+							</div>
+						{/each}
+					</div>
+				{/if}
+			</div>
+		{:else if activeTab === 'logs'}
+			<!-- 📜 Log Azioni Admin -->
+			<div class="tab-content-panel" in:fade={{ duration: 150 }}>
+				<!-- Toolbar Filtri & Azioni Log -->
+				<div class="logs-toolbar duo-card">
+					<div class="logs-filters-row">
+						<select bind:value={logsActionFilter} class="duo-input log-action-select">
+							<option value="ALL">Tutte le Azioni ({logs.length})</option>
+							<option value="create_card">✨ Creazione Scheda</option>
+							<option value="update_card">✏️ Modifica Scheda</option>
+							<option value="trash_card">🗑️ Cestinamento Scheda</option>
+							<option value="restore_card">♻️ Ripristino Scheda</option>
+							<option value="permanent_delete_card">✕ Eliminazione Definitiva</option>
+							<option value="set_role_admin">👑 Promozione Admin</option>
+							<option value="remove_role_admin">👤 Revoca Admin</option>
+							<option value="rename_category">🏷️ Rinomina Categoria</option>
+							<option value="import_cards">📥 Importazione Backup</option>
+							<option value="clean_media">🧹 Pulizia Media</option>
+						</select>
+
+						<div class="search-input-wrap log-search-wrap">
+							<span class="search-icon">🔍</span>
+							<input
+								type="text"
+								bind:value={logsSearchQuery}
+								placeholder="Cerca nei log..."
+								class="duo-input search-box-input"
+							/>
+							{#if logsSearchQuery}
+								<button class="clear-search-btn" onclick={() => (logsSearchQuery = '')}>✕</button>
+							{/if}
+						</div>
+					</div>
+
+					<div class="logs-buttons-row">
+						<button type="button" class="duo-btn duo-btn-subtle refresh-btn" onclick={loadLogs} disabled={logsLoading}>
+							{logsLoading ? '⏳' : '🔄'} Aggiorna
+						</button>
+						{#if logs.length > 0}
+							<button type="button" class="duo-btn duo-btn-red clear-logs-btn" onclick={clearAllLogs}>
+								🧹 Svuota Registro
+							</button>
 						{/if}
 					</div>
 				</div>
-			{/if}
 
-			<!-- Sezione Backup & Ripristino Schede (In fondo) -->
-			<div class="backup-section-card duo-card">
-				<div class="backup-header">
-					<div>
-						<h2 class="section-title">💾 Backup & Ripristino Database</h2>
-						<p class="section-subtitle">Esporta o ripristina l'intero database delle schede informative in formato JSON.</p>
+				<!-- Logs Timeline List -->
+				{#if logsLoading && logs.length === 0}
+					<div class="empty-list-box duo-card">
+						⏳ Caricamento registro log in corso...
 					</div>
+				{:else if filteredLogs.length === 0}
+					<div class="empty-list-box duo-card">
+						Nessuna azione registrata con i filtri correnti.
+					</div>
+				{:else}
+					<div class="logs-timeline-list">
+						{#each filteredLogs as log (log.id)}
+							{@const badge = getActionBadge(log.action)}
+							<div class="log-item-card duo-card animated-card">
+								<div class="log-item-header">
+									<div class="log-admin-user">
+										{#if log.userAvatar}
+											<img src={log.userAvatar} alt={log.userName} class="log-admin-avatar" />
+										{:else}
+											<div class="log-admin-avatar fallback">
+												{log.userName ? log.userName.charAt(0).toUpperCase() : 'A'}
+											</div>
+										{/if}
+										<div class="log-admin-meta">
+											<strong class="log-admin-name">{log.userName}</strong>
+											<span class="log-timestamp">
+												{new Date(log.createdAt).toLocaleString('it-IT', {
+													day: '2-digit',
+													month: 'short',
+													year: 'numeric',
+													hour: '2-digit',
+													minute: '2-digit',
+													second: '2-digit'
+												})}
+											</span>
+										</div>
+									</div>
 
-					<div class="backup-buttons-row">
-						<button type="button" class="duo-btn duo-btn-blue backup-action-btn" onclick={exportJSON}>
-							📥 Esporta Backup JSON
-						</button>
+									<div
+										class="log-action-badge"
+										style="color: {badge.color}; background: {badge.bg}; border-color: {badge.color}40;"
+									>
+										<span>{badge.icon}</span>
+										<span>{badge.label}</span>
+									</div>
+								</div>
 
-						<label class="duo-btn duo-btn-purple backup-action-btn import-label-btn">
-							<span>📤 Importa Backup JSON</span>
-							<input
-								type="file"
-								accept=".json,application/json"
-								bind:this={fileInputRef}
-								onchange={handleImportFileSelect}
-								class="hidden-file-input"
-							/>
-						</label>
+								{#if log.targetTitle}
+									<div class="log-target-row">
+										<span class="target-prefix">Target:</span>
+										<strong class="target-title">"{log.targetTitle}"</strong>
+										{#if log.targetType}
+											<span class="target-type-pill">({log.targetType})</span>
+										{/if}
+									</div>
+								{/if}
+
+								{#if log.details && Object.keys(log.details).length > 0}
+									<div class="log-details-accordion">
+										<div class="log-details-pills">
+											{#each Object.entries(log.details) as [key, val]}
+												{#if val !== undefined && val !== null && typeof val !== 'object'}
+													<span class="detail-pill">
+														<strong>{key}:</strong> {val}
+													</span>
+												{/if}
+											{/each}
+										</div>
+									</div>
+								{/if}
+							</div>
+						{/each}
+					</div>
+				{/if}
+			</div>
+		{:else if activeTab === 'trash'}
+			<!-- 🗑️ Cestino -->
+			<div class="tab-content-panel" in:fade={{ duration: 150 }}>
+				<div class="trash-banner duo-card">
+					⚠️ Le schede nel cestino non sono visibili nell'apprendimento. Puoi ripristinarle o eliminarle per sempre.
+				</div>
+
+				<div class="list-filters-toolbar duo-card">
+					<div class="search-input-wrap full-width">
+						<span class="search-icon">🔍</span>
+						<input
+							type="text"
+							bind:value={searchQuery}
+							placeholder="Cerca nel cestino..."
+							class="duo-input search-box-input"
+						/>
+						{#if searchQuery}
+							<button class="clear-search-btn" onclick={() => (searchQuery = '')}>✕</button>
+						{/if}
 					</div>
 				</div>
+
+				<div class="cards-list-grid">
+					{#if filteredTrashCards.length === 0}
+						<div class="empty-list-box duo-card">
+							✨ Il cestino è vuoto.
+						</div>
+					{:else}
+						{#each filteredTrashCards as card (card.id)}
+							<div class="admin-card-item duo-card in-trash animated-card">
+								<div class="card-row-wrapper">
+									<div class="card-main-info">
+										<div class="item-title-row">
+											<h3 class="card-item-title">{card.title}</h3>
+											{#if card.acronym}
+												<span class="acronym-badge">[{card.acronym}]</span>
+											{/if}
+											{#if card.category}
+												<span class="category-pill">{card.category}</span>
+											{/if}
+											<span class="trash-date-pill">Eliminata</span>
+										</div>
+										<p class="card-item-desc">{card.description}</p>
+									</div>
+
+									<div class="item-actions">
+										<button
+											class="duo-btn duo-btn-green restore-btn"
+											onclick={() => handleRestoreCard(card.id)}
+											title="Ripristina la scheda nelle schede attive"
+										>
+											♻️ Ripristina
+										</button>
+										<button
+											class="duo-btn duo-btn-red perm-delete-btn"
+											onclick={() => handlePermanentDeleteCard(card.id)}
+											title="Elimina definitivamente la scheda e le sue immagini"
+										>
+											✕ Elimina Definitivamente
+										</button>
+									</div>
+								</div>
+							</div>
+						{/each}
+					{/if}
+				</div>
 			</div>
-		</div>
+		{/if}
 	{/if}
 </div>
 
@@ -1260,31 +1401,125 @@
 	.admin-container {
 		display: flex;
 		flex-direction: column;
-		gap: 1.25rem;
-		max-width: 800px;
+		gap: 1.15rem;
+		max-width: 860px;
 		margin: 0 auto;
 		width: 100%;
 		box-sizing: border-box;
-		padding-bottom: 2.5rem;
+		padding: 0.5rem 0.75rem 3rem 0.75rem;
 	}
 
-	.admin-panel {
+	/* 📱 Banner in alto visibile SOLO su Mobile */
+	.mobile-only-header {
+		display: none;
+		width: 100%;
+	}
+
+	@media (max-width: 1023px) {
+		.mobile-only-header {
+			display: block;
+			margin-bottom: 0.25rem;
+		}
+	}
+
+	/* 💻 Desktop Header (Nascosto su Mobile) */
+	.desktop-admin-header {
 		display: flex;
-		flex-direction: column;
-		gap: 1.15rem;
+		justify-content: space-between;
+		align-items: center;
+		padding: 1.15rem 1.35rem;
+		background: var(--card-bg);
+		border-radius: 20px;
+		border: 2px solid var(--border-color);
+		box-shadow: 0 4px 14px var(--shadow-color);
 	}
 
-	/* Accordion Categorie */
-	.categories-accordion-card {
-		padding: 0.75rem 1rem;
+	@media (max-width: 1023px) {
+		.desktop-admin-header {
+			display: none;
+		}
+	}
+
+	.desktop-header-left {
+		display: flex;
+		align-items: center;
+		gap: 0.85rem;
+	}
+
+	.desktop-admin-title {
+		font-family: 'Outfit', sans-serif;
+		font-size: 1.35rem;
+		font-weight: 900;
+		color: var(--text-color);
+		margin: 0;
+	}
+
+	.desktop-admin-subtitle {
+		font-size: 0.82rem;
+		color: var(--text-muted);
+		margin: 0.15rem 0 0 0;
+	}
+
+	.add-card-top-btn {
+		font-size: 0.88rem;
+		padding: 0.6rem 1.15rem;
+		white-space: nowrap;
+	}
+
+	/* 🆕 Box Creazione Scheda */
+	.create-card-wrapper {
+		padding: 1.25rem;
 		background: var(--card-bg);
-		border-radius: 16px;
+		border-radius: 20px;
+		border: 2px solid var(--brand-color);
+		box-shadow: 0 4px 20px var(--brand-glow);
+	}
+
+	.create-card-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 1rem;
+		padding-bottom: 0.65rem;
+		border-bottom: 1.5px solid var(--border-color);
+	}
+
+	.create-title {
+		font-family: 'Outfit', sans-serif;
+		font-size: 1.1rem;
+		font-weight: 900;
+		color: var(--brand-color);
+	}
+
+	.close-create-btn {
+		background: none;
+		border: none;
+		font-size: 1.1rem;
+		font-weight: 900;
+		color: var(--text-muted);
+		cursor: pointer;
+		padding: 0.25rem 0.5rem;
+		border-radius: 8px;
+		transition: all 0.15s ease;
+	}
+
+	.close-create-btn:hover {
+		background: var(--card-bg-subtle);
+		color: #ef4444;
+	}
+
+	/* ⚙️ Strumenti & Manutenzione Accordion */
+	.tools-accordion-card {
+		background: var(--card-bg);
+		border-radius: 18px;
+		padding: 0.75rem 1rem;
+		border: 2px solid var(--border-color);
 		display: flex;
 		flex-direction: column;
 		gap: 0.75rem;
 	}
 
-	.accordion-toggle-btn {
+	.tools-toggle-btn {
 		background: none;
 		border: none;
 		display: flex;
@@ -1293,38 +1528,90 @@
 		width: 100%;
 		cursor: pointer;
 		padding: 0.25rem 0;
+		text-align: left;
 	}
 
-	.accordion-title-group {
+	.tools-title-group {
 		display: flex;
 		align-items: center;
-		gap: 0.5rem;
+		gap: 0.65rem;
 	}
 
-	.accordion-icon {
-		font-size: 1.1rem;
+	.tools-icon {
+		font-size: 1.3rem;
 	}
 
-	.accordion-title {
-		font-size: 0.92rem;
+	.tools-text {
+		display: flex;
+		flex-direction: column;
+		gap: 0.1rem;
+	}
+
+	.tools-title {
+		font-size: 0.95rem;
 		font-weight: 900;
 		color: var(--text-color);
 	}
 
-	.accordion-arrow {
+	.tools-subtitle {
 		font-size: 0.75rem;
+		font-weight: 700;
+		color: var(--text-muted);
+	}
+
+	.tools-arrow {
+		font-size: 0.78rem;
+		font-weight: 900;
+		color: var(--accent-color);
+		background: var(--accent-light-bg);
+		padding: 0.25rem 0.6rem;
+		border-radius: 8px;
+	}
+
+	.tools-content-box {
+		display: flex;
+		flex-direction: column;
+		gap: 0.85rem;
+		border-top: 1.5px solid var(--border-color);
+		padding-top: 0.85rem;
+	}
+
+	.tools-subtabs-row {
+		display: flex;
+		gap: 0.5rem;
+		overflow-x: auto;
+		scrollbar-width: none;
+	}
+
+	.tool-subtab-btn {
+		flex: 1;
+		min-width: 130px;
+		padding: 0.55rem 0.75rem;
+		font-size: 0.8rem;
 		font-weight: 800;
+		border-radius: 12px;
+		background: var(--card-bg-subtle);
+		border: 1.5px solid var(--border-color);
+		color: var(--text-muted);
+		cursor: pointer;
+		transition: all 0.15s ease;
+		white-space: nowrap;
+		text-align: center;
+	}
+
+	.tool-subtab-btn.active {
+		border-color: var(--accent-color);
+		background: var(--accent-light-bg);
 		color: var(--accent-color);
 	}
 
-	.accordion-content {
+	.tool-subpanel {
 		display: flex;
 		flex-direction: column;
-		gap: 0.65rem;
-		border-top: 1px solid var(--border-color);
-		padding-top: 0.75rem;
+		gap: 0.75rem;
 	}
 
+	/* Categorie Styles */
 	.category-chips-scroll {
 		display: grid;
 		grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
@@ -1338,14 +1625,10 @@
 		padding: 0.65rem 0.85rem;
 		background: var(--card-bg-subtle);
 		border-radius: 12px;
+		border: 1.5px solid var(--border-color);
 		display: flex;
 		flex-direction: column;
 		gap: 0.45rem;
-		transition: transform 0.15s ease, box-shadow 0.15s ease;
-	}
-
-	.category-stat-item:hover {
-		transform: translateY(-2px);
 	}
 
 	.stat-main {
@@ -1407,10 +1690,14 @@
 		gap: 0.35rem;
 	}
 
-	.rename-input,
-	.quick-merge-select {
+	.rename-input {
 		font-size: 0.78rem;
-		padding: 0.35rem 0.6rem;
+		padding: 0.35rem 0.5rem;
+	}
+
+	.quick-merge-select {
+		font-size: 0.72rem;
+		padding: 0.35rem 0.5rem;
 	}
 
 	.rename-actions-row {
@@ -1421,32 +1708,24 @@
 	.save-cat-btn,
 	.cancel-cat-btn {
 		font-size: 0.72rem;
-		padding: 0.3rem 0.6rem;
+		padding: 0.25rem 0.55rem;
 	}
 
-	/* Media Cleaner */
-	.media-cleaner-card {
-		padding: 0.85rem 1.15rem;
-		background: var(--card-bg);
-		border-radius: 16px;
-		display: flex;
-		flex-direction: column;
-		gap: 0.75rem;
-	}
-
-	.cleaner-header {
+	/* Media Cleaner Styles */
+	.cleaner-header,
+	.backup-header {
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
+		gap: 0.75rem;
 		flex-wrap: wrap;
-		gap: 0.5rem;
 	}
 
 	.section-title {
-		font-size: 0.92rem;
+		font-size: 0.95rem;
 		font-weight: 900;
-		margin: 0;
 		color: var(--text-color);
+		margin: 0;
 	}
 
 	.section-subtitle {
@@ -1456,28 +1735,29 @@
 	}
 
 	.scan-btn {
-		font-size: 0.78rem;
+		font-size: 0.8rem;
 		padding: 0.45rem 0.85rem;
 	}
 
 	.media-stats-grid {
 		display: grid;
 		grid-template-columns: repeat(3, 1fr);
-		gap: 0.6rem;
+		gap: 0.5rem;
 	}
 
 	.media-stat-box {
+		padding: 0.6rem 0.75rem;
+		background: var(--card-bg-subtle);
+		border-radius: 12px;
+		border: 1px solid var(--border-color);
 		display: flex;
 		flex-direction: column;
 		align-items: center;
-		padding: 0.5rem;
-		background: var(--card-bg-subtle);
-		border-radius: 10px;
-		border: 1px solid var(--border-color);
+		gap: 0.15rem;
 	}
 
 	.m-val {
-		font-size: 1.1rem;
+		font-size: 1.15rem;
 		font-weight: 900;
 		color: var(--text-color);
 	}
@@ -1490,151 +1770,192 @@
 	}
 
 	.media-stat-box.success .m-val {
-		color: #22c55e;
+		color: var(--green-color);
 	}
 
 	.media-stat-box.warning .m-val {
-		color: #f59e0b;
+		color: var(--orange-color);
 	}
 
 	.clean-btn {
 		width: 100%;
-		font-size: 0.85rem;
-		padding: 0.65rem 1rem;
+		font-size: 0.82rem;
+		padding: 0.6rem 1rem;
 	}
 
 	.all-clean-text {
 		font-size: 0.8rem;
 		font-weight: 800;
-		color: #22c55e;
+		color: var(--green-color);
 		margin: 0;
 	}
 
-	/* Tabs */
-	.admin-tabs-row {
-		display: grid;
-		grid-template-columns: repeat(4, 1fr);
+	.backup-buttons-row {
+		display: flex;
 		gap: 0.5rem;
+		flex-wrap: wrap;
+	}
+
+	.backup-action-btn {
+		font-size: 0.8rem;
+		padding: 0.5rem 0.85rem;
+		cursor: pointer;
+	}
+
+	.import-label-btn {
+		position: relative;
+		overflow: hidden;
+		display: inline-flex;
+		align-items: center;
+	}
+
+	.hidden-file-input {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		opacity: 0;
+		cursor: pointer;
+	}
+
+	/* 🧭 Unified Tab Navigation Bar */
+	.admin-tabs-nav {
+		display: flex;
+		gap: 0.4rem;
+		background: var(--card-bg-subtle);
+		padding: 0.35rem;
+		border-radius: 18px;
+		border: 2px solid var(--border-color);
 		overflow-x: auto;
 		scrollbar-width: none;
 	}
 
-	.admin-tabs-row::-webkit-scrollbar {
+	.admin-tabs-nav::-webkit-scrollbar {
 		display: none;
 	}
 
-	.admin-tab-btn {
-		padding: 0.7rem 0.6rem;
-		font-size: 0.82rem;
+	.admin-tab-item {
+		flex: 1;
+		min-width: 100px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.4rem;
+		padding: 0.65rem 0.8rem;
+		font-size: 0.85rem;
 		font-weight: 900;
 		border-radius: 14px;
-		background: var(--card-bg);
-		border: 2px solid var(--border-color);
+		background: transparent;
+		border: none;
 		color: var(--text-muted);
 		cursor: pointer;
-		transition: all 0.15s ease;
+		transition: all 0.18s ease;
 		white-space: nowrap;
-		text-align: center;
 	}
 
-	.admin-tab-btn:hover {
-		border-color: var(--text-muted);
+	.admin-tab-item:hover {
 		color: var(--text-color);
+		background: rgba(255, 255, 255, 0.04);
 	}
 
-	.admin-tab-btn.active {
-		border-color: var(--accent-color);
-		background: var(--accent-light-bg);
-		color: var(--accent-color);
+	.admin-tab-item.active {
+		background: var(--brand-color);
+		color: var(--brand-text);
+		border-bottom: 3px solid var(--brand-depth);
+		box-shadow: 0 4px 12px var(--brand-glow);
 	}
 
-	.admin-tab-btn.users-tab.active {
-		border-color: #06b6d4;
-		background: rgba(6, 182, 212, 0.12);
-		color: #06b6d4;
+	.admin-tab-item.users-tab.active {
+		background: var(--accent-color);
+		color: #ffffff;
+		border-bottom: 3px solid var(--accent-depth);
+		box-shadow: 0 4px 12px var(--accent-light-bg);
 	}
 
-	.admin-tab-btn.logs-tab.active {
-		border-color: #8b5cf6;
-		background: rgba(139, 92, 246, 0.12);
-		color: #8b5cf6;
+	.admin-tab-item.logs-tab.active {
+		background: var(--purple-color);
+		color: #ffffff;
+		border-bottom: 3px solid var(--purple-depth);
+		box-shadow: 0 4px 12px rgba(206, 130, 255, 0.25);
 	}
 
-	.admin-tab-btn.trash-tab.active {
-		border-color: #ef4444;
-		background: rgba(239, 68, 68, 0.12);
-		color: #ef4444;
+	.admin-tab-item.trash-tab.active {
+		background: var(--pink-color);
+		color: #ffffff;
+		border-bottom: 3px solid var(--pink-depth);
+		box-shadow: 0 4px 12px rgba(255, 75, 75, 0.25);
 	}
 
-	/* 👥 Users Section Styles */
-	.users-section {
-		display: flex;
-		flex-direction: column;
-		gap: 1rem;
-	}
-
-	.users-summary-grid {
-		display: grid;
-		grid-template-columns: repeat(3, 1fr);
-		gap: 0.75rem;
-	}
-
-	.user-summary-card {
-		padding: 0.85rem 1rem;
-		border-radius: 14px;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		text-align: center;
-		gap: 0.25rem;
-		background: var(--card-bg-subtle);
-	}
-
-	.user-summary-card.gold .us-val {
-		color: #eab308;
-	}
-
-	.user-summary-card.blue .us-val {
-		color: #3b82f6;
-	}
-
-	.us-val {
-		font-size: 1.4rem;
+	.tab-count-chip {
+		font-size: 0.68rem;
 		font-weight: 900;
-		color: var(--text-color);
+		background: rgba(0, 0, 0, 0.2);
+		padding: 0.1rem 0.4rem;
+		border-radius: 999px;
 	}
 
-	.us-lbl {
-		font-size: 0.75rem;
-		font-weight: 800;
-		color: var(--text-muted);
+	.admin-tab-item.active .tab-count-chip {
+		background: rgba(255, 255, 255, 0.3);
+		color: #ffffff;
 	}
 
-	.users-toolbar {
+	/* 📋 Tab Content Panel */
+	.tab-content-panel {
 		display: flex;
-		gap: 0.65rem;
-		align-items: center;
+		flex-direction: column;
+		gap: 0.85rem;
 	}
 
-	.search-wrap {
+	.list-filters-toolbar {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		gap: 0.65rem;
+		padding: 0.75rem 1rem;
+		background: var(--card-bg);
+		border-radius: 16px;
+		border: 1.5px solid var(--border-color);
+		flex-wrap: wrap;
+	}
+
+	.filters-left {
+		display: flex;
+		align-items: center;
+		gap: 0.65rem;
 		flex: 1;
+		min-width: 260px;
+		flex-wrap: wrap;
+	}
+
+	.category-select-filter {
+		min-width: 180px;
+		font-size: 0.82rem;
+		padding: 0.45rem 0.75rem;
+	}
+
+	.search-input-wrap {
+		flex: 1;
+		min-width: 180px;
 		display: flex;
 		align-items: center;
 		gap: 0.4rem;
-		background: var(--card-bg);
+		background: var(--card-bg-subtle);
 		border: 1.5px solid var(--border-color);
 		border-radius: 12px;
-		padding: 0.4rem 0.75rem;
-		position: relative;
+		padding: 0.35rem 0.65rem;
 	}
 
-	.search-wrap .search-ico {
+	.search-input-wrap.full-width {
+		width: 100%;
+	}
+
+	.search-icon {
 		font-size: 0.85rem;
 		color: var(--text-muted);
 	}
 
-	.user-search-input,
-	.log-search-input {
+	.search-box-input {
 		flex: 1;
 		background: transparent;
 		border: none;
@@ -1654,11 +1975,204 @@
 		padding: 0 0.2rem;
 	}
 
-	.refresh-btn {
-		font-size: 0.8rem;
-		padding: 0.55rem 0.85rem;
+	.mobile-add-card-btn {
+		font-size: 0.82rem;
+		padding: 0.5rem 0.95rem;
 		white-space: nowrap;
+	}
+
+	@media (min-width: 1024px) {
+		.mobile-add-card-btn {
+			display: none;
+		}
+	}
+
+	/* Cards List Styles */
+	.cards-list-grid {
+		display: flex;
+		flex-direction: column;
+		gap: 0.65rem;
+	}
+
+	.admin-card-item {
+		padding: 0.95rem 1.15rem;
+		background: var(--card-bg);
+		border-radius: 18px;
+		border: 2px solid var(--border-color);
+		transition: all 0.15s ease;
+	}
+
+	.animated-card:hover {
+		transform: translateY(-2px);
+		border-color: var(--brand-color);
+		box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+	}
+
+	.card-row-wrapper {
+		display: flex;
+		justify-content: space-between;
+		align-items: flex-start;
+		gap: 0.85rem;
+	}
+
+	@media (max-width: 650px) {
+		.card-row-wrapper {
+			flex-direction: column;
+		}
+
+		.item-actions {
+			width: 100%;
+			justify-content: flex-end;
+		}
+	}
+
+	.card-main-info {
+		display: flex;
+		flex-direction: column;
+		gap: 0.35rem;
+		flex: 1;
+		min-width: 0;
+	}
+
+	.item-title-row {
+		display: flex;
+		align-items: center;
+		gap: 0.45rem;
+		flex-wrap: wrap;
+	}
+
+	.card-item-title {
+		font-family: 'Outfit', sans-serif;
+		font-size: 1.05rem;
+		font-weight: 900;
+		color: var(--text-color);
+		margin: 0;
+	}
+
+	.acronym-badge {
+		font-size: 0.8rem;
+		font-weight: 900;
+		color: var(--brand-color);
+	}
+
+	.full-name-preview {
+		font-size: 0.78rem;
+		color: var(--text-muted);
+		font-weight: 700;
+	}
+
+	.category-pill,
+	.hidden-wiki-badge,
+	.trash-date-pill {
+		font-size: 0.7rem;
+		font-weight: 800;
+		padding: 0.15rem 0.45rem;
+		border-radius: 6px;
+		background: var(--card-bg-subtle);
+		color: var(--text-muted);
+		border: 1px solid var(--border-color);
+	}
+
+	.hidden-wiki-badge {
+		color: #ef4444;
+		border-color: rgba(239, 68, 68, 0.4);
+		background: rgba(239, 68, 68, 0.08);
+	}
+
+	.trash-date-pill {
+		color: var(--orange-color);
+	}
+
+	.card-item-desc {
+		font-size: 0.85rem;
+		color: var(--text-muted);
+		line-height: 1.45;
+		margin: 0;
+	}
+
+	.item-actions {
+		display: flex;
+		gap: 0.45rem;
 		flex-shrink: 0;
+	}
+
+	.edit-btn,
+	.delete-btn,
+	.restore-btn,
+	.perm-delete-btn {
+		font-size: 0.78rem;
+		padding: 0.45rem 0.8rem;
+	}
+
+	/* Inline Form Wrapper */
+	.inline-edit-wrapper {
+		display: flex;
+		flex-direction: column;
+		gap: 0.85rem;
+	}
+
+	.inline-edit-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding-bottom: 0.65rem;
+		border-bottom: 1.5px solid var(--border-color);
+	}
+
+	.inline-edit-title {
+		font-size: 0.95rem;
+		color: var(--text-color);
+	}
+
+	.close-inline-btn {
+		background: none;
+		border: none;
+		font-size: 0.82rem;
+		font-weight: 800;
+		color: var(--text-muted);
+		cursor: pointer;
+		padding: 0.25rem 0.5rem;
+		border-radius: 6px;
+	}
+
+	/* 👥 Users Section Styles */
+	.users-summary-grid {
+		display: grid;
+		grid-template-columns: repeat(3, 1fr);
+		gap: 0.75rem;
+	}
+
+	.user-summary-card {
+		padding: 0.85rem 1rem;
+		border-radius: 16px;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		text-align: center;
+		gap: 0.2rem;
+		background: var(--card-bg);
+		border: 2px solid var(--border-color);
+	}
+
+	.user-summary-card.gold .us-val {
+		color: var(--yellow-color);
+	}
+
+	.user-summary-card.blue .us-val {
+		color: var(--accent-color);
+	}
+
+	.us-val {
+		font-family: 'Outfit', sans-serif;
+		font-size: 1.4rem;
+		font-weight: 900;
+		color: var(--text-color);
+	}
+
+	.us-lbl {
+		font-size: 0.75rem;
+		font-weight: 800;
+		color: var(--text-muted);
 	}
 
 	.users-list-grid {
@@ -1668,24 +2182,19 @@
 	}
 
 	.user-card-item {
-		padding: 1rem;
-		border-radius: 16px;
+		padding: 1rem 1.15rem;
+		border-radius: 18px;
 		background: var(--card-bg);
-		border: 1.5px solid var(--border-color);
+		border: 2px solid var(--border-color);
 		display: flex;
 		flex-direction: column;
 		gap: 0.75rem;
 		transition: all 0.15s ease;
 	}
 
-	.user-card-item:hover {
-		border-color: var(--accent-color);
-		transform: translateY(-1px);
-	}
-
 	.user-card-item.is-admin {
-		border-color: rgba(234, 179, 8, 0.4);
-		background: linear-gradient(to right, rgba(234, 179, 8, 0.04), var(--card-bg));
+		border-color: rgba(255, 200, 0, 0.45);
+		background: linear-gradient(to right, rgba(255, 200, 0, 0.05), var(--card-bg));
 	}
 
 	.user-card-header {
@@ -1703,7 +2212,7 @@
 	.user-avatar-fallback {
 		width: 44px;
 		height: 44px;
-		border-radius: 12px;
+		border-radius: 14px;
 		object-fit: cover;
 		border: 1.5px solid var(--border-color);
 	}
@@ -1712,8 +2221,8 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		background: var(--accent-light-bg);
-		color: var(--accent-color);
+		background: var(--brand-light-bg);
+		color: var(--brand-color);
 		font-weight: 900;
 		font-size: 1.2rem;
 	}
@@ -1725,7 +2234,7 @@
 		font-size: 0.85rem;
 		background: var(--card-bg);
 		border-radius: 50%;
-		box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+		box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
 	}
 
 	.user-meta-info {
@@ -1744,6 +2253,7 @@
 	}
 
 	.user-display-name {
+		font-family: 'Outfit', sans-serif;
 		font-size: 0.95rem;
 		font-weight: 900;
 		color: var(--text-color);
@@ -1757,9 +2267,9 @@
 	}
 
 	.role-chip.admin {
-		background: rgba(234, 179, 8, 0.16);
-		color: #eab308;
-		border: 1px solid rgba(234, 179, 8, 0.35);
+		background: rgba(255, 200, 0, 0.16);
+		color: var(--yellow-color);
+		border: 1px solid rgba(255, 200, 0, 0.35);
 	}
 
 	.role-chip.user {
@@ -1809,15 +2319,15 @@
 		justify-content: flex-end;
 		gap: 0.5rem;
 		padding-top: 0.35rem;
-		border-top: 1px solid var(--border-color);
+		border-top: 1.5px solid var(--border-color);
 	}
 
 	.protected-admin-pill {
 		font-size: 0.75rem;
 		font-weight: 800;
-		color: #eab308;
-		background: rgba(234, 179, 8, 0.12);
-		border: 1px solid rgba(234, 179, 8, 0.3);
+		color: var(--yellow-color);
+		background: rgba(255, 200, 0, 0.12);
+		border: 1px solid rgba(255, 200, 0, 0.3);
 		padding: 0.4rem 0.8rem;
 		border-radius: 10px;
 	}
@@ -1828,16 +2338,11 @@
 	}
 
 	/* 📜 Logs Section Styles */
-	.logs-section {
-		display: flex;
-		flex-direction: column;
-		gap: 1rem;
-	}
-
 	.logs-toolbar {
 		padding: 0.85rem 1rem;
 		border-radius: 16px;
 		background: var(--card-bg);
+		border: 2px solid var(--border-color);
 		display: flex;
 		flex-direction: column;
 		gap: 0.75rem;
@@ -1879,10 +2384,10 @@
 	}
 
 	.log-item-card {
-		padding: 0.85rem 1rem;
-		border-radius: 14px;
+		padding: 0.9rem 1.15rem;
+		border-radius: 16px;
 		background: var(--card-bg);
-		border: 1.5px solid var(--border-color);
+		border: 2px solid var(--border-color);
 		display: flex;
 		flex-direction: column;
 		gap: 0.5rem;
@@ -1909,18 +2414,19 @@
 	}
 
 	.log-admin-avatar {
-		width: 28px;
-		height: 28px;
-		border-radius: 8px;
+		width: 30px;
+		height: 30px;
+		border-radius: 10px;
 		object-fit: cover;
+		border: 1px solid var(--border-color);
 	}
 
 	.log-admin-avatar.fallback {
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		background: var(--accent-light-bg);
-		color: var(--accent-color);
+		background: var(--brand-light-bg);
+		color: var(--brand-color);
 		font-size: 0.75rem;
 		font-weight: 900;
 	}
@@ -1932,7 +2438,7 @@
 	}
 
 	.log-admin-name {
-		font-size: 0.82rem;
+		font-size: 0.85rem;
 		font-weight: 850;
 		color: var(--text-color);
 	}
@@ -1962,8 +2468,8 @@
 		font-size: 0.8rem;
 		color: var(--text-color);
 		background: var(--card-bg-subtle);
-		padding: 0.3rem 0.6rem;
-		border-radius: 8px;
+		padding: 0.35rem 0.65rem;
+		border-radius: 10px;
 		flex-wrap: wrap;
 	}
 
@@ -1993,7 +2499,7 @@
 		font-size: 0.68rem;
 		background: var(--card-bg-subtle);
 		border: 1px solid var(--border-color);
-		padding: 0.15rem 0.4rem;
+		padding: 0.15rem 0.45rem;
 		border-radius: 6px;
 		color: var(--text-muted);
 	}
@@ -2002,309 +2508,117 @@
 		color: var(--text-color);
 	}
 
-	/* Responsive Mobile Queries */
-	@media (max-width: 640px) {
-		.admin-tabs-row {
-			grid-template-columns: repeat(2, 1fr);
-		}
-
-		.users-summary-grid {
-			grid-template-columns: 1fr;
-		}
-
-		.user-card-actions {
-			justify-content: stretch;
-		}
-
-		.user-card-actions button {
-			width: 100%;
-		}
-
-		.logs-filters-row {
-			flex-direction: column;
-		}
-	}
-
-	/* List Section */
-	.list-section {
-		display: flex;
-		flex-direction: column;
-		gap: 0.85rem;
-	}
-
+	/* 🗑️ Trash Styles */
 	.trash-banner {
 		padding: 0.75rem 1rem;
-		background: rgba(239, 68, 68, 0.08);
-		border: 1.5px solid #ef4444;
-		border-radius: 12px;
+		background: rgba(255, 75, 75, 0.08);
+		border: 1.5px solid var(--pink-color);
+		border-radius: 14px;
+		color: var(--pink-color);
 		font-size: 0.82rem;
-		color: var(--text-color);
-		font-weight: 700;
-	}
-
-	.list-header {
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-	}
-
-	.list-filters {
-		display: flex;
-		gap: 0.5rem;
-	}
-
-	.category-select-filter {
-		max-width: 240px;
-		font-size: 0.82rem;
-	}
-
-	.search-input {
-		flex: 1;
-		font-size: 0.82rem;
-	}
-
-	.search-input.full-width {
-		width: 100%;
-	}
-
-	.cards-list {
-		display: flex;
-		flex-direction: column;
-		gap: 0.65rem;
-	}
-
-	.admin-card-item {
-		padding: 0.85rem 1.15rem;
-		background: var(--card-bg);
-		border-radius: 16px;
-		transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
-	}
-
-	.animated-card:hover {
-		transform: translateY(-2px);
-		box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
-	}
-
-	.card-row-wrapper {
-		display: flex;
-		justify-content: space-between;
-		align-items: flex-start;
-		gap: 0.85rem;
-	}
-
-	@media (max-width: 650px) {
-		.card-row-wrapper {
-			flex-direction: column;
-		}
-
-		.item-actions {
-			width: 100%;
-			justify-content: flex-end;
-		}
-	}
-
-	.card-main-info {
-		display: flex;
-		flex-direction: column;
-		gap: 0.35rem;
-		flex: 1;
-		min-width: 0;
-	}
-
-	.item-title-row {
-		display: flex;
-		align-items: center;
-		gap: 0.45rem;
-		flex-wrap: wrap;
-	}
-
-	.card-item-title {
-		font-size: 1.05rem;
-		font-weight: 900;
-		color: var(--text-color);
-		margin: 0;
-	}
-
-	.acronym-badge {
-		font-size: 0.8rem;
 		font-weight: 800;
-		color: var(--accent-color);
-	}
-
-	.full-name-preview {
-		font-size: 0.78rem;
-		color: var(--text-muted);
-		font-weight: 700;
-	}
-
-	.category-pill,
-	.hidden-wiki-badge,
-	.trash-date-pill {
-		font-size: 0.7rem;
-		font-weight: 800;
-		padding: 0.15rem 0.45rem;
-		border-radius: 6px;
-		background: var(--card-bg-subtle);
-		color: var(--text-muted);
-		border: 1px solid var(--border-color);
-	}
-
-	.hidden-wiki-badge {
-		color: #ef4444;
-		border-color: rgba(239, 68, 68, 0.4);
-		background: rgba(239, 68, 68, 0.08);
-	}
-
-	.trash-date-pill {
-		color: #f59e0b;
-	}
-
-	.card-item-desc {
-		font-size: 0.85rem;
-		color: var(--text-muted);
-		line-height: 1.45;
-		margin: 0;
-		word-break: break-word;
-	}
-
-	.item-actions {
-		display: flex;
-		gap: 0.4rem;
-		flex-shrink: 0;
-		align-items: center;
-	}
-
-	/* Theme Dynamic Edit Button */
-	.duo-btn-theme {
-		background: var(--brand-color);
-		border-color: var(--brand-depth);
-		border-bottom-width: 4px;
-		color: var(--brand-text, #ffffff);
-	}
-
-	.duo-btn-theme:hover {
-		background: var(--brand-hover);
-		filter: brightness(1.05);
-	}
-
-	.edit-btn,
-	.delete-btn,
-	.restore-btn,
-	.perm-delete-btn {
-		font-size: 0.78rem;
-		padding: 0.4rem 0.75rem;
-		white-space: nowrap;
-	}
-
-	.inline-edit-wrapper {
-		display: flex;
-		flex-direction: column;
-		gap: 0.85rem;
-		width: 100%;
-	}
-
-	.inline-edit-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		padding-bottom: 0.5rem;
-		border-bottom: 1.5px solid var(--border-color);
-	}
-
-	.inline-edit-title {
-		font-size: 0.95rem;
-		font-weight: 900;
-		color: var(--brand-color);
-	}
-
-	.close-inline-btn {
-		background: none;
-		border: 1px solid var(--border-color);
-		border-radius: 8px;
-		color: var(--text-muted);
-		font-size: 0.75rem;
-		font-weight: 800;
-		padding: 0.25rem 0.5rem;
-		cursor: pointer;
-	}
-
-	.close-inline-btn:hover {
-		color: var(--text-color);
-		border-color: var(--text-color);
 	}
 
 	.empty-list-box {
-		padding: 2rem;
+		padding: 2.5rem 1.5rem;
 		text-align: center;
 		color: var(--text-muted);
 		font-size: 0.88rem;
 		font-weight: 700;
 		background: var(--card-bg);
-		border-radius: 16px;
+		border-radius: 18px;
+		border: 2px solid var(--border-color);
 	}
 
-	/* Backup Section */
-	.backup-section-card {
-		padding: 1rem 1.15rem;
+	/* Login & Modals */
+	.login-card {
+		padding: 2.5rem 1.5rem;
 		background: var(--card-bg);
-		border-radius: 16px;
-	}
-
-	.backup-header {
+		border-radius: 24px;
+		border: 2px solid var(--border-color);
 		display: flex;
-		justify-content: space-between;
+		flex-direction: column;
 		align-items: center;
-		flex-wrap: wrap;
-		gap: 0.85rem;
+		text-align: center;
+		gap: 1rem;
+		box-shadow: 0 8px 30px var(--shadow-color);
 	}
 
-	.backup-buttons-row {
-		display: flex;
+	.login-badge {
+		font-size: 0.75rem;
+		font-weight: 900;
+		color: var(--brand-color);
+		background: var(--brand-light-bg);
+		padding: 0.25rem 0.75rem;
+		border-radius: 999px;
+	}
+
+	.login-title {
+		font-family: 'Outfit', sans-serif;
+		font-size: 1.5rem;
+		font-weight: 900;
+		margin: 0;
+	}
+
+	.login-desc {
+		font-size: 0.88rem;
+		color: var(--text-muted);
+		max-width: 480px;
+		line-height: 1.5;
+		margin: 0;
+	}
+
+	.error-banner {
+		padding: 0.75rem 1rem;
+		background: rgba(255, 75, 75, 0.15);
+		border: 1.5px solid var(--pink-color);
+		border-radius: 12px;
+		color: var(--pink-color);
+		font-size: 0.82rem;
+		font-weight: 800;
+	}
+
+	.discord-login-btn {
+		background-color: #5865f2;
+		color: #ffffff;
+		border: 2px solid #4752c4;
+		border-bottom: 4px solid #4752c4;
+		display: inline-flex;
+		align-items: center;
 		gap: 0.5rem;
-		flex-wrap: wrap;
-	}
-
-	.backup-action-btn {
-		font-size: 0.8rem;
-		padding: 0.5rem 0.9rem;
+		font-weight: 900;
+		padding: 0.75rem 1.5rem;
+		border-radius: 16px;
 		cursor: pointer;
 	}
 
-	.import-label-btn {
-		position: relative;
-		overflow: hidden;
-		display: inline-flex;
-		align-items: center;
-	}
-
-	.hidden-file-input {
-		display: none;
-	}
-
-	/* Import Modal */
+	/* Modal Importazione */
 	.import-modal-backdrop {
 		position: fixed;
-		inset: 0;
-		background: rgba(0, 0, 0, 0.6);
+		top: 0;
+		left: 0;
+		width: 100vw;
+		height: 100vh;
+		background: rgba(0, 0, 0, 0.7);
 		backdrop-filter: blur(4px);
-		z-index: 9999;
+		z-index: 1000;
 		display: flex;
 		align-items: center;
 		justify-content: center;
 		padding: 1rem;
+		box-sizing: border-box;
 	}
 
 	.import-modal-content {
 		max-width: 500px;
 		width: 100%;
 		background: var(--card-bg);
-		border-radius: 20px;
+		border-radius: 24px;
+		border: 2px solid var(--border-color);
 		padding: 1.5rem;
 		display: flex;
 		flex-direction: column;
 		gap: 1rem;
-		border: 2px solid var(--border-color);
-		box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
 	}
 
 	.modal-header {
@@ -2314,9 +2628,10 @@
 	}
 
 	.modal-header h3 {
-		margin: 0;
+		font-family: 'Outfit', sans-serif;
 		font-size: 1.15rem;
 		font-weight: 900;
+		margin: 0;
 		color: var(--text-color);
 	}
 
@@ -2324,9 +2639,9 @@
 		background: none;
 		border: none;
 		font-size: 1.1rem;
+		font-weight: 900;
 		color: var(--text-muted);
 		cursor: pointer;
-		font-weight: 900;
 	}
 
 	.modal-body {
@@ -2360,21 +2675,21 @@
 		padding: 0.85rem 1rem;
 		background: var(--card-bg-subtle);
 		border: 2px solid var(--border-color);
-		border-radius: 14px;
+		border-radius: 16px;
 		cursor: pointer;
 		text-align: left;
 		transition: all 0.15s ease;
 	}
 
 	.import-option-card:hover {
-		border-color: var(--accent-color);
-		background: var(--accent-light-bg);
+		border-color: var(--brand-color);
+		background: var(--brand-light-bg);
 		transform: translateY(-2px);
 	}
 
 	.import-option-card.danger-opt:hover {
-		border-color: #ef4444;
-		background: rgba(239, 68, 68, 0.1);
+		border-color: var(--pink-color);
+		background: rgba(255, 75, 75, 0.1);
 	}
 
 	.opt-icon {
@@ -2398,61 +2713,40 @@
 		line-height: 1.35;
 	}
 
-	.login-card {
-		padding: 2rem;
-		background: var(--card-bg);
-		border-radius: 20px;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		text-align: center;
-		gap: 1rem;
-	}
+	/* Responsive Mobile Queries */
+	@media (max-width: 640px) {
+		.admin-container {
+			padding: 0.35rem 0.5rem 3rem 0.5rem;
+		}
 
-	.login-badge {
-		font-size: 0.75rem;
-		font-weight: 900;
-		color: var(--accent-color);
-		background: var(--accent-light-bg);
-		padding: 0.25rem 0.65rem;
-		border-radius: 999px;
-	}
+		.users-summary-grid {
+			grid-template-columns: 1fr;
+		}
 
-	.login-title {
-		font-size: 1.4rem;
-		font-weight: 900;
-		margin: 0;
-	}
+		.user-card-actions {
+			justify-content: stretch;
+		}
 
-	.login-desc {
-		font-size: 0.88rem;
-		color: var(--text-muted);
-		max-width: 480px;
-		line-height: 1.5;
-		margin: 0;
-	}
+		.user-card-actions button {
+			width: 100%;
+		}
 
-	.error-banner {
-		padding: 0.75rem 1rem;
-		background: rgba(239, 68, 68, 0.15);
-		border: 1.5px solid #ef4444;
-		border-radius: 12px;
-		color: #ef4444;
-		font-size: 0.82rem;
-		font-weight: 800;
-	}
+		.logs-filters-row {
+			flex-direction: column;
+		}
 
-	.discord-login-btn {
-		background-color: #5865f2;
-		color: #ffffff;
-		border: 2px solid #4752c4;
-		border-bottom: 4px solid #4752c4;
-		display: inline-flex;
-		align-items: center;
-		gap: 0.5rem;
-		font-weight: 900;
-		padding: 0.75rem 1.5rem;
-		border-radius: 14px;
-		cursor: pointer;
+		.filters-left {
+			flex-direction: column;
+			align-items: stretch;
+		}
+
+		.category-select-filter,
+		.search-input-wrap {
+			width: 100%;
+		}
+
+		.mobile-add-card-btn {
+			width: 100%;
+		}
 	}
 </style>
