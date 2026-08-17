@@ -10,10 +10,10 @@
 		onSave,
 		onCancel = undefined,
 		onSelectExistingCard = undefined,
-		submitLabel = 'Salva Scheda'
+		submitLabel = undefined
 	} = $props<{
 		initialCard?: Card | null;
-		onSave: (data: Omit<Card, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void> | void;
+		onSave: (data: { id?: string } & Omit<Card, 'createdAt' | 'updatedAt'>) => Promise<void> | void;
 		onCancel?: () => void;
 		onSelectExistingCard?: (card: Card) => void;
 		submitLabel?: string;
@@ -34,6 +34,20 @@
 	let cloneCategoryFilter = $state('ALL');
 	let isTitleFocused = $state(false);
 	let isFullNameFocused = $state(false);
+	let activeEditCard = $state<Card | null>(null);
+
+	let effectiveEditCard = $derived(initialCard || activeEditCard);
+
+	let effectiveSubmitLabel = $derived.by(() => {
+		if (saving) return 'Salvataggio in corso...';
+		if (effectiveEditCard?.id) {
+			return `💾 SALVA MODIFICHE SCHEDA ("${effectiveEditCard.title}")`;
+		}
+		if (initialCard) {
+			return submitLabel || '💾 SALVA MODIFICHE';
+		}
+		return submitLabel || '➕ AGGIUNGI SCHEDA';
+	});
 
 	// Existing cards and category list for suggestions
 	let allCards = $state<Card[]>([]);
@@ -73,6 +87,7 @@
 	});
 
 	function cloneCardIntoForm(card: Card) {
+		activeEditCard = null;
 		title = card.title || '';
 		fullName = card.fullName || '';
 		description = card.description || '';
@@ -84,12 +99,13 @@
 
 	$effect(() => {
 		if (initialCard) {
+			activeEditCard = null;
 			title = initialCard.title || '';
 			fullName = initialCard.fullName || '';
 			description = initialCard.description || '';
 			category = initialCard.category || '';
 			images = initialCard.images ? [...initialCard.images] : [];
-		} else {
+		} else if (!activeEditCard) {
 			title = '';
 			fullName = '';
 			description = '';
@@ -107,7 +123,7 @@
 		if (!q || q.length < 2) return [];
 		return allCards.filter(
 			(c) =>
-				c.id !== initialCard?.id &&
+				c.id !== effectiveEditCard?.id &&
 				(c.title.toLowerCase().includes(q) || (c.fullName && c.fullName.toLowerCase().includes(q)))
 		).slice(0, 5);
 	});
@@ -117,22 +133,36 @@
 		if (!q || q.length < 2) return [];
 		return allCards.filter(
 			(c) =>
-				c.id !== initialCard?.id &&
+				c.id !== effectiveEditCard?.id &&
 				((c.fullName && c.fullName.toLowerCase().includes(q)) || c.title.toLowerCase().includes(q))
 		).slice(0, 5);
 	});
 
 	function handleSelectExisting(card: Card) {
+		activeEditCard = card;
+		title = card.title || '';
+		fullName = card.fullName || '';
+		description = card.description || '';
+		category = card.category || '';
+		images = card.images ? [...card.images] : [];
+		isTitleFocused = false;
+		isFullNameFocused = false;
+		toastStore.show({ message: `✏️ Passato alla modifica di "${card.title}"` });
 		if (onSelectExistingCard) {
 			onSelectExistingCard(card);
-		} else {
-			// Populate local form in edit mode
-			title = card.title || '';
-			fullName = card.fullName || '';
-			description = card.description || '';
-			category = card.category || '';
-			images = card.images ? [...card.images] : [];
 		}
+	}
+
+	function cancelActiveEdit() {
+		activeEditCard = null;
+		title = '';
+		fullName = '';
+		description = '';
+		category = '';
+		customCategory = '';
+		images = [];
+		validationError = null;
+		if (onCancel) onCancel();
 	}
 
 	function addImageUrl() {
@@ -228,12 +258,16 @@
 		saving = true;
 		try {
 			await onSave({
+				...(effectiveEditCard?.id ? { id: effectiveEditCard.id } : {}),
 				title: t,
 				fullName: fn || undefined,
 				description: desc,
 				category: finalCategory,
 				images: validImages
-			});
+			} as any);
+			if (activeEditCard) {
+				activeEditCard = null;
+			}
 		} catch (err: any) {
 			console.error('Errore nel salvataggio della scheda:', err);
 			const errMsg = err?.message || '⚠️ Errore durante il salvataggio della scheda sul server.';
@@ -495,15 +529,24 @@
 		</div>
 	</div>
 
+	{#if activeEditCard}
+		<div class="active-edit-notice-banner duo-card">
+			<span>✏️ Stai modificando la scheda esistente <strong>"{activeEditCard.title}"</strong>. Salva per aggiornarla.</span>
+			<button type="button" class="cancel-active-edit-chip" onclick={cancelActiveEdit}>
+				✕ Torna a Nuova Scheda
+			</button>
+		</div>
+	{/if}
+
 	<!-- Form Actions -->
 	<div class="form-actions">
-		{#if onCancel}
-			<button type="button" class="duo-btn duo-btn-gray cancel-btn" onclick={onCancel}>
-				Annulla
+		{#if onCancel || activeEditCard}
+			<button type="button" class="duo-btn duo-btn-gray cancel-btn" onclick={cancelActiveEdit}>
+				Annulla Modifica
 			</button>
 		{/if}
 		<button type="submit" class="duo-btn duo-btn-green save-btn" disabled={saving}>
-			{saving ? 'Salvataggio in corso...' : submitLabel}
+			{effectiveSubmitLabel}
 		</button>
 	</div>
 </form>
@@ -514,6 +557,39 @@
 		flex-direction: column;
 		gap: 1.2rem;
 		width: 100%;
+	}
+
+	.active-edit-notice-banner {
+		background: rgba(28, 176, 246, 0.12);
+		border: 1.5px solid var(--accent-color);
+		border-radius: 14px;
+		padding: 0.75rem 1rem;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.75rem;
+		font-size: 0.85rem;
+		font-weight: 800;
+		color: var(--accent-color);
+	}
+
+	.cancel-active-edit-chip {
+		background: var(--card-bg);
+		border: 1px solid var(--border-color);
+		border-radius: 8px;
+		padding: 0.25rem 0.6rem;
+		font-size: 0.75rem;
+		font-weight: 800;
+		color: var(--text-color);
+		cursor: pointer;
+		white-space: nowrap;
+		transition: all 0.15s ease;
+	}
+
+	.cancel-active-edit-chip:hover {
+		background: var(--red-color, #ff4b4b);
+		color: white;
+		border-color: var(--red-color, #ff4b4b);
 	}
 
 	.validation-error-box {

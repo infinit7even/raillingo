@@ -68,12 +68,7 @@
 			return;
 		}
 		editingCard = card;
-		setTimeout(() => {
-			const el = document.getElementById(`admin-card-${card.id}`);
-			if (el) {
-				el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-			}
-		}, 60);
+		window.scrollTo({ top: 0, behavior: 'smooth' });
 	}
 
 	function startDuplicate(card: Card) {
@@ -85,15 +80,18 @@
 		window.scrollTo({ top: 0, behavior: 'smooth' });
 	}
 
-	async function handleSaveCard(cardData: Omit<Card, 'id' | 'createdAt' | 'updatedAt'>) {
+	async function handleSaveCard(cardData: { id?: string } & Omit<Card, 'createdAt' | 'updatedAt'>) {
 		try {
-			if (editingCard) {
-				const savedId = editingCard.id;
+			const targetId = cardData.id || editingCard?.id;
+			if (targetId) {
+				const savedId = targetId;
 				await cardsStore.updateCard({
-					...editingCard,
-					...cardData
-				});
+					...(editingCard || {}),
+					...cardData,
+					id: targetId
+				} as Card);
 				editingCard = null;
+				clonedCard = null;
 				toastStore.show({ message: '💾 Scheda aggiornata con successo!' });
 				setTimeout(() => {
 					const el = document.getElementById(`admin-card-${savedId}`);
@@ -102,7 +100,7 @@
 					}
 				}, 60);
 			} else {
-				await cardsStore.addCard(cardData);
+				await cardsStore.addCard(cardData as any);
 				resetForm();
 				toastStore.show({ message: '✨ Nuova scheda creata con successo!' });
 			}
@@ -329,14 +327,21 @@
 			<!-- Form Creazione Nuova Card -->
 			<div class="editor-card duo-card">
 				<h2 class="form-title">
-					{#if clonedCard}
+					{#if editingCard}
+						✏️ Modifica Scheda: "{editingCard.title}"
+					{:else if clonedCard}
 						📋 Aggiungi Scheda Duplicata (da "{clonedCard.title}")
 					{:else}
 						➕ Aggiungi Nuova Card Informativa
 					{/if}
 				</h2>
 
-				{#if clonedCard}
+				{#if editingCard}
+					<div class="admin-clone-notice edit-notice">
+						<span>✏️ Stai modificando la scheda <strong>"{editingCard.title}"</strong>. Salva per applicare le modifiche.</span>
+						<button type="button" class="cancel-clone-btn" onclick={resetForm}>✕ Annulla Modifica</button>
+					</div>
+				{:else if clonedCard}
 					<div class="admin-clone-notice">
 						<span>📋 Stai creando una nuova card clonando i dati di <strong>"{clonedCard.title}"</strong>. Modifica i campi e salva.</span>
 						<button type="button" class="cancel-clone-btn" onclick={resetForm}>✕ Azzera</button>
@@ -344,11 +349,11 @@
 				{/if}
 
 				<CardForm
-					initialCard={clonedCard}
+					initialCard={editingCard || clonedCard}
 					onSave={handleSaveCard}
-					onCancel={clonedCard ? resetForm : undefined}
+					onCancel={(editingCard || clonedCard) ? resetForm : undefined}
 					onSelectExistingCard={startEdit}
-					submitLabel={clonedCard ? '➕ AGGIUNGI SCHEDA DUPLICATA' : '➕ AGGIUNGI SCHEDA'}
+					submitLabel={editingCard ? '💾 SALVA MODIFICHE SCHEDA' : clonedCard ? '➕ AGGIUNGI SCHEDA DUPLICATA' : '➕ AGGIUNGI SCHEDA'}
 				/>
 			</div>
 
