@@ -149,23 +149,8 @@
 
 	<div class="nav-container">
 		{#if isNotesPage && notesNavState.isVaultCollapsed}
-			<!-- 📓 Modalità Vault Compresso: Mostra elenco note nella barra laterale a sinistra -->
+			<!-- 📓 Modalità Vault Compresso: Mostra unicamente elenco note nella barra laterale -->
 			<div class="collapsed-vault-sidebar-panel">
-				<div class="collapsed-vault-header">
-					<div class="cv-title-box">
-						<span class="cv-icon">📓</span>
-						<span class="cv-title">NOTE ({notesNavState.notes.length})</span>
-					</div>
-					<button
-						type="button"
-						class="cv-expand-btn"
-						onclick={() => notesNavStore.setCollapsed(false)}
-						title="Riespandi Vault Appunti"
-					>
-						⤢ Espandi Vault
-					</button>
-				</div>
-
 				<div class="collapsed-notes-scroll">
 					{#if notesNavState.notes.length === 0}
 						<div class="cv-empty">Nessun appunto nel Vault</div>
@@ -460,55 +445,6 @@
 		gap: 0.5rem;
 		height: 100%;
 		overflow: hidden;
-	}
-
-	.collapsed-vault-header {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		padding-bottom: 0.4rem;
-		border-bottom: 1.5px solid var(--border-color);
-		flex-shrink: 0;
-	}
-
-	.cv-title-box {
-		display: flex;
-		align-items: center;
-		gap: 0.4rem;
-	}
-
-	.cv-icon {
-		font-size: 0.95rem;
-	}
-
-	.cv-title {
-		font-family: 'Outfit', sans-serif;
-		font-size: 0.78rem;
-		font-weight: 900;
-		color: var(--text-color);
-	}
-
-	.cv-expand-btn {
-		background: var(--card-bg-subtle);
-		border: 1.5px solid var(--border-color);
-		border-bottom: 2.5px solid var(--border-depth-color);
-		border-radius: 8px;
-		padding: 0.2rem 0.55rem;
-		font-size: 0.72rem;
-		font-weight: 800;
-		color: var(--accent-color);
-		cursor: pointer;
-		transition: all 0.12s ease;
-	}
-
-	.cv-expand-btn:hover {
-		background: var(--accent-light-bg);
-		border-color: var(--accent-color);
-	}
-
-	.cv-expand-btn:active {
-		transform: translateY(1.5px);
-		border-bottom-width: 1px;
 	}
 
 	.collapsed-notes-scroll {
