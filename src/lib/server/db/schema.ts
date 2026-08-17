@@ -68,17 +68,21 @@ export const cards = pgTable('cards', {
 	id: text('id').primaryKey(),
 	title: text('title').notNull(),
 	fullName: text('full_name'),
+	hasAcronym: boolean('has_acronym').default(false),
+	acronym: text('acronym'),
 	description: text('description').notNull().default(''),
 	category: text('category').notNull().default('Generale'),
 	images: jsonb('images').$type<string[]>().default([]),
 	tags: jsonb('tags').$type<string[]>().default([]),
 	showInWiki: boolean('show_in_wiki').default(true),
 	gameModes: jsonb('game_modes').$type<string[]>().default(['flashcard', 'quiz', 'reels', 'scrittura']),
+	isDeleted: boolean('is_deleted').default(false),
+	deletedAt: timestamp('deleted_at', { withTimezone: true }),
 	createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 	updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
 });
 
-// ─── NOTES SCHEMA (Appunti, Vault & Condivisione) ─────────────────────────
+// ─── NOTES SCHEMA (Appunti, Vault & Cestino) ─────────────────────────
 
 export const notes = pgTable('notes', {
 	id: text('id').primaryKey(),
@@ -89,9 +93,11 @@ export const notes = pgTable('notes', {
 	tags: jsonb('tags').$type<string[]>().default([]),
 	images: jsonb('images').$type<string[]>().default([]),
 	isPinned: boolean('is_pinned').notNull().default(false),
-	isPublic: boolean('is_public').notNull().default(false), // Supporto per la condivisione pubblica tramite link
-	shareId: text('share_id').unique(), // ID o slug per la condivisione del link
+	isPublic: boolean('is_public').notNull().default(false),
+	shareId: text('share_id').unique(),
 	order: integer('order').notNull().default(0),
+	isDeleted: boolean('is_deleted').default(false),
+	deletedAt: timestamp('deleted_at', { withTimezone: true }),
 	createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 	updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
 });

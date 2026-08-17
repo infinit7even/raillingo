@@ -31,6 +31,15 @@
 	let sortOption = $state<NoteSortOption>('custom');
 	let selectedTagFilter = $state<string | null>(null);
 
+	// Trash state
+	let isViewingTrash = $state(false);
+	let trashNotes = $state<Note[]>([]);
+	let selectedTrashNote = $state<Note | null>(null);
+
+	async function loadTrash() {
+		trashNotes = await notesStore.fetchTrash();
+	}
+
 	// Workspace UI states
 	let isOutlineOpen = $state(false);
 	let isSidebarOpenMobile = $state(true);
@@ -72,6 +81,7 @@
 
 	onMount(() => {
 		notesStore.hydrate(data.initialNotes, user?.id);
+		loadTrash();
 
 		const handlePasteReq = () => {
 			handleContextPaste();
@@ -297,6 +307,54 @@
 
 		return list;
 	});
+
+	let filteredTrashNotes = $derived.by(() => {
+		let list = [...trashNotes];
+		const q = searchQuery.toLowerCase().trim();
+		if (q) {
+			list = list.filter(
+				(n) =>
+					n.title.toLowerCase().includes(q) ||
+					n.content.toLowerCase().includes(q) ||
+					(n.tags && n.tags.some((t) => t.toLowerCase().includes(q)))
+			);
+		}
+		return list;
+	});
+
+	async function handleRestoreTrashNote(noteId: string) {
+		const success = await notesStore.restoreNote(noteId);
+		if (success) {
+			await loadTrash();
+			selectedTrashNote = null;
+			isViewingTrash = false;
+			await notesStore.loadNotes();
+		}
+	}
+
+	async function handlePermanentDeleteNote(noteId: string) {
+		confirmModalStore.open({
+			title: 'Elimina Definitivamente',
+			message: 'Vuoi eliminare DEFINITIVAMENTE questo appunto dal cestino? L\'operazione non può essere annullata.',
+			confirmText: 'Elimina Definitivamente',
+			confirmVariant: 'danger',
+			icon: '🗑️',
+			onConfirm: async () => {
+				await notesStore.permanentDeleteNote(noteId);
+				trashNotes = trashNotes.filter((n) => n.id !== noteId);
+				if (selectedTrashNote?.id === noteId) {
+					selectedTrashNote = null;
+				}
+			}
+		});
+	}
+
+	function selectTrashNote(note: Note) {
+		selectedTrashNote = note;
+		if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+			isSidebarOpenMobile = false;
+		}
+	}
 
 	let docStats = $derived(getMarkdownStats(currentContent));
 	let headingsOutline = $derived<HeadingItem[]>(extractHeadings(currentContent));
@@ -908,13 +966,39 @@
 				</div>
 			</div>
 
+			<!-- Vault Switcher Tabs: Attive / Cestino -->
+			<div class="vault-tabs-row">
+				<button
+					type="button"
+					class="vault-tab-pill"
+					class:active={!isViewingTrash}
+					onclick={() => {
+						isViewingTrash = false;
+						selectedTrashNote = null;
+					}}
+				>
+					📓 Appunti ({notes.length})
+				</button>
+				<button
+					type="button"
+					class="vault-tab-pill trash"
+					class:active={isViewingTrash}
+					onclick={() => {
+						isViewingTrash = true;
+						loadTrash();
+					}}
+				>
+					🗑️ Cestino ({trashNotes.length})
+				</button>
+			</div>
+
 			<!-- Vault Search Bar -->
 			<div class="vault-search-box">
 				<span class="search-ico">🔍</span>
 				<input
 					type="text"
 					bind:value={searchQuery}
-					placeholder="Cerca nel vault..."
+					placeholder={isViewingTrash ? 'Cerca nel cestino...' : 'Cerca nel vault...'}
 					class="vault-search-input"
 				/>
 				{#if searchQuery}
@@ -922,8 +1006,8 @@
 				{/if}
 			</div>
 
-			<!-- User Custom Tags Filter Row in Sidebar -->
-			{#if allUserTags.length > 0}
+			<!-- User Custom Tags Filter Row in Sidebar (solo se in appunti attivi) -->
+			{#if !isViewingTrash && allUserTags.length > 0}
 				<div class="vault-tags-filter-row">
 					<button
 						type="button"
@@ -949,56 +1033,92 @@
 
 			<!-- Notes List Explorer -->
 			<div class="vault-files-list">
-				{#if filteredNotes.length === 0}
-					<div class="vault-empty-state">
-						<p>Nessun appunto trovato nel Vault.</p>
-						<button type="button" class="create-first-link" onclick={handleCreateNewNote}>
-							Crea un nuovo appunto
-						</button>
-					</div>
-				{:else}
-					{#each filteredNotes as note (note.id)}
-						{@const isSelected = selectedNoteId === note.id}
-						<div
-							class="vault-file-item"
-							class:active={isSelected}
-							data-note-id={note.id}
-							onclick={() => selectNote(note)}
-							role="button"
-							tabindex="0"
-							onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && selectNote(note)}
-						>
-							<div class="file-item-header">
-								<span class="file-title">
-									{#if note.isPinned}
-										<span class="pin-ico" title="Fissato in evidenza">📌</span>
-									{/if}
-									{note.title || 'Senza titolo'}
-								</span>
-							</div>
-
-							{#if note.tags && note.tags.length > 0}
-								<div class="file-tags-row">
-									{#each note.tags.slice(0, 3) as tag}
-										<span class="file-tag-mini">🏷️ {tag}</span>
-									{/each}
-									{#if note.tags.length > 3}
-										<span class="file-tag-mini">+{note.tags.length - 3}</span>
-									{/if}
-								</div>
-							{/if}
-
-							<div class="file-item-meta">
-								<span class="file-date">
-									{new Date(note.updatedAt || note.createdAt).toLocaleDateString('it-IT', {
-										day: 'numeric',
-										month: 'short'
-									})}
-								</span>
-								<span class="file-words">{getMarkdownStats(note.content).wordCount} parole</span>
-							</div>
+				{#if isViewingTrash}
+					{#if filteredTrashNotes.length === 0}
+						<div class="vault-empty-state">
+							<p>✨ Il cestino è vuoto.</p>
 						</div>
-					{/each}
+					{:else}
+						{#each filteredTrashNotes as note (note.id)}
+							{@const isSelected = selectedTrashNote?.id === note.id}
+							<div
+								class="vault-file-item in-trash"
+								class:active={isSelected}
+								onclick={() => selectTrashNote(note)}
+								role="button"
+								tabindex="0"
+								onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && selectTrashNote(note)}
+							>
+								<div class="file-item-header">
+									<span class="file-title">
+										{note.title || 'Senza titolo'}
+									</span>
+								</div>
+
+								<div class="file-item-meta">
+									<span class="file-date">
+										Eliminata il {new Date(note.deletedAt || note.updatedAt).toLocaleDateString('it-IT', {
+											day: 'numeric',
+											month: 'short'
+										})}
+									</span>
+									<span class="trash-badge-mini">Cestino</span>
+								</div>
+							</div>
+						{/each}
+					{/if}
+				{:else}
+					{#if filteredNotes.length === 0}
+						<div class="vault-empty-state">
+							<p>Nessun appunto trovato nel Vault.</p>
+							<button type="button" class="create-first-link" onclick={handleCreateNewNote}>
+								Crea un nuovo appunto
+							</button>
+						</div>
+					{:else}
+						{#each filteredNotes as note (note.id)}
+							{@const isSelected = selectedNoteId === note.id}
+							<div
+								class="vault-file-item"
+								class:active={isSelected}
+								data-note-id={note.id}
+								onclick={() => selectNote(note)}
+								role="button"
+								tabindex="0"
+								onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && selectNote(note)}
+							>
+								<div class="file-item-header">
+									<span class="file-title">
+										{#if note.isPinned}
+											<span class="pin-ico" title="Fissato in evidenza">📌</span>
+										{/if}
+										{note.title || 'Senza titolo'}
+									</span>
+								</div>
+
+								{#if note.tags && note.tags.length > 0}
+									<div class="file-tags-row">
+										{#each note.tags.slice(0, 3) as tag}
+											<span class="file-tag-mini">🏷️ {tag}</span>
+										{/each}
+										{#if note.tags.length > 3}
+											<span class="file-tag-mini">+{note.tags.length - 3}</span>
+										{/if}
+									</div>
+								{/if}
+
+								<div class="file-item-meta">
+									<span class="file-date">
+										{new Date(note.updatedAt || note.createdAt).toLocaleDateString('it-IT', {
+											day: 'numeric',
+											month: 'short'
+										})}
+									</span>
+									<span class="file-words">{getMarkdownStats(note.content).wordCount} parole</span>
+								</div>
+							</div>
+						{/each}
+					{/if}
 				{/if}
 			</div>
 		</aside>
@@ -1006,9 +1126,44 @@
 	<!-- 📝 2. CENTER MAIN WORKSPACE -->
 	<main
 		class="note-workspace-pane duo-card"
-		class:mobile-hidden={isSidebarOpenMobile && selectedNoteId !== null}
+		class:mobile-hidden={isSidebarOpenMobile && (selectedNoteId !== null || selectedTrashNote !== null)}
 	>
-		{#if selectedNoteId && activeNote}
+		{#if isViewingTrash && selectedTrashNote}
+			<div class="trash-note-view">
+				<div class="trash-note-banner duo-card">
+					<div class="trash-banner-info">
+						<span class="trash-icon">🗑️</span>
+						<div>
+							<strong>Questo appunto si trova nel Cestino</strong>
+							<span class="trash-sub">Eliminato il {new Date(selectedTrashNote.deletedAt || selectedTrashNote.updatedAt).toLocaleDateString('it-IT')} • Il cestino non si svuota mai automaticamente</span>
+						</div>
+					</div>
+					<div class="trash-banner-actions">
+						<button
+							type="button"
+							class="duo-btn duo-btn-green restore-note-btn"
+							onclick={() => selectedTrashNote && handleRestoreTrashNote(selectedTrashNote.id)}
+						>
+							♻️ Ripristina
+						</button>
+						<button
+							type="button"
+							class="duo-btn duo-btn-red perm-delete-note-btn"
+							onclick={() => selectedTrashNote && handlePermanentDeleteNote(selectedTrashNote.id)}
+						>
+							✕ Elimina Definitivamente
+						</button>
+					</div>
+				</div>
+
+				<div class="trash-note-canvas">
+					<h1 class="trash-note-title">{selectedTrashNote.title}</h1>
+					<div class="doc-editor preview-mode">
+						{@html markdownToDocHtml(selectedTrashNote.content)}
+					</div>
+				</div>
+			</div>
+		{:else if selectedNoteId && activeNote}
 			<!-- Workspace Top Header Bar -->
 			<div class="workspace-header">
 				<div class="workspace-header-left">
@@ -3010,5 +3165,125 @@
 			height: calc(100vh - 40px) !important;
 			height: calc(100dvh - 40px) !important;
 		}
+	}
+
+	/* 🗑️ Vault Tabs & Cestino Styles */
+	.vault-tabs-row {
+		display: flex;
+		gap: 0.4rem;
+		padding: 0 0.85rem 0.5rem 0.85rem;
+	}
+
+	.vault-tab-pill {
+		flex: 1;
+		padding: 0.45rem 0.6rem;
+		font-size: 0.78rem;
+		font-weight: 800;
+		border-radius: 10px;
+		background: var(--card-bg-subtle);
+		border: 1.5px solid var(--border-color);
+		color: var(--text-muted);
+		cursor: pointer;
+		transition: all 0.15s ease;
+	}
+
+	.vault-tab-pill:hover {
+		color: var(--text-color);
+		border-color: var(--accent-color);
+	}
+
+	.vault-tab-pill.active {
+		border-color: var(--accent-color);
+		background: var(--accent-light-bg);
+		color: var(--accent-color);
+		font-weight: 900;
+	}
+
+	.vault-tab-pill.trash.active {
+		border-color: #ef4444;
+		background: rgba(239, 68, 68, 0.12);
+		color: #ef4444;
+	}
+
+	.trash-badge-mini {
+		font-size: 0.68rem;
+		font-weight: 800;
+		color: #ef4444;
+		background: rgba(239, 68, 68, 0.12);
+		padding: 0.1rem 0.35rem;
+		border-radius: 4px;
+	}
+
+	.vault-file-item.in-trash {
+		border-left: 3px solid #ef4444;
+	}
+
+	.trash-note-view {
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+		width: 100%;
+		height: 100%;
+		padding: 1.25rem;
+		overflow-y: auto;
+		box-sizing: border-box;
+	}
+
+	.trash-note-banner {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 0.85rem 1.15rem;
+		background: rgba(239, 68, 68, 0.08);
+		border: 1.5px solid #ef4444;
+		border-radius: 14px;
+		gap: 1rem;
+		flex-wrap: wrap;
+	}
+
+	.trash-banner-info {
+		display: flex;
+		align-items: center;
+		gap: 0.65rem;
+	}
+
+	.trash-icon {
+		font-size: 1.3rem;
+	}
+
+	.trash-banner-info strong {
+		display: block;
+		font-size: 0.9rem;
+		color: var(--text-color);
+	}
+
+	.trash-sub {
+		font-size: 0.75rem;
+		color: var(--text-muted);
+	}
+
+	.trash-banner-actions {
+		display: flex;
+		gap: 0.5rem;
+	}
+
+	.restore-note-btn,
+	.perm-delete-note-btn {
+		font-size: 0.78rem;
+		padding: 0.45rem 0.85rem;
+	}
+
+	.trash-note-canvas {
+		background: var(--card-bg);
+		border-radius: 18px;
+		padding: 1.5rem;
+		border: 1px solid var(--border-color);
+	}
+
+	.trash-note-title {
+		font-size: 1.75rem;
+		font-weight: 900;
+		color: var(--text-color);
+		margin: 0 0 1rem 0;
 	}
 </style>

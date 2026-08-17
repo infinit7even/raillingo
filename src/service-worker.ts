@@ -15,11 +15,9 @@ const CRITICAL_PATHS = [
 	'/reels',
 	'/wiki',
 	'/notes',
-	'/missions',
 	'/privacy',
 	'/manifest.webmanifest',
-	'/api/cards',
-	'/data/cards.json'
+	'/api/cards'
 ];
 
 // ─── INSTALL: pre-cache asset, rotte shell e dati ────────────────────────────

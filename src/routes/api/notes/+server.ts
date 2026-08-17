@@ -3,8 +3,9 @@ import { db } from '$lib/server/db';
 import { notes } from '$lib/server/db/schema';
 import { eq, desc, or, and, isNull } from 'drizzle-orm';
 import {
-	deleteImagesForNote,
-	cleanupUnusedImagesOnNoteUpdate,
+	moveImagesToTrash,
+	restoreImagesFromTrash,
+	permanentlyDeleteImages,
 	extractMediaFilenames
 } from '$lib/server/mediaCleanup';
 import type { Note } from '$lib/types/notes';
@@ -13,6 +14,7 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 	const user = locals.user;
 	const singleId = url.searchParams.get('id');
 	const shareId = url.searchParams.get('shareId');
+	const isTrashRequest = url.searchParams.get('trash') === 'true';
 
 	try {
 		// 1. Se viene richiesta una specifica nota tramite ID o link di condivisione
@@ -24,7 +26,6 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 			const found = await db.select().from(notes).where(query).limit(1);
 			if (found.length > 0) {
 				const n = found[0];
-				// Consenti se è pubblica, se appartiene all'utente o se è admin
 				if (n.isPublic || (user && n.userId === user.id) || user?.role === 'admin' || !n.userId) {
 					const noteObj: Note = {
 						id: n.id,
@@ -38,8 +39,10 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 						isPublic: n.isPublic,
 						shareId: n.shareId || undefined,
 						order: n.order,
-						createdAt: n.createdAt.toISOString(),
-						updatedAt: n.updatedAt.toISOString()
+						isDeleted: Boolean(n.isDeleted),
+						deletedAt: n.deletedAt ? n.deletedAt.toISOString() : undefined,
+						createdAt: n.createdAt ? n.createdAt.toISOString() : new Date().toISOString(),
+						updatedAt: n.updatedAt ? n.updatedAt.toISOString() : new Date().toISOString()
 					};
 					return json(noteObj);
 				}
@@ -48,7 +51,7 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 			return json({ error: 'Nota non trovata' }, { status: 404 });
 		}
 
-		// 2. Lettura lista note per utente autenticato o note generali
+		// 2. Lettura lista note per utente autenticato
 		let list;
 		if (user) {
 			if (user.isAdmin || user.role === 'admin') {
@@ -56,11 +59,14 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 					.select()
 					.from(notes)
 					.where(
-						or(
-							eq(notes.userId, user.id),
-							eq(notes.userId, '691289686093725736'),
-							eq(notes.userId, 'local-user'),
-							isNull(notes.userId)
+						and(
+							eq(notes.isDeleted, isTrashRequest),
+							or(
+								eq(notes.userId, user.id),
+								eq(notes.userId, '691289686093725736'),
+								eq(notes.userId, 'local-user'),
+								isNull(notes.userId)
+							)
 						)
 					)
 					.orderBy(desc(notes.order), desc(notes.createdAt));
@@ -68,14 +74,19 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 				list = await db
 					.select()
 					.from(notes)
-					.where(eq(notes.userId, user.id))
+					.where(
+						and(
+							eq(notes.isDeleted, isTrashRequest),
+							eq(notes.userId, user.id)
+						)
+					)
 					.orderBy(desc(notes.order), desc(notes.createdAt));
 			}
 		} else {
 			list = await db
 				.select()
 				.from(notes)
-				.where(eq(notes.isPublic, true))
+				.where(and(eq(notes.isPublic, true), eq(notes.isDeleted, false)))
 				.orderBy(desc(notes.order), desc(notes.createdAt));
 		}
 
@@ -91,8 +102,10 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 			isPublic: n.isPublic,
 			shareId: n.shareId || undefined,
 			order: n.order,
-			createdAt: n.createdAt.toISOString(),
-			updatedAt: n.updatedAt.toISOString()
+			isDeleted: Boolean(n.isDeleted),
+			deletedAt: n.deletedAt ? n.deletedAt.toISOString() : undefined,
+			createdAt: n.createdAt ? n.createdAt.toISOString() : new Date().toISOString(),
+			updatedAt: n.updatedAt ? n.updatedAt.toISOString() : new Date().toISOString()
 		}));
 
 		return json(formatted, {
@@ -136,6 +149,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 				isPublic: Boolean(payload.isPublic),
 				shareId: payload.shareId || noteId,
 				order: typeof payload.order === 'number' ? payload.order : 0,
+				isDeleted: false,
 				createdAt: payload.createdAt ? new Date(payload.createdAt) : now,
 				updatedAt: now
 			})
@@ -150,6 +164,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 					isPinned: Boolean(payload.isPinned),
 					isPublic: Boolean(payload.isPublic),
 					order: typeof payload.order === 'number' ? payload.order : 0,
+					isDeleted: false,
+					deletedAt: null,
 					updatedAt: now
 				}
 			})
@@ -167,8 +183,10 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			isPublic: inserted.isPublic,
 			shareId: inserted.shareId || undefined,
 			order: inserted.order,
-			createdAt: inserted.createdAt.toISOString(),
-			updatedAt: inserted.updatedAt.toISOString()
+			isDeleted: Boolean(inserted.isDeleted),
+			deletedAt: inserted.deletedAt ? inserted.deletedAt.toISOString() : undefined,
+			createdAt: inserted.createdAt ? inserted.createdAt.toISOString() : new Date().toISOString(),
+			updatedAt: inserted.updatedAt ? inserted.updatedAt.toISOString() : new Date().toISOString()
 		};
 
 		return json(formatted, { status: 201 });
@@ -198,7 +216,6 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
 		const newImages = Array.from(new Set([...explicitImages, ...contentImages]));
 
 		if (existing.length === 0) {
-			// Se la nota non esiste ancora sul server (creata offline), inseriscila
 			const [created] = await db
 				.insert(notes)
 				.values({
@@ -213,6 +230,7 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
 					isPublic: Boolean(updated.isPublic),
 					shareId: updated.shareId || updated.id,
 					order: typeof updated.order === 'number' ? updated.order : 0,
+					isDeleted: false,
 					createdAt: updated.createdAt ? new Date(updated.createdAt) : now,
 					updatedAt: now
 				})
@@ -230,41 +248,26 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
 				isPublic: created.isPublic,
 				shareId: created.shareId || undefined,
 				order: created.order,
-				createdAt: created.createdAt.toISOString(),
-				updatedAt: created.updatedAt.toISOString()
+				isDeleted: Boolean(created.isDeleted),
+				deletedAt: created.deletedAt ? created.deletedAt.toISOString() : undefined,
+				createdAt: created.createdAt ? created.createdAt.toISOString() : new Date().toISOString(),
+				updatedAt: created.updatedAt ? created.updatedAt.toISOString() : new Date().toISOString()
 			};
 			return json(formatted);
 		}
 
-		const oldNote = existing[0];
-		const oldNoteType: Note = {
-			id: oldNote.id,
-			userId: oldNote.userId || undefined,
-			title: oldNote.title,
-			content: oldNote.content,
-			category: oldNote.category,
-			tags: (oldNote.tags as string[]) || [],
-			images: (oldNote.images as string[]) || [],
-			isPinned: oldNote.isPinned,
-			isPublic: oldNote.isPublic,
-			shareId: oldNote.shareId || undefined,
-			order: oldNote.order,
-			createdAt: oldNote.createdAt.toISOString(),
-			updatedAt: oldNote.updatedAt.toISOString()
-		};
-
 		const [saved] = await db
 			.update(notes)
 			.set({
-				title: updated.title !== undefined ? updated.title.trim() : oldNote.title,
+				title: updated.title !== undefined ? updated.title.trim() : existing[0].title,
 				content: newContent,
-				category: updated.category !== undefined ? updated.category.trim() : oldNote.category,
-				tags: Array.isArray(updated.tags) ? updated.tags : (oldNote.tags as string[]) || [],
+				category: updated.category !== undefined ? updated.category.trim() : existing[0].category,
+				tags: Array.isArray(updated.tags) ? updated.tags : (existing[0].tags as string[]) || [],
 				images: newImages,
-				isPinned: updated.isPinned !== undefined ? Boolean(updated.isPinned) : oldNote.isPinned,
-				isPublic: updated.isPublic !== undefined ? Boolean(updated.isPublic) : oldNote.isPublic,
-				shareId: updated.shareId !== undefined ? updated.shareId : oldNote.shareId || oldNote.id,
-				order: typeof updated.order === 'number' ? updated.order : oldNote.order,
+				isPinned: updated.isPinned !== undefined ? Boolean(updated.isPinned) : existing[0].isPinned,
+				isPublic: updated.isPublic !== undefined ? Boolean(updated.isPublic) : existing[0].isPublic,
+				shareId: updated.shareId !== undefined ? updated.shareId : existing[0].shareId || existing[0].id,
+				order: typeof updated.order === 'number' ? updated.order : existing[0].order,
 				updatedAt: now
 			})
 			.where(eq(notes.id, updated.id))
@@ -282,12 +285,11 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
 			isPublic: saved.isPublic,
 			shareId: saved.shareId || undefined,
 			order: saved.order,
-			createdAt: saved.createdAt.toISOString(),
-			updatedAt: saved.updatedAt.toISOString()
+			isDeleted: Boolean(saved.isDeleted),
+			deletedAt: saved.deletedAt ? saved.deletedAt.toISOString() : undefined,
+			createdAt: saved.createdAt ? saved.createdAt.toISOString() : new Date().toISOString(),
+			updatedAt: saved.updatedAt ? saved.updatedAt.toISOString() : new Date().toISOString()
 		};
-
-		// Pulisci le immagini rimosse in background
-		await cleanupUnusedImagesOnNoteUpdate(oldNoteType, formatted).catch(() => {});
 
 		return json(formatted);
 	} catch (err: any) {
@@ -296,69 +298,94 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
 	}
 };
 
+export const PATCH: RequestHandler = async ({ request, locals }) => {
+	const user = locals.user;
+	try {
+		const payload = await request.json();
+
+		if (payload.action === 'restore' && payload.id) {
+			const existing = await db.select().from(notes).where(eq(notes.id, payload.id)).limit(1);
+			if (existing.length > 0) {
+				const n = existing[0];
+				if (n.userId && user && n.userId !== user.id && user.role !== 'admin' && !user.isAdmin) {
+					return json({ error: 'Non autorizzato a ripristinare questa nota.' }, { status: 403 });
+				}
+				await restoreImagesFromTrash(n).catch(() => {});
+			}
+
+			const [restored] = await db
+				.update(notes)
+				.set({
+					isDeleted: false,
+					deletedAt: null,
+					updatedAt: new Date()
+				})
+				.where(eq(notes.id, payload.id))
+				.returning();
+
+			return json({ success: true, note: restored });
+		}
+
+		if (payload && Array.isArray(payload.items)) {
+			for (const item of payload.items) {
+				if (user?.role === 'admin' || user?.isAdmin) {
+					await db.update(notes).set({ order: item.order }).where(eq(notes.id, item.id));
+				} else if (user) {
+					await db
+						.update(notes)
+						.set({ order: item.order })
+						.where(and(eq(notes.id, item.id), eq(notes.userId, user.id)));
+				}
+			}
+			return json({ success: true });
+		}
+
+		return json({ error: 'Richiesta non valida.' }, { status: 400 });
+	} catch (err: any) {
+		console.error('Errore patch note:', err);
+		return json({ error: err.message || 'Errore elaborazione richiesta' }, { status: 500 });
+	}
+};
+
 export const DELETE: RequestHandler = async ({ url, locals }) => {
 	const user = locals.user;
 	const id = url.searchParams.get('id');
+	const isPermanent = url.searchParams.get('permanent') === 'true';
+
 	if (!id) {
 		return json({ error: 'Parametro id mancante.' }, { status: 400 });
 	}
 
 	try {
 		const existing = await db.select().from(notes).where(eq(notes.id, id)).limit(1);
-		if (existing.length > 0) {
-			const n = existing[0];
-			if (n.userId && user && n.userId !== user.id && user.role !== 'admin' && !user.isAdmin) {
-				return json({ error: 'Non autorizzato ad eliminare questa nota.' }, { status: 403 });
-			}
-
-			const noteType: Note = {
-				id: n.id,
-				userId: n.userId || undefined,
-				title: n.title,
-				content: n.content,
-				category: n.category,
-				tags: (n.tags as string[]) || [],
-				images: (n.images as string[]) || [],
-				isPinned: n.isPinned,
-				isPublic: n.isPublic,
-				shareId: n.shareId || undefined,
-				order: n.order,
-				createdAt: n.createdAt.toISOString(),
-				updatedAt: n.updatedAt.toISOString()
-			};
-			await deleteImagesForNote(noteType).catch(() => {});
+		if (existing.length === 0) {
+			return json({ error: 'Nota non trovata' }, { status: 404 });
 		}
 
-		await db.delete(notes).where(eq(notes.id, id));
-		return json({ success: true, id });
+		const n = existing[0];
+		if (n.userId && user && n.userId !== user.id && user.role !== 'admin' && !user.isAdmin) {
+			return json({ error: 'Non autorizzato ad eliminare questa nota.' }, { status: 403 });
+		}
+
+		if (isPermanent) {
+			await permanentlyDeleteImages(n).catch(() => {});
+			await db.delete(notes).where(eq(notes.id, id));
+			return json({ success: true, id, permanent: true });
+		} else {
+			await moveImagesToTrash(n).catch(() => {});
+			await db
+				.update(notes)
+				.set({
+					isDeleted: true,
+					deletedAt: new Date(),
+					updatedAt: new Date()
+				})
+				.where(eq(notes.id, id));
+
+			return json({ success: true, id, trash: true });
+		}
 	} catch (err: any) {
 		console.error('Errore eliminazione nota:', err);
 		return json({ error: err.message || 'Impossibile eliminare la nota' }, { status: 500 });
-	}
-};
-
-export const PATCH: RequestHandler = async ({ request, locals }) => {
-	const user = locals.user;
-	try {
-		const payload: { items: { id: string; order: number }[] } = await request.json();
-		if (!payload || !Array.isArray(payload.items)) {
-			return json({ error: 'Formato batch non valido.' }, { status: 400 });
-		}
-
-		for (const item of payload.items) {
-			if (user?.role === 'admin' || user?.isAdmin) {
-				await db.update(notes).set({ order: item.order }).where(eq(notes.id, item.id));
-			} else if (user) {
-				await db
-					.update(notes)
-					.set({ order: item.order })
-					.where(and(eq(notes.id, item.id), eq(notes.userId, user.id)));
-			}
-		}
-
-		return json({ success: true });
-	} catch (err: any) {
-		console.error('Errore riordinamento note:', err);
-		return json({ error: err.message || 'Impossibile aggiornare ordine' }, { status: 500 });
 	}
 };

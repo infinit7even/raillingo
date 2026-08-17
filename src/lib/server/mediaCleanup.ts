@@ -10,7 +10,7 @@ import type { Note } from '$lib/types/notes';
  */
 export function extractMediaFilenames(sources: (string | string[] | undefined | null)[]): Set<string> {
 	const filenames = new Set<string>();
-	const regex = /(?:\/uploads\/|\/api\/uploads\/)([a-zA-Z0-9_.-]+\.(?:webp|jpg|jpeg|png|gif|svg))/gi;
+	const regex = /(?:\/uploads\/|\/uploads\/trash\/|\/api\/uploads\/)([a-zA-Z0-9_.-]+\.(?:webp|jpg|jpeg|png|gif|svg))/gi;
 
 	for (const src of sources) {
 		if (!src) continue;
@@ -40,6 +40,94 @@ export function extractMediaFilenames(sources: (string | string[] | undefined | 
 	}
 
 	return filenames;
+}
+
+export interface MediaItem {
+	id?: string;
+	images?: string[] | null | unknown;
+	description?: string | null;
+	content?: string | null;
+	title?: string | null;
+	fullName?: string | null;
+}
+
+/**
+ * Assicura l'esistenza della cartella trash
+ */
+async function ensureTrashDirExists(): Promise<string> {
+	const trashDir = path.resolve('static/uploads/trash');
+	try {
+		await fs.mkdir(trashDir, { recursive: true });
+	} catch {}
+	return trashDir;
+}
+
+/**
+ * Sposta le immagini associate a una card/nota nella cartella trash
+ */
+export async function moveImagesToTrash(item: MediaItem): Promise<void> {
+	const filenames = extractMediaFilenames([item.images as any, item.description || item.content]);
+	if (filenames.size === 0) return;
+
+	const trashDir = await ensureTrashDirExists();
+	const staticUploadDir = path.resolve('static/uploads');
+
+	for (const fn of filenames) {
+		const srcPath = path.join(staticUploadDir, fn);
+		const destPath = path.join(trashDir, fn);
+		try {
+			const stat = await fs.stat(srcPath);
+			if (stat.isFile()) {
+				await fs.rename(srcPath, destPath);
+			}
+		} catch {
+			// File potrebbe non essere presente sul disco o già spostato
+		}
+	}
+}
+
+/**
+ * Ripristina le immagini dalla cartella trash alla cartella uploads
+ */
+export async function restoreImagesFromTrash(item: MediaItem): Promise<void> {
+	const filenames = extractMediaFilenames([item.images as any, item.description || item.content]);
+	if (filenames.size === 0) return;
+
+	const trashDir = path.resolve('static/uploads/trash');
+	const staticUploadDir = path.resolve('static/uploads');
+
+	for (const fn of filenames) {
+		const srcPath = path.join(trashDir, fn);
+		const destPath = path.join(staticUploadDir, fn);
+		try {
+			const stat = await fs.stat(srcPath);
+			if (stat.isFile()) {
+				await fs.rename(srcPath, destPath);
+			}
+		} catch {
+			// Ignora
+		}
+	}
+}
+
+/**
+ * Elimina definitivamente i file immagine di una scheda o nota dal disco
+ */
+export async function permanentlyDeleteImages(item: MediaItem): Promise<void> {
+	const filenames = extractMediaFilenames([item.images as any, item.description || item.content]);
+	if (filenames.size === 0) return;
+
+	const staticUploadDir = path.resolve('static/uploads');
+	const trashDir = path.resolve('static/uploads/trash');
+
+	for (const fn of filenames) {
+		const normalPath = path.join(staticUploadDir, fn);
+		const trashPath = path.join(trashDir, fn);
+		await Promise.allSettled([
+			fs.unlink(normalPath).catch(() => {}),
+			fs.unlink(trashPath).catch(() => {})
+		]);
+	}
 }
 
 /**
@@ -82,68 +170,10 @@ export async function isImageReferencedElsewhere(
 		}
 	} catch (e) {
 		console.error('Errore verifica referenze immagine:', e);
-		return true; // Per sicurezza, non cancellare se c'è un errore di query
+		return true;
 	}
 
 	return false;
-}
-
-/**
- * Elimina fisicamente il file dal disco se non è referenziato altrove.
- */
-export async function deleteMediaFileIfUnused(
-	imgUrlOrFilename: string,
-	options?: { excludeCardId?: string; excludeNoteId?: string }
-): Promise<boolean> {
-	if (!imgUrlOrFilename || typeof imgUrlOrFilename !== 'string') return false;
-
-	const filename = path.basename(imgUrlOrFilename.split('?')[0].trim());
-	if (!filename || filename.includes('..')) return false;
-
-	const isUsed = await isImageReferencedElsewhere(filename, options);
-	if (isUsed) {
-		return false;
-	}
-
-	const dataPath = path.resolve('data/uploads', filename);
-	const staticPath = path.resolve('static/uploads', filename);
-
-	await Promise.allSettled([
-		fs.unlink(dataPath).catch(() => {}),
-		fs.unlink(staticPath).catch(() => {})
-	]);
-
-	return true;
-}
-
-/**
- * Elimina tutti i file immagine associati a una Card eliminata.
- */
-export async function deleteImagesForCard(card: Card): Promise<number> {
-	const filenames = extractMediaFilenames([card.images, card.description]);
-	let count = 0;
-
-	for (const filename of filenames) {
-		const deleted = await deleteMediaFileIfUnused(filename, { excludeCardId: card.id });
-		if (deleted) count++;
-	}
-
-	return count;
-}
-
-/**
- * Elimina tutti i file immagine associati a una Note eliminata.
- */
-export async function deleteImagesForNote(note: Note): Promise<number> {
-	const filenames = extractMediaFilenames([note.images, note.content]);
-	let count = 0;
-
-	for (const filename of filenames) {
-		const deleted = await deleteMediaFileIfUnused(filename, { excludeNoteId: note.id });
-		if (deleted) count++;
-	}
-
-	return count;
 }
 
 /**
@@ -155,7 +185,11 @@ export async function cleanupUnusedImagesOnCardUpdate(oldCard: Card, newCard: Ca
 
 	for (const filename of oldFiles) {
 		if (!newFiles.has(filename)) {
-			await deleteMediaFileIfUnused(filename, { excludeCardId: oldCard.id });
+			const isUsed = await isImageReferencedElsewhere(filename, { excludeCardId: oldCard.id });
+			if (!isUsed) {
+				const staticPath = path.resolve('static/uploads', filename);
+				await fs.unlink(staticPath).catch(() => {});
+			}
 		}
 	}
 }
@@ -169,7 +203,11 @@ export async function cleanupUnusedImagesOnNoteUpdate(oldNote: Note, newNote: No
 
 	for (const filename of oldFiles) {
 		if (!newFiles.has(filename)) {
-			await deleteMediaFileIfUnused(filename, { excludeNoteId: oldNote.id });
+			const isUsed = await isImageReferencedElsewhere(filename, { excludeNoteId: oldNote.id });
+			if (!isUsed) {
+				const staticPath = path.resolve('static/uploads', filename);
+				await fs.unlink(staticPath).catch(() => {});
+			}
 		}
 	}
 }

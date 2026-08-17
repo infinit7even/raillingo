@@ -28,7 +28,7 @@ class NotesStore {
 			this.hydrated = true;
 
 			if (initialNotes && Array.isArray(initialNotes)) {
-				this.notes = initialNotes;
+				this.notes = initialNotes.filter((n) => !n.isDeleted);
 				this.saveToStorage();
 				this.notify();
 			} else {
@@ -62,7 +62,7 @@ class NotesStore {
 			if (raw) {
 				const parsed = JSON.parse(raw);
 				if (Array.isArray(parsed)) {
-					this.notes = parsed;
+					this.notes = parsed.filter((n) => !n.isDeleted);
 					this.notify();
 					return;
 				}
@@ -98,10 +98,10 @@ class NotesStore {
 			if (res.ok) {
 				const fresh: Note[] = await res.json();
 				if (Array.isArray(fresh)) {
-					this.notes = fresh;
+					this.notes = fresh.filter((n) => !n.isDeleted);
 					this.saveToStorage();
 					this.notify();
-					return fresh;
+					return this.notes;
 				}
 			}
 		} catch (e) {
@@ -109,6 +109,20 @@ class NotesStore {
 		}
 
 		return this.notes;
+	}
+
+	public async fetchTrash(): Promise<Note[]> {
+		try {
+			const res = await fetch('/api/notes?trash=true');
+			if (res.ok) {
+				const list = await res.json();
+				return Array.isArray(list) ? list : [];
+			}
+			return [];
+		} catch (err) {
+			console.error('Errore caricamento cestino note:', err);
+			return [];
+		}
 	}
 
 	public async createNote(noteData: Partial<Note>): Promise<Note> {
@@ -131,6 +145,7 @@ class NotesStore {
 			isPublic: Boolean(noteData.isPublic),
 			shareId: noteData.shareId || localId,
 			order: typeof noteData.order === 'number' ? noteData.order : this.notes.length + 1,
+			isDeleted: false,
 			createdAt: noteData.createdAt || now,
 			updatedAt: now
 		};
@@ -206,6 +221,7 @@ class NotesStore {
 		return updated;
 	}
 
+	/** Sposta l'appunto nel cestino (soft delete) */
 	public async deleteNote(id: string): Promise<boolean> {
 		this.notes = this.notes.filter((n) => n.id !== id);
 		this.saveToStorage();
@@ -225,8 +241,49 @@ class NotesStore {
 			}
 		}
 
-		toastStore.show({ message: '🗑️ Appunto eliminato' });
+		toastStore.show({ message: '🗑️ Appunto spostato nel cestino' });
 		return true;
+	}
+
+	/** Ripristina l'appunto dal cestino */
+	public async restoreNote(id: string): Promise<boolean> {
+		if (browser) {
+			try {
+				const res = await fetch('/api/notes', {
+					method: 'PATCH',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ action: 'restore', id })
+				});
+
+				if (res.ok) {
+					await this.loadNotes();
+					toastStore.show({ message: '♻️ Appunto ripristinato con successo!' });
+					return true;
+				}
+			} catch (e) {
+				console.error('Errore ripristino appunto:', e);
+			}
+		}
+		return false;
+	}
+
+	/** Elimina definitivamente l'appunto e le sue immagini */
+	public async permanentDeleteNote(id: string): Promise<boolean> {
+		if (browser) {
+			try {
+				const res = await fetch(`/api/notes?id=${encodeURIComponent(id)}&permanent=true`, {
+					method: 'DELETE'
+				});
+
+				if (res.ok) {
+					toastStore.show({ message: '✕ Appunto eliminato definitivamente' });
+					return true;
+				}
+			} catch (e) {
+				console.error('Errore eliminazione definitiva appunto:', e);
+			}
+		}
+		return false;
 	}
 
 	public async togglePin(id: string): Promise<void> {
@@ -288,7 +345,6 @@ class NotesStore {
 						if (res.ok) {
 							synced++;
 						} else {
-							// Se 404 tenta POST
 							const postRes = await fetch('/api/notes', {
 								method: 'POST',
 								headers: { 'Content-Type': 'application/json' },

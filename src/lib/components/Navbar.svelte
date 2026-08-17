@@ -43,8 +43,7 @@
 			navStore.close();
 		} else {
 			toastStore.show({
-				message: 'Funzione riservata agli amministratori',
-				type: 'warning'
+				message: '🔒 Funzione riservata agli amministratori autorizzati'
 			});
 		}
 	}
@@ -226,7 +225,7 @@
 				onclick={handleAddCardClick}
 				title="Aggiungi Scheda Rapida"
 			>
-				⚡ AGGIUNGI SCHEDA
+				⚡ AGGIUNGI
 			</button>
 
 			{#if isAdmin}

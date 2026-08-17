@@ -10,6 +10,8 @@ export interface Note {
 	isPublic?: boolean; // Se la nota è condivisa pubblicamente
 	shareId?: string; // ID / token di condivisione link
 	order: number; // Posizione numerica per riordinamento personalizzato
+	isDeleted?: boolean; // Se la nota si trova nel cestino
+	deletedAt?: string; // Data di cancellazione / spostamento nel cestino
 	createdAt: string;
 	updatedAt: string;
 }

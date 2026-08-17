@@ -6,13 +6,16 @@
 	import CardForm from '$lib/components/CardForm.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import { loginWithDiscord, logoutUser } from '$lib/auth-client';
-
 	import { toastStore } from '$lib/stores/toastStore';
+	import { matchesCategory } from '$lib/stores/globalCategoryStore';
 
 	let { data } = $props();
 
 	// Local state
 	let cards = $state<Card[]>([]);
+	let trashCards = $state<Card[]>([]);
+	let activeTab = $state<'active' | 'trash'>('active');
+
 	let user = $derived(data.user);
 	let error = $derived(data.error);
 	let isAdmin = $derived(
@@ -28,13 +31,13 @@
 		await logoutUser();
 	}
 
-	// Form state for creating / editing card
+	// Form state for editing card inline
 	let editingCard = $state<Card | null>(null);
-	let clonedCard = $state<Card | null>(null);
 	let searchQuery = $state('');
 	let selectedCategoryFilter = $state('ALL');
 
 	// Category batch edit state
+	let isCategoryAccordionOpen = $state(false);
 	let categoryToRename = $state<string | null>(null);
 	let newCategoryName = $state('');
 	let renamingInProgress = $state(false);
@@ -58,33 +61,28 @@
 		return categoryStats.filter((s) => s.category.toLowerCase().includes(q));
 	});
 
+	async function loadTrash() {
+		trashCards = await cardsStore.fetchTrash();
+	}
+
 	onMount(() => {
-		const unsubscribe = cardsStore.subscribe((c) => (cards = c));
+		const unsubscribe = cardsStore.subscribe((c) => {
+			cards = c;
+		});
+		loadTrash();
 		return unsubscribe;
 	});
 
 	function resetForm() {
 		editingCard = null;
-		clonedCard = null;
 	}
 
 	function startEdit(card: Card) {
-		clonedCard = null;
 		if (editingCard?.id === card.id) {
 			editingCard = null;
 			return;
 		}
 		editingCard = card;
-		window.scrollTo({ top: 0, behavior: 'smooth' });
-	}
-
-	function startDuplicate(card: Card) {
-		editingCard = null;
-		clonedCard = {
-			...card,
-			id: ''
-		};
-		window.scrollTo({ top: 0, behavior: 'smooth' });
 	}
 
 	async function handleSaveCard(cardData: { id?: string } & Omit<Card, 'createdAt' | 'updatedAt'>) {
@@ -98,7 +96,6 @@
 					id: targetId
 				} as Card);
 				editingCard = null;
-				clonedCard = null;
 				toastStore.show({ message: '💾 Scheda aggiornata con successo!' });
 				setTimeout(() => {
 					const el = document.getElementById(`admin-card-${savedId}`);
@@ -119,17 +116,39 @@
 	}
 
 	async function handleDeleteCard(id: string) {
-		if (confirm('Sei sicuro di voler eliminare questa scheda?')) {
+		try {
+			await cardsStore.deleteCard(id);
+			if (editingCard?.id === id) {
+				resetForm();
+			}
+			await loadTrash();
+			toastStore.show({ message: '🗑️ Scheda spostata nel cestino!' });
+		} catch (err: any) {
+			console.error('Errore durante l\'eliminazione della scheda:', err);
+			toastStore.show({ message: `⚠️ ${err.message || 'Errore eliminazione scheda'}` });
+		}
+	}
+
+	async function handleRestoreCard(id: string) {
+		try {
+			await cardsStore.restoreCard(id);
+			await loadTrash();
+			toastStore.show({ message: '♻️ Scheda ripristinata con successo!' });
+		} catch (err: any) {
+			console.error('Errore ripristino scheda:', err);
+			toastStore.show({ message: `⚠️ ${err.message || 'Errore ripristino scheda'}` });
+		}
+	}
+
+	async function handlePermanentDeleteCard(id: string) {
+		if (confirm('Sei sicuro di voler eliminare DEFINITIVAMENTE questa scheda e le sue immagini? Questa azione è irreversibile.')) {
 			try {
-				await cardsStore.deleteCard(id);
-				if (editingCard?.id === id) {
-					resetForm();
-				}
-				toastStore.show({ message: '🗑️ Scheda eliminata con successo!' });
+				await cardsStore.permanentDeleteCard(id);
+				trashCards = trashCards.filter((c) => c.id !== id);
+				toastStore.show({ message: '✕ Scheda eliminata definitivamente' });
 			} catch (err: any) {
-				console.error('Errore durante l\'eliminazione della scheda:', err);
-				toastStore.show({ message: `⚠️ ${err.message || 'Errore eliminazione scheda'}` });
-				alert(`Impossibile eliminare la scheda: ${err.message || 'Errore server'}`);
+				console.error('Errore eliminazione definitiva:', err);
+				toastStore.show({ message: `⚠️ ${err.message || 'Errore eliminazione definitiva'}` });
 			}
 		}
 	}
@@ -151,7 +170,6 @@
 			return;
 		}
 
-		// Se la categoria di destinazione esiste già, chiedi conferma per l'unione
 		const destinationExists = categoryStats.some(
 			(s) => s.category.toLowerCase() === trimmedNew.toLowerCase() && s.category !== oldCat
 		);
@@ -249,8 +267,6 @@
 		downloadAnchor.remove();
 	}
 
-	import { matchesCategory } from '$lib/stores/globalCategoryStore';
-
 	let filteredCards = $derived(
 		cards.filter((c) => {
 			const matchesCat =
@@ -263,10 +279,25 @@
 				!q ||
 				c.title.toLowerCase().includes(q) ||
 				(c.fullName && c.fullName.toLowerCase().includes(q)) ||
+				(c.acronym && c.acronym.toLowerCase().includes(q)) ||
 				c.description.toLowerCase().includes(q) ||
 				(c.category && c.category.toLowerCase().includes(q));
 
 			return matchesCat && matchesQuery;
+		})
+	);
+
+	let filteredTrashCards = $derived(
+		trashCards.filter((c) => {
+			const q = searchQuery.toLowerCase().trim();
+			return (
+				!q ||
+				c.title.toLowerCase().includes(q) ||
+				(c.fullName && c.fullName.toLowerCase().includes(q)) ||
+				(c.acronym && c.acronym.toLowerCase().includes(q)) ||
+				c.description.toLowerCase().includes(q) ||
+				(c.category && c.category.toLowerCase().includes(q))
+			);
 		})
 	);
 </script>
@@ -274,7 +305,7 @@
 <div class="admin-container">
 	<PageHeader
 		title="Pannello Amministratore"
-		subtitle="Gestione schede, categorie e database"
+		subtitle="Gestione schede, categorie e cestino database"
 		icon="/emoji/star_3d.png"
 		variant="blue"
 		mobileOpenNav={true}
@@ -282,7 +313,7 @@
 
 	{#if !user || !isAdmin}
 		<!-- Login / Unauthorized View -->
-		<div class="login-card">
+		<div class="login-card duo-card">
 			<div class="login-badge">Area Riservata</div>
 			<h1 class="login-title">Pannello Amministratore</h1>
 			<p class="login-desc">
@@ -302,8 +333,8 @@
 				</div>
 			{/if}
 
-			<button type="button" class="discord-login-btn" onclick={() => loginWithDiscord('/admin')}>
-				<svg class="discord-icon" viewBox="0 0 24 24" fill="currentColor">
+			<button type="button" class="duo-btn discord-login-btn flex-btn" onclick={() => loginWithDiscord('/admin')}>
+				<svg class="discord-icon-mini" viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
 					<path
 						d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.106a13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"
 					/>
@@ -317,161 +348,132 @@
 			<!-- Header Admin Bar -->
 			<div class="admin-top duo-card">
 				<div class="user-info">
-					<div>
-						<span class="user-name">👤 {user.username}</span>
-						<span class="user-role">ID Discord: {user.userId} • Email: {user.email || 'N/D'}</span>
-					</div>
+					<span class="user-name">👤 {user.name || user.username || 'Admin'}</span>
+					<span class="user-role">ID: {user.userId || user.id}</span>
 				</div>
 
 				<div class="top-actions">
 					<button class="duo-btn duo-btn-blue export-btn" onclick={exportJSON}>
-						📥 ESPORTA DATI JSON
+						📥 ESPORTA JSON
 					</button>
 					<button class="duo-btn duo-btn-gray logout-btn" onclick={logout}> Esci </button>
 				</div>
 			</div>
 
-			<!-- Form Creazione Nuova Card -->
-			<div class="editor-card duo-card">
-				<h2 class="form-title">
-					{#if editingCard}
-						✏️ Modifica Scheda: "{editingCard.title}"
-					{:else if clonedCard}
-						📋 Aggiungi Scheda Duplicata (da "{clonedCard.title}")
-					{:else}
-						➕ Aggiungi Nuova Card Informativa
-					{/if}
-				</h2>
-
-				{#if editingCard}
-					<div class="admin-clone-notice edit-notice">
-						<span>✏️ Stai modificando la scheda <strong>"{editingCard.title}"</strong>. Salva per applicare le modifiche.</span>
-						<button type="button" class="cancel-clone-btn" onclick={resetForm}>✕ Annulla Modifica</button>
+			<!-- Compact Collapsible Sezione Gestione Categorie -->
+			<div class="categories-accordion-card duo-card">
+				<button
+					type="button"
+					class="accordion-toggle-btn"
+					onclick={() => (isCategoryAccordionOpen = !isCategoryAccordionOpen)}
+				>
+					<div class="accordion-title-group">
+						<span class="accordion-icon">🏷️</span>
+						<span class="accordion-title">Gestione Categorie ({categoryStats.length})</span>
 					</div>
-				{:else if clonedCard}
-					<div class="admin-clone-notice">
-						<span>📋 Stai creando una nuova card clonando i dati di <strong>"{clonedCard.title}"</strong>. Modifica i campi e salva.</span>
-						<button type="button" class="cancel-clone-btn" onclick={resetForm}>✕ Azzera</button>
+					<span class="accordion-arrow">{isCategoryAccordionOpen ? '▲ Riduci' : '▼ Espandi'}</span>
+				</button>
+
+				{#if isCategoryAccordionOpen}
+					<div class="accordion-content">
+						<div class="category-search-box">
+							<input
+								type="text"
+								bind:value={categorySearchQuery}
+								placeholder="Cerca tra le categorie..."
+								class="duo-input cat-search-input"
+							/>
+						</div>
+
+						<div class="category-chips-scroll">
+							{#each filteredCategoryStats as stat}
+								<div
+									class="category-stat-item duo-card"
+									class:is-renaming-active={categoryToRename === stat.category}
+								>
+									<div class="stat-main">
+										<span class="category-name">{stat.category}</span>
+										<span class="category-count-badge">{stat.count} card</span>
+									</div>
+
+									{#if categoryToRename === stat.category}
+										<div class="rename-inline-box">
+											<div class="rename-fields-wrapper">
+												<input
+													type="text"
+													bind:value={newCategoryName}
+													placeholder="Nuovo nome categoria..."
+													class="duo-input rename-input"
+													onkeydown={(e) => {
+														if (e.key === 'Enter') {
+															e.preventDefault();
+															handleBatchRenameCategory(stat.category);
+														} else if (e.key === 'Escape') {
+															categoryToRename = null;
+															newCategoryName = '';
+														}
+													}}
+												/>
+
+												<select
+													bind:value={newCategoryName}
+													class="duo-input quick-merge-select"
+													title="Unisci in un'altra categoria esistente"
+												>
+													<option value={newCategoryName} disabled>-- Unisci a esistente --</option>
+													{#each categoryStats.filter((s) => s.category !== stat.category) as targetStat}
+														<option value={targetStat.category}>
+															Unisci in "{targetStat.category}" ({targetStat.count} card)
+														</option>
+													{/each}
+												</select>
+											</div>
+
+											<div class="rename-actions-row">
+												<button
+													class="duo-btn duo-btn-green save-cat-btn"
+													disabled={renamingInProgress || !newCategoryName.trim()}
+													onclick={() => handleBatchRenameCategory(stat.category)}
+												>
+													{renamingInProgress ? '⏳...' : '💾 Salva'}
+												</button>
+												<button
+													class="duo-btn duo-btn-gray cancel-cat-btn"
+													onclick={() => {
+														categoryToRename = null;
+														newCategoryName = '';
+													}}
+												>
+													✕
+												</button>
+											</div>
+										</div>
+									{:else}
+										<div class="category-card-actions">
+											<button
+												class="cat-action-btn filter"
+												onclick={() => filterCardsByCategory(stat.category)}
+												title="Filtra schede"
+											>
+												🔍 Filtra
+											</button>
+											<button
+												class="cat-action-btn rename"
+												onclick={() => {
+													categoryToRename = stat.category;
+													newCategoryName = stat.category;
+												}}
+												title="Rinomina categoria"
+											>
+												✏️ Rinomina
+											</button>
+										</div>
+									{/if}
+								</div>
+							{/each}
+						</div>
 					</div>
 				{/if}
-
-				<CardForm
-					initialCard={editingCard || clonedCard}
-					onSave={handleSaveCard}
-					onCancel={(editingCard || clonedCard) ? resetForm : undefined}
-					onSelectExistingCard={startEdit}
-					submitLabel={editingCard ? '💾 SALVA MODIFICHE SCHEDA' : clonedCard ? '➕ AGGIUNGI SCHEDA DUPLICATA' : '➕ AGGIUNGI SCHEDA'}
-				/>
-			</div>
-
-			<!-- Sezione Gestione Categorie in Blocco -->
-			<div class="categories-admin-card duo-card">
-				<div class="categories-header-row">
-					<div>
-						<h2 class="section-title">🏷️ Gestione Categorie & Conteggio Card ({categoryStats.length})</h2>
-						<p class="section-subtitle">
-							Rinomina una categoria in blocco o unisci schede tra categorie esistenti.
-						</p>
-					</div>
-
-					<div class="category-search-box">
-						<input
-							type="text"
-							bind:value={categorySearchQuery}
-							placeholder="Cerca categoria..."
-							class="duo-input cat-search-input"
-						/>
-					</div>
-				</div>
-
-				<div class="category-stats-grid">
-					{#each filteredCategoryStats as stat}
-						<div
-							class="category-stat-item duo-card"
-							class:is-renaming-active={categoryToRename === stat.category}
-						>
-							<div class="stat-main">
-								<span class="category-name">{stat.category}</span>
-								<span class="category-count-badge">{stat.count} card</span>
-							</div>
-
-							{#if categoryToRename === stat.category}
-								<div class="rename-inline-box">
-									<div class="rename-fields-wrapper">
-										<input
-											type="text"
-											bind:value={newCategoryName}
-											placeholder="Nuovo nome categoria..."
-											class="duo-input rename-input"
-											onkeydown={(e) => {
-												if (e.key === 'Enter') {
-													e.preventDefault();
-													handleBatchRenameCategory(stat.category);
-												} else if (e.key === 'Escape') {
-													categoryToRename = null;
-													newCategoryName = '';
-												}
-											}}
-										/>
-
-										<!-- Quick Merge Select Dropdown -->
-										<select
-											bind:value={newCategoryName}
-											class="duo-input quick-merge-select"
-											title="Oppure seleziona una categoria esistente in cui unire le schede"
-										>
-											<option value={newCategoryName} disabled>-- Oppure unisci a esistente --</option>
-											{#each categoryStats.filter((s) => s.category !== stat.category) as targetStat}
-												<option value={targetStat.category}>
-													Unisci in "{targetStat.category}" ({targetStat.count} card)
-												</option>
-											{/each}
-										</select>
-									</div>
-
-									<div class="rename-actions-row">
-										<button
-											class="duo-btn duo-btn-green save-cat-btn"
-											disabled={renamingInProgress || !newCategoryName.trim()}
-											onclick={() => handleBatchRenameCategory(stat.category)}
-										>
-											{renamingInProgress ? '⏳ Salvo...' : '💾 Salva'}
-										</button>
-										<button
-											class="duo-btn duo-btn-gray cancel-cat-btn"
-											onclick={() => {
-												categoryToRename = null;
-												newCategoryName = '';
-											}}
-										>
-											✕ Annulla
-										</button>
-									</div>
-								</div>
-							{:else}
-								<div class="category-card-actions">
-									<button
-										class="cat-action-btn filter"
-										onclick={() => filterCardsByCategory(stat.category)}
-										title="Visualizza solo le schede appartenenti a questa categoria"
-									>
-										🔍 Filtra schede
-									</button>
-									<button
-										class="cat-action-btn rename"
-										onclick={() => {
-											categoryToRename = stat.category;
-											newCategoryName = stat.category;
-										}}
-										title="Rinomina in blocco questa categoria"
-									>
-										✏️ Rinomina
-									</button>
-								</div>
-							{/if}
-						</div>
-					{/each}
-				</div>
 			</div>
 
 			<!-- Media Cleaner Panel -->
@@ -480,12 +482,11 @@
 					<div>
 						<h2 class="section-title">🧹 Pulizia File & Immagini Non Utilizzate</h2>
 						<p class="section-subtitle">
-							Scansiona la cartella <code>/uploads</code> per identificare ed eliminare le immagini non
-							collegate.
+							Scansiona la cartella degli upload per eliminare i file non collegati alle schede.
 						</p>
 					</div>
 					<button class="duo-btn duo-btn-blue scan-btn" disabled={mediaLoading} onclick={scanMedia}>
-						{mediaLoading ? '⏳ Scansione...' : '🔍 Scansiona Uploads'}
+						{mediaLoading ? '⏳ Scansione...' : '🔍 Scansiona'}
 					</button>
 				</div>
 
@@ -497,11 +498,11 @@
 						</div>
 						<div class="media-stat-box success">
 							<span class="m-val">{mediaInfo.referencedFiles}</span>
-							<span class="m-lbl">File in Uso</span>
+							<span class="m-lbl">In Uso</span>
 						</div>
 						<div class="media-stat-box warning">
 							<span class="m-val">{mediaInfo.orphanedCount}</span>
-							<span class="m-lbl">File Orfani ({mediaInfo.orphanedBytes ? ((mediaInfo.orphanedBytes || 0) / 1024 / 1024).toFixed(2) : 0} MB)</span>
+							<span class="m-lbl">Orfani ({((mediaInfo.orphanedBytes || 0) / 1024 / 1024).toFixed(2)} MB)</span>
 						</div>
 					</div>
 
@@ -518,318 +519,332 @@
 							</button>
 						</div>
 					{:else}
-						<p class="all-clean-text">✨ Tutti i file multimediali su disco sono collegati e in uso!</p>
+						<p class="all-clean-text">✨ Tutti i file multimediali sono collegati e in uso!</p>
 					{/if}
 				{/if}
 			</div>
 
-			<!-- List Sezione Schede Registrate -->
-			<div class="list-section">
-				<div class="list-header">
-					<h2>Schede Registrate ({filteredCards.length})</h2>
+			<!-- Navigazione Tab: Schede Attive / Cestino -->
+			<div class="admin-tabs-row">
+				<button
+					class="admin-tab-btn"
+					class:active={activeTab === 'active'}
+					onclick={() => (activeTab = 'active')}
+				>
+					📋 Schede Attive ({cards.length})
+				</button>
+				<button
+					class="admin-tab-btn trash-tab"
+					class:active={activeTab === 'trash'}
+					onclick={() => {
+						activeTab = 'trash';
+						loadTrash();
+					}}
+				>
+					🗑️ Cestino ({trashCards.length})
+				</button>
+			</div>
 
-					<div class="list-filters">
-						<select bind:value={selectedCategoryFilter} class="duo-input category-select-filter">
-							<option value="ALL">Tutte le Categorie</option>
-							{#each categoryStats as stat}
-								<option value={stat.category}>{stat.category} ({stat.count})</option>
+			{#if activeTab === 'active'}
+				<!-- List Sezione Schede Attive -->
+				<div class="list-section">
+					<div class="list-header">
+						<div class="list-filters">
+							<select bind:value={selectedCategoryFilter} class="duo-input category-select-filter">
+								<option value="ALL">Tutte le Categorie ({categoryStats.length})</option>
+								{#each categoryStats as stat}
+									<option value={stat.category}>{stat.category} ({stat.count})</option>
+								{/each}
+							</select>
+
+							<input
+								type="text"
+								bind:value={searchQuery}
+								placeholder="Cerca schede..."
+								class="search-input duo-input"
+							/>
+						</div>
+					</div>
+
+					<div class="cards-list">
+						{#if filteredCards.length === 0}
+							<div class="empty-list-box duo-card">
+								Nessuna scheda trovata con i filtri correnti.
+							</div>
+						{:else}
+							{#each filteredCards as card (card.id)}
+								<div
+									id={`admin-card-${card.id}`}
+									class="admin-card-item duo-card"
+									class:is-editing-this={editingCard?.id === card.id}
+								>
+									{#if editingCard?.id === card.id}
+										<div class="inline-edit-wrapper">
+											<div class="inline-edit-header">
+												<div class="inline-edit-title">
+													<span>✏️ Modifica Scheda: <strong>"{card.title}"</strong></span>
+												</div>
+												<button type="button" class="close-inline-btn" onclick={resetForm}>
+													✕ Chiudi
+												</button>
+											</div>
+
+											<CardForm
+												initialCard={editingCard}
+												onSave={handleSaveCard}
+												onCancel={resetForm}
+												submitLabel="💾 Salva Modifiche"
+											/>
+										</div>
+									{:else}
+										<div class="card-row-wrapper">
+											<div class="card-main-info">
+												<div class="item-title-row">
+													<h3 class="card-item-title">{card.title}</h3>
+													{#if card.acronym}
+														<span class="acronym-badge">[{card.acronym}]</span>
+													{/if}
+													{#if card.fullName && card.fullName.trim().toLowerCase() !== card.title.trim().toLowerCase()}
+														<span class="fullname-badge">{card.fullName}</span>
+													{/if}
+													{#if card.category}
+														<span class="category-pill">{card.category}</span>
+													{/if}
+													{#if card.images && card.images.length > 0}
+														<span class="img-count-pill">📷 {card.images.length}</span>
+													{/if}
+													{#if card.showInWiki === false}
+														<span class="wiki-hidden-pill">🚫 No Wiki</span>
+													{/if}
+												</div>
+												<p class="card-item-desc">{card.description}</p>
+											</div>
+
+											<div class="item-actions">
+												<button class="duo-btn duo-btn-blue edit-btn" onclick={() => startEdit(card)}>
+													✏️ Modifica
+												</button>
+												<button class="duo-btn duo-btn-gray delete-btn" onclick={() => handleDeleteCard(card.id)} title="Sposta nel cestino">
+													🗑️ Cestina
+												</button>
+											</div>
+										</div>
+									{/if}
+								</div>
 							{/each}
-						</select>
+						{/if}
+					</div>
+				</div>
+			{:else}
+				<!-- List Sezione Cestino -->
+				<div class="list-section">
+					<div class="trash-banner duo-card">
+						<span>🗑️ Gli elementi nel cestino rimangono conservati finché non vengono eliminati manualmente.</span>
+					</div>
 
+					<div class="list-header">
 						<input
 							type="text"
 							bind:value={searchQuery}
-							placeholder="Filtra tra le schede..."
-							class="search-input duo-input"
+							placeholder="Cerca nel cestino..."
+							class="search-input duo-input full-width-search"
 						/>
 					</div>
-				</div>
 
-				<div class="cards-list">
-					{#each filteredCards as card (card.id)}
-						<div
-							id={`admin-card-${card.id}`}
-							class="admin-card-item duo-card"
-							class:is-editing-this={editingCard?.id === card.id}
-						>
-							{#if editingCard?.id === card.id}
-								<div class="inline-edit-wrapper">
-									<div class="inline-edit-header">
-										<div class="inline-edit-title">
-											<span class="inline-edit-icon">✏️</span>
-											<span>Modifica Scheda: <strong>"{card.title}"</strong></span>
+					<div class="cards-list">
+						{#if filteredTrashCards.length === 0}
+							<div class="empty-list-box duo-card">
+								✨ Il cestino è vuoto. Nessuna scheda eliminata.
+							</div>
+						{:else}
+							{#each filteredTrashCards as card (card.id)}
+								<div class="admin-card-item duo-card in-trash">
+									<div class="card-row-wrapper">
+										<div class="card-main-info">
+											<div class="item-title-row">
+												<h3 class="card-item-title">{card.title}</h3>
+												{#if card.acronym}
+													<span class="acronym-badge">[{card.acronym}]</span>
+												{/if}
+												{#if card.category}
+													<span class="category-pill">{card.category}</span>
+												{/if}
+												<span class="trash-date-pill">Eliminata</span>
+											</div>
+											<p class="card-item-desc">{card.description}</p>
 										</div>
-										<button type="button" class="close-inline-btn" onclick={resetForm}>
-											✕ Chiudi Modifica
-										</button>
-									</div>
 
-									<CardForm
-										initialCard={editingCard}
-										onSave={handleSaveCard}
-										onCancel={resetForm}
-										submitLabel="💾 Salva Modifiche"
-									/>
-								</div>
-							{:else}
-								<div class="card-main-info">
-									<div class="item-title-row">
-										<h3 class="card-item-title">{card.title}</h3>
-										{#if card.fullName && card.fullName.trim().toLowerCase() !== card.title.trim().toLowerCase()}
-											<span class="fullname-badge">{card.fullName}</span>
-										{/if}
-										{#if card.category}
-											<span class="category-pill">{card.category}</span>
-										{/if}
-										{#if card.images && card.images.length > 0}
-											<span class="img-count-pill">📷 {card.images.length}</span>
-										{/if}
+										<div class="item-actions">
+											<button
+												class="duo-btn duo-btn-green restore-btn"
+												onclick={() => handleRestoreCard(card.id)}
+												title="Ripristina la scheda nelle schede attive"
+											>
+												♻️ Ripristina
+											</button>
+											<button
+												class="duo-btn duo-btn-red perm-delete-btn"
+												onclick={() => handlePermanentDeleteCard(card.id)}
+												title="Elimina definitivamente la scheda e le sue immagini"
+											>
+												✕ Elimina Definitivamente
+											</button>
+										</div>
 									</div>
-									<p class="card-item-desc">{card.description}</p>
 								</div>
-
-								<div class="item-actions">
-									<button class="duplicate-btn" onclick={() => startDuplicate(card)} title="Duplica e crea nuova scheda da questa">
-										📋 Duplica
-									</button>
-									<button class="edit-btn" onclick={() => startEdit(card)}> ✏️ Modifica </button>
-									<button class="delete-btn" onclick={() => handleDeleteCard(card.id)}>
-										🗑️ Elimina
-									</button>
-								</div>
-							{/if}
-						</div>
-					{/each}
+							{/each}
+						{/if}
+					</div>
 				</div>
-			</div>
+			{/if}
 		</div>
 	{/if}
 </div>
 
 <style>
 	.admin-container {
-		width: 100%;
-		max-width: 850px;
-		margin: 0 auto;
-	}
-
-	.login-card {
-		background: var(--card-bg);
-		border: 1px solid var(--border-color);
-		border-radius: 28px;
-		padding: 2.5rem;
-		text-align: center;
 		display: flex;
 		flex-direction: column;
-		gap: 1.5rem;
-		align-items: center;
-		box-shadow: 0 12px 36px rgba(0, 0, 0, 0.15);
+		gap: 1.25rem;
+		max-width: 800px;
+		margin: 0 auto;
+		width: 100%;
+		box-sizing: border-box;
+		padding-bottom: 2.5rem;
 	}
 
-	.login-badge {
-		padding: 0.25rem 0.85rem;
-		border-radius: 9999px;
-		font-size: 0.75rem;
-		font-weight: 800;
-		text-transform: uppercase;
-		background: var(--accent-light-bg);
-		color: var(--accent-color);
-		border: 1px solid var(--border-color);
-	}
-
-	.login-title {
-		font-size: 2.2rem;
-		font-weight: 900;
-		margin: 0;
-	}
-
-	.login-desc {
-		color: var(--text-muted);
-		line-height: 1.6;
-		max-width: 500px;
-	}
-
-	.error-banner {
-		background: rgba(239, 68, 68, 0.15);
-		border: 1px solid #ef4444;
-		color: #f87171;
-		padding: 0.85rem 1.25rem;
-		border-radius: 14px;
-		font-size: 0.9rem;
-		font-weight: 700;
-	}
-
-	.discord-login-btn {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.75rem;
-		padding: 1rem 2rem;
-		border-radius: 16px;
-		background: #5865f2;
-		color: white;
-		font-weight: 800;
-		font-size: 1.1rem;
-		text-decoration: none;
-		box-shadow: 0 6px 20px rgba(88, 101, 242, 0.4);
-		transition: transform 0.2s ease;
-	}
-
-	.discord-login-btn:hover {
-		transform: translateY(-2px);
-	}
-
-	.discord-icon {
-		width: 24px;
-		height: 24px;
-	}
-
-	/* Dashboard */
 	.admin-panel {
 		display: flex;
 		flex-direction: column;
-		gap: 2rem;
+		gap: 1.15rem;
 	}
 
 	.admin-top {
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
+		padding: 0.85rem 1.15rem;
 		background: var(--card-bg);
-		border: 1px solid var(--border-color);
-		border-radius: 20px;
-		padding: 1rem 1.5rem;
+		border-radius: 16px;
 	}
 
 	.user-info {
 		display: flex;
-		align-items: center;
-		gap: 0.85rem;
+		flex-direction: column;
+		gap: 0.15rem;
 	}
 
 	.user-name {
-		font-weight: 800;
-		display: block;
+		font-size: 0.95rem;
+		font-weight: 900;
+		color: var(--text-color);
 	}
 
 	.user-role {
-		font-size: 0.75rem;
-		color: var(--accent-color);
+		font-size: 0.72rem;
+		color: var(--text-muted);
 		font-weight: 700;
 	}
 
 	.top-actions {
 		display: flex;
-		gap: 0.75rem;
+		gap: 0.5rem;
 	}
 
 	.export-btn,
 	.logout-btn {
-		padding: 0.6rem 1rem;
-		border-radius: 12px;
-		font-size: 0.85rem;
-		font-weight: 700;
-		text-decoration: none;
-		border: 1px solid var(--border-color);
-		cursor: pointer;
+		font-size: 0.78rem;
+		padding: 0.45rem 0.85rem;
 	}
 
-	.export-btn {
-		background: var(--accent-light-bg);
-		color: var(--accent-color);
-	}
-
-	.logout-btn {
-		background: var(--card-bg-subtle);
-		color: var(--text-color);
-	}
-
-	/* Editor Form */
-	.editor-card {
+	/* Accordion Categorie */
+	.categories-accordion-card {
+		padding: 0.75rem 1rem;
 		background: var(--card-bg);
-		border: 1px solid var(--border-color);
-		border-radius: 24px;
-		padding: 1.75rem;
-		display: flex;
-		flex-direction: column;
-		gap: 1.25rem;
-		box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
-	}
-
-	.form-title {
-		font-size: 1.4rem;
-		font-weight: 800;
-		margin: 0 0 1rem 0;
-	}
-
-	/* Sezione Categorie Admin */
-	.categories-admin-card {
-		background: var(--card-bg);
-		border-radius: 24px;
-		padding: 1.5rem;
-		display: flex;
-		flex-direction: column;
-		gap: 1.25rem;
-	}
-
-	.categories-header-row {
-		display: flex;
-		justify-content: space-between;
-		align-items: flex-start;
-		gap: 1rem;
-		flex-wrap: wrap;
-	}
-
-	.cat-search-input {
-		font-size: 0.82rem;
-		padding: 0.45rem 0.75rem;
-		min-width: 180px;
-	}
-
-	.category-stats-grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-		gap: 0.85rem;
-	}
-
-	.category-stat-item {
-		padding: 1rem;
+		border-radius: 16px;
 		display: flex;
 		flex-direction: column;
 		gap: 0.75rem;
-		background: var(--card-bg-subtle);
-		border: 1px solid var(--border-color);
-		border-radius: 16px;
-		transition: border-color 0.2s ease, box-shadow 0.2s ease;
 	}
 
-	.category-stat-item.is-renaming-active {
-		border-color: var(--accent-color);
-		box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-color) 30%, transparent);
-		grid-column: span 1;
+	.accordion-toggle-btn {
+		background: none;
+		border: none;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		width: 100%;
+		cursor: pointer;
+		padding: 0.25rem 0;
+	}
+
+	.accordion-title-group {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	.accordion-icon {
+		font-size: 1.1rem;
+	}
+
+	.accordion-title {
+		font-size: 0.92rem;
+		font-weight: 900;
+		color: var(--text-color);
+	}
+
+	.accordion-arrow {
+		font-size: 0.75rem;
+		font-weight: 800;
+		color: var(--accent-color);
+	}
+
+	.accordion-content {
+		display: flex;
+		flex-direction: column;
+		gap: 0.65rem;
+		border-top: 1px solid var(--border-color);
+		padding-top: 0.75rem;
+	}
+
+	.category-chips-scroll {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+		gap: 0.6rem;
+		max-height: 260px;
+		overflow-y: auto;
+		padding-right: 0.25rem;
+	}
+
+	.category-stat-item {
+		padding: 0.65rem 0.85rem;
+		background: var(--card-bg-subtle);
+		border-radius: 12px;
+		display: flex;
+		flex-direction: column;
+		gap: 0.45rem;
 	}
 
 	.stat-main {
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		gap: 0.5rem;
 	}
 
 	.category-name {
-		font-weight: 900;
-		font-size: 0.95rem;
+		font-size: 0.82rem;
+		font-weight: 800;
 		color: var(--text-color);
-		word-break: break-word;
 	}
 
 	.category-count-badge {
-		font-size: 0.75rem;
-		font-weight: 800;
-		background: var(--accent-color);
-		color: #ffffff;
-		padding: 0.2rem 0.6rem;
-		border-radius: 12px;
-		white-space: nowrap;
+		font-size: 0.68rem;
+		font-weight: 900;
+		background: var(--accent-light-bg);
+		color: var(--accent-color);
+		padding: 0.15rem 0.45rem;
+		border-radius: 6px;
 	}
 
 	.category-card-actions {
@@ -838,184 +853,239 @@
 	}
 
 	.cat-action-btn {
-		flex: 1;
-		font-size: 0.76rem;
+		font-size: 0.72rem;
 		font-weight: 800;
-		padding: 0.35rem 0.5rem;
+		padding: 0.25rem 0.5rem;
 		border-radius: 8px;
-		cursor: pointer;
-		transition: all 0.15s ease;
-		text-align: center;
-	}
-
-	.cat-action-btn.filter {
-		background: var(--card-bg);
 		border: 1px solid var(--border-color);
-		color: var(--text-muted);
+		background: var(--card-bg);
+		color: var(--text-color);
+		cursor: pointer;
 	}
 
 	.cat-action-btn.filter:hover {
-		color: var(--accent-color);
 		border-color: var(--accent-color);
-		background: var(--accent-light-bg);
-	}
-
-	.cat-action-btn.rename {
-		background: var(--card-bg);
-		border: 1px dashed var(--border-color);
 		color: var(--accent-color);
 	}
 
 	.cat-action-btn.rename:hover {
-		background: var(--accent-color);
-		color: #ffffff;
-		border-style: solid;
+		border-color: var(--yellow-color);
+		color: var(--yellow-color);
 	}
 
 	.rename-inline-box {
 		display: flex;
 		flex-direction: column;
-		gap: 0.5rem;
-		width: 100%;
+		gap: 0.45rem;
 	}
 
 	.rename-fields-wrapper {
 		display: flex;
 		flex-direction: column;
-		gap: 0.4rem;
+		gap: 0.35rem;
 	}
 
-	.rename-input {
-		font-size: 0.85rem;
-		padding: 0.45rem 0.6rem;
-		font-weight: 700;
-	}
-
+	.rename-input,
 	.quick-merge-select {
-		font-size: 0.75rem;
-		padding: 0.35rem 0.5rem;
-		color: var(--text-muted);
+		font-size: 0.78rem;
+		padding: 0.35rem 0.6rem;
 	}
 
 	.rename-actions-row {
 		display: flex;
-		gap: 0.4rem;
+		gap: 0.35rem;
 	}
 
 	.save-cat-btn,
 	.cancel-cat-btn {
-		flex: 1;
-		padding: 0.4rem 0.6rem;
+		font-size: 0.72rem;
+		padding: 0.3rem 0.6rem;
+	}
+
+	/* Media Cleaner */
+	.media-cleaner-card {
+		padding: 0.85rem 1.15rem;
+		background: var(--card-bg);
+		border-radius: 16px;
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+	}
+
+	.cleaner-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+	}
+
+	.section-title {
+		font-size: 0.92rem;
+		font-weight: 900;
+		margin: 0;
+		color: var(--text-color);
+	}
+
+	.section-subtitle {
+		font-size: 0.75rem;
+		color: var(--text-muted);
+		margin: 0.15rem 0 0 0;
+	}
+
+	.scan-btn {
+		font-size: 0.78rem;
+		padding: 0.45rem 0.85rem;
+	}
+
+	.media-stats-grid {
+		display: grid;
+		grid-template-columns: repeat(3, 1fr);
+		gap: 0.6rem;
+	}
+
+	.media-stat-box {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		padding: 0.5rem;
+		background: var(--card-bg-subtle);
+		border-radius: 10px;
+		border: 1px solid var(--border-color);
+	}
+
+	.m-val {
+		font-size: 1.1rem;
+		font-weight: 900;
+		color: var(--text-color);
+	}
+
+	.m-lbl {
+		font-size: 0.68rem;
+		font-weight: 700;
+		color: var(--text-muted);
+		text-align: center;
+	}
+
+	.media-stat-box.success .m-val {
+		color: #22c55e;
+	}
+
+	.media-stat-box.warning .m-val {
+		color: #f59e0b;
+	}
+
+	.clean-btn {
+		width: 100%;
+		font-size: 0.85rem;
+		padding: 0.65rem 1rem;
+	}
+
+	.all-clean-text {
 		font-size: 0.8rem;
+		font-weight: 800;
+		color: #22c55e;
+		margin: 0;
+	}
+
+	/* Tabs */
+	.admin-tabs-row {
+		display: flex;
+		gap: 0.5rem;
+	}
+
+	.admin-tab-btn {
+		flex: 1;
+		padding: 0.7rem 1rem;
+		font-size: 0.85rem;
+		font-weight: 900;
+		border-radius: 14px;
+		background: var(--card-bg);
+		border: 2px solid var(--border-color);
+		color: var(--text-muted);
+		cursor: pointer;
+		transition: all 0.15s ease;
+	}
+
+	.admin-tab-btn.active {
+		border-color: var(--accent-color);
+		background: var(--accent-light-bg);
+		color: var(--accent-color);
+	}
+
+	.admin-tab-btn.trash-tab.active {
+		border-color: #ef4444;
+		background: rgba(239, 68, 68, 0.12);
+		color: #ef4444;
 	}
 
 	/* List Section */
 	.list-section {
 		display: flex;
 		flex-direction: column;
-		gap: 1rem;
+		gap: 0.85rem;
+	}
+
+	.trash-banner {
+		padding: 0.75rem 1rem;
+		background: rgba(239, 68, 68, 0.08);
+		border: 1.5px solid #ef4444;
+		border-radius: 12px;
+		font-size: 0.82rem;
+		color: var(--text-color);
+		font-weight: 700;
 	}
 
 	.list-header {
 		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		flex-wrap: wrap;
-		gap: 0.75rem;
+		flex-direction: column;
+		gap: 0.5rem;
 	}
 
 	.list-filters {
 		display: flex;
 		gap: 0.5rem;
-		flex-wrap: wrap;
 	}
 
 	.category-select-filter {
-		font-size: 0.85rem;
-		padding: 0.55rem 0.85rem;
+		max-width: 240px;
+		font-size: 0.82rem;
 	}
 
 	.search-input {
-		padding: 0.55rem 0.85rem;
-		font-size: 0.85rem;
+		flex: 1;
+		font-size: 0.82rem;
+	}
+
+	.full-width-search {
+		width: 100%;
 	}
 
 	.cards-list {
 		display: flex;
 		flex-direction: column;
-		gap: 0.75rem;
+		gap: 0.65rem;
 	}
 
 	.admin-card-item {
+		padding: 0.85rem 1.15rem;
 		background: var(--card-bg);
-		border: 1px solid var(--border-color);
 		border-radius: 16px;
-		padding: 1.25rem;
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		gap: 1rem;
-		transition: all 0.2s ease;
-	}
-
-	.admin-card-item.is-editing-this {
-		flex-direction: column;
-		align-items: stretch;
-		border-color: var(--accent-color);
-		border-width: 2px;
-		box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
-		padding: 1.5rem;
-		gap: 1rem;
-	}
-
-	.inline-edit-wrapper {
-		width: 100%;
-		display: flex;
-		flex-direction: column;
-		gap: 1rem;
-	}
-
-	.inline-edit-header {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 0.75rem;
-		padding-bottom: 0.75rem;
-		border-bottom: 1.5px solid var(--border-color);
-	}
-
-	.inline-edit-title {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		font-size: 1.05rem;
-		font-weight: 800;
-		color: var(--accent-color);
-	}
-
-	.close-inline-btn {
-		background: var(--card-bg-subtle);
-		border: 1.5px solid var(--border-color);
-		border-radius: 10px;
-		padding: 0.35rem 0.75rem;
-		font-size: 0.8rem;
-		font-weight: 800;
-		color: var(--text-muted);
-		cursor: pointer;
 		transition: all 0.15s ease;
 	}
 
-	.close-inline-btn:hover {
-		color: #ff5e5b;
-		border-color: #ff5e5b;
-		background: rgba(255, 94, 91, 0.1);
+	.card-row-wrapper {
+		display: flex;
+		justify-content: space-between;
+		align-items: flex-start;
+		gap: 0.85rem;
 	}
 
-	@media (max-width: 600px) {
-		.admin-card-item:not(.is-editing-this) {
+	@media (max-width: 650px) {
+		.card-row-wrapper {
 			flex-direction: column;
-			align-items: flex-start;
 		}
+
 		.item-actions {
 			width: 100%;
 			justify-content: flex-end;
@@ -1026,212 +1096,185 @@
 		display: flex;
 		flex-direction: column;
 		gap: 0.35rem;
+		flex: 1;
+		min-width: 0;
 	}
 
 	.item-title-row {
 		display: flex;
 		align-items: center;
-		gap: 0.6rem;
+		gap: 0.45rem;
 		flex-wrap: wrap;
 	}
 
 	.card-item-title {
-		font-size: 1.2rem;
+		font-size: 1.05rem;
+		font-weight: 900;
+		color: var(--text-color);
+		margin: 0;
+	}
+
+	.acronym-badge {
+		font-size: 0.8rem;
 		font-weight: 800;
 		color: var(--accent-color);
-		margin: 0;
 	}
 
 	.fullname-badge {
-		font-size: 0.8rem;
-		font-weight: 800;
-		color: var(--accent-color);
-		background: var(--accent-light-bg);
-		padding: 0.2rem 0.6rem;
-		border-radius: 8px;
-		border: 1px solid var(--accent-color);
-	}
-
-	.category-pill {
-		font-size: 0.75rem;
-		font-weight: 800;
-		color: var(--green-color);
-		background: rgba(34, 197, 94, 0.12);
-		padding: 0.15rem 0.55rem;
-		border-radius: 8px;
-		border: 1px solid var(--green-color);
-	}
-
-	.img-count-pill {
-		font-size: 0.7rem;
+		font-size: 0.78rem;
+		color: var(--text-muted);
 		font-weight: 700;
-		padding: 0.15rem 0.5rem;
+	}
+
+	.category-pill,
+	.img-count-pill,
+	.wiki-hidden-pill,
+	.trash-date-pill {
+		font-size: 0.7rem;
+		font-weight: 800;
+		padding: 0.15rem 0.45rem;
 		border-radius: 6px;
 		background: var(--card-bg-subtle);
 		color: var(--text-muted);
+		border: 1px solid var(--border-color);
+	}
+
+	.wiki-hidden-pill {
+		color: #ef4444;
+		border-color: rgba(239, 68, 68, 0.4);
+		background: rgba(239, 68, 68, 0.08);
+	}
+
+	.trash-date-pill {
+		color: #f59e0b;
 	}
 
 	.card-item-desc {
-		font-size: 0.875rem;
+		font-size: 0.85rem;
 		color: var(--text-muted);
+		line-height: 1.45;
 		margin: 0;
-		display: -webkit-box;
-		-webkit-line-clamp: 2;
-		line-clamp: 2;
-		-webkit-box-orient: vertical;
-		overflow: hidden;
-	}
-
-	.admin-clone-notice {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 0.6rem;
-		padding: 0.65rem 0.85rem;
-		background: rgba(88, 204, 2, 0.12);
-		border: 1.5px solid var(--green-color);
-		border-radius: 12px;
-		font-size: 0.8rem;
-		color: var(--text-color);
-		margin-bottom: 0.75rem;
-	}
-
-	.cancel-clone-btn {
-		background: var(--card-bg);
-		border: 1.5px solid var(--border-color);
-		border-radius: 8px;
-		padding: 0.25rem 0.55rem;
-		font-size: 0.72rem;
-		font-weight: 800;
-		color: var(--text-muted);
-		cursor: pointer;
-		white-space: nowrap;
-	}
-
-	.cancel-clone-btn:hover {
-		color: #ff5e5b;
-		border-color: #ff5e5b;
+		word-break: break-word;
 	}
 
 	.item-actions {
 		display: flex;
 		gap: 0.4rem;
-		flex-wrap: wrap;
+		flex-shrink: 0;
+		align-items: center;
 	}
 
-	.duplicate-btn,
 	.edit-btn,
-	.delete-btn {
-		padding: 0.45rem 0.75rem;
-		border-radius: 10px;
+	.delete-btn,
+	.restore-btn,
+	.perm-delete-btn {
 		font-size: 0.78rem;
-		font-weight: 800;
-		border: 1.5px solid var(--border-color);
-		cursor: pointer;
-		transition: all 0.15s ease;
+		padding: 0.4rem 0.75rem;
 		white-space: nowrap;
 	}
 
-	.duplicate-btn {
-		background: var(--card-bg-subtle);
-		color: var(--accent-color);
-		border-color: var(--accent-color);
+	.inline-edit-wrapper {
+		display: flex;
+		flex-direction: column;
+		gap: 0.85rem;
+		width: 100%;
 	}
 
-	.duplicate-btn:hover {
-		background: var(--accent-light-bg);
-	}
-
-	.edit-btn {
-		background: var(--card-bg-subtle);
-		color: var(--text-color);
-	}
-
-	.edit-btn:hover {
-		background: var(--hover-bg);
-	}
-
-	.delete-btn {
-		background: rgba(239, 68, 68, 0.1);
-		color: #ef4444;
-		border-color: rgba(239, 68, 68, 0.3);
-	}
-
-	.delete-btn:hover {
-		background: rgba(239, 68, 68, 0.2);
-	}
-
-	.media-cleaner-card {
-		background: var(--card-bg);
-		border: 2px solid var(--border-color);
-		border-radius: 18px;
-		padding: 1.5rem;
-	}
-
-	.cleaner-header {
+	.inline-edit-header {
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		flex-wrap: wrap;
-		gap: 1rem;
+		padding-bottom: 0.5rem;
+		border-bottom: 1.5px solid var(--border-color);
 	}
 
-	.scan-btn {
-		white-space: nowrap;
-		font-size: 0.88rem;
-		padding: 0.65rem 1.15rem;
-	}
-
-	.media-stats-grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-		gap: 0.75rem;
-		margin-top: 1.25rem;
-	}
-
-	.media-stat-box {
-		padding: 0.85rem;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		text-align: center;
-		gap: 0.25rem;
-		background: var(--card-bg-subtle);
-		border-radius: 14px;
-		border: 1px solid var(--border-color);
-	}
-
-	.m-val {
-		font-size: 1.4rem;
+	.inline-edit-title {
+		font-size: 0.95rem;
 		font-weight: 900;
 		color: var(--accent-color);
 	}
 
-	.media-stat-box.warning .m-val {
-		color: #f59e0b !important;
-	}
-
-	.media-stat-box.success .m-val {
-		color: var(--green-color) !important;
-	}
-
-	.m-lbl {
+	.close-inline-btn {
+		background: none;
+		border: 1px solid var(--border-color);
+		border-radius: 8px;
+		color: var(--text-muted);
 		font-size: 0.75rem;
 		font-weight: 800;
+		padding: 0.25rem 0.5rem;
+		cursor: pointer;
+	}
+
+	.close-inline-btn:hover {
+		color: var(--text-color);
+		border-color: var(--text-color);
+	}
+
+	.empty-list-box {
+		padding: 2rem;
+		text-align: center;
 		color: var(--text-muted);
-		text-transform: uppercase;
-	}
-
-	.clean-action-box {
-		margin-top: 1.25rem;
-		display: flex;
-		justify-content: flex-end;
-	}
-
-	.all-clean-text {
-		margin: 1rem 0 0 0;
 		font-size: 0.88rem;
+		font-weight: 700;
+		background: var(--card-bg);
+		border-radius: 16px;
+	}
+
+	.login-card {
+		padding: 2rem;
+		background: var(--card-bg);
+		border-radius: 20px;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		text-align: center;
+		gap: 1rem;
+	}
+
+	.login-badge {
+		font-size: 0.75rem;
+		font-weight: 900;
+		color: var(--accent-color);
+		background: var(--accent-light-bg);
+		padding: 0.25rem 0.65rem;
+		border-radius: 999px;
+	}
+
+	.login-title {
+		font-size: 1.4rem;
+		font-weight: 900;
+		margin: 0;
+	}
+
+	.login-desc {
+		font-size: 0.88rem;
+		color: var(--text-muted);
+		max-width: 480px;
+		line-height: 1.5;
+		margin: 0;
+	}
+
+	.error-banner {
+		padding: 0.75rem 1rem;
+		background: rgba(239, 68, 68, 0.15);
+		border: 1.5px solid #ef4444;
+		border-radius: 12px;
+		color: #ef4444;
+		font-size: 0.82rem;
 		font-weight: 800;
-		color: var(--green-color);
+	}
+
+	.discord-login-btn {
+		background-color: #5865f2;
+		color: #ffffff;
+		border: 2px solid #4752c4;
+		border-bottom: 4px solid #4752c4;
+		display: inline-flex;
+		align-items: center;
+		gap: 0.5rem;
+		font-weight: 900;
+		padding: 0.75rem 1.5rem;
+		border-radius: 14px;
+		cursor: pointer;
 	}
 </style>

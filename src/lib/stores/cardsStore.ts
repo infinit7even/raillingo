@@ -8,10 +8,7 @@ class CardsStore {
 
 	private hydrated = false;
 
-	constructor() {
-		// L'inizializzazione avviene tramite hydrate() con i dati SSR,
-		// evitando un secondo fetch di /api/cards al primo caricamento.
-	}
+	constructor() {}
 
 	/** Inizializza lo store con i dati provenienti dal server (SSR). */
 	public hydrate(initialCards: Card[] | null | undefined) {
@@ -19,13 +16,13 @@ class CardsStore {
 		this.hydrated = true;
 
 		if (initialCards && initialCards.length > 0) {
-			this.cards = initialCards;
+			this.cards = initialCards.filter((c) => !c.isDeleted);
 			this.saveToStorage();
 			this.notify();
 			return;
 		}
 
-		// Fallback: cache locale + API (accesso senza dati SSR)
+		// Fallback: cache locale + API
 		this.loadFromStorageOrApi();
 	}
 
@@ -53,22 +50,13 @@ class CardsStore {
 				}
 			}
 
-			// 2. Fetch fresh cards from API / static JSON
+			// 2. Fetch fresh cards from API
 			const res = await fetch('/api/cards');
 			if (res.ok) {
 				const freshCards: Card[] = await res.json();
-				this.cards = freshCards;
-				localStorage.setItem('rf_cards_cache', JSON.stringify(freshCards));
+				this.cards = freshCards.filter((c) => !c.isDeleted);
+				this.saveToStorage();
 				this.notify();
-			} else {
-				// Fallback to static JSON file directly
-				const fallbackRes = await fetch('/data/cards.json');
-				if (fallbackRes.ok) {
-					const fallbackCards: Card[] = await fallbackRes.json();
-					this.cards = fallbackCards;
-					localStorage.setItem('rf_cards_cache', JSON.stringify(fallbackCards));
-					this.notify();
-				}
 			}
 		} catch (err) {
 			console.warn('Modalità offline o errore durante il caricamento delle card:', err);
@@ -79,6 +67,19 @@ class CardsStore {
 
 	public get list(): Card[] {
 		return this.cards;
+	}
+
+	public async fetchTrash(): Promise<Card[]> {
+		try {
+			const res = await fetch('/api/cards?trash=true');
+			if (res.ok) {
+				return await res.json();
+			}
+			return [];
+		} catch (err) {
+			console.error('Errore caricamento cestino card:', err);
+			return [];
+		}
 	}
 
 	public async addCard(
@@ -134,6 +135,7 @@ class CardsStore {
 		return savedCard;
 	}
 
+	/** Sposta la scheda nel cestino (soft-delete) */
 	public async deleteCard(id: string): Promise<boolean> {
 		const res = await fetch(`/api/cards?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
 		if (!res.ok) {
@@ -147,18 +149,39 @@ class CardsStore {
 		return true;
 	}
 
-	public async resetToDefault() {
-		try {
-			const res = await fetch('/data/cards.json');
-			if (res.ok) {
-				const defaultCards = await res.json();
-				this.cards = defaultCards;
-				this.saveToStorage();
-				this.notify();
-			}
-		} catch (e) {
-			console.error('Errore nel ripristino delle card predefinite:', e);
+	/** Ripristina una scheda dal cestino */
+	public async restoreCard(id: string): Promise<boolean> {
+		const res = await fetch('/api/cards', {
+			method: 'PATCH',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ action: 'restore', id })
+		});
+
+		if (!res.ok) {
+			const errData = await res.json().catch(() => ({ error: 'Errore ripristino scheda' }));
+			throw new Error(errData.error || `Errore ripristino scheda (${res.status})`);
 		}
+
+		// Ricarica la lista attiva
+		await this.loadFromStorageOrApi();
+		return true;
+	}
+
+	/** Elimina definitivamente una scheda e le sue immagini dal disco e dal database */
+	public async permanentDeleteCard(id: string): Promise<boolean> {
+		const res = await fetch(`/api/cards?id=${encodeURIComponent(id)}&permanent=true`, {
+			method: 'DELETE'
+		});
+
+		if (!res.ok) {
+			const errData = await res.json().catch(() => ({ error: 'Errore eliminazione definitiva' }));
+			throw new Error(errData.error || `Errore eliminazione definitiva (${res.status})`);
+		}
+
+		this.cards = this.cards.filter((c) => c.id !== id);
+		this.saveToStorage();
+		this.notify();
+		return true;
 	}
 
 	public async updateCategoryBatch(oldCategory: string, newCategory: string): Promise<number> {
@@ -178,24 +201,25 @@ class CardsStore {
 			throw new Error(errData.error || `Errore rinomina categoria (${res.status})`);
 		}
 
-		const result = await res.json();
-		const count: number = result.count || 0;
-
-		// Aggiorna lo stato locale
-		this.cards = this.cards.map((c) =>
-			(c.category || '').trim() === oldCat
-				? { ...c, category: newCat, updatedAt: new Date().toISOString() }
-				: c
-		);
+		const data = await res.json();
+		this.cards = this.cards.map((c) => {
+			if ((c.category || '').trim() === oldCat) {
+				return { ...c, category: newCat };
+			}
+			return c;
+		});
 		this.saveToStorage();
 		this.notify();
-
-		return count;
+		return data.count || 0;
 	}
 
 	private saveToStorage() {
 		if (browser) {
-			localStorage.setItem('rf_cards_cache', JSON.stringify(this.cards));
+			try {
+				localStorage.setItem('rf_cards_cache', JSON.stringify(this.cards));
+			} catch (e) {
+				console.error('Errore salvataggio card in localStorage:', e);
+			}
 		}
 	}
 

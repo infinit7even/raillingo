@@ -11,6 +11,8 @@ export interface Card {
 	images?: string[]; // Lista URL o percorsi immagini
 	showInWiki?: boolean; // Se visibile nella Wiki (default: true)
 	gameModes?: string[]; // Mini giochi abilitati: ['flashcard', 'quiz', 'reels', 'scrittura'] (default: tutti)
+	isDeleted?: boolean; // Se la card si trova nel cestino
+	deletedAt?: string; // Data di spostamento nel cestino
 	createdAt: string;
 	updatedAt: string;
 }

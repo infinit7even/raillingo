@@ -5,78 +5,25 @@ import { isAuthorizedAdmin } from '$lib/server/auth';
 import { isSameOriginRequest } from '$lib/server/csrf';
 import { db } from '$lib/server/db';
 import { cards as cardsTable, notes as notesTable } from '$lib/server/db/schema';
-import type { Card } from '$lib/types/cards';
-import type { Note } from '$lib/types/notes';
-
-function extractImageFilenamesFromNotes(notes: Note[]): Set<string> {
-	const filenames = new Set<string>();
-	const regex = /\/uploads\/([^)"'\s]+)/g;
-
-	for (const note of notes) {
-		if (note.images && Array.isArray(note.images)) {
-			for (const img of note.images) {
-				if (typeof img === 'string') {
-					filenames.add(path.basename(img.split('?')[0]));
-				}
-			}
-		}
-		if (note.content && typeof note.content === 'string') {
-			let match;
-			while ((match = regex.exec(note.content)) !== null) {
-				filenames.add(path.basename(match[1].split('?')[0]));
-			}
-		}
-	}
-	return filenames;
-}
-
-function extractImageFilenamesFromCards(cards: Card[]): Set<string> {
-	const filenames = new Set<string>();
-	const regex = /\/uploads\/([^)"'\s]+)/g;
-
-	for (const card of cards) {
-		if (card.images && Array.isArray(card.images)) {
-			for (const img of card.images) {
-				if (typeof img === 'string') {
-					filenames.add(path.basename(img.split('?')[0]));
-				}
-			}
-		}
-		if (card.description && typeof card.description === 'string') {
-			let match;
-			while ((match = regex.exec(card.description)) !== null) {
-				filenames.add(path.basename(match[1].split('?')[0]));
-			}
-		}
-	}
-	return filenames;
-}
+import { extractMediaFilenames } from '$lib/server/mediaCleanup';
 
 async function getUploadDirectoryInfo() {
-	const dataUploadDir = path.resolve('data/uploads');
 	const staticUploadDir = path.resolve('static/uploads');
-
 	const allFiles = new Map<string, { path: string; size: number }>();
 
-	for (const dir of [dataUploadDir, staticUploadDir]) {
-		try {
-			const files = await fs.readdir(dir);
-			for (const file of files) {
-				if (file.startsWith('.')) continue;
-				const fullPath = path.join(dir, file);
-				try {
-					const stat = await fs.stat(fullPath);
-					if (stat.isFile()) {
-						allFiles.set(file, { path: fullPath, size: stat.size });
-					}
-				} catch {
-					// Ignora file non accessibili
+	try {
+		const files = await fs.readdir(staticUploadDir);
+		for (const file of files) {
+			if (file.startsWith('.') || file === 'trash') continue;
+			const fullPath = path.join(staticUploadDir, file);
+			try {
+				const stat = await fs.stat(fullPath);
+				if (stat.isFile()) {
+					allFiles.set(file, { path: fullPath, size: stat.size });
 				}
-			}
-		} catch {
-			// Directory non esistente
+			} catch {}
 		}
-	}
+	} catch {}
 
 	return allFiles;
 }
@@ -95,40 +42,18 @@ export const GET: RequestHandler = async (event) => {
 			getUploadDirectoryInfo()
 		]);
 
-		const cards: Card[] = dbCards.map((c) => ({
-			id: c.id,
-			title: c.title,
-			fullName: c.fullName || undefined,
-			description: c.description,
-			category: c.category,
-			images: (c.images as string[]) || [],
-			tags: (c.tags as string[]) || [],
-			createdAt: c.createdAt.toISOString(),
-			updatedAt: c.updatedAt.toISOString()
-		}));
+		const cardSources = dbCards.map((c) => [c.images, c.description, c.title, c.fullName]);
+		const noteSources = dbNotes.map((n) => [n.images, n.content, n.title]);
 
-		const notes: Note[] = dbNotes.map((n) => ({
-			id: n.id,
-			userId: n.userId || undefined,
-			title: n.title,
-			content: n.content,
-			category: n.category,
-			tags: (n.tags as string[]) || [],
-			images: (n.images as string[]) || [],
-			isPinned: n.isPinned,
-			isPublic: n.isPublic,
-			shareId: n.shareId || undefined,
-			order: n.order,
-			createdAt: n.createdAt.toISOString(),
-			updatedAt: n.updatedAt.toISOString()
-		}));
+		const referenced = new Set<string>();
+		for (const srcList of cardSources) {
+			for (const fn of extractMediaFilenames(srcList)) referenced.add(fn);
+		}
+		for (const srcList of noteSources) {
+			for (const fn of extractMediaFilenames(srcList)) referenced.add(fn);
+		}
 
-		const cardRefs = extractImageFilenamesFromCards(cards);
-		const noteRefs = extractImageFilenamesFromNotes(notes);
-
-		const referenced = new Set<string>([...cardRefs, ...noteRefs]);
 		const orphaned: { filename: string; size: number }[] = [];
-
 		let totalBytes = 0;
 		let orphanedBytes = 0;
 
@@ -172,37 +97,16 @@ export const POST: RequestHandler = async (event) => {
 			getUploadDirectoryInfo()
 		]);
 
-		const cards: Card[] = dbCards.map((c) => ({
-			id: c.id,
-			title: c.title,
-			fullName: c.fullName || undefined,
-			description: c.description,
-			category: c.category,
-			images: (c.images as string[]) || [],
-			tags: (c.tags as string[]) || [],
-			createdAt: c.createdAt.toISOString(),
-			updatedAt: c.updatedAt.toISOString()
-		}));
+		const cardSources = dbCards.map((c) => [c.images, c.description, c.title, c.fullName]);
+		const noteSources = dbNotes.map((n) => [n.images, n.content, n.title]);
 
-		const notes: Note[] = dbNotes.map((n) => ({
-			id: n.id,
-			userId: n.userId || undefined,
-			title: n.title,
-			content: n.content,
-			category: n.category,
-			tags: (n.tags as string[]) || [],
-			images: (n.images as string[]) || [],
-			isPinned: n.isPinned,
-			isPublic: n.isPublic,
-			shareId: n.shareId || undefined,
-			order: n.order,
-			createdAt: n.createdAt.toISOString(),
-			updatedAt: n.updatedAt.toISOString()
-		}));
-
-		const cardRefs = extractImageFilenamesFromCards(cards);
-		const noteRefs = extractImageFilenamesFromNotes(notes);
-		const referenced = new Set<string>([...cardRefs, ...noteRefs]);
+		const referenced = new Set<string>();
+		for (const srcList of cardSources) {
+			for (const fn of extractMediaFilenames(srcList)) referenced.add(fn);
+		}
+		for (const srcList of noteSources) {
+			for (const fn of extractMediaFilenames(srcList)) referenced.add(fn);
+		}
 
 		let deletedCount = 0;
 		let freedBytes = 0;

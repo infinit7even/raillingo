@@ -1,24 +1,40 @@
 import { json, type RequestHandler } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import { cards } from '$lib/server/db/schema';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, and } from 'drizzle-orm';
 import { isAuthorizedAdmin } from '$lib/server/auth';
-import { deleteImagesForCard, cleanupUnusedImagesOnCardUpdate } from '$lib/server/mediaCleanup';
+import {
+	moveImagesToTrash,
+	restoreImagesFromTrash,
+	permanentlyDeleteImages,
+	cleanupUnusedImagesOnCardUpdate
+} from '$lib/server/mediaCleanup';
 import type { Card } from '$lib/types/cards';
 
-export const GET: RequestHandler = async () => {
+export const GET: RequestHandler = async ({ url }) => {
+	const isTrashRequest = url.searchParams.get('trash') === 'true';
+
 	try {
-		const list = await db.select().from(cards).orderBy(desc(cards.createdAt));
+		const list = await db
+			.select()
+			.from(cards)
+			.where(eq(cards.isDeleted, isTrashRequest))
+			.orderBy(desc(cards.createdAt));
+
 		const formatted: Card[] = list.map((c) => ({
 			id: c.id,
 			title: c.title,
 			fullName: c.fullName || undefined,
+			hasAcronym: Boolean(c.hasAcronym),
+			acronym: c.acronym || undefined,
 			description: c.description,
 			category: c.category,
 			images: (c.images as string[]) || [],
 			tags: (c.tags as string[]) || [],
 			showInWiki: c.showInWiki !== false,
 			gameModes: (c.gameModes as string[]) || ['flashcard', 'quiz', 'reels', 'scrittura'],
+			isDeleted: Boolean(c.isDeleted),
+			deletedAt: c.deletedAt ? c.deletedAt.toISOString() : undefined,
 			createdAt: c.createdAt ? c.createdAt.toISOString() : new Date().toISOString(),
 			updatedAt: c.updatedAt ? c.updatedAt.toISOString() : new Date().toISOString()
 		}));
@@ -45,6 +61,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
 		const title = (newCard.title || '').trim();
 		const fullName = (newCard.fullName || '').trim();
+		const hasAcronym = Boolean(newCard.hasAcronym);
+		const acronym = (newCard.acronym || '').trim();
 		const description = (newCard.description || '').trim();
 		const category = (newCard.category || '').trim();
 		const images = Array.isArray(newCard.images)
@@ -75,12 +93,15 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 				id: cardId,
 				title: title,
 				fullName: fullName || null,
+				hasAcronym,
+				acronym: acronym || null,
 				description,
 				category: category || 'Generale',
 				images,
 				tags,
 				showInWiki,
 				gameModes,
+				isDeleted: false,
 				createdAt: now,
 				updatedAt: now
 			})
@@ -89,12 +110,16 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 				set: {
 					title: title,
 					fullName: fullName || null,
+					hasAcronym,
+					acronym: acronym || null,
 					description,
 					category: category || 'Generale',
 					images,
 					tags,
 					showInWiki,
 					gameModes,
+					isDeleted: false,
+					deletedAt: null,
 					updatedAt: now
 				}
 			})
@@ -104,12 +129,16 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			id: inserted.id,
 			title: inserted.title,
 			fullName: inserted.fullName || undefined,
+			hasAcronym: Boolean(inserted.hasAcronym),
+			acronym: inserted.acronym || undefined,
 			description: inserted.description,
 			category: inserted.category,
 			images: (inserted.images as string[]) || [],
 			tags: (inserted.tags as string[]) || [],
 			showInWiki: inserted.showInWiki !== false,
 			gameModes: (inserted.gameModes as string[]) || ['flashcard', 'quiz', 'reels', 'scrittura'],
+			isDeleted: Boolean(inserted.isDeleted),
+			deletedAt: inserted.deletedAt ? inserted.deletedAt.toISOString() : undefined,
 			createdAt: inserted.createdAt.toISOString(),
 			updatedAt: inserted.updatedAt.toISOString()
 		};
@@ -145,18 +174,24 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
 			id: oldCard.id,
 			title: oldCard.title,
 			fullName: oldCard.fullName || undefined,
+			hasAcronym: Boolean(oldCard.hasAcronym),
+			acronym: oldCard.acronym || undefined,
 			description: oldCard.description,
 			category: oldCard.category,
 			images: (oldCard.images as string[]) || [],
 			tags: (oldCard.tags as string[]) || [],
 			showInWiki: oldCard.showInWiki !== false,
 			gameModes: (oldCard.gameModes as string[]) || ['flashcard', 'quiz', 'reels', 'scrittura'],
+			isDeleted: Boolean(oldCard.isDeleted),
+			deletedAt: oldCard.deletedAt ? oldCard.deletedAt.toISOString() : undefined,
 			createdAt: oldCard.createdAt.toISOString(),
 			updatedAt: oldCard.updatedAt.toISOString()
 		};
 
 		const title = (updatedCard.title !== undefined ? updatedCard.title : oldCard.title || '').trim();
 		const fullName = (updatedCard.fullName !== undefined ? updatedCard.fullName : oldCard.fullName || '').trim();
+		const hasAcronym = updatedCard.hasAcronym !== undefined ? Boolean(updatedCard.hasAcronym) : Boolean(oldCard.hasAcronym);
+		const acronym = (updatedCard.acronym !== undefined ? updatedCard.acronym : oldCard.acronym || '').trim();
 		const description = (updatedCard.description !== undefined ? updatedCard.description : oldCard.description || '').trim();
 		const category = (updatedCard.category !== undefined ? updatedCard.category : oldCard.category || '').trim();
 		const images = Array.isArray(updatedCard.images)
@@ -174,6 +209,8 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
 			.set({
 				title: title,
 				fullName: fullName || null,
+				hasAcronym,
+				acronym: acronym || null,
 				description,
 				category: category || oldCard.category || 'Generale',
 				images,
@@ -189,12 +226,16 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
 			id: updated.id,
 			title: updated.title,
 			fullName: updated.fullName || undefined,
+			hasAcronym: Boolean(updated.hasAcronym),
+			acronym: updated.acronym || undefined,
 			description: updated.description,
 			category: updated.category,
 			images: (updated.images as string[]) || [],
 			tags: (updated.tags as string[]) || [],
 			showInWiki: updated.showInWiki !== false,
 			gameModes: (updated.gameModes as string[]) || ['flashcard', 'quiz', 'reels', 'scrittura'],
+			isDeleted: Boolean(updated.isDeleted),
+			deletedAt: updated.deletedAt ? updated.deletedAt.toISOString() : undefined,
 			createdAt: updated.createdAt.toISOString(),
 			updatedAt: updated.updatedAt.toISOString()
 		};
@@ -209,6 +250,42 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
 	}
 };
 
+export const PATCH: RequestHandler = async ({ request, locals }) => {
+	if (!isAuthorizedAdmin(locals.user)) {
+		return json({ error: 'Accesso negato: admin richiesto.' }, { status: 403 });
+	}
+
+	try {
+		const { id, action } = await request.json();
+		if (!id) return json({ error: 'ID mancante.' }, { status: 400 });
+
+		if (action === 'restore') {
+			const existing = await db.select().from(cards).where(eq(cards.id, id)).limit(1);
+			if (existing.length > 0) {
+				const card = existing[0];
+				await restoreImagesFromTrash(card).catch(() => {});
+			}
+
+			const [restored] = await db
+				.update(cards)
+				.set({
+					isDeleted: false,
+					deletedAt: null,
+					updatedAt: new Date()
+				})
+				.where(eq(cards.id, id))
+				.returning();
+
+			return json({ success: true, card: restored });
+		}
+
+		return json({ error: 'Azione non riconosciuta.' }, { status: 400 });
+	} catch (err: any) {
+		console.error('Errore patch card:', err);
+		return json({ error: err.message || 'Errore ripristino scheda' }, { status: 500 });
+	}
+};
+
 export const DELETE: RequestHandler = async ({ url, locals }) => {
 	if (!isAuthorizedAdmin(locals.user)) {
 		return json(
@@ -218,30 +295,39 @@ export const DELETE: RequestHandler = async ({ url, locals }) => {
 	}
 
 	const id = url.searchParams.get('id');
+	const isPermanent = url.searchParams.get('permanent') === 'true';
+
 	if (!id) {
 		return json({ error: 'ID non specificato' }, { status: 400 });
 	}
 
 	try {
 		const existing = await db.select().from(cards).where(eq(cards.id, id)).limit(1);
-		if (existing.length > 0) {
-			const old = existing[0];
-			const oldCard: Card = {
-				id: old.id,
-				title: old.title,
-				fullName: old.fullName || undefined,
-				description: old.description,
-				category: old.category,
-				images: (old.images as string[]) || [],
-				tags: (old.tags as string[]) || [],
-				createdAt: old.createdAt.toISOString(),
-				updatedAt: old.updatedAt.toISOString()
-			};
-			await deleteImagesForCard(oldCard).catch(() => {});
+		if (existing.length === 0) {
+			return json({ error: 'Scheda non trovata' }, { status: 404 });
 		}
 
-		await db.delete(cards).where(eq(cards.id, id));
-		return json({ success: true, id });
+		const old = existing[0];
+
+		if (isPermanent) {
+			// Eliminazione definitiva: rimuovi immagini dal disco ed elimina riga da Postgres
+			await permanentlyDeleteImages(old).catch(() => {});
+			await db.delete(cards).where(eq(cards.id, id));
+			return json({ success: true, id, permanent: true });
+		} else {
+			// Soft-delete: sposta nel cestino e sposta immagini nella cartella trash
+			await moveImagesToTrash(old).catch(() => {});
+			await db
+				.update(cards)
+				.set({
+					isDeleted: true,
+					deletedAt: new Date(),
+					updatedAt: new Date()
+				})
+				.where(eq(cards.id, id));
+
+			return json({ success: true, id, trash: true });
+		}
 	} catch (err: any) {
 		console.error('Errore eliminazione scheda dal database:', err);
 		return json({ error: err.message || "Errore durante l'eliminazione della scheda" }, { status: 500 });

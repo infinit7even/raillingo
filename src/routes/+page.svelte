@@ -365,61 +365,95 @@
 		object-fit: contain;
 	}
 
-	/* 💡 Parola del Giorno Card */
+	/* 💡 Parola del Giorno Card (Style Duolingo 3D) */
 	.word-of-day-section {
 		width: 100%;
+		margin-bottom: 0;
 	}
 
 	.word-of-day-card {
-		padding: 1.1rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.85rem;
+		padding: 0.85rem 1.15rem;
 		background: var(--card-bg);
 		border-radius: 18px;
-		position: relative;
-		overflow: hidden;
 	}
 
 	.wod-header {
 		display: flex;
-		align-items: center;
 		justify-content: space-between;
-		margin-bottom: 0.75rem;
+		align-items: center;
+		flex-wrap: wrap;
+		gap: 0.6rem;
+		border-bottom: 1.5px solid var(--border-color);
+		padding-bottom: 0.75rem;
 	}
 
 	.wod-badge {
-		display: inline-flex;
+		display: flex;
 		align-items: center;
-		gap: 0.35rem;
-		background: rgba(255, 200, 0, 0.15);
-		color: var(--yellow-color);
-		padding: 0.25rem 0.6rem;
-		border-radius: 10px;
-		font-weight: 900;
+		gap: 0.4rem;
+		background: var(--accent-light-bg);
+		padding: 0.3rem 0.75rem;
+		border-radius: 999px;
+		border: 1px solid var(--accent-color);
+	}
+
+	.wod-icon {
+		font-size: 1rem;
+	}
+
+	.wod-badge-text {
 		font-size: 0.75rem;
-		letter-spacing: 0.04em;
+		font-weight: 900;
+		color: var(--accent-color);
+		letter-spacing: 0.08em;
+	}
+
+	.wod-header-actions {
+		display: flex;
+		gap: 0.4rem;
 	}
 
 	.wod-action-btn {
-		background: var(--card-bg-subtle);
-		border: 1px solid var(--border-color);
-		border-radius: 8px;
-		padding: 0.25rem 0.55rem;
-		font-size: 0.75rem;
+		font-size: 0.78rem;
 		font-weight: 800;
-		color: var(--text-muted);
+		padding: 0.35rem 0.7rem;
+		border-radius: 12px;
+		background: var(--card-bg-subtle);
+		border: 1.5px solid var(--border-color);
+		color: var(--text-color);
 		cursor: pointer;
 		display: inline-flex;
 		align-items: center;
-		gap: 0.3rem;
-		transition: all 0.15s ease;
+		gap: 0.35rem;
+		transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 	}
 
-	.wod-action-btn:hover {
+	.wod-action-btn:hover:not(:disabled) {
+		background: var(--hover-bg);
 		border-color: var(--accent-color);
-		color: var(--text-color);
+		transform: translateY(-1px);
+	}
+
+	.wod-action-btn:active:not(:disabled) {
+		transform: translateY(1px);
+	}
+
+	.dice-icon {
+		display: inline-block;
+		transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+	}
+
+	.dice-icon.spin {
+		transform: rotate(360deg) scale(1.3);
 	}
 
 	.wod-content {
-		transition: transform 0.15s ease, opacity 0.15s ease;
+		transition:
+			opacity 0.2s ease,
+			transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 	}
 
 	.wod-content.wod-pop {
@@ -432,7 +466,7 @@
 		align-items: baseline;
 		gap: 0.6rem;
 		flex-wrap: wrap;
-		margin-bottom: 0.35rem;
+		margin-bottom: 0.4rem;
 	}
 
 	.wod-title {
@@ -440,7 +474,6 @@
 		font-weight: 900;
 		color: var(--accent-color);
 		margin: 0;
-		letter-spacing: -0.02em;
 	}
 
 	.wod-fullname {
@@ -450,9 +483,10 @@
 	}
 
 	.wod-desc {
-		font-size: 0.88rem;
-		line-height: 1.45;
-		color: var(--text-muted);
+		font-size: 0.95rem;
+		line-height: 1.55;
+		color: var(--text-color);
+		opacity: 0.92;
 		margin: 0;
 	}
 
