@@ -155,7 +155,7 @@
 		const copy = await notesStore.createNote({
 			title: `${note.title} (Copia)`,
 			content: note.content || '',
-			category: note.category || '',
+			category: '',
 			isPinned: false
 		});
 		if (copy) {
@@ -181,11 +181,6 @@
 	function handlePaste() {
 		contextMenuStore.close();
 		window.dispatchEvent(new CustomEvent('rf-paste-request'));
-	}
-
-	function handleOpenCategoryModal() {
-		contextMenuStore.close();
-		window.dispatchEvent(new CustomEvent('rf-open-category-modal'));
 	}
 
 	async function handleCreateNew() {
@@ -226,20 +221,12 @@
 			<!-- 📄 Menu Contestuale per Nota Specifica -->
 			<div class="ctx-header">
 				<span class="ctx-note-title">{targetNote.title || 'Appunto'}</span>
-				{#if targetNote.category}
-					<span class="ctx-note-cat">📁 {targetNote.category}</span>
-				{/if}
 			</div>
 			<div class="ctx-divider"></div>
 
 			<button type="button" class="ctx-item" onclick={() => handleTogglePin(targetNote!)}>
 				<span class="ctx-icon">{targetNote.isPinned ? '📌' : '📍'}</span>
 				<span>{targetNote.isPinned ? 'Rimuovi evidenza' : 'Fissa in alto'}</span>
-			</button>
-
-			<button type="button" class="ctx-item" onclick={handleOpenCategoryModal}>
-				<span class="ctx-icon">📁</span>
-				<span>Gestisci Categoria...</span>
 			</button>
 
 			<button type="button" class="ctx-item" onclick={() => handleCopy(targetNote!)}>
@@ -268,11 +255,6 @@
 			<button type="button" class="ctx-item" onclick={handleCreateNew}>
 				<span class="ctx-icon">📝</span>
 				<span>Nuovo appunto</span>
-			</button>
-
-			<button type="button" class="ctx-item" onclick={handleOpenCategoryModal}>
-				<span class="ctx-icon">📁</span>
-				<span>Gestisci Categorie...</span>
 			</button>
 
 			<button type="button" class="ctx-item" onclick={handlePaste}>
@@ -431,13 +413,6 @@
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
-	}
-
-	.ctx-note-cat {
-		font-size: 0.68rem;
-		font-weight: 800;
-		color: var(--accent-color);
-		text-transform: uppercase;
 	}
 
 	.ctx-divider {

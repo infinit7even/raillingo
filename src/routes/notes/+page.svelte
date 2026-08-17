@@ -5,18 +5,16 @@
 	import type { Note, NoteSortOption } from '$lib/types/notes';
 	import { toastStore } from '$lib/stores/toastStore';
 	import { confirmModalStore } from '$lib/stores/confirmModalStore';
-	import { fade, scale } from 'svelte/transition';
-	import { uploadImage } from '$lib/utils/imageUploader';
-	import { offlineNotesSync, type SyncState } from '$lib/utils/offlineNotesSync';
+	import { fade } from 'svelte/transition';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import {
 		markdownToDocHtml,
 		docHtmlToMarkdown,
 		createInlineImageFigureHtml
 	} from '$lib/utils/docConverter';
-
-	import { globalCategoryStore, matchesCategory } from '$lib/stores/globalCategoryStore';
 	import { navStore } from '$lib/stores/navStore';
+	import { uploadImage } from '$lib/utils/imageUploader';
+	import { offlineNotesSync, type SyncState } from '$lib/utils/offlineNotesSync';
 
 	let { data } = $props();
 	let user = $derived(data.user);
@@ -29,15 +27,7 @@
 	let notes = $state<Note[]>(seed.list);
 	let selectedNoteId = $state<string | null>(null);
 	let searchQuery = $state('');
-	let selectedCategory = $state<string>('ALL');
 	let sortOption = $state<NoteSortOption>('custom');
-
-	// Vault category search & picker modal
-	let isVaultCatPickerOpen = $state(false);
-	let vaultCatSearchQuery = $state('');
-	let newCategoryModalInput = $state('');
-	let isCreatingCustomCategory = $state(false);
-	let customCategoryInput = $state('');
 
 	// Workspace UI states
 	let isOutlineOpen = $state(false);
@@ -54,7 +44,6 @@
 	// Active note local editor state
 	let currentTitle = $state('');
 	let currentContent = $state('');
-	let currentCategory = $state('');
 	let currentImages = $state<string[]>([]);
 	let currentIsPinned = $state(false);
 
@@ -68,9 +57,6 @@
 	onMount(() => {
 		notesStore.hydrate(data.initialNotes);
 
-		const handleOpenCatModal = () => {
-			isVaultCatPickerOpen = true;
-		};
 		const handlePasteReq = () => {
 			handleContextPaste();
 		};
@@ -83,24 +69,15 @@
 			if (savedCollapsed === 'true') {
 				isVaultCollapsed = true;
 			}
-			customCreatedCategories = loadCustomCategories();
 
 			// Intercetta paste globale ed eventi custom
 			window.addEventListener('paste', handleGlobalPaste);
-			window.addEventListener('keydown', handleGlobalKeydown);
-			window.addEventListener('rf-open-category-modal', handleOpenCatModal);
 			window.addEventListener('rf-paste-request', handlePasteReq);
 		}
 
 		const unsubSync = offlineNotesSync.subscribe((state, count) => {
 			syncState = state;
 			pendingSyncCount = count;
-		});
-
-		const unsubGlobalCat = globalCategoryStore.subscribe((cat) => {
-			if (cat) {
-				selectedCategory = cat;
-			}
 		});
 
 		const unsub = notesStore.subscribe((n) => {
@@ -115,22 +92,13 @@
 		return () => {
 			if (typeof window !== 'undefined') {
 				window.removeEventListener('paste', handleGlobalPaste);
-				window.removeEventListener('keydown', handleGlobalKeydown);
-				window.removeEventListener('rf-open-category-modal', handleOpenCatModal);
 				window.removeEventListener('rf-paste-request', handlePasteReq);
 			}
 			unsubSync();
-			unsubGlobalCat();
 			unsub();
 			if (saveDebounceTimer) clearTimeout(saveDebounceTimer);
 		};
 	});
-
-	function handleGlobalKeydown(e: KeyboardEvent) {
-		if (e.key === 'Escape') {
-			isVaultCatPickerOpen = false;
-		}
-	}
 
 	async function handleContextPaste() {
 		if (!selectedNoteId && notes.length > 0) {
@@ -180,7 +148,6 @@
 		selectedNoteId = note.id;
 		currentTitle = note.title;
 		currentContent = note.content || '';
-		currentCategory = note.category || '';
 		currentImages = note.images ? [...note.images] : [];
 		currentIsPinned = Boolean(note.isPinned);
 		isSidebarOpenMobile = false;
@@ -203,184 +170,8 @@
 		}
 	});
 
-	// Categorie personali personalizzate create dall'utente
-	let customCreatedCategories = $state<string[]>([]);
-
-	function loadCustomCategories(): string[] {
-		if (typeof localStorage === 'undefined') return [];
-		try {
-			const saved = localStorage.getItem('rf_custom_categories');
-			if (saved) {
-				const parsed = JSON.parse(saved);
-				if (Array.isArray(parsed)) return parsed.map((s) => String(s).trim()).filter(Boolean);
-			}
-		} catch (e) {
-			console.warn('Errore lettura categorie:', e);
-		}
-		return [];
-	}
-
-	function saveCustomCategories(cats: string[]) {
-		if (typeof localStorage === 'undefined') return;
-		try {
-			localStorage.setItem('rf_custom_categories', JSON.stringify(cats));
-		} catch (e) {
-			console.warn('Errore salvataggio categorie:', e);
-		}
-	}
-
-	// Elenco completo e ordinato delle categorie personali dell'utente
-	let userNoteCategories = $derived.by<string[]>(() => {
-		const set = new Set<string>();
-		for (const n of notes) {
-			if (n.category && n.category.trim()) {
-				set.add(n.category.trim());
-			}
-		}
-		for (const c of customCreatedCategories) {
-			if (c && c.trim()) {
-				set.add(c.trim());
-			}
-		}
-		return Array.from(set).sort((a, b) => a.localeCompare(b, 'it'));
-	});
-
-	let availableCategories = $derived.by<[string, number][]>(() => {
-		const counts = new Map<string, number>();
-		for (const catName of userNoteCategories) {
-			counts.set(catName, 0);
-		}
-		for (const n of notes) {
-			const cat = (n.category || '').trim();
-			if (cat) {
-				counts.set(cat, (counts.get(cat) || 0) + 1);
-			}
-		}
-		return Array.from(counts.entries()).sort((a, b) => a[0].localeCompare(b[0], 'it'));
-	});
-
-	let uncategorizedCount = $derived(notes.filter((n) => !(n.category || '').trim()).length);
-
-	let filteredVaultCategories = $derived.by<[string, number][]>(() => {
-		const q = vaultCatSearchQuery.toLowerCase().trim();
-		if (!q) return availableCategories;
-		return availableCategories.filter(([catName]) => catName.toLowerCase().includes(q));
-	});
-
-	// Assegna categoria alla nota attiva
-	async function handleAssignCategoryToActive(catName: string) {
-		const trimmed = catName.trim();
-		currentCategory = trimmed;
-		if (activeNote) {
-			await notesStore.updateNote({ id: activeNote.id, category: trimmed });
-		}
-		triggerAutoSave();
-		toastStore.show({ message: `📁 Categoria "${trimmed}" assegnata!`, type: 'success' });
-	}
-
-	// Rimuovi / Disassegna categoria dalla nota attiva
-	async function handleUnassignCategoryFromActive() {
-		currentCategory = '';
-		if (activeNote) {
-			await notesStore.updateNote({ id: activeNote.id, category: '' });
-		}
-		triggerAutoSave();
-		toastStore.show({ message: `🚫 Categoria rimossa dalla nota (Senza Categoria)`, type: 'info' });
-	}
-
-	// Crea nuova categoria personale
-	async function handleCreateNewCategory(assignToActive: boolean = true) {
-		const trimmed = newCategoryModalInput.trim();
-		if (!trimmed) return;
-
-		if (!customCreatedCategories.includes(trimmed)) {
-			customCreatedCategories = [...customCreatedCategories, trimmed];
-			saveCustomCategories(customCreatedCategories);
-		}
-
-		if (assignToActive && activeNote) {
-			await handleAssignCategoryToActive(trimmed);
-		} else {
-			toastStore.show({ message: `✨ Categoria "${trimmed}" creata!`, type: 'success' });
-		}
-
-		newCategoryModalInput = '';
-	}
-
-	// Elimina una categoria da tutte le note e dal sistema
-	function handleDeleteCategoryGlobally(catToDelete: string) {
-		const trimmed = catToDelete.trim();
-		if (!trimmed) return;
-
-		confirmModalStore.open({
-			title: 'Elimina Categoria',
-			message: `Sei sicuro di voler eliminare la categoria "${trimmed}"? Verrà rimossa da tutti gli appunti associati.`,
-			confirmText: 'Elimina Categoria',
-			confirmVariant: 'danger',
-			icon: '📁',
-			onConfirm: async () => {
-				customCreatedCategories = customCreatedCategories.filter((c) => c !== trimmed);
-				saveCustomCategories(customCreatedCategories);
-
-				await notesStore.deleteCategoryFromAllNotes(trimmed);
-
-				if (currentCategory === trimmed) {
-					currentCategory = '';
-				}
-
-				if (selectedCategory.includes(trimmed)) {
-					const remaining = selectedCategory.split(',').filter((s) => s.trim() !== trimmed);
-					selectedCategory = remaining.length > 0 ? remaining.join(',') : 'ALL';
-				}
-
-				toastStore.show({ message: `🗑️ Categoria "${trimmed}" eliminata`, type: 'info' });
-			}
-		});
-	}
-
-	function toggleVaultCategory(cat: string) {
-		if (cat === 'ALL') {
-			selectedCategory = 'ALL';
-			globalCategoryStore.reset();
-			return;
-		}
-
-		if (cat === '__NO_CATEGORY__') {
-			selectedCategory = selectedCategory === '__NO_CATEGORY__' ? 'ALL' : '__NO_CATEGORY__';
-			return;
-		}
-
-		let selectedList = selectedCategory === 'ALL' || !selectedCategory || selectedCategory === '__NO_CATEGORY__'
-			? []
-			: selectedCategory.split(',').map((s) => s.trim());
-
-		if (selectedList.includes(cat)) {
-			selectedList = selectedList.filter((c) => c !== cat);
-		} else {
-			selectedList.push(cat);
-		}
-
-		if (selectedList.length === 0 || selectedList.length === availableCategories.length) {
-			selectedCategory = 'ALL';
-			globalCategoryStore.reset();
-		} else {
-			const val = selectedList.join(',');
-			selectedCategory = val;
-			globalCategoryStore.setCategory(val);
-		}
-	}
-
 	let filteredNotes = $derived.by(() => {
 		let list = [...notes];
-
-		if (selectedCategory !== 'ALL') {
-			if (selectedCategory === '__NO_CATEGORY__') {
-				list = list.filter((n) => !(n.category || '').trim());
-			} else {
-				const selectedList = selectedCategory.split(',').map((s) => s.trim());
-				list = list.filter((n) => selectedList.includes((n.category || '').trim()));
-			}
-		}
 
 		const q = searchQuery.toLowerCase().trim();
 		if (q) {
@@ -388,7 +179,6 @@
 				(n) =>
 					n.title.toLowerCase().includes(q) ||
 					n.content.toLowerCase().includes(q) ||
-					(n.category && n.category.toLowerCase().includes(q)) ||
 					(n.tags && n.tags.some((t) => t.toLowerCase().includes(q)))
 			);
 		}
@@ -408,17 +198,20 @@
 					new Date(a.updatedAt || a.createdAt).getTime()
 				);
 			});
+		} else if (sortOption === 'date-asc') {
+			list.sort((a, b) => {
+				if (a.isPinned && !b.isPinned) return -1;
+				if (!a.isPinned && b.isPinned) return 1;
+				return (
+					new Date(a.updatedAt || a.createdAt).getTime() -
+					new Date(b.updatedAt || b.createdAt).getTime()
+				);
+			});
 		} else if (sortOption === 'title-asc') {
 			list.sort((a, b) => {
 				if (a.isPinned && !b.isPinned) return -1;
 				if (!a.isPinned && b.isPinned) return 1;
 				return a.title.localeCompare(b.title, 'it');
-			});
-		} else if (sortOption === 'category') {
-			list.sort((a, b) => {
-				if (a.isPinned && !b.isPinned) return -1;
-				if (!a.isPinned && b.isPinned) return 1;
-				return (a.category || '').localeCompare(b.category || '', 'it');
 			});
 		}
 
@@ -432,7 +225,6 @@
 		if (!editorEl) return;
 		currentContent = docHtmlToMarkdown(editorEl);
 
-		// Estrai tutte le immagini presenti nel documento
 		const imgEls = editorEl.querySelectorAll('figure.doc-inline-image, img.doc-img-element');
 		const foundUrls: string[] = [];
 		imgEls.forEach((el) => {
@@ -454,7 +246,6 @@
 				id: selectedNoteId,
 				title: currentTitle.trim() || 'Appunto senza titolo',
 				content: currentContent,
-				category: currentCategory,
 				images: currentImages,
 				isPinned: currentIsPinned
 			});
@@ -470,11 +261,10 @@
 	}
 
 	async function handleCreateNewNote() {
-		const defaultCat = selectedCategory !== 'ALL' ? selectedCategory : (userNoteCategories[0] || '');
 		const newNote = await notesStore.createNote({
 			title: 'Nuovo Appunto',
 			content: '',
-			category: defaultCat,
+			category: '',
 			images: [],
 			isPinned: false
 		});
@@ -543,7 +333,14 @@
 		handleEditorInput();
 	}
 
-	// Funzione unificata per caricare e inserire immagini visivamente nel flusso del testo (Word-style)
+	async function handleFileInputChange(e: Event) {
+		const input = e.target as HTMLInputElement;
+		if (input.files && input.files[0]) {
+			await uploadAndInsertImage(input.files[0]);
+			input.value = '';
+		}
+	}
+
 	async function uploadAndInsertImage(rawFile: File | Blob) {
 		if (!selectedNoteId) {
 			toastStore.show({ message: '⚠️ Seleziona prima un appunto in cui incollare l\'immagine.' });
@@ -857,14 +654,6 @@
 		}
 	}
 
-	function handleFileInputChange(e: Event) {
-		const target = e.target as HTMLInputElement;
-		if (target.files && target.files.length > 0) {
-			uploadAndInsertImage(target.files[0]);
-			target.value = '';
-		}
-	}
-
 	function copyMarkdown() {
 		syncContentFromEditor();
 		if (!currentContent) return;
@@ -875,7 +664,7 @@
 	function downloadFile() {
 		syncContentFromEditor();
 		const filename = `${currentTitle.replace(/[^a-zA-Z0-9_-]/g, '_').toLowerCase() || 'appunto'}.md`;
-		const fullText = `# ${currentTitle}\n\n**Categoria**: ${currentCategory}\n---\n\n${currentContent}`;
+		const fullText = `# ${currentTitle}\n\n${currentContent}`;
 		const blob = new Blob([fullText], { type: 'text/markdown;charset=utf-8;' });
 		const url = URL.createObjectURL(blob);
 		const a = document.createElement('a');
@@ -977,33 +766,6 @@
 				{/if}
 			</div>
 
-			<!-- Folders Chips & Smart Category Selector -->
-			<div class="vault-folders-bar">
-				<!-- Trigger for Category Modal Picker with Search -->
-				<button
-					type="button"
-					class="vault-cat-trigger-btn full-width"
-					class:active={selectedCategory !== 'ALL'}
-					onclick={() => (isVaultCatPickerOpen = true)}
-					title="Apri filtro categorie con ricerca rapida"
-				>
-					<div class="vcat-left">
-						<span class="vcat-ico">📁</span>
-						<span class="vcat-label">Categorie</span>
-					</div>
-					<div class="vcat-right">
-						<span class="vcat-badge">
-							{#if selectedCategory === 'ALL'}
-								Tutti ({notes.length})
-							{:else}
-								{selectedCategory.split(',').length} attive
-							{/if}
-						</span>
-						<span class="vcat-arrow">▾</span>
-					</div>
-				</button>
-			</div>
-
 			<!-- Notes List Explorer -->
 			<div class="vault-files-list">
 				{#if filteredNotes.length === 0}
@@ -1032,7 +794,6 @@
 									{/if}
 									{note.title || 'Senza titolo'}
 								</span>
-								<span class="file-cat">{note.category || 'Senza Categoria'}</span>
 							</div>
 
 							<div class="file-item-meta">
@@ -1077,19 +838,6 @@
 						title="Torna all'elenco appunti"
 					>
 						← Vault
-					</button>
-
-					<button
-						type="button"
-						class="workspace-category-pill"
-						class:has-cat={Boolean(currentCategory)}
-						class:no-cat={!currentCategory}
-						title={currentCategory ? `Categoria: "${currentCategory}". Clicca per cambiare, rimuovere o gestire le categorie.` : 'Nessuna categoria. Clicca per assegnare o creare una categoria.'}
-						onclick={() => (isVaultCatPickerOpen = true)}
-					>
-						<span class="cat-pill-ico">📁</span>
-						<span class="cat-pill-txt">{currentCategory || '+ Assegna Categoria'}</span>
-						<span class="cat-pill-arrow">▾</span>
 					</button>
 
 					<div class="save-status-pill">
@@ -1362,229 +1110,11 @@
 			<div class="outline-meta-box">
 				<span class="meta-lbl">METADATI NOTA</span>
 				<div class="meta-row">
-					<span>Categoria:</span>
-					<strong>{currentCategory}</strong>
-				</div>
-				<div class="meta-row">
 					<span>Stato:</span>
 					<strong>{currentIsPinned ? '📌 In evidenza' : 'Ordinario'}</strong>
 				</div>
 			</div>
 		</aside>
-	{/if}
-
-	<!-- 🗂️ Modal / Popover Selettore Categorie per il Vault -->
-	{#if isVaultCatPickerOpen}
-		<div
-			class="vault-cat-backdrop"
-			onclick={() => (isVaultCatPickerOpen = false)}
-			onkeydown={(e) => e.key === 'Escape' && (isVaultCatPickerOpen = false)}
-			role="button"
-			tabindex="0"
-			aria-label="Chiudi selettore categorie"
-			transition:fade={{ duration: 120 }}
-		></div>
-
-		<div
-			class="vault-cat-modal duo-card"
-			transition:scale={{ start: 0.95, duration: 150 }}
-		>
-			<!-- Modal Header -->
-			<div class="vcat-modal-header">
-				<div class="vcat-header-title-box">
-					<span class="vcat-header-ico">📁</span>
-					<div>
-						<h3 class="vcat-heading">Gestione Categorie</h3>
-						<span class="vcat-sub">
-							{#if selectedCategory === 'ALL'}
-								Tutte le {availableCategories.length} categorie
-							{:else if selectedCategory === '__NO_CATEGORY__'}
-								Solo note senza categoria
-							{:else}
-								{selectedCategory.split(',').length} di {availableCategories.length} attive
-							{/if}
-						</span>
-					</div>
-				</div>
-				<button
-					type="button"
-					class="vcat-close-btn"
-					onclick={() => (isVaultCatPickerOpen = false)}
-					aria-label="Chiudi"
-				>
-					✕
-				</button>
-			</div>
-
-			<!-- Current Active Note Info & Unassign Action -->
-			{#if activeNote}
-				<div class="vcat-active-note-card">
-					<div class="vcat-target-note-header">
-						<span class="vcat-note-target-label">APPUNTO APERTO:</span>
-						<span class="vcat-note-target-title">{currentTitle || 'Appunto'}</span>
-					</div>
-					<div class="vcat-current-cat-state">
-						{#if currentCategory}
-							<div class="vcat-assigned-badge">
-								<span class="vcat-badge-ico">🏷️</span>
-								<span class="vcat-badge-text">{currentCategory}</span>
-							</div>
-							<button
-								type="button"
-								class="vcat-unassign-btn"
-								onclick={handleUnassignCategoryFromActive}
-								title="Rimuovi la categoria da questo appunto"
-							>
-								🚫 Rimuovi Categoria
-							</button>
-						{:else}
-							<span class="vcat-no-cat-label">Nessuna categoria assegnata</span>
-						{/if}
-					</div>
-				</div>
-			{/if}
-
-			<!-- Create New Category Input -->
-			<div class="vcat-create-section">
-				<div class="vcat-create-row">
-					<input
-						type="text"
-						bind:value={newCategoryModalInput}
-						placeholder="➕ Crea nuova categoria personale..."
-						class="vcat-create-input"
-						onkeydown={(e) => {
-							if (e.key === 'Enter') handleCreateNewCategory(Boolean(activeNote));
-						}}
-					/>
-					<button
-						type="button"
-						class="vcat-create-btn duo-btn duo-btn-blue"
-						onclick={() => handleCreateNewCategory(Boolean(activeNote))}
-						disabled={!newCategoryModalInput.trim()}
-					>
-						{activeNote ? '+ Crea ed Assegna' : '+ Crea Categoria'}
-					</button>
-				</div>
-			</div>
-
-			<!-- Live Search -->
-			<div class="vcat-search-box">
-				<span class="vsearch-ico">🔍</span>
-				<input
-					type="text"
-					bind:value={vaultCatSearchQuery}
-					placeholder="Cerca tra le {availableCategories.length} categorie..."
-					class="vcat-search-input"
-				/>
-				{#if vaultCatSearchQuery}
-					<button
-						type="button"
-						class="vsearch-clear"
-						onclick={() => (vaultCatSearchQuery = '')}
-					>
-						✕
-					</button>
-				{/if}
-			</div>
-
-			<!-- Category List -->
-			<div class="vcat-list">
-				{#if availableCategories.length === 0}
-					<div class="vcat-empty">
-						<p>Non hai ancora nessuna categoria personale.</p>
-						<span class="vcat-empty-hint">Scrivi un nome nel campo sopra per crearne una!</span>
-					</div>
-				{:else if filteredVaultCategories.length === 0}
-					<p class="vcat-empty">Nessuna categoria trovata per "{vaultCatSearchQuery}"</p>
-				{:else}
-					{#each filteredVaultCategories as [catName, count]}
-						{@const isSelectedInFilter = selectedCategory !== 'ALL' && selectedCategory.split(',').map((s) => s.trim()).includes(catName)}
-						{@const isCurrentNoteCategory = currentCategory === catName}
-						<div class="vcat-card-item" class:is-assigned={isCurrentNoteCategory}>
-							<button
-								type="button"
-								class="vcat-item-left"
-								onclick={() => {
-									if (activeNote) {
-										handleAssignCategoryToActive(catName);
-									} else {
-										toggleVaultCategory(catName);
-									}
-								}}
-								title={activeNote ? `Assegna "${catName}" a questo appunto` : `Filtra note per "${catName}"`}
-							>
-								<span class="vcat-item-icon">📁</span>
-								<div class="vcat-item-text">
-									<span class="vcat-item-name">{catName}</span>
-									<span class="vcat-item-count">{count} {count === 1 ? 'appunto' : 'appunti'}</span>
-								</div>
-								{#if isCurrentNoteCategory}
-									<span class="vcat-item-check-badge">✓ ASSEGNATA</span>
-								{/if}
-							</button>
-
-							<div class="vcat-item-actions">
-								{#if activeNote && !isCurrentNoteCategory}
-									<button
-										type="button"
-										class="vcat-action-assign-btn"
-										onclick={() => handleAssignCategoryToActive(catName)}
-										title="Assegna questa categoria all'appunto aperto"
-									>
-										Assegna
-									</button>
-								{/if}
-
-								<button
-									type="button"
-									class="vcat-item-delete-btn"
-									onclick={() => handleDeleteCategoryGlobally(catName)}
-									title="Elimina la categoria '{catName}' da tutte le note"
-								>
-									🗑️
-								</button>
-							</div>
-						</div>
-					{/each}
-				{/if}
-			</div>
-
-			<!-- Footer -->
-			<div class="vcat-modal-footer">
-				<div class="vcat-batch-row">
-					<button
-						type="button"
-						class="vcat-batch-btn"
-						class:active-batch={selectedCategory === 'ALL'}
-						onclick={() => {
-							selectedCategory = 'ALL';
-							globalCategoryStore.reset();
-						}}
-					>
-						📁 Tutte ({notes.length})
-					</button>
-
-					{#if uncategorizedCount > 0}
-						<button
-							type="button"
-							class="vcat-batch-btn"
-							class:active-batch={selectedCategory === '__NO_CATEGORY__'}
-							onclick={() => toggleVaultCategory('__NO_CATEGORY__')}
-						>
-							🚫 Senza Categoria ({uncategorizedCount})
-						</button>
-					{/if}
-				</div>
-
-				<button
-					type="button"
-					class="duo-btn duo-btn-green vcat-apply-btn"
-					onclick={() => (isVaultCatPickerOpen = false)}
-				>
-					✓ CHIUDI
-				</button>
-			</div>
-		</div>
 	{/if}
 </div>
 {:else}
@@ -1979,508 +1509,6 @@
 		padding: 0;
 	}
 
-	.vault-folders-bar {
-		display: flex;
-		align-items: center;
-		gap: 0.3rem;
-		padding: 2px 0 4px 0;
-		flex-shrink: 0;
-		flex-wrap: wrap;
-	}
-
-	.vault-cat-trigger-btn {
-		display: inline-flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 0.35rem;
-		padding: 0.35rem 0.65rem;
-		border-radius: 10px;
-		background: var(--card-bg-subtle);
-		border: 1.5px solid var(--border-color);
-		color: var(--text-color);
-		font-family: 'Outfit', sans-serif;
-		font-size: 0.76rem;
-		font-weight: 800;
-		cursor: pointer;
-		white-space: nowrap;
-		flex-shrink: 0;
-		transition: all 0.12s ease;
-		box-sizing: border-box;
-	}
-
-	.vault-cat-trigger-btn.full-width {
-		width: 100%;
-	}
-
-	.vault-cat-trigger-btn:hover {
-		border-color: var(--accent-color);
-		color: var(--accent-color);
-		background: var(--hover-bg);
-	}
-
-	.vault-cat-trigger-btn.active {
-		background: var(--accent-light-bg);
-		border-color: var(--accent-color);
-		color: var(--accent-color);
-	}
-
-	.vcat-left {
-		display: flex;
-		align-items: center;
-		gap: 0.35rem;
-	}
-
-	.vcat-right {
-		display: flex;
-		align-items: center;
-		gap: 0.3rem;
-	}
-
-	.vcat-badge {
-		background: var(--card-bg);
-		border: 1px solid var(--border-color);
-		border-radius: 6px;
-		padding: 0.05rem 0.35rem;
-		font-size: 0.65rem;
-		font-weight: 900;
-		color: var(--accent-color);
-	}
-
-	.vcat-arrow {
-		font-size: 0.7rem;
-		opacity: 0.6;
-	}
-
-
-
-	/* 🗂️ Vault Category Modal Styles */
-	.vcat-modal-backdrop {
-		position: fixed;
-		inset: 0;
-		background: rgba(0, 0, 0, 0.65);
-		backdrop-filter: blur(4px);
-		-webkit-backdrop-filter: blur(4px);
-		z-index: 9998;
-	}
-
-	.vault-cat-modal {
-		position: fixed;
-		top: 50%;
-		left: 50%;
-		transform: translate(-50%, -50%);
-		width: 92vw;
-		max-width: 460px;
-		max-height: 85vh;
-		background: var(--card-bg);
-		border-radius: 22px;
-		border: 2px solid var(--border-color);
-		border-bottom: 6px solid var(--border-depth-color);
-		box-shadow: 0 20px 48px rgba(0, 0, 0, 0.45);
-		z-index: 9999;
-		padding: 1.2rem;
-		display: flex;
-		flex-direction: column;
-		gap: 0.75rem;
-		box-sizing: border-box;
-		animation: duoPop 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
-	}
-
-	.vcat-modal-header {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		padding-bottom: 0.4rem;
-		border-bottom: 1.5px solid var(--border-color);
-	}
-
-	.vcat-header-title-box {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-	}
-
-	.vcat-header-ico {
-		font-size: 1.4rem;
-	}
-
-	.vcat-heading {
-		font-family: 'Outfit', sans-serif;
-		font-size: 1.05rem;
-		font-weight: 900;
-		margin: 0;
-		color: var(--text-color);
-	}
-
-	.vcat-sub {
-		font-size: 0.72rem;
-		font-weight: 700;
-		color: var(--text-muted);
-	}
-
-	.vcat-close-btn {
-		background: var(--card-bg-subtle);
-		border: 1.5px solid var(--border-color);
-		border-radius: 10px;
-		width: 32px;
-		height: 32px;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		color: var(--text-muted);
-		font-size: 0.9rem;
-		font-weight: 900;
-		cursor: pointer;
-		transition: all 0.12s ease;
-	}
-
-	.vcat-close-btn:hover {
-		background: var(--hover-bg);
-		color: var(--text-color);
-	}
-
-	/* 📌 Active Note Target Box inside Modal */
-	.vcat-active-note-card {
-		background: var(--card-bg-subtle);
-		border: 1.5px solid var(--border-color);
-		border-radius: 14px;
-		padding: 0.65rem 0.8rem;
-		display: flex;
-		flex-direction: column;
-		gap: 0.45rem;
-	}
-
-	.vcat-target-note-header {
-		display: flex;
-		align-items: center;
-		gap: 0.35rem;
-		font-size: 0.72rem;
-		font-weight: 800;
-	}
-
-	.vcat-note-target-label {
-		color: var(--text-muted);
-		font-size: 0.65rem;
-		font-weight: 900;
-		letter-spacing: 0.04em;
-	}
-
-	.vcat-note-target-title {
-		color: var(--text-color);
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		max-width: 250px;
-	}
-
-	.vcat-current-cat-state {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 0.5rem;
-	}
-
-	.vcat-assigned-badge {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.35rem;
-		background: var(--accent-light-bg);
-		border: 1.5px solid var(--accent-color);
-		border-radius: 8px;
-		padding: 0.2rem 0.55rem;
-		font-size: 0.76rem;
-		font-weight: 800;
-		color: var(--accent-color);
-	}
-
-	.vcat-no-cat-label {
-		font-size: 0.74rem;
-		font-weight: 700;
-		color: var(--text-muted);
-		font-style: italic;
-	}
-
-	.vcat-unassign-btn {
-		background: rgba(255, 75, 75, 0.12);
-		border: 1.5px solid rgba(255, 75, 75, 0.35);
-		color: var(--pink-color, #ff4b4b);
-		border-radius: 8px;
-		padding: 0.22rem 0.55rem;
-		font-size: 0.72rem;
-		font-weight: 800;
-		cursor: pointer;
-		transition: all 0.12s ease;
-	}
-
-	.vcat-unassign-btn:hover {
-		background: var(--pink-color, #ff4b4b);
-		color: #ffffff;
-	}
-
-	/* ➕ Create Category Section */
-	.vcat-create-section {
-		display: flex;
-		flex-direction: column;
-		gap: 0.3rem;
-	}
-
-	.vcat-create-row {
-		display: flex;
-		align-items: center;
-		gap: 0.4rem;
-		background: var(--card-bg-subtle);
-		border: 1.5px solid var(--border-color);
-		border-radius: 12px;
-		padding: 0.3rem 0.4rem 0.3rem 0.7rem;
-	}
-
-	.vcat-create-input {
-		flex: 1;
-		background: transparent;
-		border: none;
-		outline: none;
-		color: var(--text-color);
-		font-family: inherit;
-		font-size: 0.8rem;
-		font-weight: 800;
-	}
-
-	.vcat-create-btn {
-		padding: 0.4rem 0.75rem !important;
-		font-size: 0.74rem !important;
-		border-radius: 9px !important;
-		white-space: nowrap;
-	}
-
-	/* 🔍 Search Box */
-	.vcat-search-box {
-		display: flex;
-		align-items: center;
-		gap: 0.4rem;
-		background: var(--card-bg-subtle);
-		border: 1.5px solid var(--border-color);
-		border-radius: 11px;
-		padding: 0.35rem 0.65rem;
-	}
-
-	.vsearch-ico {
-		font-size: 0.82rem;
-		color: var(--text-muted);
-	}
-
-	.vcat-search-input {
-		flex: 1;
-		background: transparent;
-		border: none;
-		outline: none;
-		color: var(--text-color);
-		font-family: inherit;
-		font-size: 0.8rem;
-		font-weight: 700;
-	}
-
-	.vsearch-clear {
-		background: none;
-		border: none;
-		color: var(--text-muted);
-		font-size: 0.82rem;
-		cursor: pointer;
-	}
-
-	/* 🗂️ Category List Items */
-	.vcat-list {
-		flex: 1;
-		overflow-y: auto;
-		max-height: 220px;
-		display: flex;
-		flex-direction: column;
-		gap: 0.35rem;
-		padding-right: 0.15rem;
-	}
-
-	.vcat-empty {
-		text-align: center;
-		padding: 1.5rem 1rem;
-		font-size: 0.82rem;
-		color: var(--text-muted);
-		display: flex;
-		flex-direction: column;
-		gap: 0.3rem;
-	}
-
-	.vcat-empty-hint {
-		font-size: 0.74rem;
-		color: var(--text-muted);
-		opacity: 0.85;
-	}
-
-	.vcat-card-item {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 0.5rem;
-		background: var(--card-bg-subtle);
-		border: 1.5px solid var(--border-color);
-		border-radius: 12px;
-		padding: 0.4rem 0.6rem;
-		transition: all 0.12s ease;
-	}
-
-	.vcat-card-item:hover {
-		border-color: var(--accent-color);
-		background: var(--hover-bg);
-	}
-
-	.vcat-card-item.is-assigned {
-		border-color: var(--accent-color);
-		background: var(--accent-light-bg);
-	}
-
-	.vcat-item-left {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		background: none;
-		border: none;
-		color: inherit;
-		cursor: pointer;
-		text-align: left;
-		flex: 1;
-		min-width: 0;
-		padding: 0;
-	}
-
-	.vcat-item-icon {
-		font-size: 0.95rem;
-		flex-shrink: 0;
-	}
-
-	.vcat-item-text {
-		display: flex;
-		flex-direction: column;
-		min-width: 0;
-		flex: 1;
-	}
-
-	.vcat-item-name {
-		font-size: 0.82rem;
-		font-weight: 800;
-		color: var(--text-color);
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
-
-	.vcat-item-count {
-		font-size: 0.68rem;
-		font-weight: 700;
-		color: var(--text-muted);
-	}
-
-	.vcat-item-check-badge {
-		font-size: 0.65rem;
-		font-weight: 900;
-		color: var(--green-color, #58cc02);
-		background: rgba(88, 204, 2, 0.15);
-		border: 1px solid var(--green-color, #58cc02);
-		border-radius: 6px;
-		padding: 0.1rem 0.35rem;
-		white-space: nowrap;
-		flex-shrink: 0;
-	}
-
-	.vcat-item-actions {
-		display: flex;
-		align-items: center;
-		gap: 0.3rem;
-		flex-shrink: 0;
-	}
-
-	.vcat-action-assign-btn {
-		background: var(--card-bg);
-		border: 1.5px solid var(--border-color);
-		border-radius: 7px;
-		color: var(--accent-color);
-		font-size: 0.7rem;
-		font-weight: 800;
-		padding: 0.2rem 0.45rem;
-		cursor: pointer;
-		transition: all 0.12s ease;
-	}
-
-	.vcat-action-assign-btn:hover {
-		background: var(--accent-color);
-		color: #ffffff;
-		border-color: var(--accent-color);
-	}
-
-	.vcat-item-delete-btn {
-		background: transparent;
-		border: 1px solid transparent;
-		border-radius: 7px;
-		color: var(--text-muted);
-		font-size: 0.8rem;
-		padding: 0.2rem 0.35rem;
-		cursor: pointer;
-		transition: all 0.12s ease;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-	}
-
-	.vcat-item-delete-btn:hover {
-		background: rgba(255, 75, 75, 0.15);
-		border-color: rgba(255, 75, 75, 0.35);
-		color: var(--pink-color, #ff4b4b);
-	}
-
-	/* Footer */
-	.vcat-modal-footer {
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-		padding-top: 0.4rem;
-		border-top: 1.5px solid var(--border-color);
-	}
-
-	.vcat-batch-row {
-		display: flex;
-		gap: 0.35rem;
-	}
-
-	.vcat-batch-btn {
-		flex: 1;
-		padding: 0.35rem 0.5rem;
-		border-radius: 9px;
-		background: var(--card-bg-subtle);
-		border: 1.5px solid var(--border-color);
-		color: var(--text-muted);
-		font-family: inherit;
-		font-size: 0.72rem;
-		font-weight: 800;
-		cursor: pointer;
-		transition: all 0.12s ease;
-		white-space: nowrap;
-	}
-
-	.vcat-batch-btn:hover {
-		color: var(--text-color);
-		border-color: var(--accent-color);
-	}
-
-	.vcat-batch-btn.active-batch {
-		background: var(--accent-light-bg);
-		color: var(--accent-color);
-		border-color: var(--accent-color);
-	}
-
-	.vcat-apply-btn {
-		width: 100%;
-		padding: 0.6rem;
-		font-size: 0.84rem;
-		font-weight: 900;
-		justify-content: center;
-	}
-
 	.vault-files-list {
 		flex: 1;
 		overflow-y: auto;
@@ -2541,19 +1569,6 @@
 
 	.pin-ico {
 		font-size: 0.75rem;
-		flex-shrink: 0;
-	}
-
-	.file-cat {
-		font-size: 0.62rem;
-		font-weight: 800;
-		text-transform: uppercase;
-		color: var(--accent-color);
-		background: var(--card-bg);
-		border: 1px solid var(--border-color);
-		border-radius: 6px;
-		padding: 0.1rem 0.35rem;
-		white-space: nowrap;
 		flex-shrink: 0;
 	}
 
@@ -2647,36 +1662,6 @@
 			display: inline-flex;
 			align-items: center;
 		}
-	}
-
-	.workspace-category-pill {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.35rem;
-		background: var(--card-bg-subtle);
-		border: 1.5px solid var(--border-color);
-		border-radius: 8px;
-		padding: 0 0.55rem;
-		height: 32px;
-		box-sizing: border-box;
-		user-select: none;
-		min-width: 0;
-		flex-shrink: 1;
-	}
-
-	.cat-pill-ico {
-		font-size: 0.82rem;
-		flex-shrink: 0;
-	}
-
-	.cat-pill-txt {
-		font-size: 0.76rem;
-		font-weight: 800;
-		color: var(--accent-color);
-		white-space: nowrap;
-		max-width: 150px;
-		overflow: hidden;
-		text-overflow: ellipsis;
 	}
 
 	.save-status-pill {
@@ -2851,17 +1836,6 @@
 			font-size: 0.72rem;
 		}
 
-		.workspace-category-pill {
-			height: 30px;
-			padding: 0 0.45rem;
-			max-width: 110px;
-		}
-
-		.cat-pill-txt {
-			max-width: 65px;
-			font-size: 0.72rem;
-		}
-
 		.save-status-pill {
 			display: none;
 		}
@@ -2888,14 +1862,6 @@
 	}
 
 	@media (max-width: 480px) {
-		.workspace-category-pill {
-			max-width: 95px;
-		}
-
-		.cat-pill-txt {
-			max-width: 50px;
-		}
-
 		.action-outline-btn,
 		.action-export-btn {
 			display: none;
