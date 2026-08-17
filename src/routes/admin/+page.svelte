@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { fade, slide } from 'svelte/transition';
 	import { cardsStore } from '$lib/stores/cardsStore';
 	import type { Card } from '$lib/types/cards';
 
 	import CardForm from '$lib/components/CardForm.svelte';
-	import PageHeader from '$lib/components/PageHeader.svelte';
-	import { loginWithDiscord, logoutUser } from '$lib/auth-client';
+	import { loginWithDiscord } from '$lib/auth-client';
 	import { toastStore } from '$lib/stores/toastStore';
 	import { matchesCategory } from '$lib/stores/globalCategoryStore';
 
@@ -27,10 +27,6 @@
 		)
 	);
 
-	async function logout() {
-		await logoutUser();
-	}
-
 	// Form state for editing card inline
 	let editingCard = $state<Card | null>(null);
 	let searchQuery = $state('');
@@ -42,6 +38,13 @@
 	let newCategoryName = $state('');
 	let renamingInProgress = $state(false);
 	let categorySearchQuery = $state('');
+
+	// Import Modal state
+	let isImportModalOpen = $state(false);
+	let importedCardsData = $state<Card[] | null>(null);
+	let importFileName = $state('');
+	let isImporting = $state(false);
+	let fileInputRef = $state<HTMLInputElement | null>(null);
 
 	// Derived category stats map
 	let categoryStats = $derived.by<{ category: string; count: number }[]>(() => {
@@ -260,11 +263,77 @@
 		downloadAnchor.setAttribute('href', dataStr);
 		downloadAnchor.setAttribute(
 			'download',
-			`rail_focus_cards_${new Date().toISOString().split('T')[0]}.json`
+			`rail_focus_cards_backup_${new Date().toISOString().split('T')[0]}.json`
 		);
 		document.body.appendChild(downloadAnchor);
 		downloadAnchor.click();
 		downloadAnchor.remove();
+		toastStore.show({ message: '📥 Backup JSON scaricato con successo!' });
+	}
+
+	function handleImportFileSelect(e: Event) {
+		const target = e.target as HTMLInputElement;
+		if (!target.files || target.files.length === 0) return;
+
+		const file = target.files[0];
+		importFileName = file.name;
+
+		const reader = new FileReader();
+		reader.onload = (ev) => {
+			try {
+				const content = ev.target?.result as string;
+				const parsed = JSON.parse(content);
+				if (!Array.isArray(parsed)) {
+					alert('Il file JSON selezionato non contiene una lista valida di schede.');
+					return;
+				}
+				importedCardsData = parsed;
+				isImportModalOpen = true;
+			} catch (err) {
+				alert('Errore nella lettura del file JSON.');
+			} finally {
+				target.value = '';
+			}
+		};
+		reader.readAsText(file);
+	}
+
+	async function executeImport(mode: 'merge' | 'replace') {
+		if (!importedCardsData) return;
+
+		if (
+			mode === 'replace' &&
+			!confirm('⚠️ ATTENZIONE: Questa opzione cancellerà TUTTE le schede attuali nel database e le sostituirà con quelle del file. Continuare?')
+		) {
+			return;
+		}
+
+		isImporting = true;
+		try {
+			const res = await fetch('/api/admin/import', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ mode, cards: importedCardsData })
+			});
+
+			if (!res.ok) {
+				const data = await res.json();
+				throw new Error(data.error || 'Errore importazione');
+			}
+
+			const result = await res.json();
+			toastStore.show({
+				message: `✨ Importazione completata! ${result.insertedCount} inserite, ${result.updatedCount} aggiornate.`
+			});
+			isImportModalOpen = false;
+			importedCardsData = null;
+			await cardsStore.loadFromStorageOrApi();
+		} catch (err: any) {
+			console.error('Errore importazione backup:', err);
+			toastStore.show({ message: `❌ ${err.message || 'Errore importazione'}` });
+		} finally {
+			isImporting = false;
+		}
 	}
 
 	let filteredCards = $derived(
@@ -303,17 +372,9 @@
 </script>
 
 <div class="admin-container">
-	<PageHeader
-		title="Pannello Amministratore"
-		subtitle="Gestione schede, categorie e cestino database"
-		icon="/emoji/star_3d.png"
-		variant="blue"
-		mobileOpenNav={true}
-	/>
-
 	{#if !user || !isAdmin}
 		<!-- Login / Unauthorized View -->
-		<div class="login-card duo-card">
+		<div class="login-card duo-card" in:fade={{ duration: 200 }}>
 			<div class="login-badge">Area Riservata</div>
 			<h1 class="login-title">Pannello Amministratore</h1>
 			<p class="login-desc">
@@ -344,22 +405,7 @@
 		</div>
 	{:else}
 		<!-- Admin Panel Dashboard -->
-		<div class="admin-panel">
-			<!-- Header Admin Bar -->
-			<div class="admin-top duo-card">
-				<div class="user-info">
-					<span class="user-name">👤 {user.name || user.username || 'Admin'}</span>
-					<span class="user-role">ID: {user.userId || user.id}</span>
-				</div>
-
-				<div class="top-actions">
-					<button class="duo-btn duo-btn-blue export-btn" onclick={exportJSON}>
-						📥 ESPORTA JSON
-					</button>
-					<button class="duo-btn duo-btn-gray logout-btn" onclick={logout}> Esci </button>
-				</div>
-			</div>
-
+		<div class="admin-panel" in:fade={{ duration: 180 }}>
 			<!-- Compact Collapsible Sezione Gestione Categorie -->
 			<div class="categories-accordion-card duo-card">
 				<button
@@ -375,7 +421,7 @@
 				</button>
 
 				{#if isCategoryAccordionOpen}
-					<div class="accordion-content">
+					<div class="accordion-content" transition:slide={{ duration: 180 }}>
 						<div class="category-search-box">
 							<input
 								type="text"
@@ -491,7 +537,7 @@
 				</div>
 
 				{#if mediaInfo}
-					<div class="media-stats-grid">
+					<div class="media-stats-grid" transition:slide={{ duration: 160 }}>
 						<div class="media-stat-box">
 							<span class="m-val">{mediaInfo.totalFiles}</span>
 							<span class="m-lbl">File Totali ({((mediaInfo.totalBytes || 0) / 1024 / 1024).toFixed(2)} MB)</span>
@@ -507,7 +553,7 @@
 					</div>
 
 					{#if mediaInfo.orphanedCount > 0}
-						<div class="clean-action-box">
+						<div class="clean-action-box" transition:slide={{ duration: 160 }}>
 							<button
 								class="duo-btn duo-btn-red clean-btn"
 								disabled={mediaLoading}
@@ -547,7 +593,7 @@
 
 			{#if activeTab === 'active'}
 				<!-- List Sezione Schede Attive -->
-				<div class="list-section">
+				<div class="list-section" in:fade={{ duration: 150 }}>
 					<div class="list-header">
 						<div class="list-filters">
 							<select bind:value={selectedCategoryFilter} class="duo-input category-select-filter">
@@ -575,11 +621,11 @@
 							{#each filteredCards as card (card.id)}
 								<div
 									id={`admin-card-${card.id}`}
-									class="admin-card-item duo-card"
+									class="admin-card-item duo-card animated-card"
 									class:is-editing-this={editingCard?.id === card.id}
 								>
 									{#if editingCard?.id === card.id}
-										<div class="inline-edit-wrapper">
+										<div class="inline-edit-wrapper" transition:slide={{ duration: 200 }}>
 											<div class="inline-edit-header">
 												<div class="inline-edit-title">
 													<span>✏️ Modifica Scheda: <strong>"{card.title}"</strong></span>
@@ -621,7 +667,7 @@
 											</div>
 
 											<div class="item-actions">
-												<button class="duo-btn duo-btn-blue edit-btn" onclick={() => startEdit(card)}>
+												<button class="duo-btn duo-btn-theme edit-btn" onclick={() => startEdit(card)}>
 													✏️ Modifica
 												</button>
 												<button class="duo-btn duo-btn-gray delete-btn" onclick={() => handleDeleteCard(card.id)} title="Sposta nel cestino">
@@ -637,7 +683,7 @@
 				</div>
 			{:else}
 				<!-- List Sezione Cestino -->
-				<div class="list-section">
+				<div class="list-section" in:fade={{ duration: 150 }}>
 					<div class="trash-banner duo-card">
 						<span>🗑️ Gli elementi nel cestino rimangono conservati finché non vengono eliminati manualmente.</span>
 					</div>
@@ -658,7 +704,7 @@
 							</div>
 						{:else}
 							{#each filteredTrashCards as card (card.id)}
-								<div class="admin-card-item duo-card in-trash">
+								<div class="admin-card-item duo-card in-trash animated-card">
 									<div class="card-row-wrapper">
 										<div class="card-main-info">
 											<div class="item-title-row">
@@ -697,9 +743,83 @@
 					</div>
 				</div>
 			{/if}
+
+			<!-- Sezione Backup & Ripristino Schede (In fondo) -->
+			<div class="backup-section-card duo-card">
+				<div class="backup-header">
+					<div>
+						<h2 class="section-title">💾 Backup & Ripristino Database</h2>
+						<p class="section-subtitle">Esporta o ripristina l'intero database delle schede informative in formato JSON.</p>
+					</div>
+
+					<div class="backup-buttons-row">
+						<button type="button" class="duo-btn duo-btn-blue backup-action-btn" onclick={exportJSON}>
+							📥 Esporta Backup JSON
+						</button>
+
+						<label class="duo-btn duo-btn-purple backup-action-btn import-label-btn">
+							<span>📤 Importa Backup JSON</span>
+							<input
+								type="file"
+								accept=".json,application/json"
+								bind:this={fileInputRef}
+								onchange={handleImportFileSelect}
+								class="hidden-file-input"
+							/>
+						</label>
+					</div>
+				</div>
+			</div>
 		</div>
 	{/if}
 </div>
+
+<!-- Modal di Scelta Modalità Importazione -->
+{#if isImportModalOpen && importedCardsData}
+	<div class="import-modal-backdrop" transition:fade={{ duration: 150 }}>
+		<div class="import-modal-content duo-card" transition:slide={{ duration: 200 }}>
+			<div class="modal-header">
+				<h3>📤 Importazione Backup Database</h3>
+				<button type="button" class="close-modal-x" onclick={() => (isImportModalOpen = false)}>✕</button>
+			</div>
+
+			<div class="modal-body">
+				<p>
+					Stai per importare il file <strong>{importFileName}</strong> contenente <strong>{importedCardsData.length} schede</strong>.
+				</p>
+				<p class="modal-hint">Scegli come desideri procedere con l'importazione dei dati:</p>
+
+				<div class="import-options-grid">
+					<button
+						type="button"
+						class="import-option-card duo-card"
+						disabled={isImporting}
+						onclick={() => executeImport('merge')}
+					>
+						<div class="opt-icon">🔄</div>
+						<div class="opt-content">
+							<strong>Unisci & Aggiorna</strong>
+							<span>Aggiorna le schede esistenti e aggiunge le nuove senza cancellare le altre.</span>
+						</div>
+					</button>
+
+					<button
+						type="button"
+						class="import-option-card danger-opt duo-card"
+						disabled={isImporting}
+						onclick={() => executeImport('replace')}
+					>
+						<div class="opt-icon">⚠️</div>
+						<div class="opt-content">
+							<strong>Sostituisci Tutto</strong>
+							<span>Cancella tutte le schede attuali e le rimpiazza completamente con il backup.</span>
+						</div>
+					</button>
+				</div>
+			</div>
+		</div>
+	</div>
+{/if}
 
 <style>
 	.admin-container {
@@ -717,44 +837,6 @@
 		display: flex;
 		flex-direction: column;
 		gap: 1.15rem;
-	}
-
-	.admin-top {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		padding: 0.85rem 1.15rem;
-		background: var(--card-bg);
-		border-radius: 16px;
-	}
-
-	.user-info {
-		display: flex;
-		flex-direction: column;
-		gap: 0.15rem;
-	}
-
-	.user-name {
-		font-size: 0.95rem;
-		font-weight: 900;
-		color: var(--text-color);
-	}
-
-	.user-role {
-		font-size: 0.72rem;
-		color: var(--text-muted);
-		font-weight: 700;
-	}
-
-	.top-actions {
-		display: flex;
-		gap: 0.5rem;
-	}
-
-	.export-btn,
-	.logout-btn {
-		font-size: 0.78rem;
-		padding: 0.45rem 0.85rem;
 	}
 
 	/* Accordion Categorie */
@@ -824,6 +906,11 @@
 		display: flex;
 		flex-direction: column;
 		gap: 0.45rem;
+		transition: transform 0.15s ease, box-shadow 0.15s ease;
+	}
+
+	.category-stat-item:hover {
+		transform: translateY(-2px);
 	}
 
 	.stat-main {
@@ -1071,7 +1158,12 @@
 		padding: 0.85rem 1.15rem;
 		background: var(--card-bg);
 		border-radius: 16px;
-		transition: all 0.15s ease;
+		transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+	}
+
+	.animated-card:hover {
+		transform: translateY(-2px);
+		box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
 	}
 
 	.card-row-wrapper {
@@ -1164,6 +1256,18 @@
 		align-items: center;
 	}
 
+	/* Theme Dynamic Edit Button */
+	.duo-btn-theme {
+		background: var(--accent-color);
+		border-color: var(--accent-depth);
+		border-bottom-width: 4px;
+		color: #ffffff;
+	}
+
+	.duo-btn-theme:hover {
+		filter: brightness(1.1);
+	}
+
 	.edit-btn,
 	.delete-btn,
 	.restore-btn,
@@ -1218,6 +1322,161 @@
 		font-weight: 700;
 		background: var(--card-bg);
 		border-radius: 16px;
+	}
+
+	/* Backup Section */
+	.backup-section-card {
+		padding: 1rem 1.15rem;
+		background: var(--card-bg);
+		border-radius: 16px;
+	}
+
+	.backup-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		flex-wrap: wrap;
+		gap: 0.85rem;
+	}
+
+	.backup-buttons-row {
+		display: flex;
+		gap: 0.5rem;
+		flex-wrap: wrap;
+	}
+
+	.backup-action-btn {
+		font-size: 0.8rem;
+		padding: 0.5rem 0.9rem;
+		cursor: pointer;
+	}
+
+	.import-label-btn {
+		position: relative;
+		overflow: hidden;
+		display: inline-flex;
+		align-items: center;
+	}
+
+	.hidden-file-input {
+		display: none;
+	}
+
+	/* Import Modal */
+	.import-modal-backdrop {
+		position: fixed;
+		inset: 0;
+		background: rgba(0, 0, 0, 0.6);
+		backdrop-filter: blur(4px);
+		z-index: 9999;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 1rem;
+	}
+
+	.import-modal-content {
+		max-width: 500px;
+		width: 100%;
+		background: var(--card-bg);
+		border-radius: 20px;
+		padding: 1.5rem;
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+		border: 2px solid var(--border-color);
+		box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+	}
+
+	.modal-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+	}
+
+	.modal-header h3 {
+		margin: 0;
+		font-size: 1.15rem;
+		font-weight: 900;
+		color: var(--text-color);
+	}
+
+	.close-modal-x {
+		background: none;
+		border: none;
+		font-size: 1.1rem;
+		color: var(--text-muted);
+		cursor: pointer;
+		font-weight: 900;
+	}
+
+	.modal-body {
+		display: flex;
+		flex-direction: column;
+		gap: 0.85rem;
+	}
+
+	.modal-body p {
+		margin: 0;
+		font-size: 0.88rem;
+		color: var(--text-color);
+		line-height: 1.45;
+	}
+
+	.modal-hint {
+		font-weight: 700;
+		color: var(--text-muted) !important;
+	}
+
+	.import-options-grid {
+		display: flex;
+		flex-direction: column;
+		gap: 0.65rem;
+	}
+
+	.import-option-card {
+		display: flex;
+		align-items: center;
+		gap: 0.85rem;
+		padding: 0.85rem 1rem;
+		background: var(--card-bg-subtle);
+		border: 2px solid var(--border-color);
+		border-radius: 14px;
+		cursor: pointer;
+		text-align: left;
+		transition: all 0.15s ease;
+	}
+
+	.import-option-card:hover {
+		border-color: var(--accent-color);
+		background: var(--accent-light-bg);
+		transform: translateY(-2px);
+	}
+
+	.import-option-card.danger-opt:hover {
+		border-color: #ef4444;
+		background: rgba(239, 68, 68, 0.1);
+	}
+
+	.opt-icon {
+		font-size: 1.4rem;
+	}
+
+	.opt-content {
+		display: flex;
+		flex-direction: column;
+		gap: 0.2rem;
+	}
+
+	.opt-content strong {
+		font-size: 0.92rem;
+		color: var(--text-color);
+	}
+
+	.opt-content span {
+		font-size: 0.76rem;
+		color: var(--text-muted);
+		line-height: 1.35;
 	}
 
 	.login-card {

@@ -200,8 +200,8 @@
 	}
 
 	function toggleGameMode(mode: string) {
-		if (mode === 'reels' && !hasImages) {
-			toastStore.show({ message: "📷 Reels richiede almeno un'immagine allegata.", type: 'warning' });
+		if ((mode === 'reels' || mode === 'flashcard:photo') && !hasImages) {
+			toastStore.show({ message: "📷 Questa modalità richiede almeno un'immagine allegata." });
 			return;
 		}
 
@@ -225,9 +225,8 @@
 			const res = await uploadImage(file, { context: 'card' });
 			if (res && res.url) {
 				images = [...images, res.url];
-				if (!gameModes.includes('reels')) {
-					gameModes = [...gameModes, 'reels'];
-				}
+				if (!gameModes.includes('reels')) gameModes = [...gameModes, 'reels'];
+				if (!gameModes.includes('flashcard:photo')) gameModes = [...gameModes, 'flashcard:photo'];
 				saveDraft();
 				toastStore.show({ message: '📷 Immagine caricata con successo!' });
 			}
@@ -249,9 +248,8 @@
 		}
 
 		images = [...images, clean];
-		if (!gameModes.includes('reels')) {
-			gameModes = [...gameModes, 'reels'];
-		}
+		if (!gameModes.includes('reels')) gameModes = [...gameModes, 'reels'];
+		if (!gameModes.includes('flashcard:photo')) gameModes = [...gameModes, 'flashcard:photo'];
 		newImageUrl = '';
 		saveDraft();
 	}
@@ -259,7 +257,7 @@
 	function removeImage(index: number) {
 		images = images.filter((_, i) => i !== index);
 		if (images.length === 0) {
-			gameModes = gameModes.filter((m) => m !== 'reels');
+			gameModes = gameModes.filter((m) => m !== 'reels' && m !== 'flashcard:photo');
 		}
 		saveDraft();
 	}
@@ -274,9 +272,8 @@
 					const res = await uploadImage(file, { context: 'card' });
 					if (res && res.url) {
 						images = [...images, res.url];
-						if (!gameModes.includes('reels')) {
-							gameModes = [...gameModes, 'reels'];
-						}
+						if (!gameModes.includes('reels')) gameModes = [...gameModes, 'reels'];
+						if (!gameModes.includes('flashcard:photo')) gameModes = [...gameModes, 'flashcard:photo'];
 						saveDraft();
 						toastStore.show({ message: '📷 Immagine incollata caricata con successo!' });
 					}
@@ -299,9 +296,8 @@
 					const res = await uploadImage(file, { context: 'card' });
 					if (res && res.url) {
 						images = [...images, res.url];
-						if (!gameModes.includes('reels')) {
-							gameModes = [...gameModes, 'reels'];
-						}
+						if (!gameModes.includes('reels')) gameModes = [...gameModes, 'reels'];
+						if (!gameModes.includes('flashcard:photo')) gameModes = [...gameModes, 'flashcard:photo'];
 						saveDraft();
 						toastStore.show({ message: '📷 Immagine trascinata caricata con successo!' });
 					}
@@ -419,7 +415,7 @@
 			{/if}
 		</div>
 
-		<!-- 2. SPUNTA ACRONIMO & CAMPO OPZIONALE -->
+		<!-- 2. SPUNTA ACRONIMO -->
 		<div class="form-group full-width acr-toggle-box">
 			<label class="custom-checkbox-row">
 				<input
@@ -432,30 +428,16 @@
 			</label>
 
 			{#if hasAcronym}
-				<div class="acronym-subfields-grid">
-					<div class="form-group">
-						<label for="card-acronym-field">Sigla / Acronimo (es: SCMT, RFI, PL)</label>
-						<input
-							id="card-acronym-field"
-							type="text"
-							bind:value={acronym}
-							oninput={saveDraft}
-							placeholder="es: SCMT"
-							class="duo-input"
-						/>
-					</div>
-
-					<div class="form-group">
-						<label for="card-fullname-field">Significato Esteso (Opzionale)</label>
-						<input
-							id="card-fullname-field"
-							type="text"
-							bind:value={fullName}
-							oninput={saveDraft}
-							placeholder="es: Sistema Controllo Marcia Treno"
-							class="duo-input"
-						/>
-					</div>
+				<div class="acronym-subfield-single">
+					<label for="card-acronym-field">Sigla / Acronimo (es: SCMT, RFI, PL, SSC...)</label>
+					<input
+						id="card-acronym-field"
+						type="text"
+						bind:value={acronym}
+						oninput={saveDraft}
+						placeholder="es: SCMT"
+						class="duo-input"
+					/>
 				</div>
 			{/if}
 		</div>
@@ -491,80 +473,101 @@
 			</div>
 		</div>
 
-		<!-- 4. VISIBILITÀ WIKI & MINIGIOCHI (SPUNTE) -->
-		<div class="form-group full-width visibility-section duo-card">
-			<span class="visibility-section-title">🌐 Visibilità e Giochi in cui mostrare la scheda</span>
-			
-			<div class="visibility-toggles-grid">
-				<!-- Spunta Mostra nella Wiki -->
-				<label class="game-toggle-chip" class:active={showInWiki}>
-					<input
-						type="checkbox"
-						bind:checked={showInWiki}
-						onchange={saveDraft}
-						class="hidden-toggle-input"
-					/>
-					<span class="toggle-icon">📚</span>
-					<div class="toggle-text">
-						<strong>Mostra nella WIKI</strong>
-						<span class="toggle-sub">Visibile nel dizionario ed eleggibile per la parola del giorno</span>
-					</div>
-					<span class="toggle-status-badge">{showInWiki ? '✓ ATTIVA' : '✕ NO'}</span>
-				</label>
+		<!-- 4. VISIBILITÀ WIKI & MINIGIOCHI (COMPATTA) -->
+		<div class="form-group full-width visibility-compact-box">
+			<div class="visibility-compact-header">
+				<span class="vis-title">🌐 Visibilità & Minigiochi Abilitati</span>
+			</div>
 
-				<!-- Spunte Minigiochi -->
-				<div class="minigames-pills-row">
-					<span class="minigames-group-lbl">Mini-giochi abilitati:</span>
+			<div class="vis-chips-wrap">
+				<!-- Wiki Toggle -->
+				<button
+					type="button"
+					class="vis-pill-btn"
+					class:checked={showInWiki}
+					onclick={() => {
+						showInWiki = !showInWiki;
+						saveDraft();
+					}}
+					title="Mostra nella Wiki e come Parola del Giorno"
+				>
+					<span>📚 Wiki</span>
+					<span class="pill-check">{showInWiki ? '✓' : '✕'}</span>
+				</button>
 
-					<!-- Flashcard Standard -->
-					<button
-						type="button"
-						class="game-pill-btn"
-						class:checked={gameModes.includes('flashcard')}
-						onclick={() => toggleGameMode('flashcard')}
-						title="Include la scheda nelle sessioni Flashcard"
-					>
-						<span>📖 Flashcard</span>
-						<span class="pill-check">{gameModes.includes('flashcard') ? '✓' : '✕'}</span>
-					</button>
+				<!-- Flashcard Testuale -->
+				<button
+					type="button"
+					class="vis-pill-btn"
+					class:checked={gameModes.includes('flashcard:text') || gameModes.includes('flashcard')}
+					onclick={() => toggleGameMode('flashcard:text')}
+					title="Flashcard: Acronimo/Titolo -> Descrizione"
+				>
+					<span>📖 FC Testo</span>
+					<span class="pill-check">{gameModes.includes('flashcard:text') || gameModes.includes('flashcard') ? '✓' : '✕'}</span>
+				</button>
 
-					<!-- Quiz -->
-					<button
-						type="button"
-						class="game-pill-btn"
-						class:checked={gameModes.includes('quiz')}
-						onclick={() => toggleGameMode('quiz')}
-						title="Include la scheda nei Quiz a scelta multipla"
-					>
-						<span>⭐ Quiz</span>
-						<span class="pill-check">{gameModes.includes('quiz') ? '✓' : '✕'}</span>
-					</button>
+				<!-- Flashcard Visiva (Richiede Foto) -->
+				<button
+					type="button"
+					class="vis-pill-btn"
+					class:checked={hasImages && (gameModes.includes('flashcard:photo') || gameModes.includes('flashcard'))}
+					class:disabled={!hasImages}
+					onclick={() => toggleGameMode('flashcard:photo')}
+					title={!hasImages ? "Richiede almeno un'immagine allegata" : "Flashcard: Mostra Foto intera"}
+				>
+					<span>📷 FC Foto</span>
+					<span class="pill-check">{hasImages && (gameModes.includes('flashcard:photo') || gameModes.includes('flashcard')) ? '✓' : (!hasImages ? '🚫' : '✕')}</span>
+				</button>
 
-					<!-- Reels (Richiede Immagine) -->
-					<button
-						type="button"
-						class="game-pill-btn"
-						class:checked={hasImages && gameModes.includes('reels')}
-						class:disabled={!hasImages}
-						onclick={() => toggleGameMode('reels')}
-						title={!hasImages ? "Reels richiede almeno un'immagine allegata" : "Feed verticale Reels"}
-					>
-						<span>📷 Reels {!hasImages ? '(Richiede Foto)' : ''}</span>
-						<span class="pill-check">{hasImages && gameModes.includes('reels') ? '✓' : (!hasImages ? '🚫' : '✕')}</span>
-					</button>
+				<!-- Flashcard Inversa -->
+				<button
+					type="button"
+					class="vis-pill-btn"
+					class:checked={gameModes.includes('flashcard:reverse') || gameModes.includes('flashcard')}
+					onclick={() => toggleGameMode('flashcard:reverse')}
+					title="Flashcard Inversa: Descrizione -> Titolo"
+				>
+					<span>🔄 FC Inversa</span>
+					<span class="pill-check">{gameModes.includes('flashcard:reverse') || gameModes.includes('flashcard') ? '✓' : '✕'}</span>
+				</button>
 
-					<!-- Scrittura -->
-					<button
-						type="button"
-						class="game-pill-btn"
-						class:checked={gameModes.includes('scrittura')}
-						onclick={() => toggleGameMode('scrittura')}
-						title="Include nella digitazione / ripasso libero"
-					>
-						<span>✍️ Scrittura / Ripasso</span>
-						<span class="pill-check">{gameModes.includes('scrittura') ? '✓' : '✕'}</span>
-					</button>
-				</div>
+				<!-- Quiz -->
+				<button
+					type="button"
+					class="vis-pill-btn"
+					class:checked={gameModes.includes('quiz')}
+					onclick={() => toggleGameMode('quiz')}
+					title="Quiz a scelta multipla"
+				>
+					<span>⭐ Quiz</span>
+					<span class="pill-check">{gameModes.includes('quiz') ? '✓' : '✕'}</span>
+				</button>
+
+				<!-- Reels (Richiede Foto) -->
+				<button
+					type="button"
+					class="vis-pill-btn"
+					class:checked={hasImages && gameModes.includes('reels')}
+					class:disabled={!hasImages}
+					onclick={() => toggleGameMode('reels')}
+					title={!hasImages ? "Reels richiede almeno un'immagine allegata" : "Feed verticale Reels"}
+				>
+					<span>🎬 Reels</span>
+					<span class="pill-check">{hasImages && gameModes.includes('reels') ? '✓' : (!hasImages ? '🚫' : '✕')}</span>
+				</button>
+
+				<!-- Scrittura -->
+				<button
+					type="button"
+					class="vis-pill-btn"
+					class:checked={gameModes.includes('scrittura')}
+					onclick={() => toggleGameMode('scrittura')}
+					title="Esercizi di scrittura e digitazione"
+				>
+					<span>✍️ Scrittura</span>
+					<span class="pill-check">{gameModes.includes('scrittura') ? '✓' : '✕'}</span>
+				</button>
 			</div>
 		</div>
 
@@ -733,17 +736,11 @@
 		color: var(--text-color);
 	}
 
-	.acronym-subfields-grid {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: 0.75rem;
-		margin-top: 0.25rem;
-	}
-
-	@media (max-width: 600px) {
-		.acronym-subfields-grid {
-			grid-template-columns: 1fr;
-		}
+	.acronym-subfield-single {
+		margin-top: 0.35rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.35rem;
 	}
 
 	.form-grid {
@@ -786,136 +783,71 @@
 		cursor: pointer;
 	}
 
-	.visibility-section {
+	.visibility-compact-box {
 		display: flex;
 		flex-direction: column;
-		gap: 0.75rem;
-		padding: 0.85rem;
+		gap: 0.5rem;
+		padding: 0.75rem 0.85rem;
 		background: var(--card-bg-subtle);
-		border-radius: 16px;
+		border-radius: 14px;
+		border: 1px solid var(--border-color);
 	}
 
-	.visibility-section-title {
-		font-size: 0.82rem;
+	.visibility-compact-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+	}
+
+	.vis-title {
+		font-size: 0.78rem;
 		font-weight: 900;
 		color: var(--text-color);
-		letter-spacing: 0.03em;
+		letter-spacing: 0.02em;
 		text-transform: uppercase;
 	}
 
-	.visibility-toggles-grid {
-		display: flex;
-		flex-direction: column;
-		gap: 0.75rem;
-	}
-
-	.game-toggle-chip {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-		padding: 0.65rem 0.85rem;
-		background: var(--card-bg);
-		border: 2px solid var(--border-color);
-		border-radius: 12px;
-		cursor: pointer;
-		transition: all 0.15s ease;
-	}
-
-	.game-toggle-chip.active {
-		border-color: var(--accent-color);
-		background: var(--accent-light-bg);
-	}
-
-	.hidden-toggle-input {
-		display: none;
-	}
-
-	.toggle-icon {
-		font-size: 1.3rem;
-	}
-
-	.toggle-text {
-		display: flex;
-		flex-direction: column;
-		flex: 1;
-		gap: 0.15rem;
-	}
-
-	.toggle-text strong {
-		font-size: 0.85rem;
-		color: var(--text-color);
-	}
-
-	.toggle-sub {
-		font-size: 0.72rem;
-		color: var(--text-muted);
-		font-weight: 600;
-	}
-
-	.toggle-status-badge {
-		font-size: 0.72rem;
-		font-weight: 900;
-		padding: 0.2rem 0.5rem;
-		border-radius: 8px;
-		background: var(--card-bg-subtle);
-		color: var(--text-muted);
-	}
-
-	.game-toggle-chip.active .toggle-status-badge {
-		background: var(--accent-color);
-		color: #ffffff;
-	}
-
-	.minigames-pills-row {
+	.vis-chips-wrap {
 		display: flex;
 		align-items: center;
 		flex-wrap: wrap;
-		gap: 0.45rem;
+		gap: 0.4rem;
 	}
 
-	.minigames-group-lbl {
-		font-size: 0.78rem;
-		font-weight: 800;
-		color: var(--text-muted);
-		width: 100%;
-		margin-bottom: 0.15rem;
-	}
-
-	.game-pill-btn {
+	.vis-pill-btn {
 		display: inline-flex;
 		align-items: center;
-		gap: 0.4rem;
-		padding: 0.45rem 0.75rem;
+		gap: 0.35rem;
+		padding: 0.35rem 0.65rem;
 		background: var(--card-bg);
-		border: 2px solid var(--border-color);
+		border: 1.5px solid var(--border-color);
 		border-radius: 10px;
-		font-size: 0.8rem;
+		font-size: 0.76rem;
 		font-weight: 800;
 		color: var(--text-muted);
 		cursor: pointer;
-		transition: all 0.15s ease;
+		transition: all 0.12s ease;
 	}
 
-	.game-pill-btn:hover:not(:disabled) {
+	.vis-pill-btn:hover:not(.disabled) {
 		border-color: var(--accent-color);
 		color: var(--text-color);
 	}
 
-	.game-pill-btn.checked {
+	.vis-pill-btn.checked {
 		background: var(--accent-light-bg);
 		border-color: var(--accent-color);
 		color: var(--accent-color);
 	}
 
-	.game-pill-btn.disabled,
-	.game-pill-btn:disabled {
-		opacity: 0.45;
+	.vis-pill-btn.disabled {
+		opacity: 0.4;
 		cursor: not-allowed;
 		border-color: var(--border-color);
 	}
 
 	.pill-check {
-		font-size: 0.75rem;
+		font-size: 0.72rem;
 		font-weight: 900;
 	}
 

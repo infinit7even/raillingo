@@ -79,6 +79,40 @@
 		return Array.from(set).sort();
 	});
 
+	// Fullscreen & Context Menu state
+	let isFullscreen = $state(false);
+	let isNotesContextMenuOpen = $state(false);
+	let contextMenuX = $state(0);
+	let contextMenuY = $state(0);
+
+	function toggleFullscreen() {
+		if (typeof document === 'undefined') return;
+		if (!document.fullscreenElement) {
+			document.documentElement.requestFullscreen().catch(() => {});
+			isFullscreen = true;
+			toastStore.show({ message: '⛶ Modalità Schermo Intero attivata' });
+		} else {
+			document.exitFullscreen().catch(() => {});
+			isFullscreen = false;
+			toastStore.show({ message: 'Modalità Schermo Intero disattivata' });
+		}
+	}
+
+	function handleNotesContextMenu(e: MouseEvent) {
+		const target = e.target as HTMLElement;
+		if (target && (target.closest('.document-canvas-container') || target.closest('.word-document-editor') || target.closest('.note-workspace-pane'))) {
+			e.preventDefault();
+			e.stopPropagation();
+			contextMenuX = Math.min(e.clientX, window.innerWidth - 230);
+			contextMenuY = Math.min(e.clientY, window.innerHeight - 320);
+			isNotesContextMenuOpen = true;
+		}
+	}
+
+	function closeNotesContextMenu() {
+		isNotesContextMenuOpen = false;
+	}
+
 	onMount(() => {
 		notesStore.hydrate(data.initialNotes, user?.id);
 		loadTrash();
@@ -104,10 +138,12 @@
 				isVaultCollapsed = true;
 			}
 
-			// Intercetta paste globale ed eventi custom
+			// Intercetta paste globale, contextmenu ed eventi custom
 			window.addEventListener('paste', handleGlobalPaste);
 			window.addEventListener('rf-paste-request', handlePasteReq);
 			window.addEventListener('rf-select-note', handleExternalNoteSelect);
+			window.addEventListener('click', closeNotesContextMenu);
+			window.addEventListener('contextmenu', handleNotesContextMenu);
 		}
 
 		const unsub = notesStore.subscribe((n) => {
@@ -128,6 +164,8 @@
 				window.removeEventListener('paste', handleGlobalPaste);
 				window.removeEventListener('rf-paste-request', handlePasteReq);
 				window.removeEventListener('rf-select-note', handleExternalNoteSelect);
+				window.removeEventListener('click', closeNotesContextMenu);
+				window.removeEventListener('contextmenu', handleNotesContextMenu);
 			}
 			unsub();
 			if (saveDebounceTimer) clearTimeout(saveDebounceTimer);
@@ -924,20 +962,6 @@
 	>
 			<!-- Vault Explorer Header -->
 			<div class="vault-header">
-				<button
-					type="button"
-					class="mobile-vault-nav-btn"
-					onclick={() => navStore.open()}
-					aria-label="Menu navigazione"
-					title="Apri menu navigazione"
-				>
-					<span class="vault-nav-lines">
-						<span></span>
-						<span></span>
-						<span></span>
-					</span>
-				</button>
-
 				<div class="vault-title-group">
 					<span class="vault-icon">📓</span>
 					<span class="vault-name">VAULT APPUNTI</span>
@@ -1129,7 +1153,7 @@
 		class:mobile-hidden={isSidebarOpenMobile && (selectedNoteId !== null || selectedTrashNote !== null)}
 	>
 		{#if isViewingTrash && selectedTrashNote}
-			<div class="trash-note-view">
+			<div class="trash-note-view" in:fade={{ duration: 150 }}>
 				<div class="trash-note-banner duo-card">
 					<div class="trash-banner-info">
 						<span class="trash-icon">🗑️</span>
@@ -1167,26 +1191,6 @@
 			<!-- Workspace Top Header Bar -->
 			<div class="workspace-header">
 				<div class="workspace-header-left">
-					{#if isVaultCollapsed}
-						<button
-							type="button"
-							class="expand-vault-btn"
-							onclick={toggleVaultCollapse}
-							title="Espandi Vault"
-						>
-							▶ Vault ({notes.length})
-						</button>
-					{/if}
-
-					<button
-						type="button"
-						class="mobile-back-btn"
-						onclick={() => (isSidebarOpenMobile = true)}
-						title="Torna all'elenco appunti"
-					>
-						← Vault
-					</button>
-
 					<div class="save-status-pill">
 						{#if isAutoSaving}
 							<span class="saving-txt">⏳ Salvataggio...</span>
@@ -1197,6 +1201,16 @@
 				</div>
 
 				<div class="workspace-quick-actions">
+					<button
+						type="button"
+						class="action-icon-btn action-fullscreen-btn"
+						class:pinned={isFullscreen}
+						onclick={toggleFullscreen}
+						title={isFullscreen ? 'Disattiva Schermo Intero' : 'Modalità Schermo Intero (F11)'}
+					>
+						{isFullscreen ? '✕' : '⛶'}
+					</button>
+
 					<button
 						type="button"
 						class="action-icon-btn action-pin-btn"
@@ -1561,6 +1575,51 @@
 				</button>
 			</div>
 		</div>
+	</div>
+{/if}
+
+<!-- Menu Contestuale Personalizzato Note (Tasto Destro) -->
+{#if isNotesContextMenuOpen}
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div
+		class="notes-floating-context-menu duo-card"
+		style="left: {contextMenuX}px; top: {contextMenuY}px;"
+		transition:fade={{ duration: 80 }}
+		onclick={(e) => e.stopPropagation()}
+		onkeydown={(e) => e.key === 'Escape' && closeNotesContextMenu()}
+		oncontextmenu={(e) => e.preventDefault()}
+		role="menu"
+		tabindex="0"
+	>
+		<button type="button" class="ctx-item" onclick={() => { isNotesContextMenuOpen = false; fileInputEl?.click(); }}>
+			<span class="ctx-ico">📷</span>
+			<span>Inserisci Immagine</span>
+		</button>
+		<button type="button" class="ctx-item" onclick={() => { isNotesContextMenuOpen = false; handleHighlightText(); }}>
+			<span class="ctx-ico">🖍️</span>
+			<span>Evidenzia Testo</span>
+		</button>
+		<button type="button" class="ctx-item" onclick={() => { isNotesContextMenuOpen = false; applyFormat('bold'); }}>
+			<span class="ctx-ico"><strong>B</strong></span>
+			<span>Grassetto</span>
+		</button>
+		<button type="button" class="ctx-item" onclick={() => { isNotesContextMenuOpen = false; applyFormat('italic'); }}>
+			<span class="ctx-ico"><em>I</em></span>
+			<span>Corsivo</span>
+		</button>
+		<button type="button" class="ctx-item" onclick={() => { isNotesContextMenuOpen = false; copyMarkdown(); }}>
+			<span class="ctx-ico">📋</span>
+			<span>Copia Markdown</span>
+		</button>
+		<button type="button" class="ctx-item" onclick={() => { isNotesContextMenuOpen = false; handleTogglePin(); }}>
+			<span class="ctx-ico">📌</span>
+			<span>{currentIsPinned ? 'Rimuovi Pin' : 'Fissa in Alto'}</span>
+		</button>
+		<div class="ctx-divider"></div>
+		<button type="button" class="ctx-item danger" onclick={() => { isNotesContextMenuOpen = false; handleDeleteActiveNote(); }}>
+			<span class="ctx-ico">🗑️</span>
+			<span>Sposta nel Cestino</span>
+		</button>
 	</div>
 {/if}
 </div>
@@ -3285,5 +3344,60 @@
 		font-weight: 900;
 		color: var(--text-color);
 		margin: 0 0 1rem 0;
+	}
+
+	/* 📋 Custom Floating Context Menu for Notes */
+	.notes-floating-context-menu {
+		position: fixed;
+		z-index: 10000;
+		background: var(--card-bg);
+		border: 1.5px solid var(--border-color);
+		border-radius: 14px;
+		padding: 0.35rem;
+		box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+		display: flex;
+		flex-direction: column;
+		gap: 0.2rem;
+		min-width: 195px;
+	}
+
+	.ctx-item {
+		display: flex;
+		align-items: center;
+		gap: 0.6rem;
+		padding: 0.45rem 0.65rem;
+		background: none;
+		border: none;
+		border-radius: 8px;
+		color: var(--text-color);
+		font-size: 0.8rem;
+		font-weight: 800;
+		cursor: pointer;
+		text-align: left;
+		transition: all 0.12s ease;
+	}
+
+	.ctx-item:hover {
+		background: var(--card-bg-subtle);
+		color: var(--accent-color);
+	}
+
+	.ctx-item.danger:hover {
+		background: rgba(239, 68, 68, 0.12);
+		color: #ef4444;
+	}
+
+	.ctx-ico {
+		font-size: 0.95rem;
+		width: 18px;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.ctx-divider {
+		height: 1px;
+		background: var(--border-color);
+		margin: 0.2rem 0;
 	}
 </style>

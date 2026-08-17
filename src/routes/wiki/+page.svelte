@@ -212,27 +212,6 @@
 						✨ <span class="action-btn-label">Riattiva ({ignoredIds.size})</span>
 					</button>
 				{/if}
-
-				{#if !user}
-					<button
-						type="button"
-						class="duo-btn sync-btn discord-sync-btn discord-wiki-login-btn"
-						title="Accedi con Discord"
-						onclick={() => loginWithDiscord('/wiki')}
-					>
-						<svg
-							class="discord-icon-mini"
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 127.14 96.36"
-							fill="currentColor"
-						>
-							<path
-								d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.7,77.7,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1A105.25,105.25,0,0,0,126.6,80.22h0C129.24,52.84,122.09,29.11,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,45.92,53.87,53,48.8,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.25,60,73.25,53s5-12.74,11.44-12.74S96.23,45.92,96.1,53,91,65.69,84.69,65.69Z"
-							/>
-						</svg>
-						<span class="action-btn-label">ACCEDI</span>
-					</button>
-				{/if}
 			</div>
 		</div>
 
@@ -269,11 +248,20 @@
 				{@const isIgnored = ignoredIds.has(card.id)}
 
 				<div class="compact-card" class:expanded={isExpanded} class:is-ignored-card={isIgnored}>
-					<div class="compact-card-header">
-						<button class="header-main-btn" onclick={() => toggleCardExpand(card.id)}>
+					<div class="compact-card-header" onclick={() => toggleCardExpand(card.id)} role="button" tabindex="0" onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && toggleCardExpand(card.id)}>
+						<div class="header-main-btn">
 							<div class="title-row">
-								<!-- Mostra SOLO l'acronimo nei titoli della wiki -->
-								<h3 class="card-title">{card.title || card.fullName}</h3>
+								{#if card.acronym}
+									<span class="card-acronym-badge">{card.acronym}</span>
+									<span class="card-title-text">{card.title}</span>
+								{:else}
+									<h3 class="card-title">{card.title || card.fullName}</h3>
+								{/if}
+
+								{#if card.fullName && card.fullName.trim().toLowerCase() !== card.title.trim().toLowerCase()}
+									<span class="card-fullname-badge">{card.fullName}</span>
+								{/if}
+
 								{#if isIgnored}
 									<span class="ignored-pill-badge">⚠️ IGNORATA</span>
 								{/if}
@@ -285,13 +273,17 @@
 								{/if}
 								<span class="expand-arrow">{isExpanded ? '▲' : '▼'}</span>
 							</div>
-						</button>
+						</div>
 
 						<!-- Stellina Ignora / Disignora globale -->
 						<button
+							type="button"
 							class="star-ignored-btn"
 							class:ignored={isIgnored}
-							onclick={(e) => toggleIgnored(e, card.id)}
+							onclick={(e) => {
+								e.stopPropagation();
+								toggleIgnored(e, card.id);
+							}}
 							title={isIgnored
 								? 'Card ignorata dai minigiochi. Clicca per riattivarla'
 								: 'Fai clic sulla stellina per ignorare la card nei minigiochi'}
@@ -549,11 +541,39 @@
 	.title-row {
 		display: flex;
 		align-items: center;
-		gap: 0.6rem;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+	}
+
+	.card-acronym-badge {
+		font-size: 1.15rem;
+		font-weight: 900;
+		color: var(--accent-color);
+		background: var(--accent-light-bg);
+		padding: 0.15rem 0.5rem;
+		border-radius: 8px;
+		border: 1px solid var(--accent-color);
+		letter-spacing: 0.02em;
+	}
+
+	.card-title-text {
+		font-size: 1.05rem;
+		font-weight: 800;
+		color: var(--text-color);
+	}
+
+	.card-fullname-badge {
+		font-size: 0.82rem;
+		font-weight: 700;
+		color: var(--text-muted);
+		background: var(--card-bg-subtle);
+		padding: 0.15rem 0.45rem;
+		border-radius: 6px;
+		border: 1px solid var(--border-color);
 	}
 
 	.card-title {
-		font-size: 1.3rem;
+		font-size: 1.2rem;
 		font-weight: 900;
 		color: var(--text-color);
 		margin: 0;
@@ -606,18 +626,18 @@
 	}
 
 	.expanded-details {
-		padding: 0.85rem 1.25rem 1.25rem 1.25rem;
+		padding: 0 1rem 1rem 1rem;
 		border-top: 1px solid var(--border-color);
-		background: var(--card-bg-subtle);
+		animation: fadeIn 0.2s ease-out;
 		display: flex;
 		flex-direction: column;
 		gap: 0.75rem;
-		animation: fadeIn 0.25s ease;
 	}
 
 	.fullname-text-detail {
-		font-size: 0.95rem;
+		font-size: 0.92rem;
 		color: var(--accent-color);
+		padding-top: 0.75rem;
 	}
 
 	.description {
@@ -628,40 +648,43 @@
 	}
 
 	.category-info-row {
-		font-size: 0.8rem;
 		display: flex;
-		gap: 0.4rem;
+		align-items: center;
+		gap: 0.5rem;
+		font-size: 0.8rem;
 	}
 
 	.cat-label {
-		font-weight: 800;
 		color: var(--text-muted);
+		font-weight: 600;
 	}
 
 	.cat-val {
+		color: var(--text-color);
 		font-weight: 800;
-		color: var(--green-color);
 	}
 
 	.tags-list {
 		display: flex;
-		gap: 0.4rem;
 		flex-wrap: wrap;
+		gap: 0.4rem;
 	}
 
 	.tag-pill {
 		font-size: 0.75rem;
+		font-weight: 700;
+		background: var(--card-bg-subtle);
 		color: var(--text-muted);
-		background: var(--card-bg);
-		padding: 0.15rem 0.5rem;
+		padding: 0.2rem 0.5rem;
 		border-radius: 6px;
+		border: 1px solid var(--border-color);
 	}
 
 	.gallery {
 		display: flex;
-		gap: 0.6rem;
+		gap: 0.5rem;
 		overflow-x: auto;
-		padding-top: 0.25rem;
+		padding-bottom: 0.5rem;
 	}
 
 	.gallery-thumb {
@@ -686,8 +709,7 @@
 	}
 
 	.filter-ignored-chip,
-	.clear-all-ignored-btn,
-	.discord-wiki-login-btn {
+	.clear-all-ignored-btn {
 		height: 36px;
 		padding: 0 0.85rem;
 		font-size: 0.78rem;
@@ -714,18 +736,6 @@
 		border-color: var(--yellow-color);
 		color: var(--yellow-color);
 		box-shadow: 0 2px 8px rgba(250, 204, 21, 0.2);
-	}
-
-	.discord-wiki-login-btn {
-		background-color: #5865f2;
-		border: 1.5px solid #4752c4;
-		color: #ffffff;
-	}
-
-	.discord-icon-mini {
-		width: 15px;
-		height: 15px;
-		flex-shrink: 0;
 	}
 
 	.empty-wiki {

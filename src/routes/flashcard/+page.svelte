@@ -100,7 +100,16 @@
 		rawCards.filter((c) => {
 			const notIgnored = !ignoredIds.has(c.id);
 			const matchesCat = matchesCategory(c.category, selectedCategory);
-			const targetMode = isWritingMode ? 'scrittura' : 'flashcard';
+			let targetMode: 'scrittura' | 'flashcard' | 'flashcard:text' | 'flashcard:photo' | 'flashcard:reverse' = 'flashcard';
+			if (isWritingMode) {
+				targetMode = 'scrittura';
+			} else if (subMode === 'foto') {
+				targetMode = 'flashcard:photo';
+			} else if (subMode === 'inverso') {
+				targetMode = 'flashcard:reverse';
+			} else {
+				targetMode = 'flashcard:text';
+			}
 			const matchesGame = isCardVisibleInGame(c, targetMode);
 			return notIgnored && matchesCat && matchesGame;
 		})
@@ -118,8 +127,7 @@
 		refreshCards();
 	});
 
-	let photoCards = $derived(shuffledDeck.filter((c) => c.images && c.images.length > 0));
-	let activeCards = $derived(subMode === 'foto' ? photoCards : shuffledDeck);
+	let activeCards = $derived(shuffledDeck);
 
 	function handleNext() {
 		if (currentIndex < activeCards.length - 1) {
@@ -229,12 +237,12 @@
 				<div class="duo-card empty-box">Nessuna scheda di ripasso trovata per questa categoria.</div>
 			{/if}
 		{:else if subMode === 'foto'}
-			{#if photoCards.length > 0}
+			{#if activeCards.length > 0}
 				<FreeWriteExercise
-					card={photoCards[currentIndex]}
+					card={activeCards[currentIndex]}
 					subMode="photo-to-title"
 					{currentIndex}
-					totalCards={photoCards.length}
+					totalCards={activeCards.length}
 					onNext={handleNext}
 				/>
 			{:else}
@@ -272,12 +280,12 @@
 				<div class="duo-card empty-box">Nessuna scheda di ripasso trovata per questa categoria.</div>
 			{/if}
 		{:else if subMode === 'foto'}
-			{#if photoCards.length > 0}
+			{#if activeCards.length > 0}
 				<FlashCard
-					card={photoCards[currentIndex]}
+					card={activeCards[currentIndex]}
 					mode="foto"
 					{currentIndex}
-					totalCards={photoCards.length}
+					totalCards={activeCards.length}
 					onNext={handleNext}
 					onPrev={handlePrev}
 				/>
