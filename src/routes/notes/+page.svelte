@@ -274,13 +274,14 @@
 			const updatedTags = (n.tags || []).map((t) => (t === trimmedOld ? trimmedNew : t));
 			const uniqueTags = Array.from(new Set(updatedTags));
 			await notesStore.updateNote({
-				...n,
+				id: n.id,
 				tags: uniqueTags
 			});
 		}
 
 		if (currentTags.includes(trimmedOld)) {
 			currentTags = currentTags.map((t) => (t === trimmedOld ? trimmedNew : t));
+			triggerAutoSave();
 		}
 		if (selectedTagFilter === trimmedOld) {
 			selectedTagFilter = trimmedNew;
@@ -288,7 +289,7 @@
 
 		editingTagOldName = null;
 		editingTagNewName = '';
-		toastStore.show({ message: `🏷️ Etichetta rinominata in "${trimmedNew}" su ${notesToUpdate.length} note!` });
+		toastStore.show({ message: `🏷️ Etichetta rinominata in "${trimmedNew}"!` });
 	}
 
 	async function handleDeleteTagGlobally(tagToDelete: string) {
@@ -298,19 +299,20 @@
 		for (const n of notesToUpdate) {
 			const updatedTags = (n.tags || []).filter((t) => t !== trimmed);
 			await notesStore.updateNote({
-				...n,
+				id: n.id,
 				tags: updatedTags
 			});
 		}
 
 		if (currentTags.includes(trimmed)) {
 			currentTags = currentTags.filter((t) => t !== trimmed);
+			triggerAutoSave();
 		}
 		if (selectedTagFilter === trimmed) {
 			selectedTagFilter = null;
 		}
 
-		toastStore.show({ message: `🗑️ Etichetta "${trimmed}" eliminata da ${notesToUpdate.length} note!` });
+		toastStore.show({ message: `🗑️ Etichetta "${trimmed}" eliminata!` });
 	}
 
 	let activeNote = $derived(notes.find((n) => n.id === selectedNoteId) || null);
@@ -890,7 +892,7 @@
 							selectedTrashNote = null;
 						}}
 					>
-						📓 Note ({activeNotesCount})
+						📓 Note
 					</button>
 					<button
 						type="button"
@@ -901,7 +903,7 @@
 							selectedTrashNote = null;
 						}}
 					>
-						📦 Arch ({archivedNotesCount})
+						📦 Archivio
 					</button>
 					<button
 						type="button"
@@ -912,7 +914,7 @@
 							loadTrash();
 						}}
 					>
-						🗑️ Trash ({trashNotes.length})
+						🗑️ Cestino
 					</button>
 				</div>
 
@@ -3336,7 +3338,21 @@
 		height: 22px;
 	}
 
-	/* 🏷️ Tag Management Modal */
+	/* 🏷️ Tag Management Modal & Backdrop */
+	.modal-backdrop {
+		position: fixed;
+		inset: 0;
+		background: rgba(0, 0, 0, 0.65);
+		backdrop-filter: blur(6px);
+		-webkit-backdrop-filter: blur(6px);
+		z-index: 9999;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 1rem;
+		box-sizing: border-box;
+	}
+
 	.tag-manager-modal {
 		background: var(--card-bg);
 		border: 2px solid var(--border-color);
@@ -3348,9 +3364,57 @@
 		display: flex;
 		flex-direction: column;
 		gap: 1rem;
-		box-shadow: 0 16px 40px rgba(0, 0, 0, 0.3);
+		box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
 		max-height: 85vh;
 		box-sizing: border-box;
+	}
+
+	.modal-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding-bottom: 0.75rem;
+		border-bottom: 1.5px solid var(--border-color);
+		flex-shrink: 0;
+	}
+
+	.modal-title-group {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	.modal-icon {
+		font-size: 1.25rem;
+	}
+
+	.modal-title-group h2 {
+		font-family: 'Outfit', sans-serif;
+		font-size: 1.15rem;
+		font-weight: 900;
+		color: var(--text-color);
+		margin: 0;
+	}
+
+	.close-modal-btn {
+		background: var(--card-bg-subtle);
+		border: 1.5px solid var(--border-color);
+		border-radius: 8px;
+		width: 28px;
+		height: 28px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		cursor: pointer;
+		color: var(--text-muted);
+		font-weight: 900;
+		font-size: 0.8rem;
+		transition: all 0.12s ease;
+	}
+
+	.close-modal-btn:hover {
+		border-color: #ef4444;
+		color: #ef4444;
 	}
 
 	.modal-badge {
