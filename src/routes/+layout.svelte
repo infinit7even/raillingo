@@ -9,6 +9,7 @@
 	import { fade } from 'svelte/transition';
 	import { navStore } from '$lib/stores/navStore';
 	import { cardsStore } from '$lib/stores/cardsStore';
+	import { ignoredCardsStore } from '$lib/stores/ignoredCardsStore';
 	import { themeStore } from '$lib/stores/themeStore';
 	import { toastStore } from '$lib/stores/toastStore';
 	import { onMount } from 'svelte';
@@ -16,6 +17,10 @@
 	let { data, children } = $props();
 
 	let user = $derived(data?.user);
+
+	$effect(() => {
+		ignoredCardsStore.hydrate(user?.id, data?.initialIgnoredCardIds);
+	});
 
 	let isAdmin = $derived(
 		Boolean(

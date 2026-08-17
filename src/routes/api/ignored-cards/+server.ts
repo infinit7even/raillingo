@@ -4,7 +4,29 @@ import { user } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
 
 export const GET: RequestHandler = async ({ cookies, locals }) => {
-	const cookieVal = cookies.get('rf_ignored_cards');
+	const currentUser = locals.user;
+
+	// 1. Se l'utente è autenticato, le card ignorate arrivano ESCLUSIVAMENTE dal suo profilo nel database
+	if (currentUser && currentUser.id) {
+		try {
+			const dbUser = await db
+				.select({ ignoredCardIds: user.ignoredCardIds })
+				.from(user)
+				.where(eq(user.id, currentUser.id))
+				.limit(1);
+
+			if (dbUser.length > 0 && Array.isArray(dbUser[0].ignoredCardIds)) {
+				return json({ ignoredCardIds: dbUser[0].ignoredCardIds });
+			}
+			return json({ ignoredCardIds: [] });
+		} catch (e) {
+			console.warn('Errore lettura ignoredCardIds utente:', e);
+			return json({ ignoredCardIds: [] });
+		}
+	}
+
+	// 2. Se l'utente è ospite (non autenticato), usiamo il cookie isolato per gli ospiti
+	const cookieVal = cookies.get('rf_ignored_cards_guest');
 	let ignoredCardIds: string[] = [];
 
 	if (cookieVal) {
@@ -12,19 +34,6 @@ export const GET: RequestHandler = async ({ cookies, locals }) => {
 			ignoredCardIds = JSON.parse(cookieVal);
 		} catch {
 			ignoredCardIds = [];
-		}
-	}
-
-	const currentUser = locals.user;
-	if (currentUser && currentUser.id) {
-		try {
-			const dbUser = await db.select().from(user).where(eq(user.id, currentUser.id)).limit(1);
-			if (dbUser.length > 0 && Array.isArray(dbUser[0].ignoredCardIds)) {
-				const merged = Array.from(new Set([...ignoredCardIds, ...dbUser[0].ignoredCardIds]));
-				ignoredCardIds = merged;
-			}
-		} catch (e) {
-			console.warn('Errore lettura ignoredCardIds:', e);
 		}
 	}
 
@@ -38,24 +47,29 @@ export const POST: RequestHandler = async ({ request, cookies, locals }) => {
 		return json({ error: 'Array ignoredCardIds non valido' }, { status: 400 });
 	}
 
-	cookies.set('rf_ignored_cards', JSON.stringify(ignoredCardIds), {
-		path: '/',
-		maxAge: 60 * 60 * 24 * 365,
-		sameSite: 'lax',
-		httpOnly: false
-	});
-
 	const currentUser = locals.user;
+
 	if (currentUser && currentUser.id) {
 		try {
 			await db
 				.update(user)
 				.set({ ignoredCardIds })
 				.where(eq(user.id, currentUser.id));
+
+			return json({ success: true, ignoredCardIds });
 		} catch (e) {
 			console.error('Errore salvataggio card ignorate utente:', e);
+			return json({ error: 'Errore salvataggio database' }, { status: 500 });
 		}
 	}
+
+	// Salvataggio per utente ospite (cookie isolato)
+	cookies.set('rf_ignored_cards_guest', JSON.stringify(ignoredCardIds), {
+		path: '/',
+		maxAge: 60 * 60 * 24 * 365,
+		sameSite: 'lax',
+		httpOnly: false
+	});
 
 	return json({ success: true, ignoredCardIds });
 };

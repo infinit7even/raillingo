@@ -3,6 +3,7 @@ import { browser } from '$app/environment';
 class IgnoredCardsStore {
 	private ignoredIds = new Set<string>();
 	private listeners = new Set<(ids: Set<string>) => void>();
+	private currentUserId: string | null = null;
 
 	constructor() {
 		if (browser) {
@@ -16,6 +17,10 @@ class IgnoredCardsStore {
 		return () => {
 			this.listeners.delete(run);
 		};
+	}
+
+	private getStorageKey(): string {
+		return this.currentUserId ? `rf_ignored_cards_${this.currentUserId}` : 'rf_ignored_cards_guest';
 	}
 
 	private getCookie(name: string): string | null {
@@ -38,18 +43,35 @@ class IgnoredCardsStore {
 		document.cookie = name + '=' + encodeURIComponent(value) + expires + '; path=/; SameSite=Lax';
 	}
 
+	public hydrate(userId?: string | null, serverIgnoredIds?: string[]) {
+		const newUserId = userId || null;
+		const userChanged = this.currentUserId !== newUserId;
+		this.currentUserId = newUserId;
+
+		if (Array.isArray(serverIgnoredIds)) {
+			this.ignoredIds = new Set(serverIgnoredIds);
+			this.saveToStorage();
+			this.notify();
+			return;
+		}
+
+		if (userChanged && browser) {
+			this.loadIgnoredCards();
+		}
+	}
+
 	private async loadIgnoredCards() {
-		// 1. Try reading localStorage or cookie
+		const storageKey = this.getStorageKey();
 		let parsed: string[] | null = null;
 		try {
-			const localVal = localStorage.getItem('rf_ignored_cards');
+			const localVal = localStorage.getItem(storageKey);
 			if (localVal) {
 				parsed = JSON.parse(localVal);
 			}
 		} catch {}
 
 		if (!parsed) {
-			const cookieVal = this.getCookie('rf_ignored_cards');
+			const cookieVal = this.getCookie(storageKey);
 			if (cookieVal) {
 				try {
 					parsed = JSON.parse(cookieVal);
@@ -60,9 +82,12 @@ class IgnoredCardsStore {
 		if (Array.isArray(parsed)) {
 			this.ignoredIds = new Set(parsed);
 			this.notify();
+		} else {
+			this.ignoredIds.clear();
+			this.notify();
 		}
 
-		// 2. Fetch from API (syncs with user session if logged in)
+		// Sync with server API for the current authenticated user or guest
 		try {
 			const res = await fetch('/api/ignored-cards');
 			if (res.ok) {
@@ -145,10 +170,11 @@ class IgnoredCardsStore {
 	private saveToStorage() {
 		const arr = Array.from(this.ignoredIds);
 		const jsonStr = JSON.stringify(arr);
-		this.setCookie('rf_ignored_cards', jsonStr);
+		const storageKey = this.getStorageKey();
+		this.setCookie(storageKey, jsonStr);
 		if (browser) {
 			try {
-				localStorage.setItem('rf_ignored_cards', jsonStr);
+				localStorage.setItem(storageKey, jsonStr);
 			} catch {}
 		}
 	}

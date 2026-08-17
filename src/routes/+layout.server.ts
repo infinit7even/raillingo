@@ -1,9 +1,9 @@
 import type { LayoutServerLoad } from './$types';
 import { db } from '$lib/server/db';
-import { cards } from '$lib/server/db/schema';
+import { cards, user as userTable } from '$lib/server/db/schema';
 import { desc, eq } from 'drizzle-orm';
 
-export const load: LayoutServerLoad = async ({ locals }) => {
+export const load: LayoutServerLoad = async ({ locals, cookies }) => {
 	const user = locals.user || null;
 
 	let initialCards: any[] = [];
@@ -32,5 +32,29 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 		initialCards = [];
 	}
 
-	return { user, initialCards };
+	let initialIgnoredCardIds: string[] = [];
+	if (user && user.id) {
+		try {
+			const dbUser = await db
+				.select({ ignoredCardIds: userTable.ignoredCardIds })
+				.from(userTable)
+				.where(eq(userTable.id, user.id))
+				.limit(1);
+
+			if (dbUser.length > 0 && Array.isArray(dbUser[0].ignoredCardIds)) {
+				initialIgnoredCardIds = dbUser[0].ignoredCardIds;
+			}
+		} catch (e) {
+			console.error('Errore caricamento ignoredCardIds utente:', e);
+		}
+	} else {
+		const cookieVal = cookies.get('rf_ignored_cards_guest');
+		if (cookieVal) {
+			try {
+				initialIgnoredCardIds = JSON.parse(cookieVal);
+			} catch {}
+		}
+	}
+
+	return { user, initialCards, initialIgnoredCardIds };
 };

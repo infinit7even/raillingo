@@ -1616,7 +1616,25 @@
 		gap: 0.35rem;
 		overflow-y: auto;
 		scrollbar-width: thin;
+		scrollbar-color: var(--border-color) transparent;
 		padding-right: 0.2rem;
+	}
+
+	.vault-files-list::-webkit-scrollbar {
+		width: 6px;
+	}
+
+	.vault-files-list::-webkit-scrollbar-track {
+		background: transparent;
+	}
+
+	.vault-files-list::-webkit-scrollbar-thumb {
+		background: var(--border-color);
+		border-radius: 9999px;
+	}
+
+	.vault-files-list::-webkit-scrollbar-thumb:hover {
+		background: var(--accent-color);
 	}
 
 	.vault-file-item {
@@ -1933,7 +1951,25 @@
 		margin: 0.5rem 0.85rem 0.85rem 0.85rem;
 		box-sizing: border-box;
 		scrollbar-width: thin;
+		scrollbar-color: var(--border-color) transparent;
 		cursor: text;
+	}
+
+	.document-canvas-container::-webkit-scrollbar {
+		width: 7px;
+	}
+
+	.document-canvas-container::-webkit-scrollbar-track {
+		background: transparent;
+	}
+
+	.document-canvas-container::-webkit-scrollbar-thumb {
+		background: var(--border-color);
+		border-radius: 9999px;
+	}
+
+	.document-canvas-container::-webkit-scrollbar-thumb:hover {
+		background: var(--accent-color);
 	}
 
 	.obsidian-live-editor {
@@ -2195,6 +2231,26 @@
 		flex-direction: column;
 		gap: 0.35rem;
 		overflow-y: auto;
+		scrollbar-width: thin;
+		scrollbar-color: var(--border-color) transparent;
+		padding-right: 0.15rem;
+	}
+
+	.outline-list::-webkit-scrollbar {
+		width: 5px;
+	}
+
+	.outline-list::-webkit-scrollbar-track {
+		background: transparent;
+	}
+
+	.outline-list::-webkit-scrollbar-thumb {
+		background: var(--border-color);
+		border-radius: 9999px;
+	}
+
+	.outline-list::-webkit-scrollbar-thumb:hover {
+		background: var(--accent-color);
 	}
 
 	.outline-item {
