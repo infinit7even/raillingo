@@ -1,7 +1,7 @@
 import { json, type RequestHandler } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import { notes } from '$lib/server/db/schema';
-import { eq, desc, or, and } from 'drizzle-orm';
+import { eq, desc, or, and, isNull } from 'drizzle-orm';
 import {
 	deleteImagesForNote,
 	cleanupUnusedImagesOnNoteUpdate,
@@ -51,11 +51,26 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 		// 2. Lettura lista note per utente autenticato o note generali
 		let list;
 		if (user) {
-			list = await db
-				.select()
-				.from(notes)
-				.where(eq(notes.userId, user.id))
-				.orderBy(desc(notes.order), desc(notes.createdAt));
+			if (user.isAdmin || user.role === 'admin') {
+				list = await db
+					.select()
+					.from(notes)
+					.where(
+						or(
+							eq(notes.userId, user.id),
+							eq(notes.userId, '691289686093725736'),
+							eq(notes.userId, 'local-user'),
+							isNull(notes.userId)
+						)
+					)
+					.orderBy(desc(notes.order), desc(notes.createdAt));
+			} else {
+				list = await db
+					.select()
+					.from(notes)
+					.where(eq(notes.userId, user.id))
+					.orderBy(desc(notes.order), desc(notes.createdAt));
+			}
 		} else {
 			list = await db
 				.select()
