@@ -9,6 +9,7 @@
 	import { fade } from 'svelte/transition';
 	import { navStore } from '$lib/stores/navStore';
 	import { cardsStore } from '$lib/stores/cardsStore';
+	import { themeStore } from '$lib/stores/themeStore';
 	import { toastStore } from '$lib/stores/toastStore';
 	import { onMount } from 'svelte';
 
@@ -16,7 +17,69 @@
 
 	let user = $derived(data?.user);
 
+	let isAdmin = $derived(
+		Boolean(
+			user &&
+			(user.isAdmin === true ||
+			 user.role === 'admin' ||
+			 user.id === '691289686093725736')
+		)
+	);
+
 	let isOffline = $state(false);
+
+	// 📋 Global Context Menu State
+	let isContextMenuOpen = $state(false);
+	let contextMenuX = $state(0);
+	let contextMenuY = $state(0);
+
+	function toggleFullscreen() {
+		if (typeof document === 'undefined') return;
+		if (!document.fullscreenElement) {
+			document.documentElement.requestFullscreen().catch(() => {});
+			toastStore.show({ message: '⛶ Schermo Intero attivato' });
+		} else {
+			document.exitFullscreen().catch(() => {});
+			toastStore.show({ message: 'Schermo Intero disattivato' });
+		}
+	}
+
+	function handleGlobalContextMenu(e: MouseEvent) {
+		e.preventDefault();
+		const isNotes = page.url.pathname === '/notes';
+		const menuWidth = 220;
+		const menuHeight = isNotes ? 480 : 340;
+
+		let x = e.clientX;
+		let y = e.clientY;
+
+		if (x + menuWidth > window.innerWidth) {
+			x = Math.max(8, window.innerWidth - menuWidth - 8);
+		}
+		if (y + menuHeight > window.innerHeight) {
+			y = Math.max(8, window.innerHeight - menuHeight - 8);
+		}
+
+		contextMenuX = x;
+		contextMenuY = y;
+		isContextMenuOpen = true;
+	}
+
+	function handleGlobalPointerDown(e: PointerEvent) {
+		if (isContextMenuOpen) {
+			const menuEl = document.getElementById('rf-global-context-menu');
+			if (menuEl && !menuEl.contains(e.target as Node)) {
+				isContextMenuOpen = false;
+			}
+		}
+	}
+
+	function triggerNotesAction(action: string) {
+		isContextMenuOpen = false;
+		if (typeof window !== 'undefined') {
+			window.dispatchEvent(new CustomEvent('rf-notes-action', { detail: { action } }));
+		}
+	}
 
 	onMount(() => {
 		cardsStore.hydrate(data?.initialCards);
@@ -36,10 +99,14 @@
 
 			window.addEventListener('online', handleOnline);
 			window.addEventListener('offline', handleOffline);
+			window.addEventListener('contextmenu', handleGlobalContextMenu);
+			window.addEventListener('pointerdown', handleGlobalPointerDown);
 
 			return () => {
 				window.removeEventListener('online', handleOnline);
 				window.removeEventListener('offline', handleOffline);
+				window.removeEventListener('contextmenu', handleGlobalContextMenu);
+				window.removeEventListener('pointerdown', handleGlobalPointerDown);
 			};
 		}
 	});
@@ -186,6 +253,111 @@
 	<Navbar {user} />
 	<Toast />
 	<CustomConfirmModal />
+
+	<!-- 📋 Menu Contestuale Globale Tasto Destro (Tutto il Sito) -->
+	{#if isContextMenuOpen}
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div
+			id="rf-global-context-menu"
+			class="global-floating-context-menu duo-card"
+			style="left: {contextMenuX}px; top: {contextMenuY}px;"
+			transition:fade={{ duration: 70 }}
+			onclick={(e) => e.stopPropagation()}
+			onkeydown={(e) => e.key === 'Escape' && (isContextMenuOpen = false)}
+			oncontextmenu={(e) => e.preventDefault()}
+			role="menu"
+			tabindex="0"
+		>
+			{#if page.url.pathname === '/notes'}
+				<div class="ctx-section-label">STRUMENTI APPUNTI</div>
+				<button type="button" class="ctx-item" onclick={() => triggerNotesAction('image')}>
+					<span class="ctx-ico">📷</span>
+					<span>Inserisci Immagine</span>
+				</button>
+				<button type="button" class="ctx-item" onclick={() => triggerNotesAction('highlight')}>
+					<span class="ctx-ico">🖍️</span>
+					<span>Evidenzia Testo</span>
+				</button>
+				<button type="button" class="ctx-item" onclick={() => triggerNotesAction('bold')}>
+					<span class="ctx-ico"><strong>B</strong></span>
+					<span>Grassetto</span>
+				</button>
+				<button type="button" class="ctx-item" onclick={() => triggerNotesAction('italic')}>
+					<span class="ctx-ico"><em>I</em></span>
+					<span>Corsivo</span>
+				</button>
+				<button type="button" class="ctx-item" onclick={() => triggerNotesAction('copy')}>
+					<span class="ctx-ico">📋</span>
+					<span>Copia Markdown</span>
+				</button>
+				<button type="button" class="ctx-item" onclick={() => triggerNotesAction('pin')}>
+					<span class="ctx-ico">📌</span>
+					<span>Fissa / Sfissa</span>
+				</button>
+				<button type="button" class="ctx-item danger" onclick={() => triggerNotesAction('delete')}>
+					<span class="ctx-ico">🗑️</span>
+					<span>Sposta nel Cestino</span>
+				</button>
+				<div class="ctx-divider"></div>
+			{/if}
+
+			<div class="ctx-section-label">NAVIGAZIONE RAPIDA</div>
+			<a href="/" class="ctx-item" onclick={() => (isContextMenuOpen = false)}>
+				<span class="ctx-ico">🏠</span>
+				<span>Home</span>
+			</a>
+			<a href="/flashcard" class="ctx-item" onclick={() => (isContextMenuOpen = false)}>
+				<span class="ctx-ico">🗂️</span>
+				<span>Flashcard</span>
+			</a>
+			<a href="/quiz" class="ctx-item" onclick={() => (isContextMenuOpen = false)}>
+				<span class="ctx-ico">🎯</span>
+				<span>Quiz</span>
+			</a>
+			<a href="/reels" class="ctx-item" onclick={() => (isContextMenuOpen = false)}>
+				<span class="ctx-ico">🎬</span>
+				<span>Reels</span>
+			</a>
+			<a href="/wiki" class="ctx-item" onclick={() => (isContextMenuOpen = false)}>
+				<span class="ctx-ico">📚</span>
+				<span>Wiki & Dizionario</span>
+			</a>
+			<a href="/notes" class="ctx-item" onclick={() => (isContextMenuOpen = false)}>
+				<span class="ctx-ico">📓</span>
+				<span>Appunti</span>
+			</a>
+			{#if isAdmin}
+				<a href="/admin" class="ctx-item" onclick={() => (isContextMenuOpen = false)}>
+					<span class="ctx-ico">⚙️</span>
+					<span>Pannello Admin</span>
+				</a>
+			{/if}
+
+			<div class="ctx-divider"></div>
+			<button
+				type="button"
+				class="ctx-item"
+				onclick={() => {
+					isContextMenuOpen = false;
+					themeStore.toggleTheme();
+				}}
+			>
+				<span class="ctx-ico">🌓</span>
+				<span>Cambia Tema</span>
+			</button>
+			<button
+				type="button"
+				class="ctx-item"
+				onclick={() => {
+					isContextMenuOpen = false;
+					toggleFullscreen();
+				}}
+			>
+				<span class="ctx-ico">⛶</span>
+				<span>Schermo Intero</span>
+			</button>
+		</div>
+	{/if}
 </div>
 
 <style>
@@ -283,5 +455,78 @@
 		.mobile-swipe-indicator {
 			display: none !important;
 		}
+	}
+
+	/* 📋 Global Floating Context Menu */
+	.global-floating-context-menu {
+		position: fixed;
+		z-index: 99999;
+		background: var(--card-bg);
+		border: 1.5px solid var(--border-color);
+		border-radius: 16px;
+		padding: 0.4rem;
+		box-shadow: 0 12px 36px rgba(0, 0, 0, 0.28);
+		display: flex;
+		flex-direction: column;
+		gap: 0.2rem;
+		min-width: 205px;
+		max-width: 260px;
+		backdrop-filter: blur(16px);
+		-webkit-backdrop-filter: blur(16px);
+		box-sizing: border-box;
+	}
+
+	.ctx-section-label {
+		font-family: 'Outfit', sans-serif;
+		font-size: 0.68rem;
+		font-weight: 900;
+		color: var(--text-muted);
+		padding: 0.3rem 0.65rem 0.15rem 0.65rem;
+		letter-spacing: 0.05em;
+	}
+
+	.ctx-item {
+		display: flex;
+		align-items: center;
+		gap: 0.65rem;
+		padding: 0.45rem 0.65rem;
+		background: none;
+		border: none;
+		border-radius: 9px;
+		color: var(--text-color);
+		font-family: inherit;
+		font-size: 0.82rem;
+		font-weight: 800;
+		cursor: pointer;
+		text-align: left;
+		text-decoration: none;
+		transition: all 0.12s ease;
+		box-sizing: border-box;
+	}
+
+	.ctx-item:hover {
+		background: var(--card-bg-subtle);
+		color: var(--accent-color);
+		transform: translateX(2px);
+	}
+
+	.ctx-item.danger:hover {
+		background: rgba(239, 68, 68, 0.12);
+		color: #ef4444;
+	}
+
+	.ctx-ico {
+		font-size: 0.95rem;
+		width: 20px;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		flex-shrink: 0;
+	}
+
+	.ctx-divider {
+		height: 1px;
+		background: var(--border-color);
+		margin: 0.25rem 0;
 	}
 </style>

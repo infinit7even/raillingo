@@ -70,11 +70,8 @@
 		return Array.from(set).sort();
 	});
 
-	// Fullscreen & Context Menu state
+	// Fullscreen state
 	let isFullscreen = $state(false);
-	let isNotesContextMenuOpen = $state(false);
-	let contextMenuX = $state(0);
-	let contextMenuY = $state(0);
 
 	function toggleFullscreen() {
 		if (typeof document === 'undefined') return;
@@ -86,27 +83,6 @@
 			document.exitFullscreen().catch(() => {});
 			isFullscreen = false;
 			toastStore.show({ message: 'Modalità Schermo Intero disattivata' });
-		}
-	}
-
-	function handleNotesContextMenu(e: MouseEvent) {
-		e.preventDefault();
-		e.stopPropagation();
-		contextMenuX = Math.min(Math.max(10, e.clientX), window.innerWidth - 240);
-		contextMenuY = Math.min(Math.max(10, e.clientY), window.innerHeight - 340);
-		isNotesContextMenuOpen = true;
-	}
-
-	function closeNotesContextMenu() {
-		isNotesContextMenuOpen = false;
-	}
-
-	function handleWindowPointerDown(e: PointerEvent) {
-		if (isNotesContextMenuOpen) {
-			const menuEl = document.querySelector('.notes-floating-context-menu');
-			if (menuEl && !menuEl.contains(e.target as Node)) {
-				isNotesContextMenuOpen = false;
-			}
 		}
 	}
 
@@ -132,6 +108,25 @@
 			}
 		};
 
+		const handleNotesActionReq = (e: any) => {
+			const action = e?.detail?.action;
+			if (action === 'image') {
+				fileInputEl?.click();
+			} else if (action === 'highlight') {
+				handleHighlightText();
+			} else if (action === 'bold') {
+				handleFormat('bold');
+			} else if (action === 'italic') {
+				handleFormat('italic');
+			} else if (action === 'copy') {
+				copyMarkdown();
+			} else if (action === 'pin') {
+				handleTogglePin();
+			} else if (action === 'delete') {
+				handleDeleteActiveNote();
+			}
+		};
+
 		if (typeof window !== 'undefined') {
 			if (window.innerWidth >= 1024) {
 				isSidebarOpenMobile = false;
@@ -143,8 +138,7 @@
 
 			window.addEventListener('rf-select-note', handleExternalNoteSelect);
 			window.addEventListener('rf-vault-collapse-changed', handleCollapseChange);
-			window.addEventListener('pointerdown', handleWindowPointerDown);
-			window.addEventListener('contextmenu', handleNotesContextMenu);
+			window.addEventListener('rf-notes-action', handleNotesActionReq);
 		}
 
 		const unsub = notesStore.subscribe((n) => {
@@ -164,8 +158,7 @@
 			if (typeof window !== 'undefined') {
 				window.removeEventListener('rf-select-note', handleExternalNoteSelect);
 				window.removeEventListener('rf-vault-collapse-changed', handleCollapseChange);
-				window.removeEventListener('pointerdown', handleWindowPointerDown);
-				window.removeEventListener('contextmenu', handleNotesContextMenu);
+				window.removeEventListener('rf-notes-action', handleNotesActionReq);
 			}
 			unsub();
 			if (saveDebounceTimer) clearTimeout(saveDebounceTimer);
@@ -673,7 +666,6 @@
 		<div
 			class="obsidian-workspace"
 			class:vault-collapsed={isVaultCollapsed}
-			oncontextmenu={handleNotesContextMenu}
 		>
 			<!-- 🗂️ 1. LEFT VAULT EXPLORER -->
 			<aside
@@ -1295,51 +1287,6 @@
 		</div>
 	{/if}
 </div>
-
-<!-- Menu Contestuale Personalizzato Note (Tasto Destro) -->
-{#if isNotesContextMenuOpen}
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div
-		class="notes-floating-context-menu duo-card"
-		style="left: {contextMenuX}px; top: {contextMenuY}px;"
-		transition:fade={{ duration: 80 }}
-		onclick={(e) => e.stopPropagation()}
-		onkeydown={(e) => e.key === 'Escape' && closeNotesContextMenu()}
-		oncontextmenu={(e) => e.preventDefault()}
-		role="menu"
-		tabindex="0"
-	>
-		<button type="button" class="ctx-item" onclick={() => { isNotesContextMenuOpen = false; fileInputEl?.click(); }}>
-			<span class="ctx-ico">📷</span>
-			<span>Inserisci Immagine</span>
-		</button>
-		<button type="button" class="ctx-item" onclick={() => { isNotesContextMenuOpen = false; handleHighlightText(); }}>
-			<span class="ctx-ico">🖍️</span>
-			<span>Evidenzia Testo</span>
-		</button>
-		<button type="button" class="ctx-item" onclick={() => { isNotesContextMenuOpen = false; handleFormat('bold'); }}>
-			<span class="ctx-ico"><strong>B</strong></span>
-			<span>Grassetto</span>
-		</button>
-		<button type="button" class="ctx-item" onclick={() => { isNotesContextMenuOpen = false; handleFormat('italic'); }}>
-			<span class="ctx-ico"><em>I</em></span>
-			<span>Corsivo</span>
-		</button>
-		<button type="button" class="ctx-item" onclick={() => { isNotesContextMenuOpen = false; copyMarkdown(); }}>
-			<span class="ctx-ico">📋</span>
-			<span>Copia Markdown</span>
-		</button>
-		<button type="button" class="ctx-item" onclick={() => { isNotesContextMenuOpen = false; handleTogglePin(); }}>
-			<span class="ctx-ico">📌</span>
-			<span>{currentIsPinned ? 'Rimuovi Pin' : 'Fissa in Alto'}</span>
-		</button>
-		<div class="ctx-divider"></div>
-		<button type="button" class="ctx-item danger" onclick={() => { isNotesContextMenuOpen = false; handleDeleteActiveNote(); }}>
-			<span class="ctx-ico">🗑️</span>
-			<span>Sposta nel Cestino</span>
-		</button>
-	</div>
-{/if}
 
 <style>
 	.notes-page-wrapper {
@@ -2284,61 +2231,6 @@
 		color: var(--text-muted);
 		text-align: center;
 		padding: 1.5rem 0;
-	}
-
-	/* 📋 Custom Floating Context Menu for Notes */
-	.notes-floating-context-menu {
-		position: fixed;
-		z-index: 10000;
-		background: var(--card-bg);
-		border: 1.5px solid var(--border-color);
-		border-radius: 14px;
-		padding: 0.35rem;
-		box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
-		display: flex;
-		flex-direction: column;
-		gap: 0.2rem;
-		min-width: 195px;
-	}
-
-	.ctx-item {
-		display: flex;
-		align-items: center;
-		gap: 0.6rem;
-		padding: 0.45rem 0.65rem;
-		background: none;
-		border: none;
-		border-radius: 8px;
-		color: var(--text-color);
-		font-size: 0.8rem;
-		font-weight: 800;
-		cursor: pointer;
-		text-align: left;
-		transition: all 0.12s ease;
-	}
-
-	.ctx-item:hover {
-		background: var(--card-bg-subtle);
-		color: var(--accent-color);
-	}
-
-	.ctx-item.danger:hover {
-		background: rgba(239, 68, 68, 0.12);
-		color: #ef4444;
-	}
-
-	.ctx-ico {
-		font-size: 0.95rem;
-		width: 18px;
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-	}
-
-	.ctx-divider {
-		height: 1px;
-		background: var(--border-color);
-		margin: 0.2rem 0;
 	}
 
 	.mobile-back-btn {
