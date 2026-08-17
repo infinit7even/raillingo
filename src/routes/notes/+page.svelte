@@ -4,7 +4,7 @@
 	import { getMarkdownStats, extractHeadings } from '$lib/utils/markdown';
 	import type { Note, NoteSortOption } from '$lib/types/notes';
 	import { toastStore } from '$lib/stores/toastStore';
-	import { fade } from 'svelte/transition';
+	import { fade, scale } from 'svelte/transition';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import { markdownToDocHtml, docHtmlToMarkdown, createInlineImageFigureHtml, parseInlineMd } from '$lib/utils/docConverter';
 	import { notesNavStore } from '$lib/stores/notesNavStore';
@@ -51,6 +51,13 @@
 	let newTagInput = $state('');
 	let isAddingTag = $state(false);
 
+	// Tag Management Modal State
+	let isTagManagerModalOpen = $state(false);
+	let tagSearchQuery = $state('');
+	let editingTagOldName = $state<string | null>(null);
+	let editingTagNewName = $state('');
+	let modalNewTagInput = $state('');
+
 	let editorEl = $state<HTMLDivElement | null>(null);
 	let docCanvasEl = $state<HTMLDivElement | null>(null);
 	let fileInputEl = $state<HTMLInputElement | null>(null);
@@ -67,7 +74,19 @@
 				}
 			}
 		}
-		return Array.from(set).sort();
+		return Array.from(set).sort((a, b) => a.localeCompare(b, 'it', { sensitivity: 'base' }));
+	});
+
+	// Etichette non ancora assegnate alla nota corrente (per suggerimenti rapidi)
+	let unassignedUserTags = $derived.by<string[]>(() => {
+		return allUserTags.filter((t) => !currentTags.includes(t));
+	});
+
+	// Etichette filtrate nel modal di gestione
+	let filteredModalTags = $derived.by<string[]>(() => {
+		const q = tagSearchQuery.toLowerCase().trim();
+		if (!q) return allUserTags;
+		return allUserTags.filter((t) => t.toLowerCase().includes(q));
 	});
 
 	// Fullscreen state
@@ -198,8 +217,8 @@
 		currentContent = docHtmlToMarkdown(editorEl);
 	}
 
-	function handleAddTag() {
-		const trimmed = newTagInput.trim();
+	function handleAddTag(tagToAdd?: string) {
+		const trimmed = (tagToAdd || newTagInput).trim();
 		if (trimmed && !currentTags.includes(trimmed)) {
 			currentTags = [...currentTags, trimmed];
 			newTagInput = '';
@@ -212,6 +231,75 @@
 	function handleRemoveTag(tagToRemove: string) {
 		currentTags = currentTags.filter((t) => t !== tagToRemove);
 		triggerAutoSave();
+	}
+
+	function handleCreateTagInModal() {
+		const trimmed = modalNewTagInput.trim();
+		if (!trimmed) return;
+		if (allUserTags.includes(trimmed)) {
+			toastStore.show({ message: `⚠️ L'etichetta "${trimmed}" esiste già.` });
+			return;
+		}
+		if (selectedNoteId) {
+			handleAddTag(trimmed);
+		} else if (notes.length > 0) {
+			const target = notes[0];
+			notesStore.updateNote({ ...target, tags: [...(target.tags || []), trimmed] });
+		}
+		modalNewTagInput = '';
+		toastStore.show({ message: `✨ Etichetta "${trimmed}" creata!` });
+	}
+
+	async function handleRenameTag(oldTag: string, newTag: string) {
+		const trimmedOld = oldTag.trim();
+		const trimmedNew = newTag.trim();
+		if (!trimmedNew || trimmedOld === trimmedNew) {
+			editingTagOldName = null;
+			return;
+		}
+
+		const notesToUpdate = notes.filter((n) => n.tags && n.tags.includes(trimmedOld));
+		for (const n of notesToUpdate) {
+			const updatedTags = (n.tags || []).map((t) => (t === trimmedOld ? trimmedNew : t));
+			const uniqueTags = Array.from(new Set(updatedTags));
+			await notesStore.updateNote({
+				...n,
+				tags: uniqueTags
+			});
+		}
+
+		if (currentTags.includes(trimmedOld)) {
+			currentTags = currentTags.map((t) => (t === trimmedOld ? trimmedNew : t));
+		}
+		if (selectedTagFilter === trimmedOld) {
+			selectedTagFilter = trimmedNew;
+		}
+
+		editingTagOldName = null;
+		editingTagNewName = '';
+		toastStore.show({ message: `🏷️ Etichetta rinominata in "${trimmedNew}" su ${notesToUpdate.length} note!` });
+	}
+
+	async function handleDeleteTagGlobally(tagToDelete: string) {
+		const trimmed = tagToDelete.trim();
+		const notesToUpdate = notes.filter((n) => n.tags && n.tags.includes(trimmed));
+
+		for (const n of notesToUpdate) {
+			const updatedTags = (n.tags || []).filter((t) => t !== trimmed);
+			await notesStore.updateNote({
+				...n,
+				tags: updatedTags
+			});
+		}
+
+		if (currentTags.includes(trimmed)) {
+			currentTags = currentTags.filter((t) => t !== trimmed);
+		}
+		if (selectedTagFilter === trimmed) {
+			selectedTagFilter = null;
+		}
+
+		toastStore.show({ message: `🗑️ Etichetta "${trimmed}" eliminata da ${notesToUpdate.length} note!` });
 	}
 
 	let activeNote = $derived(notes.find((n) => n.id === selectedNoteId) || null);
@@ -433,7 +521,7 @@
 				fig.remove();
 				syncContentFromEditor();
 				triggerAutoSave();
-				toastStore.show({ message: '✕ Immagine rimossa' });
+				toastStore.show({ message: 'Immagine rimossa' });
 			}
 			return;
 		}
@@ -755,16 +843,17 @@
 					{/if}
 				</div>
 
-				<!-- User Custom Tags Filter Row -->
-				{#if !isViewingTrash && allUserTags.length > 0}
+				<!-- User Custom Tags Filter Row (Filtro stile Categorie) -->
+				{#if !isViewingTrash}
 					<div class="vault-tags-filter-row">
 						<button
 							type="button"
 							class="tag-filter-chip"
 							class:active={selectedTagFilter === null}
 							onclick={() => (selectedTagFilter = null)}
+							title="Mostra tutti gli appunti"
 						>
-							Tutte ({notes.length})
+							Tutti ({notes.length})
 						</button>
 						{#each allUserTags as tag}
 							{@const tagCount = notes.filter((n) => n.tags && n.tags.includes(tag)).length}
@@ -773,10 +862,19 @@
 								class="tag-filter-chip"
 								class:active={selectedTagFilter === tag}
 								onclick={() => (selectedTagFilter = selectedTagFilter === tag ? null : tag)}
+								title="Filtra per etichetta {tag}"
 							>
 								🏷️ {tag} ({tagCount})
 							</button>
 						{/each}
+						<button
+							type="button"
+							class="tag-manage-gear-btn"
+							onclick={() => (isTagManagerModalOpen = true)}
+							title="Gestisci, rinomina ed elimina etichette"
+						>
+							⚙️
+						</button>
 					</div>
 				{/if}
 
@@ -1118,37 +1216,58 @@
 									type="button"
 									class="remove-tag-btn"
 									onclick={() => handleRemoveTag(tag)}
-									title="Rimuovi etichetta"
+									title="Rimuovi etichetta da questa nota"
 								>
 									✕
 								</button>
 							</span>
 						{/each}
+
 						{#if isAddingTag}
-							<div class="add-tag-input-wrap">
-								<input
-									type="text"
-									bind:value={newTagInput}
-									placeholder="Nuova etichetta..."
-									class="add-tag-input"
-									onkeydown={(e) => {
-										if (e.key === 'Enter') {
-											e.preventDefault();
-											handleAddTag();
-										} else if (e.key === 'Escape') {
-											isAddingTag = false;
-										}
-									}}
-								/>
-								<button type="button" class="confirm-tag-btn" onclick={handleAddTag}>✓</button>
-								<button type="button" class="cancel-tag-btn" onclick={() => (isAddingTag = false)}>✕</button>
+							<div class="add-tag-popover duo-card" transition:fade={{ duration: 100 }}>
+								<div class="add-tag-input-wrap">
+									<input
+										type="text"
+										bind:value={newTagInput}
+										placeholder="Nuova etichetta..."
+										class="add-tag-input"
+										onkeydown={(e) => {
+											if (e.key === 'Enter') {
+												e.preventDefault();
+												handleAddTag();
+											} else if (e.key === 'Escape') {
+												isAddingTag = false;
+											}
+										}}
+									/>
+									<button type="button" class="confirm-tag-btn" onclick={() => handleAddTag()}>✓</button>
+									<button type="button" class="cancel-tag-btn" onclick={() => (isAddingTag = false)}>✕</button>
+								</div>
+
+								{#if unassignedUserTags.length > 0}
+									<div class="tag-quick-picker">
+										<span class="quick-picker-title">Assegna esistente:</span>
+										<div class="quick-picker-chips">
+											{#each unassignedUserTags as existingTag}
+												<button
+													type="button"
+													class="quick-tag-pick-btn"
+													onclick={() => handleAddTag(existingTag)}
+													title="Assegna etichetta {existingTag}"
+												>
+													+ {existingTag}
+												</button>
+											{/each}
+										</div>
+									</div>
+								{/if}
 							</div>
 						{:else}
 							<button
 								type="button"
 								class="add-tag-trigger-btn"
 								onclick={() => (isAddingTag = true)}
-								title="Aggiungi etichetta personalizzata"
+								title="Aggiungi o assegna etichetta"
 							>
 								➕ Aggiungi
 							</button>
@@ -1300,6 +1419,167 @@
 		</div>
 	{/if}
 </div>
+
+<!-- 🏷️ Modal Gestione & Rinomina Etichette Personali -->
+{#if isTagManagerModalOpen}
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div
+		class="modal-backdrop"
+		transition:fade={{ duration: 150 }}
+		onclick={() => (isTagManagerModalOpen = false)}
+		onkeydown={(e) => e.key === 'Escape' && (isTagManagerModalOpen = false)}
+		tabindex="-1"
+	>
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div
+			class="tag-manager-modal duo-card"
+			transition:scale={{ duration: 180, start: 0.96 }}
+			onclick={(e) => e.stopPropagation()}
+			onkeydown={() => {}}
+			role="dialog"
+			aria-modal="true"
+			aria-label="Gestione Etichette Appunti"
+			tabindex="0"
+		>
+			<div class="modal-header">
+				<div class="modal-title-group">
+					<span class="modal-icon">🏷️</span>
+					<h2>Gestione Etichette</h2>
+					<span class="modal-badge">{allUserTags.length}</span>
+				</div>
+				<button
+					type="button"
+					class="close-modal-btn"
+					onclick={() => (isTagManagerModalOpen = false)}
+					title="Chiudi"
+				>
+					✕
+				</button>
+			</div>
+
+			<!-- Ricerca rapida tra le etichette -->
+			<div class="modal-search-box">
+				<span class="search-ico">🔍</span>
+				<input
+					type="text"
+					bind:value={tagSearchQuery}
+					placeholder="Cerca tra le tue etichette..."
+					class="modal-search-input"
+				/>
+				{#if tagSearchQuery}
+					<button type="button" class="clear-btn" onclick={() => (tagSearchQuery = '')}>✕</button>
+				{/if}
+			</div>
+
+			<!-- Lista Etichette con Rinomina ed Elimina -->
+			<div class="modal-tags-scroll">
+				{#if allUserTags.length === 0}
+					<div class="modal-empty-tags">
+						<p>Nessuna etichetta creata finora.</p>
+						<span>Aggiungi le etichette ai tuoi appunti per organizzarli e filtrarli rapidamente.</span>
+					</div>
+				{:else if filteredModalTags.length === 0}
+					<div class="modal-empty-tags">
+						<p>Nessuna etichetta trovata per "{tagSearchQuery}".</p>
+					</div>
+				{:else}
+					{#each filteredModalTags as tag}
+						{@const noteCount = notes.filter((n) => n.tags && n.tags.includes(tag)).length}
+						{@const isEditing = editingTagOldName === tag}
+						<div class="modal-tag-row" class:is-active-filter={selectedTagFilter === tag}>
+							{#if isEditing}
+								<div class="edit-tag-inline-form">
+									<input
+										type="text"
+										bind:value={editingTagNewName}
+										class="edit-tag-input"
+										onkeydown={(e) => {
+											if (e.key === 'Enter') handleRenameTag(tag, editingTagNewName);
+											if (e.key === 'Escape') editingTagOldName = null;
+										}}
+									/>
+									<button
+										type="button"
+										class="confirm-rename-btn"
+										onclick={() => handleRenameTag(tag, editingTagNewName)}
+										title="Salva nuovo nome"
+									>
+										✓
+									</button>
+									<button
+										type="button"
+										class="cancel-rename-btn"
+										onclick={() => (editingTagOldName = null)}
+										title="Annulla"
+									>
+										✕
+									</button>
+								</div>
+							{:else}
+								<div class="tag-row-info">
+									<button
+										type="button"
+										class="tag-filter-link"
+										onclick={() => {
+											selectedTagFilter = selectedTagFilter === tag ? null : tag;
+											isTagManagerModalOpen = false;
+										}}
+										title="Filtra gli appunti per questa etichetta"
+									>
+										<span class="tag-name">🏷️ {tag}</span>
+										<span class="tag-count-pill">{noteCount} note</span>
+									</button>
+								</div>
+
+								<div class="tag-row-actions">
+									<button
+										type="button"
+										class="tag-action-btn edit"
+										onclick={() => {
+											editingTagOldName = tag;
+											editingTagNewName = tag;
+										}}
+										title="Rinomina etichetta in tutte le note"
+									>
+										✏️ Rinomina
+									</button>
+									<button
+										type="button"
+										class="tag-action-btn delete"
+										onclick={() => handleDeleteTagGlobally(tag)}
+										title="Elimina etichetta da tutte le note"
+									>
+										🗑️
+									</button>
+								</div>
+							{/if}
+						</div>
+					{/each}
+				{/if}
+			</div>
+
+			<!-- Footer Modal: Aggiungi nuova etichetta -->
+			<div class="modal-footer-box">
+				<div class="modal-add-tag-box">
+					<input
+						type="text"
+						bind:value={modalNewTagInput}
+						placeholder="Crea nuova etichetta..."
+						class="modal-add-input"
+						onkeydown={(e) => e.key === 'Enter' && handleCreateTagInModal()}
+					/>
+					<button
+						type="button"
+						class="duo-btn duo-btn-green modal-add-btn"
+						onclick={handleCreateTagInModal}
+					>
+						➕ Crea
+					</button>
+				</div>
+			</div>
+		</div>
+	</div>
+{/if}
 
 <style>
 	.notes-page-wrapper {
@@ -1622,6 +1902,28 @@
 		color: var(--accent-color);
 	}
 
+	.tag-manage-gear-btn {
+		background: var(--card-bg-subtle);
+		border: 1px solid var(--border-color);
+		border-radius: 8px;
+		padding: 0.25rem 0.45rem;
+		font-size: 0.75rem;
+		cursor: pointer;
+		color: var(--text-muted);
+		transition: all 0.12s ease;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		flex-shrink: 0;
+	}
+
+	.tag-manage-gear-btn:hover {
+		border-color: var(--accent-color);
+		color: var(--accent-color);
+		background: var(--hover-bg);
+		transform: scale(1.05);
+	}
+
 	.vault-files-list {
 		flex: 1;
 		display: flex;
@@ -1882,6 +2184,7 @@
 		padding: 0.25rem 1.15rem 0.5rem 1.15rem;
 		flex-wrap: wrap;
 		flex-shrink: 0;
+		position: relative;
 	}
 
 	.tags-bar-label {
@@ -1923,6 +2226,19 @@
 		cursor: pointer;
 	}
 
+	.add-tag-popover {
+		display: flex;
+		flex-direction: column;
+		gap: 0.45rem;
+		background: var(--card-bg);
+		border: 1.5px solid var(--border-color);
+		border-radius: 12px;
+		padding: 0.5rem;
+		box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+		min-width: 230px;
+		max-width: 320px;
+	}
+
 	.add-tag-input-wrap {
 		display: flex;
 		gap: 0.25rem;
@@ -1932,11 +2248,12 @@
 		background: var(--card-bg-subtle);
 		border: 1px solid var(--border-color);
 		border-radius: 6px;
-		padding: 0.15rem 0.4rem;
-		font-size: 0.72rem;
+		padding: 0.2rem 0.45rem;
+		font-size: 0.74rem;
 		color: var(--text-color);
 		outline: none;
-		width: 110px;
+		flex: 1;
+		min-width: 0;
 	}
 
 	.confirm-tag-btn,
@@ -1944,10 +2261,57 @@
 		background: var(--card-bg-subtle);
 		border: 1px solid var(--border-color);
 		border-radius: 6px;
-		padding: 0.15rem 0.4rem;
+		padding: 0.2rem 0.45rem;
 		font-size: 0.72rem;
 		font-weight: 900;
 		cursor: pointer;
+	}
+
+	.confirm-tag-btn:hover {
+		border-color: var(--green-color);
+		color: var(--green-color);
+	}
+
+	.tag-quick-picker {
+		display: flex;
+		flex-direction: column;
+		gap: 0.25rem;
+		border-top: 1px dashed var(--border-color);
+		padding-top: 0.35rem;
+		margin-top: 0.15rem;
+	}
+
+	.quick-picker-title {
+		font-size: 0.68rem;
+		font-weight: 800;
+		color: var(--text-muted);
+	}
+
+	.quick-picker-chips {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.25rem;
+		max-height: 110px;
+		overflow-y: auto;
+		scrollbar-width: thin;
+	}
+
+	.quick-tag-pick-btn {
+		background: var(--card-bg-subtle);
+		border: 1px solid var(--border-color);
+		border-radius: 6px;
+		padding: 0.15rem 0.4rem;
+		font-size: 0.7rem;
+		font-weight: 800;
+		color: var(--accent-color);
+		cursor: pointer;
+		transition: all 0.12s ease;
+	}
+
+	.quick-tag-pick-btn:hover {
+		border-color: var(--accent-color);
+		background: var(--accent-light-bg);
+		transform: translateY(-1px);
 	}
 
 	/* Obsidian Live Document Canvas Container */
@@ -2555,5 +2919,222 @@
 	.discord-svg {
 		width: 22px;
 		height: 22px;
+	}
+
+	/* 🏷️ Tag Management Modal */
+	.tag-manager-modal {
+		background: var(--card-bg);
+		border: 2px solid var(--border-color);
+		border-bottom: 5px solid var(--border-depth-color);
+		border-radius: 24px;
+		width: 100%;
+		max-width: 480px;
+		padding: 1.25rem;
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+		box-shadow: 0 16px 40px rgba(0, 0, 0, 0.3);
+		max-height: 85vh;
+		box-sizing: border-box;
+	}
+
+	.modal-badge {
+		background: var(--accent-light-bg);
+		color: var(--accent-color);
+		border: 1px solid var(--accent-color);
+		border-radius: 9999px;
+		font-size: 0.72rem;
+		font-weight: 900;
+		padding: 0.1rem 0.5rem;
+	}
+
+	.modal-search-box {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		background: var(--card-bg-subtle);
+		border: 1.5px solid var(--border-color);
+		border-radius: 12px;
+		padding: 0.5rem 0.75rem;
+		box-sizing: border-box;
+	}
+
+	.modal-search-input {
+		flex: 1;
+		background: transparent;
+		border: none;
+		outline: none;
+		color: var(--text-color);
+		font-size: 0.85rem;
+		font-weight: 700;
+	}
+
+	.modal-tags-scroll {
+		display: flex;
+		flex-direction: column;
+		gap: 0.45rem;
+		max-height: 320px;
+		overflow-y: auto;
+		scrollbar-width: thin;
+		scrollbar-color: var(--border-color) transparent;
+		padding-right: 0.2rem;
+	}
+
+	.modal-empty-tags {
+		text-align: center;
+		padding: 2rem 1rem;
+		color: var(--text-muted);
+		font-size: 0.82rem;
+	}
+
+	.modal-empty-tags p {
+		font-weight: 800;
+		color: var(--text-color);
+		margin-bottom: 0.3rem;
+	}
+
+	.modal-tag-row {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 0.5rem 0.75rem;
+		background: var(--card-bg-subtle);
+		border: 1.5px solid var(--border-color);
+		border-radius: 12px;
+		gap: 0.5rem;
+		transition: all 0.12s ease;
+	}
+
+	.modal-tag-row.is-active-filter {
+		border-color: var(--accent-color);
+		background: var(--accent-light-bg);
+	}
+
+	.tag-row-info {
+		flex: 1;
+		min-width: 0;
+	}
+
+	.tag-filter-link {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.5rem;
+		background: none;
+		border: none;
+		padding: 0;
+		cursor: pointer;
+		font-family: inherit;
+		text-align: left;
+	}
+
+	.tag-name {
+		font-weight: 800;
+		font-size: 0.85rem;
+		color: var(--text-color);
+	}
+
+	.tag-count-pill {
+		font-size: 0.68rem;
+		font-weight: 800;
+		color: var(--text-muted);
+		background: var(--card-bg);
+		border: 1px solid var(--border-color);
+		padding: 0.1rem 0.4rem;
+		border-radius: 9999px;
+	}
+
+	.tag-row-actions {
+		display: flex;
+		align-items: center;
+		gap: 0.3rem;
+	}
+
+	.tag-action-btn {
+		background: var(--card-bg);
+		border: 1px solid var(--border-color);
+		border-radius: 8px;
+		padding: 0.25rem 0.5rem;
+		font-size: 0.72rem;
+		font-weight: 800;
+		color: var(--text-color);
+		cursor: pointer;
+		transition: all 0.12s ease;
+	}
+
+	.tag-action-btn.edit:hover {
+		border-color: var(--accent-color);
+		color: var(--accent-color);
+	}
+
+	.tag-action-btn.delete:hover {
+		border-color: #ef4444;
+		color: #ef4444;
+		background: rgba(239, 68, 68, 0.12);
+	}
+
+	.edit-tag-inline-form {
+		display: flex;
+		align-items: center;
+		gap: 0.35rem;
+		width: 100%;
+	}
+
+	.edit-tag-input {
+		flex: 1;
+		background: var(--card-bg);
+		border: 1.5px solid var(--accent-color);
+		border-radius: 8px;
+		padding: 0.3rem 0.5rem;
+		font-size: 0.82rem;
+		color: var(--text-color);
+		outline: none;
+	}
+
+	.confirm-rename-btn,
+	.cancel-rename-btn {
+		background: var(--card-bg);
+		border: 1px solid var(--border-color);
+		border-radius: 8px;
+		padding: 0.3rem 0.55rem;
+		font-weight: 900;
+		cursor: pointer;
+		font-size: 0.78rem;
+	}
+
+	.confirm-rename-btn:hover {
+		border-color: var(--green-color);
+		color: var(--green-color);
+	}
+
+	.cancel-rename-btn:hover {
+		border-color: #ef4444;
+		color: #ef4444;
+	}
+
+	.modal-footer-box {
+		border-top: 1.5px solid var(--border-color);
+		padding-top: 0.85rem;
+	}
+
+	.modal-add-tag-box {
+		display: flex;
+		gap: 0.45rem;
+	}
+
+	.modal-add-input {
+		flex: 1;
+		background: var(--card-bg-subtle);
+		border: 1.5px solid var(--border-color);
+		border-radius: 10px;
+		padding: 0.45rem 0.65rem;
+		font-size: 0.82rem;
+		color: var(--text-color);
+		outline: none;
+	}
+
+	.modal-add-btn {
+		padding: 0.45rem 1rem;
+		font-size: 0.82rem;
+		font-weight: 900;
 	}
 </style>
