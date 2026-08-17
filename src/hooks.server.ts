@@ -3,6 +3,9 @@ import { sequence } from '@sveltejs/kit/hooks';
 import { building } from '$app/environment';
 import { auth, getAdminIds } from '$lib/server/auth';
 import { svelteKitHandler } from 'better-auth/svelte-kit';
+import { db } from '$lib/server/db';
+import * as schema from '$lib/server/db/schema';
+import { eq, and } from 'drizzle-orm';
 
 // Header di sicurezza + de-indicizzazione applicati a OGNI risposta.
 const SECURITY_HEADERS: Record<string, string> = {
@@ -33,9 +36,33 @@ const handleAuth: Handle = async ({ event, resolve }) => {
 	if (session) {
 		event.locals.session = session.session;
 		const adminIds = getAdminIds();
-		const isAdmin =
-			session.user.role === 'admin' ||
-			adminIds.includes(String(session.user.id).trim());
+
+		let isAdmin = session.user.role === 'admin';
+
+		if (!isAdmin) {
+			try {
+				const accounts = await db
+					.select({ accountId: schema.account.accountId })
+					.from(schema.account)
+					.where(
+						and(
+							eq(schema.account.userId, session.user.id),
+							eq(schema.account.providerId, 'discord')
+						)
+					);
+
+				const discordId = accounts[0]?.accountId?.trim();
+				if (discordId && adminIds.includes(discordId)) {
+					isAdmin = true;
+					await db
+						.update(schema.user)
+						.set({ role: 'admin' })
+						.where(eq(schema.user.id, session.user.id));
+				}
+			} catch (err) {
+				console.error('Errore durante la verifica admin Discord:', err);
+			}
+		}
 
 		event.locals.user = {
 			...session.user,

@@ -130,8 +130,8 @@ export const auth = betterAuth({
 
 export type Auth = typeof auth;
 
-export function isAuthorizedAdmin(user: { id?: string; role?: string; email?: string } | null | undefined): boolean {
+export function isAuthorizedAdmin(user: { id?: string; role?: string; email?: string; isAdmin?: boolean } | null | undefined): boolean {
 	if (!user) return false;
-	if (user.role === 'admin') return true;
+	if (user.role === 'admin' || user.isAdmin === true) return true;
 	return false;
 }
