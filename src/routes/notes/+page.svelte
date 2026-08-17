@@ -695,13 +695,12 @@
 		/>
 	</div>
 
-	{#if user}
-		<div
-			class="obsidian-workspace"
-			class:vault-collapsed={isVaultCollapsed}
-			onkeydown={handleKeyDown}
-			role="presentation"
-		>
+	<div
+		class="obsidian-workspace"
+		class:vault-collapsed={isVaultCollapsed}
+		onkeydown={handleKeyDown}
+		role="presentation"
+	>
 	<!-- 🗂️ 1. LEFT VAULT EXPLORER -->
 	<aside
 		class="vault-sidebar duo-card"
@@ -731,6 +730,16 @@
 				</div>
 
 				<div class="vault-header-actions">
+					{#if !user}
+						<a
+							href="/api/auth/login?returnUrl=/notes"
+							class="discord-login-pill-btn"
+							title="Accedi con Discord per sincronizzare nel cloud"
+						>
+							🔑 Accedi
+						</a>
+					{/if}
+
 					<button
 						type="button"
 						class="new-note-btn"
@@ -1117,74 +1126,6 @@
 		</aside>
 	{/if}
 </div>
-{:else}
-	<div class="login-page-container">
-		{#if data?.error === 'admin_required'}
-			<div class="login-error-alert duo-card">
-				<span class="error-icon">⚠️</span>
-				<div class="error-text-col">
-					<strong>Accesso Riservato agli Amministratori</strong>
-					<p>Per accedere a quella sezione è necessario effettuare il login con un account Discord autorizzato.</p>
-				</div>
-			</div>
-		{/if}
-
-		<div class="notes-login-card duo-card">
-			<div class="notes-hero-box">
-				<div class="notes-icon-badge">
-					<img src="/emoji/clipboard_3d.png" alt="Appunti" class="hero-notes-img" />
-					<span class="sync-glow-badge">☁️ CLOUD SYNC</span>
-				</div>
-				<h2 class="notes-hero-title">Salva i tuoi appunti ovunque tu sia</h2>
-				<p class="notes-hero-subtitle">
-					Accedi con Discord per sbloccare il tuo Vault digitale. Le tue note, gli schemi e le sintesi della normativa RFI saranno sempre al sicuro e sincronizzate su PC, smartphone e tablet.
-				</p>
-			</div>
-
-			<div class="notes-features-grid">
-				<div class="notes-feature-card">
-					<span class="nfeature-ico">📱</span>
-					<div class="nfeature-text">
-						<strong>Sincronizzazione Multi-Dispositivo</strong>
-						<p>Inizia a scrivere gli appunti a casa sul computer e rileggili comodamente in mobilità dal telefono.</p>
-					</div>
-				</div>
-
-				<div class="notes-feature-card">
-					<span class="nfeature-ico">📝</span>
-					<div class="nfeature-text">
-						<strong>Editor Ricco & Markdown Visuale</strong>
-						<p>Organizza i concetti con titoli, immagini allegate, elenchi formattati e tabelle intuitive.</p>
-					</div>
-				</div>
-
-				<div class="notes-feature-card">
-					<span class="nfeature-ico">🛡️</span>
-					<div class="nfeature-text">
-						<strong>Backup Automatico e Protetto</strong>
-						<p>I tuoi appunti sono associati in modo sicuro al tuo account Discord. Mai più note perse durante lo studio.</p>
-					</div>
-				</div>
-			</div>
-
-			<div class="notes-action-zone">
-				<a href="/api/auth/login?returnUrl=/notes" class="duo-btn discord-login-btn hero-action-btn">
-					<svg
-						class="discord-svg"
-						xmlns="http://www.w3.org/2000/svg"
-						viewBox="0 0 127.14 96.36"
-						fill="currentColor"
-					>
-						<path
-							d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.7,77.7,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1A105.25,105.25,0,0,0,126.6,80.22h0C129.24,52.84,122.09,29.11,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,45.92,53.87,53,48.8,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.25,60,73.25,53s5-12.74,11.44-12.74S96.23,45.92,96.1,53,91,65.69,84.69,65.69Z"
-						/>
-					</svg>
-					<span>ACCEDI CON DISCORD PER SALVARE GLI APPUNTI</span>
-				</a>
-			</div>
-		</div>
-	</div>
-{/if}
 </div>
 
 <style>
@@ -2432,214 +2373,29 @@
 		}
 	}
 
-	/* 🔑 Embedded Unauthenticated Login Styles */
-	.login-page-container {
-		width: 100%;
-		max-width: 600px;
-		margin: 0 auto;
-		display: flex;
-		flex-direction: column;
-		gap: 1rem;
-		box-sizing: border-box;
-	}
-
-	.login-error-alert {
-		display: flex;
-		align-items: center;
-		gap: 0.85rem;
-		padding: 1rem 1.25rem;
-		background: rgba(255, 94, 91, 0.12);
-		border: 2px solid #ff5e5b;
-		border-radius: 16px;
-		color: var(--text-color);
-	}
-
-	.error-icon {
-		font-size: 1.5rem;
-	}
-
-	.error-text-col {
-		display: flex;
-		flex-direction: column;
-		gap: 0.2rem;
-		font-size: 0.85rem;
-	}
-
-	.error-text-col p {
-		margin: 0;
-		color: var(--text-muted);
-	}
-
-	.notes-login-card {
-		display: flex;
-		flex-direction: column;
-		gap: 1.5rem;
-		padding: 1.75rem 1.5rem;
-		background: var(--card-bg);
-		border-radius: 24px;
-		border: 2px solid var(--border-color);
-		border-bottom: 5px solid var(--border-depth-color);
-		text-align: center;
-	}
-
-	.notes-hero-box {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: 0.65rem;
-		padding-bottom: 1rem;
-		border-bottom: 2px dashed var(--border-color);
-	}
-
-	.notes-icon-badge {
-		position: relative;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-	}
-
-	.hero-notes-img {
-		width: 72px;
-		height: 72px;
-		object-fit: contain;
-		filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.2));
-	}
-
-	.sync-glow-badge {
-		font-size: 0.68rem;
-		font-weight: 900;
-		color: #ffffff;
-		background: var(--red-color, #ff5e5b);
-		padding: 0.2rem 0.65rem;
-		border-radius: 9999px;
-		margin-top: -0.4rem;
-		box-shadow: 0 3px 10px rgba(255, 94, 91, 0.4);
-		letter-spacing: 0.05em;
-	}
-
-	.notes-hero-title {
-		font-family: 'Outfit', sans-serif;
-		font-size: 1.45rem;
-		font-weight: 900;
-		color: var(--text-color);
-		margin: 0;
-		line-height: 1.25;
-	}
-
-	.notes-hero-subtitle {
-		font-size: 0.88rem;
-		color: var(--text-muted);
-		margin: 0;
-		line-height: 1.45;
-		max-width: 480px;
-	}
-
-	.notes-features-grid {
-		display: flex;
-		flex-direction: column;
-		gap: 0.85rem;
-		text-align: left;
-	}
-
-	.notes-feature-card {
-		display: flex;
-		align-items: flex-start;
-		gap: 0.85rem;
-		background: var(--card-bg-subtle);
-		border: 1.5px solid var(--border-color);
-		border-radius: 16px;
-		padding: 0.9rem 1rem;
-	}
-
-	.nfeature-ico {
-		font-size: 1.5rem;
-		flex-shrink: 0;
-		margin-top: 0.05rem;
-	}
-
-	.nfeature-text {
-		display: flex;
-		flex-direction: column;
-		gap: 0.2rem;
-	}
-
-	.nfeature-text strong {
-		font-size: 0.92rem;
-		font-weight: 800;
-		color: var(--text-color);
-	}
-
-	.nfeature-text p {
-		font-size: 0.8rem;
-		color: var(--text-muted);
-		margin: 0;
-		line-height: 1.35;
-	}
-
-	.notes-action-zone {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: 0.6rem;
-		padding-top: 0.5rem;
-	}
-
-	.hero-action-btn {
-		padding: 0.95rem 1.2rem !important;
-		font-size: 0.92rem !important;
-	}
-
-	.quick-access-hint {
-		font-size: 0.75rem;
-		font-weight: 700;
-		color: var(--text-muted);
-	}
-
-	.discord-login-btn {
-		width: 100%;
-		background-color: #5865f2 !important;
-		color: #ffffff !important;
-		border: none !important;
-		border-bottom: 4px solid #4752c4 !important;
+	.discord-login-pill-btn {
 		display: inline-flex;
 		align-items: center;
-		justify-content: center;
-		gap: 0.65rem;
-		font-size: 0.95rem;
-		font-weight: 900;
-		padding: 0.85rem 1rem;
-		border-radius: 16px;
+		gap: 0.35rem;
+		background: #5865f2;
+		color: #ffffff;
+		border: none;
+		border-radius: 8px;
+		padding: 0.25rem 0.55rem;
+		font-size: 0.72rem;
+		font-weight: 800;
 		text-decoration: none;
-		box-sizing: border-box;
-		transition: filter 0.15s ease, transform 0.1s ease, background-color 0.15s ease;
+		transition: all 0.15s ease;
+		cursor: pointer;
+		white-space: nowrap;
 	}
 
-	.discord-login-btn:hover {
-		background-color: #4752c4 !important;
-		color: #ffffff !important;
-		filter: brightness(1.08);
+	.discord-login-pill-btn:hover {
+		background: #4752c4;
+		color: #ffffff;
+		transform: translateY(-1px);
 	}
 
-	.discord-login-btn:active {
-		transform: translateY(2px);
-		border-bottom-width: 2px;
-	}
-
-	.discord-svg {
-		width: 22px;
-		height: 22px;
-		flex-shrink: 0;
-	}
-
-	.back-btn {
-		width: 100%;
-		text-align: center;
-		justify-content: center;
-		font-size: 0.85rem;
-		padding: 0.7rem 1rem;
-		text-decoration: none;
-		box-sizing: border-box;
-	}
 
 	/* 🗂️ Category Creator Row in Modal */
 	.vcat-create-row {
