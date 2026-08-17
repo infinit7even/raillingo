@@ -145,7 +145,7 @@
 	<!-- Page Header standard -->
 	<PageHeader
 		title="Ripasso e Flashcard"
-		subtitle="Gira le card o digita le risposte per allenare la memoria visiva e motoria."
+		subtitle="Ripeti ad alta voce, gira le card o scrivi le risposte."
 		icon="/emoji/open_book_3d.png"
 		variant="green"
 		mobileOpenNav={true}

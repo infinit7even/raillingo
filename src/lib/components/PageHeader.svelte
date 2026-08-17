@@ -28,12 +28,12 @@
 			if (!document.fullscreenElement) {
 				if (document.documentElement.requestFullscreen) {
 					await document.documentElement.requestFullscreen();
-					toastStore.show({ message: '🖥️ Modalità Schermo Intero attivata!', type: 'info' });
+					toastStore.show({ message: 'Modalità Schermo Intero', type: 'info' });
 				}
 			} else {
 				if (document.exitFullscreen) {
 					await document.exitFullscreen();
-					toastStore.show({ message: '🖥️ Schermo Intero disattivato', type: 'info' });
+					toastStore.show({ message: 'Schermo Intero disattivato', type: 'info' });
 				}
 			}
 		} catch (e) {

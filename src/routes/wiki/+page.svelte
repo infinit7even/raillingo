@@ -160,7 +160,7 @@
 <div class="wiki-container">
 	<!-- Page Header -->
 	<PageHeader
-		title="Wiki & Dizionario Ferroviario"
+		title="Wiki & Dizionario"
 		subtitle="Consultazione rapida di tutti gli acronimi in ordine alfabetico e gestione card ignorate."
 		icon="/emoji/books_3d.png"
 		variant="blue"

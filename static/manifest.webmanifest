@@ -73,14 +73,14 @@
     {
       "name": "Wiki Ferroviaria",
       "short_name": "Wiki",
-      "description": "Consulta l'enciclopedia con tutti i termini e segnali ferroviari.",
+      "description": "Vocabolario estero degli acronimi.",
       "url": "/wiki",
       "icons": [{ "src": "/android-icon-96x96.png", "sizes": "96x96" }]
     },
     {
       "name": "Appunti & Note Vault",
       "short_name": "Appunti",
-      "description": "Apri il tuo Vault per creare, modificare e consultare note personali.",
+      "description": "Salva le tue note sul cloud e accedi da dove vuoi.",
       "url": "/notes",
       "icons": [{ "src": "/android-icon-96x96.png", "sizes": "96x96" }]
     }
