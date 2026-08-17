@@ -296,6 +296,34 @@ class NotesStore {
 		await this.updateNote({ id, isPinned: !note.isPinned });
 	}
 
+	public async toggleArchive(id: string): Promise<boolean> {
+		const note = this.notes.find((n) => n.id === id);
+		if (!note) return false;
+		const nextArchived = !note.isArchived;
+		await this.updateNote({
+			id,
+			isArchived: nextArchived,
+			archivedAt: nextArchived ? new Date().toISOString() : undefined
+		});
+		return nextArchived;
+	}
+
+	public async archiveNote(id: string): Promise<void> {
+		await this.updateNote({
+			id,
+			isArchived: true,
+			archivedAt: new Date().toISOString()
+		});
+	}
+
+	public async unarchiveNote(id: string): Promise<void> {
+		await this.updateNote({
+			id,
+			isArchived: false,
+			archivedAt: undefined
+		});
+	}
+
 	public async togglePublicShare(id: string): Promise<string | null> {
 		const note = this.notes.find((n) => n.id === id);
 		if (!note) return null;

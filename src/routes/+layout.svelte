@@ -315,6 +315,10 @@
 					<span class="ctx-ico">📌</span>
 					<span>Fissa / Sfissa</span>
 				</button>
+				<button type="button" class="ctx-item" onclick={() => triggerNotesAction('archive')}>
+					<span class="ctx-ico">📦</span>
+					<span>Archivia / Disarchivia</span>
+				</button>
 				<div class="ctx-divider"></div>
 				<button type="button" class="ctx-item danger" onclick={() => triggerNotesAction('delete')}>
 					<span class="ctx-ico">🗑️</span>

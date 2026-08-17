@@ -36,6 +36,8 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 						tags: (n.tags as string[]) || [],
 						images: (n.images as string[]) || [],
 						isPinned: n.isPinned,
+						isArchived: Boolean(n.isArchived),
+						archivedAt: n.archivedAt ? n.archivedAt.toISOString() : undefined,
 						isPublic: n.isPublic,
 						shareId: n.shareId || undefined,
 						order: n.order,
@@ -99,6 +101,8 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 			tags: (n.tags as string[]) || [],
 			images: (n.images as string[]) || [],
 			isPinned: n.isPinned,
+			isArchived: Boolean(n.isArchived),
+			archivedAt: n.archivedAt ? n.archivedAt.toISOString() : undefined,
 			isPublic: n.isPublic,
 			shareId: n.shareId || undefined,
 			order: n.order,
@@ -132,7 +136,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		const explicitImages = Array.isArray(payload.images) ? payload.images : [];
 		const combinedImages = Array.from(new Set([...explicitImages, ...contentImages]));
 
-		const noteId = payload.id || `note-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+		const noteId = payload.id || crypto.randomUUID();
 		const userId = user?.id || payload.userId || 'local-user';
 
 		const [inserted] = await db
@@ -146,6 +150,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 				tags: Array.isArray(payload.tags) ? payload.tags : [],
 				images: combinedImages,
 				isPinned: Boolean(payload.isPinned),
+				isArchived: Boolean(payload.isArchived),
+				archivedAt: payload.isArchived ? (payload.archivedAt ? new Date(payload.archivedAt) : now) : null,
 				isPublic: Boolean(payload.isPublic),
 				shareId: payload.shareId || noteId,
 				order: typeof payload.order === 'number' ? payload.order : 0,
@@ -162,6 +168,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 					tags: Array.isArray(payload.tags) ? payload.tags : [],
 					images: combinedImages,
 					isPinned: Boolean(payload.isPinned),
+					isArchived: Boolean(payload.isArchived),
+					archivedAt: payload.isArchived ? (payload.archivedAt ? new Date(payload.archivedAt) : now) : null,
 					isPublic: Boolean(payload.isPublic),
 					order: typeof payload.order === 'number' ? payload.order : 0,
 					isDeleted: false,
@@ -180,6 +188,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			tags: (inserted.tags as string[]) || [],
 			images: (inserted.images as string[]) || [],
 			isPinned: inserted.isPinned,
+			isArchived: Boolean(inserted.isArchived),
+			archivedAt: inserted.archivedAt ? inserted.archivedAt.toISOString() : undefined,
 			isPublic: inserted.isPublic,
 			shareId: inserted.shareId || undefined,
 			order: inserted.order,
@@ -227,6 +237,8 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
 					tags: Array.isArray(updated.tags) ? updated.tags : [],
 					images: newImages,
 					isPinned: Boolean(updated.isPinned),
+					isArchived: Boolean(updated.isArchived),
+					archivedAt: updated.isArchived ? (updated.archivedAt ? new Date(updated.archivedAt) : now) : null,
 					isPublic: Boolean(updated.isPublic),
 					shareId: updated.shareId || updated.id,
 					order: typeof updated.order === 'number' ? updated.order : 0,
@@ -245,6 +257,8 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
 				tags: (created.tags as string[]) || [],
 				images: (created.images as string[]) || [],
 				isPinned: created.isPinned,
+				isArchived: Boolean(created.isArchived),
+				archivedAt: created.archivedAt ? created.archivedAt.toISOString() : undefined,
 				isPublic: created.isPublic,
 				shareId: created.shareId || undefined,
 				order: created.order,
@@ -256,6 +270,8 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
 			return json(formatted);
 		}
 
+		const isNowArchived = updated.isArchived !== undefined ? Boolean(updated.isArchived) : existing[0].isArchived;
+
 		const [saved] = await db
 			.update(notes)
 			.set({
@@ -265,6 +281,10 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
 				tags: Array.isArray(updated.tags) ? updated.tags : (existing[0].tags as string[]) || [],
 				images: newImages,
 				isPinned: updated.isPinned !== undefined ? Boolean(updated.isPinned) : existing[0].isPinned,
+				isArchived: isNowArchived,
+				archivedAt: updated.isArchived !== undefined
+					? (updated.isArchived ? (updated.archivedAt ? new Date(updated.archivedAt) : now) : null)
+					: existing[0].archivedAt,
 				isPublic: updated.isPublic !== undefined ? Boolean(updated.isPublic) : existing[0].isPublic,
 				shareId: updated.shareId !== undefined ? updated.shareId : existing[0].shareId || existing[0].id,
 				order: typeof updated.order === 'number' ? updated.order : existing[0].order,
@@ -282,6 +302,8 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
 			tags: (saved.tags as string[]) || [],
 			images: (saved.images as string[]) || [],
 			isPinned: saved.isPinned,
+			isArchived: Boolean(saved.isArchived),
+			archivedAt: saved.archivedAt ? saved.archivedAt.toISOString() : undefined,
 			isPublic: saved.isPublic,
 			shareId: saved.shareId || undefined,
 			order: saved.order,
@@ -324,6 +346,21 @@ export const PATCH: RequestHandler = async ({ request, locals }) => {
 				.returning();
 
 			return json({ success: true, note: restored });
+		}
+
+		if ((payload.action === 'archive' || payload.action === 'unarchive') && payload.id) {
+			const isArchived = payload.action === 'archive';
+			const [updated] = await db
+				.update(notes)
+				.set({
+					isArchived,
+					archivedAt: isArchived ? new Date() : null,
+					updatedAt: new Date()
+				})
+				.where(eq(notes.id, payload.id))
+				.returning();
+
+			return json({ success: true, note: updated });
 		}
 
 		if (payload && Array.isArray(payload.items)) {

@@ -26,8 +26,10 @@
 		selectedNoteId: null
 	});
 
+	let activeNotes = $derived(notesNavState.notes.filter((n) => !n.isArchived && !n.isDeleted));
+
 	let sortedCollapsedNotes = $derived(
-		[...notesNavState.notes].sort((a, b) => {
+		[...activeNotes].sort((a, b) => {
 			if (Boolean(a.isPinned) !== Boolean(b.isPinned)) {
 				return a.isPinned ? -1 : 1;
 			}

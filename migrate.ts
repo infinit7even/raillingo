@@ -114,11 +114,14 @@ async function runMigration() {
 
 			ALTER TABLE "notes" ADD COLUMN IF NOT EXISTS is_deleted boolean DEFAULT false;
 			ALTER TABLE "notes" ADD COLUMN IF NOT EXISTS deleted_at timestamptz;
+			ALTER TABLE "notes" ADD COLUMN IF NOT EXISTS is_archived boolean DEFAULT false;
+			ALTER TABLE "notes" ADD COLUMN IF NOT EXISTS archived_at timestamptz;
 
 			UPDATE "cards" SET show_in_wiki = true WHERE show_in_wiki IS NULL;
 			UPDATE "cards" SET game_modes = '["flashcard", "quiz", "reels", "scrittura"]'::jsonb WHERE game_modes IS NULL;
 			UPDATE "cards" SET is_deleted = false WHERE is_deleted IS NULL;
 			UPDATE "notes" SET is_deleted = false WHERE is_deleted IS NULL;
+			UPDATE "notes" SET is_archived = false WHERE is_archived IS NULL;
 		`);
 
 		console.log('✅ Tables created/verified/updated successfully in PostgreSQL.');

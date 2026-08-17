@@ -93,6 +93,8 @@ export const notes = pgTable('notes', {
 	tags: jsonb('tags').$type<string[]>().default([]),
 	images: jsonb('images').$type<string[]>().default([]),
 	isPinned: boolean('is_pinned').notNull().default(false),
+	isArchived: boolean('is_archived').default(false),
+	archivedAt: timestamp('archived_at', { withTimezone: true }),
 	isPublic: boolean('is_public').notNull().default(false),
 	shareId: text('share_id').unique(),
 	order: integer('order').notNull().default(0),

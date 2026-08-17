@@ -25,14 +25,22 @@
 	let sortOption = $state<NoteSortOption>('custom');
 	let selectedTagFilter = $state<string | null>(null);
 
-	// Trash state
-	let isViewingTrash = $state(false);
+	// Vault Tabs: 'notes' | 'archive' | 'trash'
+	let activeVaultTab = $state<'notes' | 'archive' | 'trash'>('notes');
+	let isViewingTrash = $derived(activeVaultTab === 'trash');
+	let isViewingArchive = $derived(activeVaultTab === 'archive');
+
 	let trashNotes = $state<Note[]>([]);
 	let selectedTrashNote = $state<Note | null>(null);
 
 	async function loadTrash() {
 		trashNotes = await notesStore.fetchTrash();
 	}
+
+	let activeNotes = $derived(notes.filter((n) => !n.isArchived && !n.isDeleted));
+	let archivedNotes = $derived(notes.filter((n) => Boolean(n.isArchived) && !n.isDeleted));
+	let activeNotesCount = $derived(activeNotes.length);
+	let archivedNotesCount = $derived(archivedNotes.length);
 
 	// Workspace UI states
 	let isOutlineOpen = $state(false);
@@ -47,6 +55,7 @@
 	let currentContent = $state('');
 	let currentTags = $state<string[]>([]);
 	let currentIsPinned = $state(false);
+	let currentIsArchived = $state(false);
 
 	let newTagInput = $state('');
 	let isAddingTag = $state(false);
@@ -140,6 +149,8 @@
 				copyMarkdown();
 			} else if (action === 'pin') {
 				handleTogglePin();
+			} else if (action === 'archive') {
+				handleToggleArchive();
 			} else if (action === 'delete') {
 				handleDeleteActiveNote();
 			}
@@ -197,6 +208,7 @@
 		currentContent = note.content || '';
 		currentTags = note.tags ? [...note.tags] : [];
 		currentIsPinned = Boolean(note.isPinned);
+		currentIsArchived = Boolean(note.isArchived);
 		isSidebarOpenMobile = false;
 
 		if (typeof localStorage !== 'undefined') {
@@ -599,10 +611,9 @@
 	}
 
 	function triggerAutoSave() {
-		if (!selectedNoteId) return;
+		if (saveDebounceTimer) clearTimeout(saveDebounceTimer);
 		isAutoSaving = true;
 
-		if (saveDebounceTimer) clearTimeout(saveDebounceTimer);
 		saveDebounceTimer = setTimeout(async () => {
 			if (!selectedNoteId) return;
 			syncContentFromEditor();
@@ -612,7 +623,8 @@
 					title: currentTitle.trim() || 'Nuovo Appunto',
 					content: currentContent,
 					tags: currentTags,
-					isPinned: currentIsPinned
+					isPinned: currentIsPinned,
+					isArchived: currentIsArchived
 				});
 				const now = new Date();
 				lastSavedTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
@@ -625,19 +637,21 @@
 	}
 
 	async function handleCreateNewNote() {
-		isViewingTrash = false;
+		activeVaultTab = 'notes';
 		selectedTrashNote = null;
 		try {
 			const newNote = await notesStore.createNote({
 				title: 'Nuovo Appunto',
 				content: '',
-				tags: selectedTagFilter ? [selectedTagFilter] : []
+				tags: selectedTagFilter ? [selectedTagFilter] : [],
+				isArchived: false
 			});
 			selectedNoteId = newNote.id;
 			currentTitle = newNote.title;
 			currentContent = '';
 			currentTags = newNote.tags || [];
 			currentIsPinned = false;
+			currentIsArchived = false;
 			isSidebarOpenMobile = false;
 			toastStore.show({ message: '✨ Nuovo appunto creato!' });
 			await tick();
@@ -661,7 +675,10 @@
 			currentTitle = '';
 			currentContent = '';
 			currentTags = [];
-			const remaining = notes.filter((n) => n.id !== idToDelete);
+			currentIsPinned = false;
+			currentIsArchived = false;
+			const sourceList = activeVaultTab === 'archive' ? archivedNotes : activeNotes;
+			const remaining = sourceList.filter((n) => n.id !== idToDelete);
 			if (remaining.length > 0) {
 				selectNote(remaining[0]);
 			}
@@ -691,6 +708,29 @@
 		toastStore.show({ message: newPinnedState ? '📌 Appunto fissato in evidenza!' : '📌 Pin rimosso' });
 	}
 
+	async function handleToggleArchive(targetNoteId?: string) {
+		const id = targetNoteId || selectedNoteId;
+		if (!id) return;
+
+		const target = notes.find((n) => n.id === id);
+		if (!target) return;
+
+		const nextArchived = !target.isArchived;
+		if (id === selectedNoteId) {
+			currentIsArchived = nextArchived;
+		}
+
+		await notesStore.updateNote({
+			id,
+			isArchived: nextArchived,
+			archivedAt: nextArchived ? new Date().toISOString() : undefined
+		});
+
+		toastStore.show({
+			message: nextArchived ? '📦 Appunto spostato in Archivio!' : '📂 Appunto ripristinato negli Appunti attivi!'
+		});
+	}
+
 	async function selectTrashNote(note: Note) {
 		selectedTrashNote = note;
 		selectedNoteId = null;
@@ -701,7 +741,7 @@
 			await notesStore.restoreNote(id);
 			await loadTrash();
 			selectedTrashNote = null;
-			isViewingTrash = false;
+			activeVaultTab = 'notes';
 			const restored = notes.find((n) => n.id === id);
 			if (restored) selectNote(restored);
 			toastStore.show({ message: '♻️ Appunto ripristinato dal cestino!' });
@@ -766,7 +806,7 @@
 	}
 
 	let filteredNotes = $derived(
-		[...notes]
+		(activeVaultTab === 'archive' ? archivedNotes : activeNotes)
 			.filter((n) => {
 				const matchesTag = !selectedTagFilter || (n.tags && n.tags.includes(selectedTagFilter));
 				const q = searchQuery.toLowerCase().trim();
@@ -848,25 +888,36 @@
 					</div>
 				</div>
 
-				<!-- Vault Switcher Tabs: Attive / Cestino -->
+				<!-- Vault Switcher Tabs: Appunti / Archivio / Cestino -->
 				<div class="vault-tabs-row">
 					<button
 						type="button"
 						class="vault-tab-pill"
-						class:active={!isViewingTrash}
+						class:active={activeVaultTab === 'notes'}
 						onclick={() => {
-							isViewingTrash = false;
+							activeVaultTab = 'notes';
 							selectedTrashNote = null;
 						}}
 					>
-						📓 Appunti ({notes.length})
+						📓 Appunti ({activeNotesCount})
+					</button>
+					<button
+						type="button"
+						class="vault-tab-pill archive"
+						class:active={activeVaultTab === 'archive'}
+						onclick={() => {
+							activeVaultTab = 'archive';
+							selectedTrashNote = null;
+						}}
+					>
+						📦 Archivio ({archivedNotesCount})
 					</button>
 					<button
 						type="button"
 						class="vault-tab-pill trash"
-						class:active={isViewingTrash}
+						class:active={activeVaultTab === 'trash'}
 						onclick={() => {
-							isViewingTrash = true;
+							activeVaultTab = 'trash';
 							loadTrash();
 						}}
 					>
@@ -880,7 +931,7 @@
 					<input
 						type="text"
 						bind:value={searchQuery}
-						placeholder={isViewingTrash ? 'Cerca nel cestino...' : 'Cerca negli appunti...'}
+						placeholder={isViewingTrash ? 'Cerca nel cestino...' : isViewingArchive ? 'Cerca nell\'archivio...' : 'Cerca negli appunti...'}
 						class="vault-search-input"
 					/>
 					{#if searchQuery}
@@ -898,19 +949,21 @@
 							onclick={() => (selectedTagFilter = null)}
 							title="Mostra tutti gli appunti"
 						>
-							Tutti ({notes.length})
+							Tutti ({activeVaultTab === 'archive' ? archivedNotesCount : activeNotesCount})
 						</button>
 						{#each allUserTags as tag}
-							{@const tagCount = notes.filter((n) => n.tags && n.tags.includes(tag)).length}
-							<button
-								type="button"
-								class="tag-filter-chip"
-								class:active={selectedTagFilter === tag}
-								onclick={() => (selectedTagFilter = selectedTagFilter === tag ? null : tag)}
-								title="Filtra per etichetta {tag}"
-							>
-								🏷️ {tag} ({tagCount})
-							</button>
+							{@const tagCount = (activeVaultTab === 'archive' ? archivedNotes : activeNotes).filter((n) => n.tags && n.tags.includes(tag)).length}
+							{#if tagCount > 0}
+								<button
+									type="button"
+									class="tag-filter-chip"
+									class:active={selectedTagFilter === tag}
+									onclick={() => (selectedTagFilter = selectedTagFilter === tag ? null : tag)}
+									title="Filtra per etichetta {tag}"
+								>
+									🏷️ {tag} ({tagCount})
+								</button>
+							{/if}
 						{/each}
 						<button
 							type="button"
@@ -962,10 +1015,14 @@
 					{:else}
 						{#if filteredNotes.length === 0}
 							<div class="vault-empty-state">
-								<p>Nessun appunto trovato.</p>
-								<button type="button" class="create-first-link" onclick={handleCreateNewNote}>
-									Crea un nuovo appunto
-								</button>
+								{#if isViewingArchive}
+									<p>📦 Nessun appunto archiviato.</p>
+								{:else}
+									<p>Nessun appunto trovato.</p>
+									<button type="button" class="create-first-link" onclick={handleCreateNewNote}>
+										Crea un nuovo appunto
+									</button>
+								{/if}
 							</div>
 						{:else}
 							{#each filteredNotes as note (note.id)}
@@ -985,18 +1042,32 @@
 											{/if}
 											{note.title || 'Senza titolo'}
 										</span>
-										<button
-											type="button"
-											class="file-pin-trigger-btn"
-											class:active={note.isPinned}
-											onclick={(e) => {
-												e.stopPropagation();
-												handleTogglePin(note.id);
-											}}
-											title={note.isPinned ? 'Rimuovi pin' : 'Fissa in evidenza'}
-										>
-											📌
-										</button>
+										<div class="file-actions-quick">
+											<button
+												type="button"
+												class="file-pin-trigger-btn"
+												class:active={note.isPinned}
+												onclick={(e) => {
+													e.stopPropagation();
+													handleTogglePin(note.id);
+												}}
+												title={note.isPinned ? 'Rimuovi pin' : 'Fissa in evidenza'}
+											>
+												📌
+											</button>
+											<button
+												type="button"
+												class="file-archive-trigger-btn"
+												class:active={note.isArchived}
+												onclick={(e) => {
+													e.stopPropagation();
+													handleToggleArchive(note.id);
+												}}
+												title={note.isArchived ? 'Ripristina dagli archivi' : 'Archivia appunto'}
+											>
+												📦
+											</button>
+										</div>
 									</div>
 
 									{#if note.tags && note.tags.length > 0}
@@ -1037,55 +1108,52 @@
 							<div class="trash-banner-info">
 								<span class="trash-icon">🗑️</span>
 								<div>
-									<strong>Questo appunto si trova nel Cestino</strong>
-									<span class="trash-sub">Eliminato il {new Date(selectedTrashNote.deletedAt || selectedTrashNote.updatedAt).toLocaleDateString('it-IT')} • Il cestino non si svuota mai automaticamente</span>
+									<h3>Appunto nel Cestino</h3>
+									<p>Stai visualizzando un appunto eliminato. Puoi ripristinarlo o eliminarlo per sempre.</p>
 								</div>
 							</div>
 							<div class="trash-banner-actions">
 								<button
 									type="button"
-									class="duo-btn duo-btn-green restore-note-btn"
+									class="duo-btn duo-btn-green restore-btn"
 									onclick={() => selectedTrashNote && handleRestoreTrashNote(selectedTrashNote.id)}
 								>
 									♻️ Ripristina
 								</button>
 								<button
 									type="button"
-									class="duo-btn duo-btn-red perm-delete-note-btn"
+									class="duo-btn duo-btn-red perm-delete-btn"
 									onclick={() => selectedTrashNote && handlePermanentDeleteNote(selectedTrashNote.id)}
 								>
-									✕ Elimina Definitivamente
+									✕ Elimina per sempre
 								</button>
 							</div>
 						</div>
 
-						<div class="trash-note-canvas">
-							<h1 class="trash-note-title">{selectedTrashNote.title}</h1>
-							<div class="obsidian-live-editor">
+						<div class="trash-document-preview">
+							<h1 class="trash-preview-title">{selectedTrashNote.title}</h1>
+							<div class="trash-preview-body">
 								{@html markdownToDocHtml(selectedTrashNote.content)}
 							</div>
 						</div>
 					</div>
-				{:else if selectedNoteId && activeNote}
-					<!-- Workspace Top Header Bar -->
-					<div class="workspace-header">
+				{:else if selectedNoteId}
+					<!-- Top Navigation Bar & Action Icons -->
+					<div class="workspace-header-bar">
 						<div class="workspace-header-left">
-							{#if isVaultCollapsed}
-								<button
-									type="button"
-									class="expand-vault-btn"
-									onclick={toggleVaultCollapse}
-									title="Espandi Appunti"
-								>
-									▶ Appunti ({notes.length})
-								</button>
-							{/if}
+							<button
+								type="button"
+								class="vault-collapse-btn desktop-only"
+								onclick={toggleVaultCollapse}
+								title={isVaultCollapsed ? 'Espandi Appunti' : 'Comprimi Appunti'}
+							>
+								{isVaultCollapsed ? '⤢ Espandi Appunti' : '⤡ Comprimi Appunti'}
+							</button>
 
 							<button
 								type="button"
-								class="mobile-back-btn"
+								class="mobile-back-btn mobile-only"
 								onclick={() => (isSidebarOpenMobile = true)}
-								title="Torna all'elenco appunti"
 							>
 								← Appunti
 							</button>
@@ -1118,6 +1186,16 @@
 								title={currentIsPinned ? 'Rimuovi pin' : 'Fissa in alto'}
 							>
 								📌
+							</button>
+
+							<button
+								type="button"
+								class="action-icon-btn action-archive-btn"
+								class:pinned={currentIsArchived}
+								onclick={() => handleToggleArchive()}
+								title={currentIsArchived ? 'Ripristina dall\'archivio' : 'Archivia appunto'}
+							>
+								📦
 							</button>
 
 							<button
@@ -1251,6 +1329,27 @@
 							style="display: none;"
 						/>
 					</div>
+
+					<!-- Archived Note Banner -->
+					{#if currentIsArchived}
+						<div class="archived-banner duo-card" in:fade={{ duration: 150 }}>
+							<div class="archived-banner-info">
+								<span class="archived-icon">📦</span>
+								<div>
+									<strong>Questo appunto è in Archivio</strong>
+									<span class="archived-sub">Puoi visualizzarlo, modificarlo o ripristinarlo nei tuoi appunti principali</span>
+								</div>
+							</div>
+							<button
+								type="button"
+								class="duo-btn duo-btn-theme unarchive-btn"
+								onclick={() => handleToggleArchive()}
+								title="Ripristina negli appunti principali"
+							>
+								📂 Disarchivia
+							</button>
+						</div>
+					{/if}
 
 					<!-- Note Title Input -->
 					<div class="note-document-title-box">
@@ -1890,6 +1989,10 @@
 		box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
 	}
 
+	.vault-tab-pill.archive.active {
+		color: #8b5cf6;
+	}
+
 	.vault-tab-pill.trash.active {
 		color: #ef4444;
 	}
@@ -2051,7 +2154,15 @@
 		min-width: 0;
 	}
 
-	.file-pin-trigger-btn {
+	.file-actions-quick {
+		display: flex;
+		align-items: center;
+		gap: 0.15rem;
+		flex-shrink: 0;
+	}
+
+	.file-pin-trigger-btn,
+	.file-archive-trigger-btn {
 		background: none;
 		border: none;
 		font-size: 0.72rem;
@@ -2064,11 +2175,14 @@
 	}
 
 	.vault-file-item:hover .file-pin-trigger-btn,
-	.file-pin-trigger-btn.active {
+	.vault-file-item:hover .file-archive-trigger-btn,
+	.file-pin-trigger-btn.active,
+	.file-archive-trigger-btn.active {
 		opacity: 1;
 	}
 
-	.file-pin-trigger-btn:hover {
+	.file-pin-trigger-btn:hover,
+	.file-archive-trigger-btn:hover {
 		transform: scale(1.2);
 	}
 
@@ -2200,9 +2314,58 @@
 		background: rgba(245, 158, 11, 0.15);
 	}
 
+	.action-icon-btn.action-archive-btn.pinned {
+		border-color: #8b5cf6;
+		background: rgba(139, 92, 246, 0.15);
+	}
+
 	.action-icon-btn.delete-btn:hover {
 		border-color: #ef4444;
 		background: rgba(239, 68, 68, 0.12);
+	}
+
+	.archived-banner {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.8rem;
+		padding: 0.6rem 1rem;
+		background: rgba(139, 92, 246, 0.08);
+		border-bottom: 1.5px solid rgba(139, 92, 246, 0.25);
+		border-radius: 0;
+		flex-shrink: 0;
+	}
+
+	.archived-banner-info {
+		display: flex;
+		align-items: center;
+		gap: 0.65rem;
+		font-size: 0.82rem;
+		color: var(--text-color);
+	}
+
+	.archived-banner-info strong {
+		display: block;
+		font-size: 0.85rem;
+		color: var(--text-color);
+	}
+
+	.archived-icon {
+		font-size: 1.25rem;
+	}
+
+	.archived-sub {
+		display: block;
+		font-size: 0.72rem;
+		color: var(--text-muted);
+		font-weight: 600;
+	}
+
+	.unarchive-btn {
+		padding: 0.35rem 0.75rem;
+		font-size: 0.78rem;
+		white-space: nowrap;
+		flex-shrink: 0;
 	}
 
 	.obsidian-ribbon-bar {
@@ -2851,8 +3014,8 @@
 		font-size: 1.3rem;
 	}
 
-	.trash-banner-info strong {
-		display: block;
+	.trash-banner-info h3 {
+		margin: 0;
 		font-size: 0.9rem;
 		color: var(--text-color);
 	}

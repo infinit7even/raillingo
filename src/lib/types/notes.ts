@@ -7,6 +7,8 @@ export interface Note {
 	tags?: string[]; // Etichette secondarie opzionali
 	images?: string[]; // Lista URL delle immagini associate e incollate nella nota
 	isPinned?: boolean; // Se fissato in cima
+	isArchived?: boolean; // Se la nota è archiviata
+	archivedAt?: string; // Data di archiviazione
 	isPublic?: boolean; // Se la nota è condivisa pubblicamente
 	shareId?: string; // ID / token di condivisione link
 	order: number; // Posizione numerica per riordinamento personalizzato
