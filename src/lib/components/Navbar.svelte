@@ -153,7 +153,7 @@
 			<div class="collapsed-vault-sidebar-panel">
 				<div class="collapsed-notes-scroll">
 					{#if notesNavState.notes.length === 0}
-						<div class="cv-empty">Nessun appunto nel Vault</div>
+						<div class="cv-empty">Nessun appunto presente</div>
 					{:else}
 						{#each notesNavState.notes as n}
 							<button

@@ -546,7 +546,7 @@
 			currentTags = newNote.tags || [];
 			currentIsPinned = false;
 			isSidebarOpenMobile = false;
-			toastStore.show({ message: '✨ Nuovo appunto creato nel Vault!' });
+			toastStore.show({ message: '✨ Nuovo appunto creato!' });
 			await tick();
 			if (editorEl) {
 				editorEl.innerHTML = '<p><br></p>';
@@ -684,7 +684,7 @@
 				<div class="vault-header">
 					<div class="vault-title-group">
 						<span class="vault-icon">📓</span>
-						<span class="vault-name">VAULT APPUNTI</span>
+						<span class="vault-name">ELENCO APPUNTI</span>
 						<span class="vault-badge">{notes.length}</span>
 					</div>
 
@@ -703,7 +703,7 @@
 							type="button"
 							class="collapse-vault-btn"
 							onclick={toggleVaultCollapse}
-							title="Comprimi Vault"
+							title="Comprimi Appunti"
 						>
 							◀
 						</button>
@@ -742,7 +742,7 @@
 					<input
 						type="text"
 						bind:value={searchQuery}
-						placeholder={isViewingTrash ? 'Cerca nel cestino...' : 'Cerca nel vault...'}
+						placeholder={isViewingTrash ? 'Cerca nel cestino...' : 'Cerca negli appunti...'}
 						class="vault-search-input"
 					/>
 					{#if searchQuery}
@@ -814,7 +814,7 @@
 					{:else}
 						{#if filteredNotes.length === 0}
 							<div class="vault-empty-state">
-								<p>Nessun appunto trovato nel Vault.</p>
+								<p>Nessun appunto trovato.</p>
 								<button type="button" class="create-first-link" onclick={handleCreateNewNote}>
 									Crea un nuovo appunto
 								</button>
@@ -915,9 +915,9 @@
 									type="button"
 									class="expand-vault-btn"
 									onclick={toggleVaultCollapse}
-									title="Espandi Vault Appunti"
+									title="Espandi Appunti"
 								>
-									▶ Vault ({notes.length})
+									▶ Appunti ({notes.length})
 								</button>
 							{/if}
 
@@ -927,7 +927,7 @@
 								onclick={() => (isSidebarOpenMobile = true)}
 								title="Torna all'elenco appunti"
 							>
-								← Vault
+								← Appunti
 							</button>
 
 							<div class="save-status-pill">
@@ -1198,11 +1198,11 @@
 								onclick={toggleVaultCollapse}
 								style="margin-bottom: 1rem;"
 							>
-								▶ Mostra Vault Appunti
+								▶ Mostra Appunti
 							</button>
 						{/if}
 						<img src="/emoji/owl_3d.png" alt="" class="empty-owl" />
-						<h2>Seleziona una nota dal Vault o creane una nuova</h2>
+						<h2>Seleziona un appunto o creane uno nuovo</h2>
 						<p>Spazio di scrittura per memorizzare concetti e normative ferroviarie.</p>
 						<button type="button" class="duo-btn duo-btn-green" onclick={handleCreateNewNote}>
 							➕ CREA NUOVA NOTA
@@ -1247,7 +1247,7 @@
 				</div>
 				<h2 class="notes-hero-title">Salva i tuoi appunti ovunque tu sia</h2>
 				<p class="notes-hero-subtitle">
-					Accedi con Discord per sbloccare il tuo Vault digitale. Le tue note, gli schemi e le sintesi della normativa RFI saranno sempre al sicuro e sincronizzate su PC, smartphone e tablet.
+					Accedi con Discord per salvare i tuoi appunti digitali. Le tue note, gli schemi e le sintesi della normativa RFI saranno sempre al sicuro e sincronizzate su PC, smartphone e tablet.
 				</p>
 			</div>
 
@@ -1387,9 +1387,13 @@
 	}
 
 	@media (min-width: 1024px) {
+		.notes-header-container {
+			display: none !important;
+		}
+
 		.obsidian-workspace {
-			height: calc(100vh - 75px);
-			height: calc(100dvh - 75px);
+			height: calc(100vh - 40px);
+			height: calc(100dvh - 40px);
 		}
 	}
 

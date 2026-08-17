@@ -345,11 +345,13 @@
 
 <style>
 	.wiki-container {
+		width: 100%;
+		max-width: 600px;
+		margin: 0 auto;
 		display: flex;
 		flex-direction: column;
 		gap: 0.75rem;
-		max-width: 600px;
-		margin: 0 auto;
+		box-sizing: border-box;
 	}
 
 	.search-section {
