@@ -7,12 +7,15 @@
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import { loginWithDiscord, logoutUser } from '$lib/auth-client';
 
+	import { toastStore } from '$lib/stores/toastStore';
+
 	let { data } = $props();
 
 	// Local state
 	let cards = $state<Card[]>([]);
 	let user = $derived(data.user);
 	let error = $derived(data.error);
+	let isAdmin = $derived(Boolean(user && (user.isAdmin || user.role === 'admin')));
 
 	async function logout() {
 		await logoutUser();
@@ -76,28 +79,46 @@
 	}
 
 	async function handleSaveCard(cardData: Omit<Card, 'id' | 'createdAt' | 'updatedAt'>) {
-		if (editingCard) {
-			const savedId = editingCard.id;
-			await cardsStore.updateCard({
-				...editingCard,
-				...cardData
-			});
-			editingCard = null;
-			setTimeout(() => {
-				const el = document.getElementById(`admin-card-${savedId}`);
-				if (el) {
-					el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-				}
-			}, 60);
-		} else {
-			await cardsStore.addCard(cardData);
-			resetForm();
+		try {
+			if (editingCard) {
+				const savedId = editingCard.id;
+				await cardsStore.updateCard({
+					...editingCard,
+					...cardData
+				});
+				editingCard = null;
+				toastStore.show({ message: '💾 Scheda aggiornata con successo!' });
+				setTimeout(() => {
+					const el = document.getElementById(`admin-card-${savedId}`);
+					if (el) {
+						el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+					}
+				}, 60);
+			} else {
+				await cardsStore.addCard(cardData);
+				resetForm();
+				toastStore.show({ message: '✨ Nuova scheda creata con successo!' });
+			}
+		} catch (err: any) {
+			console.error('Errore durante il salvataggio della scheda:', err);
+			toastStore.show({ message: `⚠️ ${err.message || 'Errore salvataggio scheda'}` });
+			throw err;
 		}
 	}
 
 	async function handleDeleteCard(id: string) {
 		if (confirm('Sei sicuro di voler eliminare questa scheda?')) {
-			await cardsStore.deleteCard(id);
+			try {
+				await cardsStore.deleteCard(id);
+				if (editingCard?.id === id) {
+					resetForm();
+				}
+				toastStore.show({ message: '🗑️ Scheda eliminata con successo!' });
+			} catch (err: any) {
+				console.error('Errore durante l\'eliminazione della scheda:', err);
+				toastStore.show({ message: `⚠️ ${err.message || 'Errore eliminazione scheda'}` });
+				alert(`Impossibile eliminare la scheda: ${err.message || 'Errore server'}`);
+			}
 		}
 	}
 
@@ -214,8 +235,8 @@
 		mobileOpenNav={true}
 	/>
 
-	{#if !user}
-		<!-- Login View -->
+	{#if !user || !isAdmin}
+		<!-- Login / Unauthorized View -->
 		<div class="login-card">
 			<div class="login-badge">Area Riservata</div>
 			<h1 class="login-title">Pannello Amministratore</h1>
@@ -224,7 +245,11 @@
 				<strong>(Discord ID: 691289686093725736)</strong>.
 			</p>
 
-			{#if error}
+			{#if user && !isAdmin}
+				<div class="error-banner">
+					⚠️ Non disponi dei permessi di amministratore per questo account (ID utente: {user.userId || user.id}).
+				</div>
+			{:else if error}
 				<div class="error-banner">
 					⚠️ Errore di autenticazione: {error === 'unauthorized'
 						? 'Utente Discord non autorizzato!'

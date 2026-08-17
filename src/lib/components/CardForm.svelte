@@ -232,7 +232,7 @@
 				fullName: fn || undefined,
 				description: desc,
 				category: finalCategory,
-				images: validImages.length > 0 ? validImages : undefined
+				images: validImages
 			});
 		} catch (err: any) {
 			console.error('Errore nel salvataggio della scheda:', err);
