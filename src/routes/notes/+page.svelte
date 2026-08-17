@@ -13,6 +13,7 @@
 		createInlineImageFigureHtml
 	} from '$lib/utils/docConverter';
 	import { navStore } from '$lib/stores/navStore';
+	import { notesNavStore } from '$lib/stores/notesNavStore';
 	import { uploadImage } from '$lib/utils/imageUploader';
 	import { loginWithDiscord } from '$lib/auth-client';
 
@@ -128,6 +129,16 @@
 			}
 		};
 
+		const handleCollapseChange = (e: any) => {
+			if (typeof e?.detail?.collapsed === 'boolean') {
+				isVaultCollapsed = e.detail.collapsed;
+				if (typeof localStorage !== 'undefined') {
+					localStorage.setItem('rf_vault_collapsed', String(isVaultCollapsed));
+				}
+				notesNavStore.syncNotes(notes, selectedNoteId, isVaultCollapsed);
+			}
+		};
+
 		if (typeof window !== 'undefined') {
 			if (window.innerWidth >= 1024) {
 				isSidebarOpenMobile = false;
@@ -141,12 +152,14 @@
 			window.addEventListener('paste', handleGlobalPaste);
 			window.addEventListener('rf-paste-request', handlePasteReq);
 			window.addEventListener('rf-select-note', handleExternalNoteSelect);
+			window.addEventListener('rf-vault-collapse-changed', handleCollapseChange);
 			window.addEventListener('click', closeNotesContextMenu);
 			window.addEventListener('contextmenu', handleNotesContextMenu);
 		}
 
 		const unsub = notesStore.subscribe((n) => {
 			notes = n;
+			notesNavStore.syncNotes(n, selectedNoteId, isVaultCollapsed);
 
 			if (selectedNoteId === null && n.length > 0) {
 				const targetId = data.sharedNoteId;
@@ -162,6 +175,7 @@
 				window.removeEventListener('paste', handleGlobalPaste);
 				window.removeEventListener('rf-paste-request', handlePasteReq);
 				window.removeEventListener('rf-select-note', handleExternalNoteSelect);
+				window.removeEventListener('rf-vault-collapse-changed', handleCollapseChange);
 				window.removeEventListener('click', closeNotesContextMenu);
 				window.removeEventListener('contextmenu', handleNotesContextMenu);
 			}
@@ -218,6 +232,7 @@
 		if (typeof localStorage !== 'undefined') {
 			localStorage.setItem('rf_vault_collapsed', String(isVaultCollapsed));
 		}
+		notesNavStore.syncNotes(notes, selectedNoteId, isVaultCollapsed);
 	}
 
 	async function selectNote(note: Note) {
@@ -232,6 +247,8 @@
 		if (typeof localStorage !== 'undefined') {
 			localStorage.setItem('rf_last_opened_note_id', note.id);
 		}
+
+		notesNavStore.syncNotes(notes, note.id, isVaultCollapsed);
 
 		await tick();
 		if (editorEl) {

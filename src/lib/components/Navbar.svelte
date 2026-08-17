@@ -5,6 +5,7 @@
 	import { pwaStore } from '$lib/stores/pwaStore';
 	import { navStore } from '$lib/stores/navStore';
 	import { toastStore } from '$lib/stores/toastStore';
+	import { notesNavStore, type NotesNavState } from '$lib/stores/notesNavStore';
 	import QuickAddCardModal from '$lib/components/QuickAddCardModal.svelte';
 	import type { Card } from '$lib/types/cards';
 	import { onMount } from 'svelte';
@@ -18,6 +19,14 @@
 	let isQuickAddOpen = $state(false);
 	let canInstall = $state(false);
 	let isNavOpen = $state(false);
+
+	let notesNavState = $state<NotesNavState>({
+		isVaultCollapsed: false,
+		notes: [],
+		selectedNoteId: null
+	});
+
+	let isNotesPage = $derived(page.url.pathname === '/notes');
 
 	let isAdmin = $derived(
 		Boolean(
@@ -55,12 +64,14 @@
 			canInstall = pwaStore.canInstall;
 		});
 		const unNav = navStore.subscribe((o) => (isNavOpen = o));
+		const unNotesNav = notesNavStore.subscribe((s) => (notesNavState = s));
 
 		return () => {
 			unTheme();
 			unCards();
 			unPwa();
 			unNav();
+			unNotesNav();
 		};
 	});
 
@@ -137,24 +148,65 @@
 	</div>
 
 	<div class="nav-container">
-		<div class="nav-scroll-wrapper">
-			{#each navItems as item}
-				{@const isActive = page.url.pathname === item.href}
-				<a
-					href={item.href}
-					class="nav-item"
-					class:active={isActive}
-					onclick={handleNavClick}
-					data-sveltekit-preload-data="tap"
-					data-sveltekit-preload-code="eager"
-				>
-					<div class="icon-wrapper" class:active-outline={isActive}>
-						<img src={item.emoji} alt={item.label} width="26" height="26" decoding="async" class="nav-emoji-img" />
+		{#if isNotesPage && notesNavState.isVaultCollapsed}
+			<!-- 📓 Modalità Vault Compresso: Mostra elenco note nella barra laterale a sinistra -->
+			<div class="collapsed-vault-sidebar-panel">
+				<div class="collapsed-vault-header">
+					<div class="cv-title-box">
+						<span class="cv-icon">📓</span>
+						<span class="cv-title">NOTE ({notesNavState.notes.length})</span>
 					</div>
-					<span class="nav-label">{item.label}</span>
-				</a>
-			{/each}
-		</div>
+					<button
+						type="button"
+						class="cv-expand-btn"
+						onclick={() => notesNavStore.setCollapsed(false)}
+						title="Riespandi Vault Appunti"
+					>
+						⤢ Espandi Vault
+					</button>
+				</div>
+
+				<div class="collapsed-notes-scroll">
+					{#if notesNavState.notes.length === 0}
+						<div class="cv-empty">Nessun appunto nel Vault</div>
+					{:else}
+						{#each notesNavState.notes as n}
+							<button
+								type="button"
+								class="cv-note-chip"
+								class:active={notesNavState.selectedNoteId === n.id}
+								onclick={() => {
+									notesNavStore.selectNote(n.id);
+									navStore.close();
+								}}
+							>
+								<span class="cv-chip-icon">{n.isPinned ? '📌' : '📄'}</span>
+								<span class="cv-chip-text">{n.title || 'Nuovo Appunto'}</span>
+							</button>
+						{/each}
+					{/if}
+				</div>
+			</div>
+		{:else}
+			<div class="nav-scroll-wrapper">
+				{#each navItems as item}
+					{@const isActive = page.url.pathname === item.href}
+					<a
+						href={item.href}
+						class="nav-item"
+						class:active={isActive}
+						onclick={handleNavClick}
+						data-sveltekit-preload-data="tap"
+						data-sveltekit-preload-code="eager"
+					>
+						<div class="icon-wrapper" class:active-outline={isActive}>
+							<img src={item.emoji} alt={item.label} width="26" height="26" decoding="async" class="nav-emoji-img" />
+						</div>
+						<span class="nav-label">{item.label}</span>
+					</a>
+				{/each}
+			</div>
+		{/if}
 	</div>
 
 	<!-- Actions Bottom Drawer (Theme + Quick Add Section) -->
@@ -399,6 +451,125 @@
 		font-size: 0.85rem;
 		letter-spacing: 0.04em;
 		white-space: nowrap;
+	}
+
+	/* Collapsed Vault Panel inside Sidebar */
+	.collapsed-vault-sidebar-panel {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+		height: 100%;
+		overflow: hidden;
+	}
+
+	.collapsed-vault-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding-bottom: 0.4rem;
+		border-bottom: 1.5px solid var(--border-color);
+		flex-shrink: 0;
+	}
+
+	.cv-title-box {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+	}
+
+	.cv-icon {
+		font-size: 0.95rem;
+	}
+
+	.cv-title {
+		font-family: 'Outfit', sans-serif;
+		font-size: 0.78rem;
+		font-weight: 900;
+		color: var(--text-color);
+	}
+
+	.cv-expand-btn {
+		background: var(--card-bg-subtle);
+		border: 1.5px solid var(--border-color);
+		border-bottom: 2.5px solid var(--border-depth-color);
+		border-radius: 8px;
+		padding: 0.2rem 0.55rem;
+		font-size: 0.72rem;
+		font-weight: 800;
+		color: var(--accent-color);
+		cursor: pointer;
+		transition: all 0.12s ease;
+	}
+
+	.cv-expand-btn:hover {
+		background: var(--accent-light-bg);
+		border-color: var(--accent-color);
+	}
+
+	.cv-expand-btn:active {
+		transform: translateY(1.5px);
+		border-bottom-width: 1px;
+	}
+
+	.collapsed-notes-scroll {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		gap: 0.35rem;
+		overflow-y: auto;
+		scrollbar-width: thin;
+		padding-right: 0.2rem;
+	}
+
+	.cv-empty {
+		font-size: 0.76rem;
+		color: var(--text-muted);
+		text-align: center;
+		padding: 1.5rem 0;
+	}
+
+	.cv-note-chip {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		padding: 0.5rem 0.65rem;
+		border-radius: 10px;
+		background: var(--card-bg-subtle);
+		border: 1.5px solid var(--border-color);
+		color: var(--text-color);
+		font-family: inherit;
+		font-size: 0.8rem;
+		font-weight: 700;
+		text-align: left;
+		cursor: pointer;
+		transition: all 0.12s ease;
+		width: 100%;
+		box-sizing: border-box;
+	}
+
+	.cv-note-chip:hover {
+		border-color: var(--accent-color);
+		background: var(--hover-bg);
+		transform: translateY(-1px);
+	}
+
+	.cv-note-chip.active {
+		border-color: var(--accent-color);
+		background: var(--accent-light-bg);
+		color: var(--accent-color);
+		font-weight: 900;
+	}
+
+	.cv-chip-icon {
+		font-size: 0.85rem;
+		flex-shrink: 0;
+	}
+
+	.cv-chip-text {
+		flex: 1;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 
 	/* Sidebar Actions */

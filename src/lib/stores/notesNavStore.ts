@@ -20,9 +20,18 @@ function createNotesNavStore() {
 		subscribe,
 		setCollapsed(collapsed: boolean) {
 			update((s) => ({ ...s, isVaultCollapsed: collapsed }));
+			if (typeof window !== 'undefined') {
+				window.dispatchEvent(new CustomEvent('rf-vault-collapse-changed', { detail: { collapsed } }));
+			}
 		},
 		toggleCollapsed() {
-			update((s) => ({ ...s, isVaultCollapsed: !s.isVaultCollapsed }));
+			update((s) => {
+				const next = !s.isVaultCollapsed;
+				if (typeof window !== 'undefined') {
+					window.dispatchEvent(new CustomEvent('rf-vault-collapse-changed', { detail: { collapsed: next } }));
+				}
+				return { ...s, isVaultCollapsed: next };
+			});
 		},
 		syncNotes(notes: Note[], selectedId: string | null, collapsed: boolean) {
 			set({
