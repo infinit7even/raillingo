@@ -619,6 +619,8 @@ select {
 	background-color: #2fb9fc;
 }
 
+.duo-btn-theme,
+.duo-btn-brand,
 .duo-btn-primary,
 .duo-btn-green {
 	background-color: var(--brand-color, #58cc02);
@@ -626,6 +628,8 @@ select {
 	border-color: var(--brand-depth, #46a302);
 }
 
+.duo-btn-theme:hover:not(:disabled),
+.duo-btn-brand:hover:not(:disabled),
 .duo-btn-primary:hover:not(:disabled),
 .duo-btn-green:hover:not(:disabled) {
 	background-color: var(--brand-hover, #61df02);

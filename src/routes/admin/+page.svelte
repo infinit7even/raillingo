@@ -1258,14 +1258,15 @@
 
 	/* Theme Dynamic Edit Button */
 	.duo-btn-theme {
-		background: var(--accent-color);
-		border-color: var(--accent-depth);
+		background: var(--brand-color);
+		border-color: var(--brand-depth);
 		border-bottom-width: 4px;
-		color: #ffffff;
+		color: var(--brand-text, #ffffff);
 	}
 
 	.duo-btn-theme:hover {
-		filter: brightness(1.1);
+		background: var(--brand-hover);
+		filter: brightness(1.05);
 	}
 
 	.edit-btn,
@@ -1295,7 +1296,7 @@
 	.inline-edit-title {
 		font-size: 0.95rem;
 		font-weight: 900;
-		color: var(--accent-color);
+		color: var(--brand-color);
 	}
 
 	.close-inline-btn {
