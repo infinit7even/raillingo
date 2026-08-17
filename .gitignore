@@ -32,3 +32,5 @@ static/data/*
 static/uploads/*
 static/data/cards.json
 data
+pg_data
+postgres_data

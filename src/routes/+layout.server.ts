@@ -1,43 +1,30 @@
 import type { LayoutServerLoad } from './$types';
-import { getAdminIds, readSession } from '$lib/server/auth';
-import { readCards, readUsers } from '$lib/server/dataCache';
+import { db } from '$lib/server/db';
+import { cards } from '$lib/server/db/schema';
+import { desc } from 'drizzle-orm';
+import { readCards } from '$lib/server/dataCache';
 
-export const load: LayoutServerLoad = async ({ cookies }) => {
-	const session = readSession(cookies);
-	let user: any = null;
-
-	if (session && session.userId && session.username) {
-		const discordUserId = String(session.userId).trim();
-
-		// Verifica che l'utente sia admin anche nel file (doppio check)
-		let isAdminInFile = false;
-		try {
-			const usersList = await readUsers<any[]>();
-			const fileUser = usersList.find((u: any) => String(u.discordId).trim() === discordUserId);
-			if (fileUser && fileUser.role === 'admin') {
-				isAdminInFile = true;
-			}
-		} catch {
-			// File non trovato o errore lettura — assume non-admin
-		}
-
-		const isAdmin = getAdminIds().includes(discordUserId) || isAdminInFile;
-		user = {
-			...session,
-			isAdmin,
-			role: isAdmin ? 'admin' : 'user'
-		};
-	} else if (session) {
-		// Sessione priva dei campi minimi — elimina i cookie
-		cookies.delete('user_session', { path: '/' });
-		cookies.delete('admin_session', { path: '/' });
-	}
+export const load: LayoutServerLoad = async ({ locals }) => {
+	const user = locals.user || null;
 
 	let initialCards: any[] = [];
 	try {
-		initialCards = await readCards<any[]>();
+		const dbCards = await db.select().from(cards).orderBy(desc(cards.createdAt));
+		if (dbCards && dbCards.length > 0) {
+			initialCards = dbCards.map((c) => ({
+				...c,
+				createdAt: c.createdAt ? c.createdAt.toISOString() : new Date().toISOString(),
+				updatedAt: c.updatedAt ? c.updatedAt.toISOString() : new Date().toISOString()
+			}));
+		} else {
+			initialCards = await readCards<any[]>();
+		}
 	} catch {
-		initialCards = [];
+		try {
+			initialCards = await readCards<any[]>();
+		} catch {
+			initialCards = [];
+		}
 	}
 
 	return { user, initialCards };

@@ -1,14 +1,14 @@
 /// <reference types="@sveltejs/kit" />
 import { build, files, version } from '$service-worker';
 
-const CACHE_NAME = `rf-app-v${version}`;
+const CACHE_NAME = `rf-v${version}`;
 const DATA_CACHE = `rf-data-v${version}`;
 
-// Asset statici generati da SvelteKit build + tutti i file in /static (icone, manifest, emoji, cards.json)
+// Asset statici generati da SvelteKit build + tutti i file in /static (icone, manifest, cards.json)
 const PRECACHE_ASSETS = [...build, ...files];
 
-// Rotte principali dell'applicazione da pre-caricare per funzionamento 100% offline
-const CRITICAL_ROUTES = [
+// Rotte applicative ed endpoint critici da pre-caricare esplicitamente per funzionamento 100% offline
+const CRITICAL_PATHS = [
 	'/',
 	'/flashcard',
 	'/quiz',
@@ -22,41 +22,41 @@ const CRITICAL_ROUTES = [
 	'/data/cards.json'
 ];
 
-// ─── INSTALL: pre-cache asset statici e rotte applicative ────────────────────
+// ─── INSTALL: pre-cache asset, rotte shell e dati ────────────────────────────
 self.addEventListener('install', (event: any) => {
 	event.waitUntil(
 		(async () => {
-			const appCache = await caches.open(CACHE_NAME);
+			const cache = await caches.open(CACHE_NAME);
 			const dataCache = await caches.open(DATA_CACHE);
 
-			// 1. Precache immediato di tutti gli asset di build (JS, CSS) e statici
-			await appCache.addAll(PRECACHE_ASSETS);
+			// Precache di tutti gli asset di build e file statici
+			await cache.addAll(PRECACHE_ASSETS);
 
-			// 2. Precache delle rotte HTML e dati critici
+			// Precache resiliente per le rotte shell e i dati critici
 			await Promise.allSettled(
-				CRITICAL_ROUTES.map(async (route) => {
+				CRITICAL_PATHS.map(async (path) => {
 					try {
-						const res = await fetch(route, { cache: 'no-cache' });
+						const res = await fetch(path);
 						if (res.ok) {
-							if (route.startsWith('/api/') || route.endsWith('.json')) {
-								await dataCache.put(route, res.clone());
+							if (path.startsWith('/api/') || path.endsWith('.json')) {
+								await dataCache.put(path, res);
 							} else {
-								await appCache.put(route, res.clone());
+								await cache.put(path, res);
 							}
 						}
 					} catch {
-						// Ignora errori se offline durante l'install iniziale
+						// Ignora errori se offline o in fase di setup iniziale
 					}
 				})
 			);
 
-			// Forza l'attivazione immediata del nuovo Service Worker
+			// Attiva subito senza attendere la chiusura dei tab
 			(self as any).skipWaiting();
 		})()
 	);
 });
 
-// ─── ACTIVATE: pulizia cache obsolete e controllo immediato client ───────────
+// ─── ACTIVATE: pulizia cache obsolete e controllo client ────────────────────
 self.addEventListener('activate', (event: any) => {
 	event.waitUntil(
 		(async () => {
@@ -71,7 +71,7 @@ self.addEventListener('activate', (event: any) => {
 	);
 });
 
-// ─── FETCH: strategie intelligenti per risorse offline ────────────────────────
+// ─── FETCH: routing strategie per risorsa ──────────────────────────────────
 self.addEventListener('fetch', (event: any) => {
 	const { request } = event;
 
@@ -80,25 +80,14 @@ self.addEventListener('fetch', (event: any) => {
 
 	// Ignora richieste verso origini esterne non statiche (Discord OAuth, etc.)
 	if (url.origin !== self.location.origin) {
+		// Consenti solo caching per Google Fonts o CDN noti se necessario
 		if (url.origin === 'https://fonts.googleapis.com' || url.origin === 'https://fonts.gstatic.com') {
 			event.respondWith(staleWhileRevalidate(request, CACHE_NAME));
 		}
 		return;
 	}
 
-	// 1. Gestione navigazione HTML (Document requests per qualsiasi pagina o reload)
-	if (request.mode === 'navigate' || request.headers.get('accept')?.includes('text/html')) {
-		event.respondWith(handleNavigation(request));
-		return;
-	}
-
-	// 2. Richieste dati SvelteKit client-side router (`__data.json`)
-	if (url.pathname.includes('__data.json')) {
-		event.respondWith(handleSvelteKitData(request));
-		return;
-	}
-
-	// 3. Dati schede e note API (/api/cards, /api/notes, /data/cards.json)
+	// 1. Dati dinamici e database schede/note: Network-First con fallback su DATA_CACHE
 	if (
 		url.pathname === '/api/cards' ||
 		url.pathname.startsWith('/api/notes') ||
@@ -106,11 +95,17 @@ self.addEventListener('fetch', (event: any) => {
 		url.pathname === '/data/cards.json' ||
 		url.pathname.endsWith('.json')
 	) {
-		event.respondWith(handleDataApi(request));
+		event.respondWith(networkFirst(request, DATA_CACHE));
 		return;
 	}
 
-	// 4. Immagini, upload, emoji 3D e file multimediali: Cache-First con fallback
+	// 2. Altre API: Network-First
+	if (url.pathname.startsWith('/api/')) {
+		event.respondWith(networkFirst(request, CACHE_NAME));
+		return;
+	}
+
+	// 3. Immagini, upload utente ed emoji 3D: Cache-First con fallback rete
 	if (
 		url.pathname.startsWith('/emoji/') ||
 		url.pathname.startsWith('/uploads/') ||
@@ -120,144 +115,19 @@ self.addEventListener('fetch', (event: any) => {
 		return;
 	}
 
-	// 5. Asset di build versionati (JS, CSS): Cache-First
-	if (PRECACHE_ASSETS.includes(url.pathname) || url.pathname.startsWith('/_app/')) {
+	// 4. Asset di build versionati (JS, CSS): Cache-First
+	if (PRECACHE_ASSETS.includes(url.pathname)) {
 		event.respondWith(cacheFirst(request, CACHE_NAME));
 		return;
 	}
 
-	// 6. Altre risorse generiche: Stale-While-Revalidate
-	event.respondWith(staleWhileRevalidate(request, CACHE_NAME));
+	// 5. Navigazione HTML (SvelteKit routes): Network-First con fallback su cache o App Shell '/'
+	event.respondWith(navigationHandler(request));
 });
 
-// ─── HANDLER SPECIFICI PER GARANTIRE 100% OFFLINE SENZA ERRORI ─────────────────
+// ─── Strategie di caching ottimizzate ──────────────────────────────────────
 
-/**
- * Gestisce la navigazione HTML: se offline, serve sempre la pagina richiesta in cache
- * o la Shell principale '/', permettendo all'app SvelteKit di avviarsi offline.
- */
-async function handleNavigation(request: Request): Promise<Response> {
-	const appCache = await caches.open(CACHE_NAME);
-	const url = new URL(request.url);
-
-	try {
-		// Tenta prima il network per avere la versione più recente
-		const networkResponse = await fetch(request);
-		if (networkResponse.ok) {
-			appCache.put(request, networkResponse.clone());
-			appCache.put(url.pathname, networkResponse.clone());
-		}
-		return networkResponse;
-	} catch {
-		// 1. Cerca per Request esatta
-		const cachedByReq = await appCache.match(request);
-		if (cachedByReq) return cachedByReq;
-
-		// 2. Cerca per pathname (es. '/notes')
-		const cachedByPath = await appCache.match(url.pathname);
-		if (cachedByPath) return cachedByPath;
-
-		// 3. Fallback: restituisci la Root App Shell '/' (SvelteKit router farà il routing client-side)
-		const appShell = await appCache.match('/');
-		if (appShell) return appShell;
-
-		// 4. Ultima spiaggia: restituisci il primo HTML disponibile in cache
-		const keys = await appCache.keys();
-		for (const key of keys) {
-			if (key.url.endsWith('/') || CRITICAL_ROUTES.some((r) => key.url.endsWith(r))) {
-				const match = await appCache.match(key);
-				if (match) return match;
-			}
-		}
-
-		return new Response('App Offline', { status: 200, headers: { 'Content-Type': 'text/html' } });
-	}
-}
-
-/**
- * Gestisce le richieste di dati client-side router di SvelteKit (`__data.json`).
- * Se offline, restituisce dati validi per impedire a SvelteKit di forzare una navigazione browser interrotta.
- */
-async function handleSvelteKitData(request: Request): Promise<Response> {
-	const dataCache = await caches.open(DATA_CACHE);
-	const url = new URL(request.url);
-
-	try {
-		const networkResponse = await fetch(request);
-		if (networkResponse.ok) {
-			dataCache.put(request, networkResponse.clone());
-			dataCache.put(url.pathname, networkResponse.clone());
-		}
-		return networkResponse;
-	} catch {
-		const cached = (await dataCache.match(request)) || (await dataCache.match(url.pathname));
-		if (cached) return cached;
-
-		// Struttura dati SvelteKit valida per non far fallire il router client-side offline
-		const svelteKitDataFallback = {
-			type: 'data',
-			nodes: [
-				{ type: 'data', data: [{ user: null, initialCards: [] }] },
-				{ type: 'data', data: [{ user: null, initialNotes: [], error: null }] }
-			]
-		};
-
-		return new Response(JSON.stringify(svelteKitDataFallback), {
-			status: 200,
-			headers: {
-				'Content-Type': 'application/json; charset=utf-8',
-				'x-sveltekit-data': 'true'
-			}
-		});
-	}
-}
-
-/**
- * Gestisce gli endpoint API (/api/cards, /api/notes, ecc.) con fallback intelligente su dati locali.
- */
-async function handleDataApi(request: Request): Promise<Response> {
-	const dataCache = await caches.open(DATA_CACHE);
-	const url = new URL(request.url);
-
-	try {
-		const response = await fetch(request);
-		if (response.ok) {
-			dataCache.put(request, response.clone());
-			dataCache.put(url.pathname, response.clone());
-		}
-		return response;
-	} catch {
-		const cached = (await dataCache.match(request)) || (await dataCache.match(url.pathname));
-		if (cached) return cached;
-
-		// Fallback specifici in base alla risorsa
-		if (url.pathname === '/api/cards' || url.pathname === '/data/cards.json') {
-			const staticCards = await dataCache.match('/data/cards.json');
-			if (staticCards) return staticCards;
-		}
-
-		if (url.pathname.startsWith('/api/notes')) {
-			return new Response(JSON.stringify([]), {
-				status: 200,
-				headers: { 'Content-Type': 'application/json; charset=utf-8' }
-			});
-		}
-
-		if (url.pathname === '/api/ignored-cards') {
-			return new Response(JSON.stringify({ ignoredCardIds: [] }), {
-				status: 200,
-				headers: { 'Content-Type': 'application/json; charset=utf-8' }
-			});
-		}
-
-		return new Response(JSON.stringify({ offline: true }), {
-			status: 200,
-			headers: { 'Content-Type': 'application/json; charset=utf-8' }
-		});
-	}
-}
-
-/** Cache-First: risponde istantaneamente dalla cache, tenta la rete se assente */
+/** Cache-First: risponde istantaneamente dalla cache, fallback su rete se assente */
 async function cacheFirst(request: Request, cacheName: string): Promise<Response> {
 	const cache = await caches.open(cacheName);
 	const cached = await cache.match(request);
@@ -270,14 +140,39 @@ async function cacheFirst(request: Request, cacheName: string): Promise<Response
 		}
 		return response;
 	} catch {
-		return new Response('Asset offline', {
+		return new Response('Risorsa non disponibile offline', {
 			status: 503,
 			headers: { 'Content-Type': 'text/plain; charset=utf-8' }
 		});
 	}
 }
 
-/** Stale-While-Revalidate: risponde subito dalla cache e aggiorna in background */
+/** Network-First: tenta la rete per dati freschi, ripiega su cache se offline */
+async function networkFirst(request: Request, cacheName: string = CACHE_NAME): Promise<Response> {
+	const cache = await caches.open(cacheName);
+	try {
+		const response = await fetch(request);
+		if (response.ok) {
+			cache.put(request, response.clone());
+		}
+		return response;
+	} catch {
+		const cached = await cache.match(request);
+		if (cached) return cached;
+
+		// Fallback se è un endpoint JSON
+		if (request.headers.get('accept')?.includes('application/json') || request.url.includes('/api/')) {
+			return new Response(JSON.stringify({ offline: true, error: 'Offline' }), {
+				status: 200,
+				headers: { 'Content-Type': 'application/json; charset=utf-8' }
+			});
+		}
+
+		return new Response('Risorsa offline', { status: 503 });
+	}
+}
+
+/** Stale-While-Revalidate: risponde subito dalla cache, aggiorna in background */
 async function staleWhileRevalidate(request: Request, cacheName: string): Promise<Response> {
 	const cache = await caches.open(cacheName);
 	const cached = await cache.match(request);
@@ -293,5 +188,36 @@ async function staleWhileRevalidate(request: Request, cacheName: string): Promis
 	const fresh = await fetchPromise;
 	if (fresh) return fresh;
 
-	return new Response('Risorsa non disponibile', { status: 503 });
+	return new Response('Offline', { status: 503 });
+}
+
+/** Gestore Navigazione HTML: garantisce il caricamento offline dell'App Shell */
+async function navigationHandler(request: Request): Promise<Response> {
+	const cache = await caches.open(CACHE_NAME);
+
+	try {
+		// Prova il network prima per ottenere la versione più recente
+		const networkResponse = await fetch(request);
+		if (networkResponse.ok) {
+			cache.put(request, networkResponse.clone());
+		}
+		return networkResponse;
+	} catch {
+		// Se offline, cerca la pagina specifica in cache
+		const cachedPage = await cache.match(request);
+		if (cachedPage) return cachedPage;
+
+		// Se la sotto-pagina specifica non è in cache, restituisci l'App Shell principale '/'
+		const appShell = await cache.match('/');
+		if (appShell) return appShell;
+
+		// Fallback finale
+		return new Response(
+			'<!doctype html><html><head><meta charset="utf-8"><title>Raillingo Offline</title><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="font-family:sans-serif;text-align:center;padding:2rem;background:#171f23;color:#fff;"><h1>📡 Modalità Offline</h1><p>Connettiti a internet o apri la Home per continuare a studiare.</p><a href="/" style="color:#1cb0f6;font-weight:bold;">Torna alla Home</a></body></html>',
+			{
+				status: 200,
+				headers: { 'Content-Type': 'text/html; charset=utf-8' }
+			}
+		);
+	}
 }

@@ -1,187 +1,196 @@
 import { json, type RequestHandler } from '@sveltejs/kit';
-import crypto from 'node:crypto';
+import { db } from '$lib/server/db';
+import { cards } from '$lib/server/db/schema';
+import { eq, desc } from 'drizzle-orm';
 import { isAuthorizedAdmin } from '$lib/server/auth';
-import { isSameOriginRequest } from '$lib/server/csrf';
-import { CARDS_FILE_PATH, invalidateCards, readCards } from '$lib/server/dataCache';
-import { mutateJsonSafe } from '$lib/server/fileStorage';
 import { deleteImagesForCard, cleanupUnusedImagesOnCardUpdate } from '$lib/server/mediaCleanup';
 import type { Card } from '$lib/types/cards';
 
-export const GET: RequestHandler = async ({ request }) => {
-	const cards = await readCards<Card[]>();
-	const body = JSON.stringify(cards);
-	const etag = `"${crypto.createHash('sha1').update(body).digest('base64url')}"`;
+export const GET: RequestHandler = async () => {
+	try {
+		const list = await db.select().from(cards).orderBy(desc(cards.createdAt));
+		const formatted: Card[] = list.map((c) => ({
+			id: c.id,
+			title: c.title,
+			fullName: c.fullName || undefined,
+			description: c.description,
+			category: c.category,
+			images: (c.images as string[]) || [],
+			tags: (c.tags as string[]) || [],
+			createdAt: c.createdAt ? c.createdAt.toISOString() : new Date().toISOString(),
+			updatedAt: c.updatedAt ? c.updatedAt.toISOString() : new Date().toISOString()
+		}));
 
-	if (request.headers.get('if-none-match') === etag) {
-		return new Response(null, {
-			status: 304,
-			headers: { ETag: etag, 'Cache-Control': 'no-cache' }
+		return json(formatted, {
+			headers: { 'Cache-Control': 'no-cache' }
 		});
+	} catch (err) {
+		console.error('Errore lettura schede da database:', err);
+		return json([], { status: 500 });
 	}
-
-	return json(cards, {
-		headers: { ETag: etag, 'Cache-Control': 'no-cache' }
-	});
 };
 
-export const POST: RequestHandler = async (event) => {
-	const { request, cookies } = event;
-
-	if (!isSameOriginRequest(event)) {
-		return json({ error: 'Origine non consentita' }, { status: 403 });
-	}
-
-	if (!isAuthorizedAdmin(cookies)) {
+export const POST: RequestHandler = async ({ request, locals }) => {
+	if (!isAuthorizedAdmin(locals.user)) {
 		return json(
-			{
-				error:
-					'Accesso negato: Soltanto gli amministratori specificati in DISCORD_ADMIN_IDS possono inserire nuove schede.'
-			},
+			{ error: 'Accesso negato: Soltanto gli amministratori possono inserire nuove schede.' },
 			{ status: 403 }
 		);
 	}
 
-	const newCard: Partial<Card> = await request.json();
+	try {
+		const newCard: Partial<Card> = await request.json();
 
-	const title = (newCard.title || '').trim();
-	const fullName = (newCard.fullName || '').trim();
-	const description = (newCard.description || '').trim();
-	const category = (newCard.category || '').trim();
-	const images = Array.isArray(newCard.images)
-		? newCard.images.filter((img): img is string => typeof img === 'string' && img.trim().length > 0)
-		: undefined;
+		const title = (newCard.title || '').trim();
+		const fullName = (newCard.fullName || '').trim();
+		const description = (newCard.description || '').trim();
+		const category = (newCard.category || '').trim();
+		const images = Array.isArray(newCard.images)
+			? newCard.images.filter((img): img is string => typeof img === 'string' && img.trim().length > 0)
+			: [];
+		const tags = Array.isArray(newCard.tags) ? newCard.tags : [];
 
-	// Deve avere almeno un identificatore visivo o testuale
-	const mainTitle = title || fullName;
-	if (!mainTitle && (!images || images.length === 0)) {
-		return json(
-			{ error: 'Inserisci almeno un titolo, un acronimo o un\'immagine per la scheda.' },
-			{ status: 400 }
-		);
-	}
-
-	const now = new Date().toISOString();
-	const cardToSave: Card = {
-		id: newCard.id || `card-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`,
-		title: title,
-		fullName: fullName || undefined,
-		description: description,
-		category: category || 'Generale',
-		images: images && images.length > 0 ? images : undefined,
-		tags: Array.isArray(newCard.tags) ? newCard.tags : undefined,
-		createdAt: newCard.createdAt || now,
-		updatedAt: now
-	};
-
-	const result = await mutateJsonSafe<Card[]>(CARDS_FILE_PATH, [], (cards) => {
-		const existingIndex = cards.findIndex((c) => c.id === cardToSave.id);
-		if (existingIndex >= 0) {
-			cards[existingIndex] = cardToSave;
-		} else {
-			cards.unshift(cardToSave);
+		const mainTitle = title || fullName;
+		if (!mainTitle && images.length === 0) {
+			return json(
+				{ error: "Inserisci almeno un titolo, un acronimo o un'immagine per la scheda." },
+				{ status: 400 }
+			);
 		}
-		return cards;
-	});
 
-	if (!result.success) {
-		return json({ error: 'Errore durante la scrittura della scheda su disco.' }, { status: 500 });
+		const cardId =
+			newCard.id ||
+			`card-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+
+		const now = new Date();
+		const [inserted] = await db
+			.insert(cards)
+			.values({
+				id: cardId,
+				title: title || fullName || 'Scheda Visiva',
+				fullName: fullName || null,
+				description,
+				category: category || 'Generale',
+				images,
+				tags,
+				createdAt: now,
+				updatedAt: now
+			})
+			.onConflictDoUpdate({
+				target: cards.id,
+				set: {
+					title: title || fullName || 'Scheda Visiva',
+					fullName: fullName || null,
+					description,
+					category: category || 'Generale',
+					images,
+					tags,
+					updatedAt: now
+				}
+			})
+			.returning();
+
+		const formatted: Card = {
+			id: inserted.id,
+			title: inserted.title,
+			fullName: inserted.fullName || undefined,
+			description: inserted.description,
+			category: inserted.category,
+			images: (inserted.images as string[]) || [],
+			tags: (inserted.tags as string[]) || [],
+			createdAt: inserted.createdAt.toISOString(),
+			updatedAt: inserted.updatedAt.toISOString()
+		};
+
+		return json(formatted, { status: 201 });
+	} catch (err: any) {
+		console.error('Errore inserimento scheda nel database:', err);
+		return json({ error: err.message || 'Errore durante il salvataggio della scheda' }, { status: 500 });
 	}
-
-	invalidateCards();
-	return json(cardToSave, { status: 201 });
 };
 
-export const PUT: RequestHandler = async (event) => {
-	const { request, cookies } = event;
-
-	if (!isSameOriginRequest(event)) {
-		return json({ error: 'Origine non consentita' }, { status: 403 });
-	}
-
-	if (!isAuthorizedAdmin(cookies)) {
+export const PUT: RequestHandler = async ({ request, locals }) => {
+	if (!isAuthorizedAdmin(locals.user)) {
 		return json(
-			{
-				error:
-					'Accesso negato: Soltanto gli amministratori specificati in DISCORD_ADMIN_IDS possono modificare le schede.'
-			},
+			{ error: 'Accesso negato: Soltanto gli amministratori possono modificare le schede.' },
 			{ status: 403 }
 		);
 	}
 
-	const updatedCard: Partial<Card> = await request.json();
-	if (!updatedCard.id) {
-		return json({ error: 'ID card mancante' }, { status: 400 });
-	}
-
-	let oldCardForCleanup: Card | null = null;
-	let finalSavedCard: Card | null = null;
-
-	const result = await mutateJsonSafe<Card[]>(CARDS_FILE_PATH, [], (cards) => {
-		const index = cards.findIndex((c) => c.id === updatedCard.id);
-		if (index === -1) {
-			return cards;
+	try {
+		const updatedCard: Partial<Card> = await request.json();
+		if (!updatedCard.id) {
+			return json({ error: 'ID card mancante' }, { status: 400 });
 		}
 
-		const oldCard = cards[index];
-		oldCardForCleanup = oldCard;
+		const existing = await db.select().from(cards).where(eq(cards.id, updatedCard.id)).limit(1);
+		if (existing.length === 0) {
+			return json({ error: 'Card non trovata' }, { status: 404 });
+		}
 
-		const oldImages = oldCard.images || [];
-		const newImages = Array.isArray(updatedCard.images)
-			? updatedCard.images.filter((img): img is string => typeof img === 'string' && img.trim().length > 0)
-			: oldImages;
+		const oldCard = existing[0];
+		const oldCardType: Card = {
+			id: oldCard.id,
+			title: oldCard.title,
+			fullName: oldCard.fullName || undefined,
+			description: oldCard.description,
+			category: oldCard.category,
+			images: (oldCard.images as string[]) || [],
+			tags: (oldCard.tags as string[]) || [],
+			createdAt: oldCard.createdAt.toISOString(),
+			updatedAt: oldCard.updatedAt.toISOString()
+		};
 
 		const title = (updatedCard.title !== undefined ? updatedCard.title : oldCard.title || '').trim();
 		const fullName = (updatedCard.fullName !== undefined ? updatedCard.fullName : oldCard.fullName || '').trim();
 		const description = (updatedCard.description !== undefined ? updatedCard.description : oldCard.description || '').trim();
 		const category = (updatedCard.category !== undefined ? updatedCard.category : oldCard.category || '').trim();
+		const images = Array.isArray(updatedCard.images)
+			? updatedCard.images.filter((img): img is string => typeof img === 'string' && img.trim().length > 0)
+			: (oldCard.images as string[]) || [];
+		const tags = Array.isArray(updatedCard.tags) ? updatedCard.tags : (oldCard.tags as string[]) || [];
 
-		finalSavedCard = {
-			...oldCard,
-			...updatedCard,
-			id: oldCard.id,
-			title: title,
-			fullName: fullName || undefined,
-			description: description,
-			category: category || oldCard.category || 'Generale',
-			images: newImages.length > 0 ? newImages : undefined,
-			updatedAt: new Date().toISOString()
+		const now = new Date();
+		const [updated] = await db
+			.update(cards)
+			.set({
+				title: title || fullName || oldCard.title || 'Scheda Visiva',
+				fullName: fullName || null,
+				description,
+				category: category || oldCard.category || 'Generale',
+				images,
+				tags,
+				updatedAt: now
+			})
+			.where(eq(cards.id, updatedCard.id))
+			.returning();
+
+		const formatted: Card = {
+			id: updated.id,
+			title: updated.title,
+			fullName: updated.fullName || undefined,
+			description: updated.description,
+			category: updated.category,
+			images: (updated.images as string[]) || [],
+			tags: (updated.tags as string[]) || [],
+			createdAt: updated.createdAt.toISOString(),
+			updatedAt: updated.updatedAt.toISOString()
 		};
 
-		cards[index] = finalSavedCard;
-		return cards;
-	});
+		// Pulisci le immagini rimosse in background
+		await cleanupUnusedImagesOnCardUpdate(oldCardType, formatted).catch(() => {});
 
-	if (!finalSavedCard) {
-		return json({ error: 'Card non trovata' }, { status: 404 });
+		return json(formatted);
+	} catch (err: any) {
+		console.error('Errore aggiornamento scheda nel database:', err);
+		return json({ error: err.message || "Errore durante l'aggiornamento della scheda" }, { status: 500 });
 	}
-
-	if (!result.success) {
-		return json({ error: 'Errore durante l\'aggiornamento della scheda su disco.' }, { status: 500 });
-	}
-
-	invalidateCards();
-
-	// Cancella le immagini non più usate in background
-	if (oldCardForCleanup) {
-		await cleanupUnusedImagesOnCardUpdate(oldCardForCleanup, finalSavedCard);
-	}
-
-	return json(finalSavedCard);
 };
 
-export const DELETE: RequestHandler = async (event) => {
-	const { url, cookies } = event;
-
-	if (!isSameOriginRequest(event)) {
-		return json({ error: 'Origine non consentita' }, { status: 403 });
-	}
-
-	if (!isAuthorizedAdmin(cookies)) {
+export const DELETE: RequestHandler = async ({ url, locals }) => {
+	if (!isAuthorizedAdmin(locals.user)) {
 		return json(
-			{
-				error:
-					'Accesso negato: Soltanto gli amministratori specificati in DISCORD_ADMIN_IDS possono eliminare le schede.'
-			},
+			{ error: 'Accesso negato: Soltanto gli amministratori possono eliminare le schede.' },
 			{ status: 403 }
 		);
 	}
@@ -191,26 +200,28 @@ export const DELETE: RequestHandler = async (event) => {
 		return json({ error: 'ID non specificato' }, { status: 400 });
 	}
 
-	let deletedCard: Card | null = null;
-
-	const result = await mutateJsonSafe<Card[]>(CARDS_FILE_PATH, [], (cards) => {
-		const found = cards.find((c) => c.id === id);
-		if (found) {
-			deletedCard = found;
+	try {
+		const existing = await db.select().from(cards).where(eq(cards.id, id)).limit(1);
+		if (existing.length > 0) {
+			const old = existing[0];
+			const oldCard: Card = {
+				id: old.id,
+				title: old.title,
+				fullName: old.fullName || undefined,
+				description: old.description,
+				category: old.category,
+				images: (old.images as string[]) || [],
+				tags: (old.tags as string[]) || [],
+				createdAt: old.createdAt.toISOString(),
+				updatedAt: old.updatedAt.toISOString()
+			};
+			await deleteImagesForCard(oldCard).catch(() => {});
 		}
-		return cards.filter((c) => c.id !== id);
-	});
 
-	if (!result.success) {
-		return json({ error: 'Errore durante l\'eliminazione della scheda dal disco.' }, { status: 500 });
+		await db.delete(cards).where(eq(cards.id, id));
+		return json({ success: true, id });
+	} catch (err: any) {
+		console.error('Errore eliminazione scheda dal database:', err);
+		return json({ error: err.message || "Errore durante l'eliminazione della scheda" }, { status: 500 });
 	}
-
-	invalidateCards();
-
-	if (deletedCard) {
-		// Elimina fisicamente dal disco tutti i file immagine associati a questa scheda
-		await deleteImagesForCard(deletedCard);
-	}
-
-	return json({ success: true, id });
 };

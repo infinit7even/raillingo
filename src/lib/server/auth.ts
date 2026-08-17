@@ -1,23 +1,15 @@
+import { betterAuth } from 'better-auth';
+import { drizzleAdapter } from 'better-auth/adapters/drizzle';
+import { sveltekitCookies } from 'better-auth/svelte-kit';
 import { env } from '$env/dynamic/private';
-import crypto from 'node:crypto';
+import { getRequestEvent } from '$app/server';
+import { db } from '$lib/server/db';
+import * as schema from '$lib/server/db/schema';
+
+import { eq } from 'drizzle-orm';
 
 export const DEFAULT_ADMIN_ID = '691289686093725736';
 
-export interface SessionUser {
-	userId: string;
-	username?: string;
-	email?: string;
-	avatar?: string;
-	role?: string;
-	isAdmin?: boolean;
-	loginAt?: string;
-}
-
-function getSessionSecret(): string | undefined {
-	return env.SESSION_SECRET || process.env.SESSION_SECRET;
-}
-
-/** Legge la lista degli ID admin dalle variabili d'ambiente, garantendo l'ID predefinito incluso. */
 export function getAdminIds(): string[] {
 	const raw = env.DISCORD_ADMIN_IDS || process.env.DISCORD_ADMIN_IDS || DEFAULT_ADMIN_ID;
 	const ids = raw
@@ -31,74 +23,81 @@ export function getAdminIds(): string[] {
 	return ids;
 }
 
-/** Firma un payload di sessione con HMAC-SHA256: ritorna `payload.signature`. */
-export function signSession(payload: unknown): string {
-	const secret = getSessionSecret();
-	if (!secret) {
-		throw new Error('SESSION_SECRET non configurata: impossibile firmare la sessione.');
-	}
-	const data = typeof payload === 'string' ? payload : JSON.stringify(payload);
-	const signature = crypto.createHmac('sha256', secret).update(data).digest('base64url');
-	return `${data}.${signature}`;
-}
+const socialProviders: Record<string, any> = {};
 
-/** Verifica la firma di una sessione e restituisce il payload, oppure null. */
-export function verifySession(signed: unknown): unknown | null {
-	const secret = getSessionSecret();
-	if (!secret || typeof signed !== 'string') return null;
-
-	const idx = signed.lastIndexOf('.');
-	if (idx <= 0 || idx === signed.length - 1) return null;
-
-	const data = signed.slice(0, idx);
-	const signature = signed.slice(idx + 1);
-
-	const expected = crypto.createHmac('sha256', secret).update(data).digest('base64url');
-	const a = Buffer.from(signature);
-	const b = Buffer.from(expected);
-	if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null;
-
-	try {
-		return JSON.parse(data);
-	} catch {
-		return null;
-	}
-}
-
-/** Legge e verifica la sessione dai cookie; ritorna il payload verificato o null. */
-export function readSession(cookies: {
-	get: (name: string) => string | undefined;
-}): SessionUser | null {
-	const cookieVal = cookies.get('admin_session') || cookies.get('user_session');
-	if (!cookieVal) return null;
-
-	const session = verifySession(cookieVal);
-	if (!session || typeof session !== 'object') return null;
-
-	const user = session as SessionUser;
-	if (!user.userId) return null;
-	return user;
-}
-
-/** Verifica se i cookie di sessione appartengono a un amministratore autorizzato. */
-export function isAuthorizedAdmin(cookies: { get: (name: string) => string | undefined }): boolean {
-	const session = readSession(cookies);
-	if (!session) return false;
-	return getAdminIds().includes(String(session.userId).trim());
-}
-
-/**
- * Opzioni condivise per il cookie di sessione admin.
- * `secure` deriva dal protocollo della richiesta: così l'impostazione (login)
- * e l'eliminazione (logout) usano sempre gli stessi attributi, evitando che su
- * HTTP non-localhost il browser scarti il cookie di cancellazione (`Secure`).
- */
-export function sessionCookieOptions(secure: boolean) {
-	return {
-		path: '/',
-		httpOnly: true, // non leggibile da JS
-		sameSite: 'lax' as const,
-		secure,
-		maxAge: 60 * 60 * 24 * 7 // 7 giorni
+if (env.DISCORD_CLIENT_ID && env.DISCORD_CLIENT_SECRET) {
+	socialProviders.discord = {
+		clientId: env.DISCORD_CLIENT_ID,
+		clientSecret: env.DISCORD_CLIENT_SECRET,
+		scope: ['identify', 'email']
 	};
+}
+
+export const auth = betterAuth({
+	baseURL: env.BETTER_AUTH_URL || env.SITE_URL || 'http://raillingo.7fx.it:3099',
+	secret: env.BETTER_AUTH_SECRET || 'raillingo_better_auth_secret_key_8f9a0b1c2d3e4f5a6b7c8d9e',
+	database: drizzleAdapter(db, {
+		provider: 'pg',
+		schema: {
+			user: schema.user,
+			session: schema.session,
+			account: schema.account,
+			verification: schema.verification
+		}
+	}),
+	socialProviders,
+	session: {
+		cookieCache: { enabled: false }
+	},
+	user: {
+		fields: {
+			name: 'name'
+		},
+		additionalFields: {
+			role: {
+				type: 'string',
+				defaultValue: 'user',
+				input: false
+			},
+			ignoredCardIds: {
+				type: 'string',
+				required: false
+			},
+			favorites: {
+				type: 'string',
+				required: false
+			},
+			stats: {
+				type: 'string',
+				required: false
+			}
+		}
+	},
+	databaseHooks: {
+		account: {
+			create: {
+				after: async (accountData) => {
+					// Se l'account Discord corrisponde ad un admin, imposta role: 'admin'
+					if (accountData.providerId === 'discord') {
+						const adminIds = getAdminIds();
+						if (adminIds.includes(String(accountData.accountId).trim())) {
+							await db
+								.update(schema.user)
+								.set({ role: 'admin' })
+								.where(eq(schema.user.id, accountData.userId));
+						}
+					}
+				}
+			}
+		}
+	},
+	plugins: [sveltekitCookies(getRequestEvent)]
+});
+
+export type Auth = typeof auth;
+
+export function isAuthorizedAdmin(user: { id?: string; role?: string; email?: string } | null | undefined): boolean {
+	if (!user) return false;
+	if (user.role === 'admin') return true;
+	return false;
 }

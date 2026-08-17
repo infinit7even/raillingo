@@ -1,57 +1,33 @@
 import { browser } from '$app/environment';
 import type { Note } from '$lib/types/notes';
 import { toastStore } from '$lib/stores/toastStore';
-import {
-	getAllLocalNotes,
-	putLocalNote,
-	putLocalNotesBatch,
-	markLocalNoteDeleted,
-	savePendingMediaLocal,
-	type OfflineNote
-} from '$lib/utils/offlineDb';
-import { offlineNotesSync, type SyncState } from '$lib/utils/offlineNotesSync';
 
-const STORAGE_KEY = 'rf_notes_cache';
+const STORAGE_KEY = 'rf_notes_vault';
+const PENDING_KEY = 'rf_notes_pending_sync';
 
 class NotesStore {
 	private notes: Note[] = [];
-	private loading = false;
 	private listeners = new Set<(notes: Note[]) => void>();
 	private hydrated = false;
 
-	public async hydrate(initialNotes: Note[] | null | undefined) {
+	public hydrate(initialNotes: Note[] | null | undefined) {
 		if (this.hydrated) return;
 		this.hydrated = true;
 
-		// Inizializza il sync engine se siamo nel browser
-		if (browser) {
-			offlineNotesSync.init();
-		}
-
-		// 1. Dati SSR ricevuti dal server
+		// 1. Dati SSR
 		if (initialNotes && Array.isArray(initialNotes) && initialNotes.length > 0) {
 			this.notes = initialNotes;
 			this.saveToStorage();
 			this.notify();
-			// Salva anche in IndexedDB in background
-			if (browser) {
-				putLocalNotesBatch(initialNotes, 'synced');
-			}
-			return;
+		} else {
+			// 2. Fallback offline
+			this.loadFromStorage();
 		}
 
-		// 2. Fallback offline: carica prima da IndexedDB, poi da localStorage
 		if (browser) {
-			const localDbNotes = await getAllLocalNotes();
-			if (localDbNotes && localDbNotes.length > 0) {
-				this.notes = localDbNotes;
-				this.notify();
-			} else {
-				this.loadFromLocalStorage();
-			}
-
-			// 3. Tenta sincronizzazione con il server in background
-			this.loadNotes();
+			// Sincronizza in background all'avvio e quando torna online
+			this.syncPending();
+			window.addEventListener('online', () => this.syncPending());
 		}
 	}
 
@@ -67,51 +43,54 @@ class NotesStore {
 		return this.notes;
 	}
 
-	private loadFromLocalStorage() {
+	private loadFromStorage() {
 		if (!browser) return;
 		try {
-			const cached = localStorage.getItem(STORAGE_KEY);
-			if (cached) {
-				const parsed = JSON.parse(cached);
-				if (Array.isArray(parsed) && parsed.length > 0) {
+			const raw = localStorage.getItem(STORAGE_KEY);
+			if (raw) {
+				const parsed = JSON.parse(raw);
+				if (Array.isArray(parsed)) {
 					this.notes = parsed;
 					this.notify();
 				}
 			}
 		} catch (e) {
-			console.warn('Errore lettura cache note da localStorage:', e);
+			console.warn('Errore lettura note locali:', e);
+		}
+	}
+
+	private saveToStorage() {
+		if (browser) {
+			try {
+				localStorage.setItem(STORAGE_KEY, JSON.stringify(this.notes));
+			} catch (e) {
+				console.warn('Errore salvataggio note locali:', e);
+			}
+		}
+	}
+
+	private notify() {
+		for (const listener of this.listeners) {
+			listener(this.notes);
 		}
 	}
 
 	public async loadNotes(): Promise<Note[]> {
 		if (!browser) return this.notes;
-		this.loading = true;
 
 		try {
 			const res = await fetch('/api/notes');
 			if (res.ok) {
-				const freshNotes: Note[] = await res.json();
-				if (Array.isArray(freshNotes)) {
-					this.notes = freshNotes;
+				const fresh: Note[] = await res.json();
+				if (Array.isArray(fresh)) {
+					this.notes = fresh;
 					this.saveToStorage();
-					await putLocalNotesBatch(freshNotes, 'synced');
 					this.notify();
-					return freshNotes;
+					return fresh;
 				}
 			}
 		} catch (e) {
-			console.warn('Modalità offline o errore durante il caricamento note da API:', e);
-			if (this.notes.length === 0) {
-				const local = await getAllLocalNotes();
-				if (local.length > 0) {
-					this.notes = local;
-					this.notify();
-				} else {
-					this.loadFromLocalStorage();
-				}
-			}
-		} finally {
-			this.loading = false;
+			console.warn('Caricamento note da API non riuscito (offline):', e);
 		}
 
 		return this.notes;
@@ -130,51 +109,41 @@ class NotesStore {
 			userId: noteData.userId || 'local-user',
 			title: noteData.title?.trim() || 'Nuovo Appunto',
 			content: noteData.content || '',
-			category: noteData.category !== undefined ? noteData.category.trim() : '',
+			category: noteData.category?.trim() || 'Normativa RFI',
 			tags: noteData.tags || [],
 			images: noteData.images || [],
 			isPinned: Boolean(noteData.isPinned),
+			isPublic: Boolean(noteData.isPublic),
+			shareId: noteData.shareId || localId,
 			order: typeof noteData.order === 'number' ? noteData.order : this.notes.length + 1,
 			createdAt: noteData.createdAt || now,
 			updatedAt: now
 		};
 
-		// 1. Salvataggio locale immediato in memoria e IndexedDB
+		// Aggiornamento locale istantaneo
 		this.notes = [newNote, ...this.notes.filter((n) => n.id !== localId)];
 		this.saveToStorage();
 		this.notify();
 
 		if (browser) {
-			const isOnline = navigator.onLine;
-			await putLocalNote(newNote, isOnline ? 'synced' : 'pending');
+			try {
+				const res = await fetch('/api/notes', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify(newNote)
+				});
 
-			// 2. Se online, sincronizza subito con il server
-			if (isOnline) {
-				try {
-					const res = await fetch('/api/notes', {
-						method: 'POST',
-						headers: { 'Content-Type': 'application/json' },
-						body: JSON.stringify(newNote)
-					});
-
-					if (res.ok) {
-						const serverCreated: Note = await res.json();
-						this.notes = this.notes.map((n) => (n.id === localId ? serverCreated : n));
-						this.saveToStorage();
-						await putLocalNote(serverCreated, 'synced');
-						this.notify();
-						toastStore.show({ message: '📝 Appunto salvato sul server!' });
-						return serverCreated;
-					} else {
-						await putLocalNote(newNote, 'pending');
-						toastStore.show({ message: '📝 Appunto salvato in locale (in attesa di sync)' });
-					}
-				} catch {
-					await putLocalNote(newNote, 'pending');
-					toastStore.show({ message: '📝 Appunto salvato in locale (offline)' });
+				if (res.ok) {
+					const created: Note = await res.json();
+					this.notes = this.notes.map((n) => (n.id === localId ? created : n));
+					this.saveToStorage();
+					this.notify();
+					return created;
+				} else {
+					this.addPending(newNote, 'save');
 				}
-			} else {
-				toastStore.show({ message: '📝 Appunto salvato in locale (modalità offline)' });
+			} catch {
+				this.addPending(newNote, 'save');
 			}
 		}
 
@@ -192,37 +161,30 @@ class NotesStore {
 			updatedAt: now
 		};
 
-		// 1. Salvataggio locale immediato (UI non aspetta la rete)
+		// Aggiornamento locale istantaneo
 		this.notes = this.notes.map((n) => (n.id === updated.id ? updated : n));
 		this.saveToStorage();
 		this.notify();
 
 		if (browser) {
-			const isOnline = navigator.onLine;
-			await putLocalNote(updated, isOnline ? 'synced' : 'pending');
+			try {
+				const res = await fetch('/api/notes', {
+					method: 'PUT',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify(updated)
+				});
 
-			// 2. Se online, invia aggiornamento al server
-			if (isOnline) {
-				try {
-					const res = await fetch('/api/notes', {
-						method: 'PUT',
-						headers: { 'Content-Type': 'application/json' },
-						body: JSON.stringify(updated)
-					});
-
-					if (res.ok) {
-						const saved: Note = await res.json();
-						this.notes = this.notes.map((n) => (n.id === saved.id ? saved : n));
-						this.saveToStorage();
-						await putLocalNote(saved, 'synced');
-						this.notify();
-						return saved;
-					} else {
-						await putLocalNote(updated, 'pending');
-					}
-				} catch {
-					await putLocalNote(updated, 'pending');
+				if (res.ok) {
+					const saved: Note = await res.json();
+					this.notes = this.notes.map((n) => (n.id === saved.id ? saved : n));
+					this.saveToStorage();
+					this.notify();
+					return saved;
+				} else {
+					this.addPending(updated, 'save');
 				}
+			} catch {
+				this.addPending(updated, 'save');
 			}
 		}
 
@@ -235,129 +197,105 @@ class NotesStore {
 		this.notify();
 
 		if (browser) {
-			const isOnline = navigator.onLine;
+			try {
+				const res = await fetch(`/api/notes?id=${encodeURIComponent(id)}`, {
+					method: 'DELETE'
+				});
 
-			if (isOnline) {
-				try {
-					const res = await fetch(`/api/notes?id=${encodeURIComponent(id)}`, {
-						method: 'DELETE'
-					});
-
-					if (res.ok) {
-						await markLocalNoteDeleted(id);
-						toastStore.show({ message: '🗑️ Appunto eliminato dal server' });
-						return true;
-					}
-				} catch {
-					// Fallback
+				if (!res.ok) {
+					this.addPending({ id } as Note, 'delete');
 				}
+			} catch {
+				this.addPending({ id } as Note, 'delete');
 			}
-
-			// Se offline o errore rete, contrassegna come eliminato localmente per il sync
-			await markLocalNoteDeleted(id);
-			toastStore.show({ message: '🗑️ Appunto eliminato in locale (offline)' });
 		}
+
+		toastStore.show({ message: '🗑️ Appunto eliminato' });
 		return true;
-	}
-
-	public async deleteCategoryFromAllNotes(categoryName: string): Promise<number> {
-		const target = categoryName.trim();
-		if (!target) return 0;
-		const affected = this.notes.filter((n) => (n.category || '').trim() === target);
-		for (const note of affected) {
-			await this.updateNote({ id: note.id, category: '' });
-		}
-		return affected.length;
-	}
-
-	public async saveOfflineImageBlob(
-		blob: Blob,
-		filename: string,
-		noteId?: string
-	): Promise<string> {
-		const tempId = `local-media-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
-		if (browser) {
-			await savePendingMediaLocal(tempId, blob, filename, blob.type || 'image/webp', noteId);
-			offlineNotesSync.checkPendingAndSync();
-		}
-		return tempId;
-	}
-
-	public async syncNow(): Promise<void> {
-		if (browser) {
-			toastStore.show({ message: '🔄 Sincronizzazione in corso...' });
-			const result = await offlineNotesSync.syncAll(true);
-			await this.loadNotes();
-			if (result.errors === 0) {
-				toastStore.show({ message: '🟢 Tutti gli appunti sono sincronizzati!' });
-			} else {
-				toastStore.show({ message: `⚠️ Sincronizzati ${result.syncedCount} elementi, ${result.errors} errori.` });
-			}
-		}
 	}
 
 	public async togglePin(id: string): Promise<void> {
 		const note = this.notes.find((n) => n.id === id);
 		if (!note) return;
-
-		const isPinned = !note.isPinned;
-		await this.updateNote({ id, isPinned });
+		await this.updateNote({ id, isPinned: !note.isPinned });
 	}
 
-	public async moveNote(id: string, direction: 'up' | 'down'): Promise<void> {
-		const idx = this.notes.findIndex((n) => n.id === id);
-		if (idx === -1) return;
+	public async togglePublicShare(id: string): Promise<string | null> {
+		const note = this.notes.find((n) => n.id === id);
+		if (!note) return null;
 
-		const targetIdx = direction === 'up' ? idx - 1 : idx + 1;
-		if (targetIdx < 0 || targetIdx >= this.notes.length) return;
+		const isPublic = !note.isPublic;
+		const shareId = note.shareId || id;
+		await this.updateNote({ id, isPublic, shareId });
 
-		const reordered = [...this.notes];
-		const temp = reordered[idx];
-		reordered[idx] = reordered[targetIdx];
-		reordered[targetIdx] = temp;
-
-		// Assegna nuovi valori di order decrescenti
-		const updatedItems = reordered.map((item, index) => ({
-			...item,
-			order: reordered.length - index
-		}));
-
-		this.notes = updatedItems;
-		this.saveToStorage();
-		this.notify();
-
-		if (browser) {
-			await putLocalNotesBatch(updatedItems, navigator.onLine ? 'synced' : 'pending');
-		}
-
-		await this.syncOrder(updatedItems.map((n) => ({ id: n.id, order: n.order })));
+		return isPublic ? shareId : null;
 	}
 
-	public async syncOrder(items: { id: string; order: number }[]): Promise<void> {
+	// ─── SINCRONIZZAZIONE AUTOMATICA SILENZIOSA QUANDO ONLINE ───────────────
+
+	private addPending(note: Note, action: 'save' | 'delete') {
+		if (!browser) return;
 		try {
-			await fetch('/api/notes', {
-				method: 'PATCH',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ items })
-			});
+			const current = JSON.parse(localStorage.getItem(PENDING_KEY) || '[]');
+			const filtered = current.filter((item: any) => item.note.id !== note.id);
+			filtered.push({ note, action, time: Date.now() });
+			localStorage.setItem(PENDING_KEY, JSON.stringify(filtered));
 		} catch (e) {
-			console.warn('Errore sync ordine appunti API:', e);
+			console.warn('Errore salvataggio coda offline:', e);
 		}
 	}
 
-	private saveToStorage() {
-		if (browser) {
-			try {
-				localStorage.setItem(STORAGE_KEY, JSON.stringify(this.notes));
-			} catch (e) {
-				console.warn('Spazio localStorage esaurito o errore salvataggio:', e);
+	public async syncPending(): Promise<void> {
+		if (!browser || !navigator.onLine) return;
+
+		try {
+			const raw = localStorage.getItem(PENDING_KEY);
+			if (!raw) return;
+			const pending: { note: Note; action: 'save' | 'delete' }[] = JSON.parse(raw);
+			if (!Array.isArray(pending) || pending.length === 0) return;
+
+			let synced = 0;
+			const remaining: typeof pending = [];
+
+			for (const item of pending) {
+				try {
+					if (item.action === 'delete') {
+						await fetch(`/api/notes?id=${encodeURIComponent(item.note.id)}`, {
+							method: 'DELETE'
+						});
+						synced++;
+					} else {
+						const res = await fetch('/api/notes', {
+							method: 'PUT',
+							headers: { 'Content-Type': 'application/json' },
+							body: JSON.stringify(item.note)
+						});
+						if (res.ok) {
+							synced++;
+						} else {
+							// Se 404 tenta POST
+							const postRes = await fetch('/api/notes', {
+								method: 'POST',
+								headers: { 'Content-Type': 'application/json' },
+								body: JSON.stringify(item.note)
+							});
+							if (postRes.ok) synced++;
+							else remaining.push(item);
+						}
+					}
+				} catch {
+					remaining.push(item);
+				}
 			}
-		}
-	}
 
-	private notify() {
-		for (const listener of this.listeners) {
-			listener(this.notes);
+			localStorage.setItem(PENDING_KEY, JSON.stringify(remaining));
+
+			if (synced > 0) {
+				console.log(`[Auto-Sync] Sincronizzati ${synced} appunti con PostgreSQL.`);
+				await this.loadNotes();
+			}
+		} catch (e) {
+			console.warn('Errore durante sync automatico note:', e);
 		}
 	}
 }

@@ -1,11 +1,11 @@
 import { redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
-import { isAuthorizedAdmin, readSession } from '$lib/server/auth';
+import { isAuthorizedAdmin } from '$lib/server/auth';
 
-export const load: PageServerLoad = async ({ cookies, url }) => {
-	const user = readSession(cookies);
+export const load: PageServerLoad = async ({ locals, url }) => {
+	const user = locals.user;
 
-	if (!isAuthorizedAdmin(cookies)) {
+	if (!isAuthorizedAdmin(user)) {
 		throw redirect(302, '/notes?error=admin_required');
 	}
 

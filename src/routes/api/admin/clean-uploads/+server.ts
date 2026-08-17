@@ -3,7 +3,8 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { isAuthorizedAdmin } from '$lib/server/auth';
 import { isSameOriginRequest } from '$lib/server/csrf';
-import { readCards, readNotes } from '$lib/server/dataCache';
+import { db } from '$lib/server/db';
+import { cards as cardsTable, notes as notesTable } from '$lib/server/db/schema';
 import type { Card } from '$lib/types/cards';
 import type { Note } from '$lib/types/notes';
 
@@ -81,18 +82,46 @@ async function getUploadDirectoryInfo() {
 }
 
 export const GET: RequestHandler = async (event) => {
-	const { cookies } = event;
+	const { locals } = event;
 
-	if (!isAuthorizedAdmin(cookies)) {
+	if (!isAuthorizedAdmin(locals.user)) {
 		return json({ error: 'Accesso negato: admin richiesto.' }, { status: 403 });
 	}
 
 	try {
-		const [cards, notes, diskFiles] = await Promise.all([
-			readCards<Card[]>(),
-			readNotes<Note[]>(),
+		const [dbCards, dbNotes, diskFiles] = await Promise.all([
+			db.select().from(cardsTable),
+			db.select().from(notesTable),
 			getUploadDirectoryInfo()
 		]);
+
+		const cards: Card[] = dbCards.map((c) => ({
+			id: c.id,
+			title: c.title,
+			fullName: c.fullName || undefined,
+			description: c.description,
+			category: c.category,
+			images: (c.images as string[]) || [],
+			tags: (c.tags as string[]) || [],
+			createdAt: c.createdAt.toISOString(),
+			updatedAt: c.updatedAt.toISOString()
+		}));
+
+		const notes: Note[] = dbNotes.map((n) => ({
+			id: n.id,
+			userId: n.userId || undefined,
+			title: n.title,
+			content: n.content,
+			category: n.category,
+			tags: (n.tags as string[]) || [],
+			images: (n.images as string[]) || [],
+			isPinned: n.isPinned,
+			isPublic: n.isPublic,
+			shareId: n.shareId || undefined,
+			order: n.order,
+			createdAt: n.createdAt.toISOString(),
+			updatedAt: n.updatedAt.toISOString()
+		}));
 
 		const cardRefs = extractImageFilenamesFromCards(cards);
 		const noteRefs = extractImageFilenamesFromNotes(notes);
@@ -126,22 +155,50 @@ export const GET: RequestHandler = async (event) => {
 };
 
 export const POST: RequestHandler = async (event) => {
-	const { cookies } = event;
+	const { locals } = event;
 
 	if (!isSameOriginRequest(event)) {
 		return json({ error: 'Origine non consentita.' }, { status: 403 });
 	}
 
-	if (!isAuthorizedAdmin(cookies)) {
+	if (!isAuthorizedAdmin(locals.user)) {
 		return json({ error: 'Accesso negato: admin richiesto.' }, { status: 403 });
 	}
 
 	try {
-		const [cards, notes, diskFiles] = await Promise.all([
-			readCards<Card[]>(),
-			readNotes<Note[]>(),
+		const [dbCards, dbNotes, diskFiles] = await Promise.all([
+			db.select().from(cardsTable),
+			db.select().from(notesTable),
 			getUploadDirectoryInfo()
 		]);
+
+		const cards: Card[] = dbCards.map((c) => ({
+			id: c.id,
+			title: c.title,
+			fullName: c.fullName || undefined,
+			description: c.description,
+			category: c.category,
+			images: (c.images as string[]) || [],
+			tags: (c.tags as string[]) || [],
+			createdAt: c.createdAt.toISOString(),
+			updatedAt: c.updatedAt.toISOString()
+		}));
+
+		const notes: Note[] = dbNotes.map((n) => ({
+			id: n.id,
+			userId: n.userId || undefined,
+			title: n.title,
+			content: n.content,
+			category: n.category,
+			tags: (n.tags as string[]) || [],
+			images: (n.images as string[]) || [],
+			isPinned: n.isPinned,
+			isPublic: n.isPublic,
+			shareId: n.shareId || undefined,
+			order: n.order,
+			createdAt: n.createdAt.toISOString(),
+			updatedAt: n.updatedAt.toISOString()
+		}));
 
 		const cardRefs = extractImageFilenamesFromCards(cards);
 		const noteRefs = extractImageFilenamesFromNotes(notes);

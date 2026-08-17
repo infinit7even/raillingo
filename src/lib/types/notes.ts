@@ -1,12 +1,14 @@
 export interface Note {
 	id: string;
-	userId: string;
+	userId?: string;
 	title: string;
 	content: string; // Testo formattato in Markdown
 	category: string; // es. "Segnalamento", "Normativa RFI", "Trazione", "Esercizio", "Varie"
 	tags?: string[]; // Etichette secondarie opzionali
 	images?: string[]; // Lista URL delle immagini associate e incollate nella nota
 	isPinned?: boolean; // Se fissato in cima
+	isPublic?: boolean; // Se la nota è condivisa pubblicamente
+	shareId?: string; // ID / token di condivisione link
 	order: number; // Posizione numerica per riordinamento personalizzato
 	createdAt: string;
 	updatedAt: string;

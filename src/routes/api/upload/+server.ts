@@ -1,20 +1,16 @@
 import { json, type RequestHandler } from '@sveltejs/kit';
-import { isAuthorizedAdmin, readSession } from '$lib/server/auth';
+import { isAuthorizedAdmin } from '$lib/server/auth';
 import { isSameOriginRequest } from '$lib/server/csrf';
 import { saveUploadedImage } from '$lib/server/uploadService';
 
 export const POST: RequestHandler = async (event) => {
-	const { request, cookies } = event;
+	const { request, locals } = event;
 
 	if (!isSameOriginRequest(event)) {
 		return json({ error: 'Origine non consentita' }, { status: 403 });
 	}
 
-	// Verifica autorizzazione admin (da cookie admin_session, DISCORD_ADMIN_IDS o ruolo admin)
-	const session = readSession(cookies);
-	const isAdmin = isAuthorizedAdmin(cookies) || session?.role === 'admin' || session?.isAdmin === true;
-
-	if (!isAdmin) {
+	if (!isAuthorizedAdmin(locals.user)) {
 		return json(
 			{ error: 'Accesso negato: soltanto gli amministratori possono caricare immagini per le schede.' },
 			{ status: 403 }

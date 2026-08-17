@@ -1,24 +1,16 @@
 import { redirect, type RequestHandler } from '@sveltejs/kit';
-import { sessionCookieOptions } from '$lib/server/auth';
-import { isSameOriginRequest } from '$lib/server/csrf';
+import { auth } from '$lib/server/auth';
 
-function safeRedirect(raw: string | null): string {
-	if (!raw) return '/';
-	if (!raw.startsWith('/')) return '/';
-	if (raw.startsWith('//') || raw.includes(':/')) return '/';
-	return raw;
-}
+export const GET: RequestHandler = async ({ request, cookies }) => {
+	await auth.api.signOut({ headers: request.headers }).catch(() => {});
+	cookies.delete('user_session', { path: '/' });
+	cookies.delete('admin_session', { path: '/' });
+	throw redirect(302, '/');
+};
 
-export const POST: RequestHandler = async (event) => {
-	const { cookies, url } = event;
-
-	if (!isSameOriginRequest(event)) {
-		return new Response(null, { status: 403 });
-	}
-
-	const opts = sessionCookieOptions(url.protocol === 'https:');
-	cookies.delete('admin_session', opts);
-	cookies.delete('user_session', opts); // legacy cleanup
-
-	throw redirect(302, safeRedirect(url.searchParams.get('redirect')));
+export const POST: RequestHandler = async ({ request, cookies }) => {
+	await auth.api.signOut({ headers: request.headers }).catch(() => {});
+	cookies.delete('user_session', { path: '/' });
+	cookies.delete('admin_session', { path: '/' });
+	throw redirect(302, '/');
 };
