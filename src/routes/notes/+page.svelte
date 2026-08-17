@@ -876,15 +876,6 @@
 							<span>➕</span>
 							<span>Nuova</span>
 						</button>
-
-						<button
-							type="button"
-							class="collapse-vault-btn"
-							onclick={toggleVaultCollapse}
-							title="Comprimi Appunti"
-						>
-							◀
-						</button>
 					</div>
 				</div>
 
@@ -899,7 +890,7 @@
 							selectedTrashNote = null;
 						}}
 					>
-						📓 Appunti ({activeNotesCount})
+						📓 Note ({activeNotesCount})
 					</button>
 					<button
 						type="button"
@@ -910,7 +901,7 @@
 							selectedTrashNote = null;
 						}}
 					>
-						📦 Archivio ({archivedNotesCount})
+						📦 Arch ({archivedNotesCount})
 					</button>
 					<button
 						type="button"
@@ -921,7 +912,7 @@
 							loadTrash();
 						}}
 					>
-						🗑️ Cestino ({trashNotes.length})
+						🗑️ Trash ({trashNotes.length})
 					</button>
 				</div>
 
@@ -1924,34 +1915,6 @@
 	}
 
 	.new-note-btn:active {
-		transform: translateY(1.5px);
-		border-bottom-width: 1px;
-	}
-
-	.collapse-vault-btn {
-		background: var(--card-bg-subtle);
-		border: 1.5px solid var(--border-color);
-		border-bottom: 2.5px solid var(--border-depth-color);
-		border-radius: 8px;
-		width: 28px;
-		height: 28px;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		color: var(--text-muted);
-		font-size: 0.68rem;
-		font-weight: 900;
-		cursor: pointer;
-		transition: all 0.12s ease;
-	}
-
-	.collapse-vault-btn:hover {
-		color: var(--text-color);
-		border-color: var(--accent-color);
-		background: var(--hover-bg);
-	}
-
-	.collapse-vault-btn:active {
 		transform: translateY(1.5px);
 		border-bottom-width: 1px;
 	}
