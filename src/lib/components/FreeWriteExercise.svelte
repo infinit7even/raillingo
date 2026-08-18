@@ -66,7 +66,7 @@
 			return scoreDesc;
 		} else {
 			const scoreTitle = calculateSimilarity(userInput, card.title || '');
-			const scoreFull = card.fullName ? calculateSimilarity(userInput, card.fullName) : 0;
+			const scoreFull = 0;
 			return Math.max(scoreTitle, scoreFull);
 		}
 	});
@@ -136,17 +136,17 @@
 					/>
 				</div>
 			{:else}
-				<p class="prompt-desc-text">{card.description || card.fullName || card.title || '(Scheda senza immagine né testo)'}</p>
+				<p class="prompt-desc-text">{card.description || card.title || '(Scheda senza immagine né testo)'}</p>
 			{/if}
 		{:else}
-			<span class="prompt-badge-label">Domanda:</span>
+			<span class="prompt-badge-label">Come si chiama:</span>
 
 			{#if subMode === 'title-to-desc'}
 				<h2 class="prompt-title">
-					Che cos'è: <span class="prompt-term">{card.title || card.fullName || 'Scheda'}</span>
+					Che cos'è: <span class="prompt-term">{card.title || 'Scheda'}</span>
 				</h2>
 			{:else if subMode === 'desc-to-title'}
-				<p class="prompt-desc-text">{card.description || card.fullName || card.title || '(Nessuna descrizione o testo disponibile per questa scheda)'}</p>
+				<p class="prompt-desc-text">{card.description || card.title || '(Nessuna descrizione o testo disponibile per questa scheda)'}</p>
 			{/if}
 		{/if}
 	</div>
@@ -211,16 +211,10 @@
 			<div class="result-header">🎯 Risposta Ufficiale:</div>
 
 			{#if subMode === 'title-to-desc'}
-				{#if card.fullName && card.fullName.trim().toLowerCase() !== card.title.trim().toLowerCase()}
-					<div class="fullname-badge">{card.fullName}</div>
-				{/if}
 				<div class="exact-answer duo-card">{card.description}</div>
 			{:else}
 				<div class="exact-answer duo-card title-highlight">
-					{card.title || card.fullName}
-					{#if card.fullName && card.title && card.fullName.trim().toLowerCase() !== card.title.trim().toLowerCase()}
-						<div class="exact-fullname">- {card.fullName}</div>
-					{/if}
+					{card.title}
 				</div>
 				<div class="exact-sub">{card.description}</div>
 			{/if}
@@ -439,13 +433,6 @@
 		font-weight: 900;
 		border-left-color: var(--green-color);
 	}
-
-	.exact-fullname {
-		font-size: 1rem;
-		font-weight: 800;
-		color: var(--accent-color);
-	}
-
 	.exact-sub {
 		font-size: 0.88rem;
 		color: var(--text-muted);

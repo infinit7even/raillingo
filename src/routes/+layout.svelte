@@ -52,24 +52,10 @@
 
 	function handleGlobalContextMenu(e: MouseEvent) {
 		e.preventDefault();
-		const target = e.target as HTMLElement | null;
-		const isInsideNoteContext = Boolean(
-			target &&
-			(target.closest('.document-canvas-container') ||
-			 target.closest('.obsidian-live-editor') ||
-			 target.closest('.note-document-title-box') ||
-			 target.closest('.note-tags-bar') ||
-			 target.closest('.vault-file-item'))
-		);
-
-		if (isInsideNoteContext && page.url.pathname === '/notes') {
-			contextMenuMode = 'notes';
-		} else {
-			contextMenuMode = 'navigation';
-		}
+		contextMenuMode = 'navigation';
 
 		const menuWidth = 210;
-		const menuHeight = contextMenuMode === 'notes' ? 290 : (isAdmin ? 370 : 330);
+		const menuHeight = isAdmin ? 340 : 300;
 
 		let x = e.clientX;
 		let y = e.clientY;
@@ -95,14 +81,7 @@
 		}
 	}
 
-	function triggerNotesAction(action: string) {
-		isContextMenuOpen = false;
-		if (typeof window !== 'undefined') {
-			window.dispatchEvent(new CustomEvent('rf-notes-action', { detail: { action } }));
-		}
-	}
-
-	onMount(() => {
+		onMount(() => {
 		cardsStore.hydrate(data?.initialCards);
 
 		if (typeof window !== 'undefined') {
@@ -138,14 +117,13 @@
 	});
 
 	// Route sequence for lateral swipe navigation
-	const routeOrder = ['/', '/flashcard', '/quiz', '/reels', '/wiki', '/notes'];
+	const routeOrder = ['/', '/flashcard', '/quiz', '/reels', '/wiki'];
 	const swipeRoutes = [
 		{ href: '/', label: 'Home', color: 'var(--accent-color)' },
 		{ href: '/flashcard', label: 'Flashcard', color: 'var(--green-color)' },
 		{ href: '/quiz', label: 'Quiz', color: 'var(--purple-color)' },
-		{ href: '/reels', label: 'Reels', color: 'var(--orange-color)' },
-		{ href: '/wiki', label: 'Wiki', color: 'var(--accent-color)' },
-		{ href: '/notes', label: 'Notes', color: 'var(--orange-color)' }
+		{ href: '/reels', label: 'Reels', color: '#ff5e5b' },
+		{ href: '/wiki', label: 'Wiki', color: 'var(--accent-color)' }
 	];
 
 	let activeSwipeIndex = $derived(routeOrder.indexOf(page.url.pathname));
@@ -289,42 +267,7 @@
 			role="menu"
 			tabindex="0"
 		>
-			{#if contextMenuMode === 'notes'}
-				<div class="ctx-section-label">STRUMENTI APPUNTI</div>
-				<button type="button" class="ctx-item" onclick={() => triggerNotesAction('image')}>
-					<span class="ctx-ico">📷</span>
-					<span>Inserisci Immagine</span>
-				</button>
-				<button type="button" class="ctx-item" onclick={() => triggerNotesAction('highlight')}>
-					<span class="ctx-ico">🖍️</span>
-					<span>Evidenzia Testo</span>
-				</button>
-				<button type="button" class="ctx-item" onclick={() => triggerNotesAction('bold')}>
-					<span class="ctx-ico"><strong>B</strong></span>
-					<span>Grassetto</span>
-				</button>
-				<button type="button" class="ctx-item" onclick={() => triggerNotesAction('italic')}>
-					<span class="ctx-ico"><em>I</em></span>
-					<span>Corsivo</span>
-				</button>
-				<button type="button" class="ctx-item" onclick={() => triggerNotesAction('copy')}>
-					<span class="ctx-ico">📋</span>
-					<span>Copia Markdown</span>
-				</button>
-				<button type="button" class="ctx-item" onclick={() => triggerNotesAction('pin')}>
-					<span class="ctx-ico">📌</span>
-					<span>Fissa / Sfissa</span>
-				</button>
-				<button type="button" class="ctx-item" onclick={() => triggerNotesAction('archive')}>
-					<span class="ctx-ico">📦</span>
-					<span>Archivia / Disarchivia</span>
-				</button>
-				<div class="ctx-divider"></div>
-				<button type="button" class="ctx-item danger" onclick={() => triggerNotesAction('delete')}>
-					<span class="ctx-ico">🗑️</span>
-					<span>Sposta nel Cestino</span>
-				</button>
-			{:else}
+			
 				<div class="ctx-section-label">NAVIGAZIONE RAPIDA</div>
 				<a href="/" class="ctx-item" onclick={() => (isContextMenuOpen = false)}>
 					<span class="ctx-ico">🏠</span>
@@ -346,10 +289,6 @@
 					<span class="ctx-ico">📚</span>
 					<span>Wiki & Dizionario</span>
 				</a>
-				<a href="/notes" class="ctx-item" onclick={() => (isContextMenuOpen = false)}>
-					<span class="ctx-ico">📓</span>
-					<span>Appunti</span>
-				</a>
 				{#if isAdmin}
 					<a href="/admin" class="ctx-item" onclick={() => (isContextMenuOpen = false)}>
 						<span class="ctx-ico">⚙️</span>
@@ -364,6 +303,9 @@
 					onclick={() => {
 						isContextMenuOpen = false;
 						themeStore.toggleTheme();
+						const mode = themeStore.theme;
+						const label = mode === "dark" ? "Modalità Scuro 🌙" : mode === "light" ? "Modalità Chiaro ☀️" : "Modalità AMOLED 🖤";
+						toastStore.show({ message: label });
 					}}
 				>
 					<span class="ctx-ico">🌓</span>
@@ -380,8 +322,7 @@
 					<span class="ctx-ico">⛶</span>
 					<span>Schermo Intero</span>
 				</button>
-			{/if}
-		</div>
+			</div>
 	{/if}
 </div>
 

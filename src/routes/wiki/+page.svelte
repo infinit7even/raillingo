@@ -36,13 +36,8 @@
 
 	function isAcronymCard(c: Card): boolean {
 		if (!c.title || !c.title.trim()) return false;
+		if (c.hasAcronym || Boolean(c.acronym)) return true;
 		const title = c.title.trim();
-		const fullName = c.fullName?.trim() || '';
-
-		// Se fullName esiste ed è diverso dal titolo, è un acronimo con espansione (es. BEM -> Blocco Elettrico Manuale)
-		if (fullName && fullName.toLowerCase() !== title.toLowerCase()) {
-			return true;
-		}
 
 		// Se il titolo è lungo o contiene descrizioni di segnali visivi ("fisso", "lampeggiante", "spenta", "temporanea"), non è un acronimo
 		if (title.length > 12) return false;
@@ -68,7 +63,9 @@
 		const set = new Set<string>();
 		for (const c of cards) {
 			if (c.category && c.category.trim()) {
-				set.add(c.category.trim());
+				for (const cat of c.category.split(',').map((s) => s.trim()).filter(Boolean)) {
+					set.add(cat);
+				}
 			}
 		}
 		return Array.from(set).sort();
@@ -78,7 +75,7 @@
 	let availableLetters = $derived.by<string[]>(() => {
 		const set = new Set<string>();
 		for (const card of wikiCards) {
-			const titleText = card.title?.trim() || card.fullName?.trim() || '';
+			const titleText = card.title?.trim() || '';
 			const first = titleText ? titleText.charAt(0).toUpperCase() : '#';
 			if (first >= 'A' && first <= 'Z') {
 				set.add(first);
@@ -93,7 +90,7 @@
 	let filteredSortedCards = $derived(
 		[...wikiCards]
 			.sort((a, b) =>
-				(a.title || a.fullName || '').localeCompare(b.title || b.fullName || '', 'it', {
+				(a.title || '').localeCompare(b.title || '', 'it', {
 					sensitivity: 'base'
 				})
 			)
@@ -102,7 +99,7 @@
 				const matchesCat = matchesCategory(c.category, selectedCategory);
 
 				// Letter filter
-				const titleText = c.title?.trim() || c.fullName?.trim() || '';
+				const titleText = c.title?.trim() || '';
 				const firstLetter = titleText ? titleText.charAt(0).toUpperCase() : '#';
 				const matchesLetter =
 					selectedLetter === 'ALL' ||
@@ -118,7 +115,7 @@
 				const matchesSearch =
 					!q ||
 					(c.title && c.title.toLowerCase().includes(q)) ||
-					(c.fullName && c.fullName.toLowerCase().includes(q)) ||
+					(c.acronym && c.acronym.toLowerCase().includes(q)) ||
 					(c.description && c.description.toLowerCase().includes(q)) ||
 					(c.tags && c.tags.some((t) => t.toLowerCase().includes(q)));
 
@@ -254,11 +251,7 @@
 									<span class="card-acronym-badge">{card.acronym}</span>
 									<span class="card-title-text">{card.title}</span>
 								{:else}
-									<h3 class="card-title">{card.title || card.fullName}</h3>
-								{/if}
-
-								{#if card.fullName && card.fullName.trim().toLowerCase() !== card.title.trim().toLowerCase()}
-									<span class="card-fullname-badge">{card.fullName}</span>
+									<h3 class="card-title">{card.title}</h3>
 								{/if}
 
 								{#if isIgnored}
@@ -295,12 +288,6 @@
 					<!-- Expandable Details on Tap -->
 					{#if isExpanded}
 						<div class="expanded-details">
-							{#if card.fullName}
-								<div class="fullname-text-detail">
-									<strong>Titolo completo:</strong>
-									{card.fullName}
-								</div>
-							{/if}
 
 							<p class="description">{card.description}</p>
 
@@ -562,17 +549,6 @@
 		font-weight: 800;
 		color: var(--text-color);
 	}
-
-	.card-fullname-badge {
-		font-size: 0.82rem;
-		font-weight: 700;
-		color: var(--text-muted);
-		background: var(--card-bg-subtle);
-		padding: 0.15rem 0.45rem;
-		border-radius: 6px;
-		border: 1px solid var(--border-color);
-	}
-
 	.card-title {
 		font-size: 1.2rem;
 		font-weight: 900;
@@ -634,13 +610,6 @@
 		flex-direction: column;
 		gap: 0.75rem;
 	}
-
-	.fullname-text-detail {
-		font-size: 0.92rem;
-		color: var(--accent-color);
-		padding-top: 0.75rem;
-	}
-
 	.description {
 		font-size: 0.95rem;
 		line-height: 1.6;

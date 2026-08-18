@@ -57,7 +57,7 @@
 		if (!targetCard) return;
 
 		// Question format: "Che cos'è: [Titolo oppure Acronimo]"
-		const labelTerm = targetCard.title || targetCard.fullName;
+		const labelTerm = targetCard.title;
 		questionTitle = `Che cos'è: ${labelTerm}`;
 
 		// Distractors from other cards (using their descriptions)

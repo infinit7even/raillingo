@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import type { Card } from '$lib/types/cards';
 	import { cardsStore } from '$lib/stores/cardsStore';
 	import { toastStore } from '$lib/stores/toastStore';
@@ -27,8 +27,9 @@
 	let acronym = $state('');
 	let fullName = $state('');
 	let description = $state('');
-	let category = $state('');
-	let customCategory = $state('');
+	let selectedCategories = $state<string[]>([]);
+	let newCategoryInput = $state('');
+	
 	let images = $state<string[]>([]);
 	let showInWiki = $state(true);
 	let gameModes = $state<string[]>(['flashcard', 'quiz', 'reels', 'scrittura']);
@@ -47,7 +48,7 @@
 	let effectiveSubmitLabel = $derived.by(() => {
 		if (saving) return 'Salvataggio in corso...';
 		if (effectiveEditCard?.id) {
-			return `💾 SALVA MODIFICHE SCHEDA ("${effectiveEditCard.title}")`;
+			return `💾 SALVA MODIFICHE SCHEDA`;
 		}
 		if (initialCard) {
 			return submitLabel || '💾 SALVA MODIFICHE';
@@ -70,10 +71,13 @@
 					title = draft.title || '';
 					hasAcronym = Boolean(draft.hasAcronym);
 					acronym = draft.acronym || '';
-					fullName = draft.fullName || '';
 					description = draft.description || '';
-					category = draft.category || '';
-					customCategory = draft.customCategory || '';
+					if (Array.isArray(draft.selectedCategories)) {
+						selectedCategories = draft.selectedCategories;
+					} else if (draft.category) {
+						selectedCategories = draft.category.split(',').map((s: string) => s.trim()).filter(Boolean);
+					}
+					
 					images = Array.isArray(draft.images) ? draft.images : [];
 					showInWiki = draft.showInWiki !== false;
 					gameModes = Array.isArray(draft.gameModes) && draft.gameModes.length > 0
@@ -97,10 +101,9 @@
 			title,
 			hasAcronym,
 			acronym,
-			fullName,
 			description,
-			category,
-			customCategory,
+			selectedCategories,
+			category: selectedCategories.join(', '),
 			images,
 			showInWiki,
 			gameModes
@@ -114,10 +117,9 @@
 		title = '';
 		hasAcronym = false;
 		acronym = '';
-		fullName = '';
 		description = '';
-		category = '';
-		customCategory = '';
+		selectedCategories = [];
+		newCategoryInput = '';
 		images = [];
 		showInWiki = true;
 		gameModes = ['flashcard', 'quiz', 'reels', 'scrittura'];
@@ -133,26 +135,61 @@
 		const set = new Set<string>();
 		for (const c of allCards) {
 			if (c.category && c.category.trim()) {
-				set.add(c.category.trim());
+				const parts = c.category.split(',').map((s: string) => s.trim()).filter(Boolean);
+				for (const p of parts) set.add(p);
 			}
+		}
+		for (const sc of selectedCategories) {
+			if (sc.trim()) set.add(sc.trim());
 		}
 		return Array.from(set).sort();
 	});
 
+	function toggleCategory(cat: string) {
+		const trimmed = cat.trim();
+		if (!trimmed) return;
+		if (selectedCategories.includes(trimmed)) {
+			selectedCategories = selectedCategories.filter((c) => c !== trimmed);
+		} else {
+			selectedCategories = [...selectedCategories, trimmed];
+		}
+		saveDraft();
+	}
+
+	function addNewCategory() {
+		const clean = newCategoryInput.trim();
+		if (!clean) return;
+		if (!selectedCategories.includes(clean)) {
+			selectedCategories = [...selectedCategories, clean];
+		}
+		newCategoryInput = '';
+		saveDraft();
+	}
+
+	let lastLoadedCardId = $state<string | null | undefined>(undefined);
+
 	$effect(() => {
-		if (initialCard) {
-			activeEditCard = null;
-			title = initialCard.title || '';
-			hasAcronym = Boolean(initialCard.hasAcronym || (initialCard.fullName && initialCard.fullName !== initialCard.title));
-			acronym = initialCard.acronym || (hasAcronym && initialCard.title.length <= 10 ? initialCard.title : '');
-			fullName = initialCard.fullName || '';
-			description = initialCard.description || '';
-			category = initialCard.category || '';
-			images = initialCard.images ? [...initialCard.images] : [];
-			showInWiki = initialCard.showInWiki !== false;
-			gameModes = Array.isArray(initialCard.gameModes) && initialCard.gameModes.length > 0
-				? [...initialCard.gameModes]
-				: ['flashcard', 'quiz', 'reels', 'scrittura'];
+		const currentId = initialCard ? (initialCard.id || '__initial_no_id__') : null;
+		if (currentId !== lastLoadedCardId) {
+			lastLoadedCardId = currentId;
+			if (initialCard) {
+				untrack(() => {
+					activeEditCard = null;
+					title = initialCard.title || '';
+					const initHasAcronym = Boolean(initialCard.hasAcronym || initialCard.acronym);
+					hasAcronym = initHasAcronym;
+					acronym = initialCard.acronym || (initHasAcronym && initialCard.title.length <= 10 ? initialCard.title : '');
+					description = initialCard.description || '';
+					selectedCategories = initialCard.category
+						? initialCard.category.split(',').map((s: string) => s.trim()).filter(Boolean)
+						: [];
+					images = initialCard.images ? [...initialCard.images] : [];
+					showInWiki = initialCard.showInWiki !== false;
+					gameModes = Array.isArray(initialCard.gameModes) && initialCard.gameModes.length > 0
+						? [...initialCard.gameModes]
+						: ['flashcard', 'quiz', 'reels', 'scrittura'];
+				});
+			}
 		}
 	});
 
@@ -164,8 +201,7 @@
 			(c) =>
 				(!effectiveEditCard || c.id !== effectiveEditCard.id) &&
 				(c.title.toLowerCase().includes(q) ||
-					(c.acronym && c.acronym.toLowerCase().includes(q)) ||
-					(c.fullName && c.fullName.toLowerCase().includes(q)))
+					(c.acronym && c.acronym.toLowerCase().includes(q)))
 		).slice(0, 4);
 	});
 
@@ -175,12 +211,12 @@
 		} else {
 			activeEditCard = card;
 			title = card.title;
-			hasAcronym = Boolean(card.hasAcronym || (card.fullName && card.fullName !== card.title));
+			hasAcronym = Boolean(card.hasAcronym || card.acronym);
 			acronym = card.acronym || '';
-			fullName = card.fullName || '';
 			description = card.description;
-			category = card.category || '';
-			customCategory = '';
+			selectedCategories = card.category
+				? card.category.split(',').map((s: string) => s.trim()).filter(Boolean)
+				: [];
 			images = card.images ? [...card.images] : [];
 			showInWiki = card.showInWiki !== false;
 			gameModes = Array.isArray(card.gameModes) && card.gameModes.length > 0
@@ -315,9 +351,8 @@
 		validationError = null;
 
 		const cleanTitle = title.trim();
-		const cleanFullName = fullName.trim();
 		const cleanAcronym = acronym.trim();
-		const finalCategory = (category === '__NEW__' ? customCategory : category).trim();
+		
 		const cleanDesc = description.trim();
 
 		if (!cleanTitle) {
@@ -325,10 +360,11 @@
 			return;
 		}
 
-		if (!finalCategory) {
-			validationError = 'Seleziona o specifica una Categoria valida.';
+		if (selectedCategories.length === 0) {
+			validationError = 'Seleziona o crea almeno una Categoria.';
 			return;
 		}
+		const finalCategory = selectedCategories.join(', ');
 
 		// Se reels è abilitato ma non ci sono immagini, avvisa e disabilita reels
 		let finalGameModes = [...gameModes];
@@ -344,7 +380,6 @@
 				title: cleanTitle,
 				hasAcronym,
 				acronym: hasAcronym ? cleanAcronym : undefined,
-				fullName: cleanFullName || undefined,
 				description: cleanDesc,
 				category: finalCategory,
 				images: images,
@@ -442,34 +477,52 @@
 			{/if}
 		</div>
 
-		<!-- 3. CATEGORIA (OBBLIGATORIA) -->
-		<div class="form-group full-width">
-			<label for="card-category-field">Categoria * (Obbligatoria)</label>
-			<div class="category-input-row">
-				<select
-					id="card-category-field"
-					bind:value={category}
-					onchange={saveDraft}
-					required
-					class="duo-input select-category"
-				>
-					<option value="" disabled>-- Seleziona una categoria --</option>
-					{#each availableCategories as cat}
-						<option value={cat}>{cat}</option>
-					{/each}
-					<option value="__NEW__">➕ Crea nuova categoria...</option>
-				</select>
+		<!-- 3. CATEGORIE MULTIPLE -->
+		<div class="form-group full-width categories-manager-box">
+			<div class="label-with-hint">
+				<label for="new-cat-quick-input">Categorie * ({selectedCategories.length} selezionate)</label>
+				<span class="required-badge">{selectedCategories.length > 0 ? `${selectedCategories.length} attive` : "Almeno 1 richiesta"}</span>
+			</div>
 
-				{#if category === '__NEW__'}
-					<input
-						type="text"
-						bind:value={customCategory}
-						oninput={saveDraft}
-						placeholder="Inserisci nome nuova categoria..."
-						required
-						class="duo-input new-cat-input"
-					/>
-				{/if}
+			<!-- Chips Categorie Selezionabili -->
+			<div class="categories-chips-grid">
+				{#each availableCategories as cat}
+					{@const isSelected = selectedCategories.includes(cat)}
+					<button
+						type="button"
+						class="cat-chip-btn"
+						class:selected={isSelected}
+						onclick={() => toggleCategory(cat)}
+					>
+						<span class="chip-check">{isSelected ? "✓" : "+"}</span>
+						<span class="chip-title">{cat}</span>
+					</button>
+				{/each}
+			</div>
+
+			<!-- Aggiunta Rapida Nuova Categoria -->
+			<div class="add-cat-row">
+				<input
+					id="new-cat-quick-input"
+					type="text"
+					bind:value={newCategoryInput}
+					placeholder="➕ Digita nuova categoria..."
+					class="duo-input add-cat-input"
+					onkeydown={(e) => {
+						if (e.key === "Enter") {
+							e.preventDefault();
+							addNewCategory();
+						}
+					}}
+				/>
+				<button
+					type="button"
+					class="duo-btn duo-btn-theme add-cat-btn"
+					onclick={addNewCategory}
+					disabled={!newCategoryInput.trim()}
+				>
+					Aggiungi
+				</button>
 			</div>
 		</div>
 
@@ -773,14 +826,73 @@
 		line-height: 1.5;
 	}
 
-	.category-input-row {
+	.categories-manager-box {
+		background: var(--card-bg-subtle);
+		border: 1.5px solid var(--border-color);
+		border-radius: 14px;
+		padding: 0.75rem;
 		display: flex;
 		flex-direction: column;
-		gap: 0.5rem;
+		gap: 0.65rem;
 	}
 
-	.select-category {
+	.categories-chips-grid {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.45rem;
+		max-height: 180px;
+		overflow-y: auto;
+		padding-right: 0.2rem;
+	}
+
+	.cat-chip-btn {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.35rem;
+		padding: 0.4rem 0.75rem;
+		background: var(--card-bg);
+		border: 1.5px solid var(--border-color);
+		border-radius: 10px;
+		font-family: inherit;
+		font-size: 0.8rem;
+		font-weight: 800;
+		color: var(--text-muted);
 		cursor: pointer;
+		transition: all 0.12s ease;
+	}
+
+	.cat-chip-btn:hover {
+		border-color: var(--brand-color, var(--accent-color));
+		color: var(--text-color);
+	}
+
+	.cat-chip-btn.selected {
+		background: var(--accent-light-bg);
+		border-color: var(--brand-color, var(--accent-color));
+		color: var(--brand-color, var(--accent-color));
+	}
+
+	.chip-check {
+		font-size: 0.85rem;
+		font-weight: 900;
+	}
+
+	.add-cat-row {
+		display: flex;
+		gap: 0.45rem;
+		align-items: center;
+		margin-top: 0.2rem;
+	}
+
+	.add-cat-input {
+		flex: 1;
+		font-size: 0.85rem;
+	}
+
+	.add-cat-btn {
+		padding: 0.55rem 0.9rem;
+		font-size: 0.8rem;
+		white-space: nowrap;
 	}
 
 	.visibility-compact-box {

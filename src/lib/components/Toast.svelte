@@ -1,18 +1,18 @@
 <script lang="ts">
-	import { fly, fade } from 'svelte/transition';
-	import { toastStore } from '$lib/stores/toastStore';
+	import { fly, fade } from "svelte/transition";
+	import { toastStore } from "$lib/stores/toastStore";
 
 	function getToastIcon(type?: string, customIcon?: string): string {
 		if (customIcon) return customIcon;
 		switch (type) {
-			case 'warning':
-				return '⚠️';
-			case 'error':
-				return '❌';
-			case 'success':
-				return '✅';
+			case "warning":
+				return "⚠️";
+			case "error":
+				return "❌";
+			case "success":
+				return "✅";
 			default:
-				return '💡';
+				return "🎨";
 		}
 	}
 </script>
@@ -20,15 +20,15 @@
 {#if $toastStore}
 	<div
 		class="duo-toast-container"
-		in:fly={{ y: 20, duration: 250 }}
+		in:fly={{ y: 20, duration: 220 }}
 		out:fade={{ duration: 150 }}
 	>
 		<div
 			class="duo-toast duo-card"
-			class:is-warning={$toastStore.type === 'warning'}
-			class:is-error={$toastStore.type === 'error'}
-			class:is-success={$toastStore.type === 'success'}
-			class:is-info={$toastStore.type === 'info' || !$toastStore.type}
+			class:is-warning={$toastStore.type === "warning"}
+			class:is-error={$toastStore.type === "error"}
+			class:is-success={$toastStore.type === "success"}
+			class:is-info={$toastStore.type === "info" || !$toastStore.type}
 			role="alert"
 			aria-live="polite"
 		>
@@ -38,19 +38,6 @@
 			</div>
 
 			<div class="toast-right-group">
-				{#if $toastStore.onAction}
-					<button
-						type="button"
-						class="duo-btn duo-btn-purple toast-action-btn"
-						onclick={() => {
-							$toastStore?.onAction?.();
-							toastStore.dismiss();
-						}}
-					>
-						{$toastStore.actionLabel || 'Annulla'}
-					</button>
-				{/if}
-
 				<button
 					type="button"
 					class="toast-close-btn"
@@ -73,7 +60,7 @@
 		transform: translateX(-50%);
 		z-index: 9999;
 		width: calc(100% - 2rem);
-		max-width: 440px;
+		max-width: 400px;
 		pointer-events: none;
 	}
 
@@ -92,24 +79,6 @@
 		transition: all 0.2s ease;
 	}
 
-	.duo-toast.is-warning {
-		border-color: #f59e0b;
-		border-bottom-color: #b45309;
-		background: var(--card-bg);
-	}
-
-	.duo-toast.is-error {
-		border-color: #ef4444;
-		border-bottom-color: #b91c1c;
-		background: var(--card-bg);
-	}
-
-	.duo-toast.is-success {
-		border-color: #22c55e;
-		border-bottom-color: #15803d;
-		background: var(--card-bg);
-	}
-
 	.toast-left-group {
 		display: flex;
 		align-items: center;
@@ -125,7 +94,7 @@
 	}
 
 	.toast-message {
-		font-family: 'Outfit', sans-serif;
+		font-family: "Outfit", sans-serif;
 		font-size: 0.88rem;
 		font-weight: 800;
 		color: var(--text-color);
@@ -138,13 +107,6 @@
 		align-items: center;
 		gap: 0.45rem;
 		flex-shrink: 0;
-	}
-
-	.toast-action-btn {
-		padding: 0.35rem 0.75rem;
-		font-size: 0.78rem;
-		font-weight: 800;
-		white-space: nowrap;
 	}
 
 	.toast-close-btn {

@@ -4,7 +4,7 @@ import path from 'node:path';
 import { isAuthorizedAdmin } from '$lib/server/auth';
 import { isSameOriginRequest } from '$lib/server/csrf';
 import { db } from '$lib/server/db';
-import { cards as cardsTable, notes as notesTable } from '$lib/server/db/schema';
+import { cards as cardsTable } from '$lib/server/db/schema';
 import { extractMediaFilenames } from '$lib/server/mediaCleanup';
 import { logAdminAction } from '$lib/server/adminLogger';
 
@@ -37,22 +37,18 @@ export const GET: RequestHandler = async (event) => {
 	}
 
 	try {
-		const [dbCards, dbNotes, diskFiles] = await Promise.all([
+		const [dbCards, diskFiles] = await Promise.all([
 			db.select().from(cardsTable),
-			db.select().from(notesTable),
 			getUploadDirectoryInfo()
 		]);
 
-		const cardSources = dbCards.map((c) => [c.images, c.description, c.title, c.fullName]);
-		const noteSources = dbNotes.map((n) => [n.images, n.content, n.title]);
-
+		const cardSources = dbCards.map((c) => [c.images, c.description, c.title]);
+		
 		const referenced = new Set<string>();
 		for (const srcList of cardSources) {
 			for (const fn of extractMediaFilenames(srcList)) referenced.add(fn);
 		}
-		for (const srcList of noteSources) {
-			for (const fn of extractMediaFilenames(srcList)) referenced.add(fn);
-		}
+		
 
 		const orphaned: { filename: string; size: number }[] = [];
 		let totalBytes = 0;
@@ -92,22 +88,18 @@ export const POST: RequestHandler = async (event) => {
 	}
 
 	try {
-		const [dbCards, dbNotes, diskFiles] = await Promise.all([
+		const [dbCards, diskFiles] = await Promise.all([
 			db.select().from(cardsTable),
-			db.select().from(notesTable),
 			getUploadDirectoryInfo()
 		]);
 
-		const cardSources = dbCards.map((c) => [c.images, c.description, c.title, c.fullName]);
-		const noteSources = dbNotes.map((n) => [n.images, n.content, n.title]);
-
+		const cardSources = dbCards.map((c) => [c.images, c.description, c.title]);
+		
 		const referenced = new Set<string>();
 		for (const srcList of cardSources) {
 			for (const fn of extractMediaFilenames(srcList)) referenced.add(fn);
 		}
-		for (const srcList of noteSources) {
-			for (const fn of extractMediaFilenames(srcList)) referenced.add(fn);
-		}
+		
 
 		let deletedCount = 0;
 		let freedBytes = 0;

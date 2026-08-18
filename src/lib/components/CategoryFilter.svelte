@@ -165,20 +165,20 @@
 
 <!-- 🎛️ Category Multi-Select Search Modal / Sheet -->
 {#if isModalOpen}
-	<div
-		class="modal-backdrop"
-		onclick={() => (isModalOpen = false)}
-		onkeydown={(e) => e.key === 'Escape' && (isModalOpen = false)}
-		role="button"
-		tabindex="0"
-		aria-label="Chiudi selettore categorie"
-		transition:fade={{ duration: 120 }}
-	></div>
+	<div class="modal-backdrop-wrap" transition:fade={{ duration: 120 }}>
+		<div
+			class="modal-backdrop"
+			onclick={() => (isModalOpen = false)}
+			onkeydown={(e) => e.key === 'Escape' && (isModalOpen = false)}
+			role="button"
+			tabindex="0"
+			aria-label="Chiudi selettore categorie"
+		></div>
 
-	<div
-		class="category-picker-modal duo-card"
-		transition:scale={{ start: 0.95, duration: 150 }}
-	>
+		<div
+			class="category-picker-modal duo-card"
+			transition:scale={{ start: 0.95, duration: 150 }}
+		>
 		<div class="modal-header">
 			<div class="modal-title-group">
 				<span class="modal-ico">🏷️</span>
@@ -271,6 +271,7 @@
 			>
 				✓ CONFERMA ({isFiltered ? `${selectedList.length} attive` : 'Tutte'})
 			</button>
+		</div>
 		</div>
 	</div>
 {/if}
@@ -422,21 +423,28 @@
 	}
 
 	/* 🎛️ Category Modal / Popover Styles */
-	.modal-backdrop {
+	.modal-backdrop-wrap {
 		position: fixed;
+		inset: 0;
+		z-index: 500;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 1rem;
+		box-sizing: border-box;
+	}
+
+	.modal-backdrop {
+		position: absolute;
 		inset: 0;
 		background: rgba(0, 0, 0, 0.6);
 		backdrop-filter: blur(4px);
 		-webkit-backdrop-filter: blur(4px);
-		z-index: 500;
 	}
 
 	.category-picker-modal {
-		position: fixed;
-		top: 50%;
-		left: 50%;
-		transform: translate(-50%, -50%);
-		width: 90vw;
+		position: relative;
+		width: 100%;
 		max-width: 460px;
 		max-height: 82vh;
 		background: var(--card-bg);
@@ -444,7 +452,7 @@
 		border: 2px solid var(--border-color);
 		border-bottom: 6px solid var(--border-depth-color);
 		box-shadow: 0 20px 48px rgba(0, 0, 0, 0.4);
-		z-index: 510;
+		z-index: 10;
 		padding: 1.25rem;
 		display: flex;
 		flex-direction: column;

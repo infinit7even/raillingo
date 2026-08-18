@@ -25,7 +25,6 @@ export const GET: RequestHandler = async ({ url }) => {
 		const formatted: Card[] = list.map((c) => ({
 			id: c.id,
 			title: c.title,
-			fullName: c.fullName || undefined,
 			hasAcronym: Boolean(c.hasAcronym),
 			acronym: c.acronym || undefined,
 			description: c.description,
@@ -61,7 +60,6 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		const newCard: Partial<Card> = await request.json();
 
 		const title = (newCard.title || '').trim();
-		const fullName = (newCard.fullName || '').trim();
 		const hasAcronym = Boolean(newCard.hasAcronym);
 		const acronym = (newCard.acronym || '').trim();
 		const description = (newCard.description || '').trim();
@@ -75,7 +73,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			? newCard.gameModes
 			: ['flashcard', 'quiz', 'reels', 'scrittura'];
 
-		const mainTitle = title || fullName;
+		const mainTitle = title;
 		if (!mainTitle && images.length === 0) {
 			return json(
 				{ error: "Inserisci almeno un titolo, un acronimo o un'immagine per la scheda." },
@@ -93,7 +91,6 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			.values({
 				id: cardId,
 				title: title,
-				fullName: fullName || null,
 				hasAcronym,
 				acronym: acronym || null,
 				description,
@@ -110,7 +107,6 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 				target: cards.id,
 				set: {
 					title: title,
-					fullName: fullName || null,
 					hasAcronym,
 					acronym: acronym || null,
 					description,
@@ -129,7 +125,6 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		const formatted: Card = {
 			id: inserted.id,
 			title: inserted.title,
-			fullName: inserted.fullName || undefined,
 			hasAcronym: Boolean(inserted.hasAcronym),
 			acronym: inserted.acronym || undefined,
 			description: inserted.description,
@@ -185,7 +180,6 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
 		const oldCardType: Card = {
 			id: oldCard.id,
 			title: oldCard.title,
-			fullName: oldCard.fullName || undefined,
 			hasAcronym: Boolean(oldCard.hasAcronym),
 			acronym: oldCard.acronym || undefined,
 			description: oldCard.description,
@@ -201,7 +195,6 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
 		};
 
 		const title = (updatedCard.title !== undefined ? updatedCard.title : oldCard.title || '').trim();
-		const fullName = (updatedCard.fullName !== undefined ? updatedCard.fullName : oldCard.fullName || '').trim();
 		const hasAcronym = updatedCard.hasAcronym !== undefined ? Boolean(updatedCard.hasAcronym) : Boolean(oldCard.hasAcronym);
 		const acronym = (updatedCard.acronym !== undefined ? updatedCard.acronym : oldCard.acronym || '').trim();
 		const description = (updatedCard.description !== undefined ? updatedCard.description : oldCard.description || '').trim();
@@ -220,7 +213,6 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
 			.update(cards)
 			.set({
 				title: title,
-				fullName: fullName || null,
 				hasAcronym,
 				acronym: acronym || null,
 				description,
@@ -237,7 +229,6 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
 		const formatted: Card = {
 			id: updated.id,
 			title: updated.title,
-			fullName: updated.fullName || undefined,
 			hasAcronym: Boolean(updated.hasAcronym),
 			acronym: updated.acronym || undefined,
 			description: updated.description,

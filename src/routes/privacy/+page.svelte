@@ -8,7 +8,7 @@
 		title="Privacy Policy"
 		subtitle="Informazioni legali e conformità GDPR"
 		icon="/emoji/books_3d.png"
-		variant="blue"
+		variant="orange"
 		mobileOpenNav={true}
 	/>
 

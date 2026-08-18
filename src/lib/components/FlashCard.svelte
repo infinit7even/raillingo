@@ -134,11 +134,11 @@
 				<div class="face-content">
 					{#if mode === 'standard'}
 						<h2 class="card-title">
-							{card.title || card.fullName}
+							{card.title}
 						</h2>
 					{:else if mode === 'inverso'}
 						<div class="description-box duo-card front-desc-box">
-							<p>{card.description || card.fullName || card.title || '(Nessuna descrizione o testo specificato per questa scheda)'}</p>
+							<p>{card.description || card.title || '(Nessuna descrizione o testo specificato per questa scheda)'}</p>
 						</div>
 					{:else if mode === 'foto'}
 						{#if card.images && card.images.length > 0}
@@ -184,7 +184,7 @@
 								<span class="fullname-inline">{card.fullName}</span>
 							</div>
 						{:else}
-							<h3 class="card-title-small">{card.title || card.fullName}</h3>
+							<h3 class="card-title-small">{card.title}</h3>
 						{/if}
 					</div>
 

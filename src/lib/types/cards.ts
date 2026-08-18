@@ -1,7 +1,6 @@
 export interface Card {
 	id: string;
 	title: string; // Titolo principale / termine obbligatorio
-	fullName?: string; // Significato esteso o testo descrittivo
 	hasAcronym?: boolean; // Se la scheda ha una sigla/acronimo associato
 	acronym?: string; // Sigla/acronimo opzionale
 	description: string; // Definizione e spiegazione d'uso dettagliata

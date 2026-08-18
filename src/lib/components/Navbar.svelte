@@ -5,11 +5,9 @@
 	import { pwaStore } from '$lib/stores/pwaStore';
 	import { navStore } from '$lib/stores/navStore';
 	import { toastStore } from '$lib/stores/toastStore';
-	import { notesNavStore, type NotesNavState } from '$lib/stores/notesNavStore';
-	import QuickAddCardModal from '$lib/components/QuickAddCardModal.svelte';
+		import QuickAddCardModal from '$lib/components/QuickAddCardModal.svelte';
 	import type { Card } from '$lib/types/cards';
 	import { onMount } from 'svelte';
-
 	let { user } = $props<{ user?: any }>();
 
 	let currentTheme = $state<ThemeMode>('dark');
@@ -19,25 +17,6 @@
 	let isQuickAddOpen = $state(false);
 	let canInstall = $state(false);
 	let isNavOpen = $state(false);
-
-	let notesNavState = $state<NotesNavState>({
-		isVaultCollapsed: false,
-		notes: [],
-		selectedNoteId: null
-	});
-
-	let activeNotes = $derived(notesNavState.notes.filter((n) => !n.isArchived && !n.isDeleted));
-
-	let sortedCollapsedNotes = $derived(
-		[...activeNotes].sort((a, b) => {
-			if (Boolean(a.isPinned) !== Boolean(b.isPinned)) {
-				return a.isPinned ? -1 : 1;
-			}
-			return new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime();
-		})
-	);
-
-	let isNotesPage = $derived(page.url.pathname === '/notes');
 
 	let isAdmin = $derived(
 		Boolean(
@@ -59,10 +38,17 @@
 		}
 	}
 
+	function handleToggleTheme() {
+		themeStore.toggleTheme();
+		const mode = themeStore.theme;
+		const label = mode === "dark" ? "Modalità Scuro 🌙" : mode === "light" ? "Modalità Chiaro ☀️" : "Modalità AMOLED 🖤";
+		toastStore.show({ message: label });
+	}
+
 	function handleLogoClick() {
 		const nextLiveryId = themeStore.cycleLivery();
 		const liv = LIVERY_OPTIONS.find((l) => l.id === nextLiveryId) ?? LIVERY_OPTIONS[0];
-		toastStore.show({ message: `Tema cambiato in ${liv.name}` });
+		toastStore.show({ message: `Livrea: ${liv.name} ${liv.emoji}` });
 	}
 
 	onMount(() => {
@@ -75,14 +61,12 @@
 			canInstall = pwaStore.canInstall;
 		});
 		const unNav = navStore.subscribe((o) => (isNavOpen = o));
-		const unNotesNav = notesNavStore.subscribe((s) => (notesNavState = s));
 
 		return () => {
 			unTheme();
 			unCards();
 			unPwa();
 			unNav();
-			unNotesNav();
 		};
 	});
 
@@ -116,8 +100,7 @@
 		{ href: '/flashcard', label: 'FLASHCARD', emoji: '/emoji/open_book_3d.png' },
 		{ href: '/quiz', label: 'QUIZ', emoji: '/emoji/star_3d.png' },
 		{ href: '/reels', label: 'REELS', emoji: '/emoji/camera_3d.png' },
-		{ href: '/wiki', label: 'WIKI', emoji: '/emoji/books_3d.png' },
-		{ href: '/notes', label: 'APPUNTI', emoji: '/emoji/clipboard_3d.png' }
+		{ href: '/wiki', label: 'WIKI', emoji: '/emoji/books_3d.png' }
 	];
 </script>
 
@@ -159,50 +142,24 @@
 	</div>
 
 	<div class="nav-container">
-		{#if isNotesPage && notesNavState.isVaultCollapsed}
-			<!-- 📓 Modalità Vault Compresso: Mostra unicamente elenco note nella barra laterale -->
-			<div class="collapsed-vault-sidebar-panel">
-				<div class="collapsed-notes-scroll">
-					{#if sortedCollapsedNotes.length === 0}
-						<div class="cv-empty">Nessun appunto presente</div>
-					{:else}
-						{#each sortedCollapsedNotes as n}
-							<button
-								type="button"
-								class="cv-note-chip"
-								class:active={notesNavState.selectedNoteId === n.id}
-								onclick={() => {
-									notesNavStore.selectNote(n.id);
-									navStore.close();
-								}}
-							>
-								<span class="cv-chip-icon">{n.isPinned ? '📌' : '📄'}</span>
-								<span class="cv-chip-text">{n.title || 'Nuovo Appunto'}</span>
-							</button>
-						{/each}
-					{/if}
-				</div>
-			</div>
-		{:else}
-			<div class="nav-scroll-wrapper">
-				{#each navItems as item}
-					{@const isActive = page.url.pathname === item.href}
-					<a
-						href={item.href}
-						class="nav-item"
-						class:active={isActive}
-						onclick={handleNavClick}
-						data-sveltekit-preload-data="tap"
-						data-sveltekit-preload-code="eager"
-					>
-						<div class="icon-wrapper" class:active-outline={isActive}>
-							<img src={item.emoji} alt={item.label} width="26" height="26" decoding="async" class="nav-emoji-img" />
-						</div>
-						<span class="nav-label">{item.label}</span>
-					</a>
-				{/each}
-			</div>
-		{/if}
+		<div class="nav-scroll-wrapper">
+			{#each navItems as item}
+				{@const isActive = page.url.pathname === item.href}
+				<a
+					href={item.href}
+					class="nav-item"
+					class:active={isActive}
+					onclick={handleNavClick}
+					data-sveltekit-preload-data="tap"
+					data-sveltekit-preload-code="eager"
+				>
+					<div class="icon-wrapper" class:active-outline={isActive}>
+						<img src={item.emoji} alt={item.label} width="26" height="26" decoding="async" class="nav-emoji-img" />
+					</div>
+					<span class="nav-label">{item.label}</span>
+				</a>
+			{/each}
+		</div>
 	</div>
 
 	<!-- Actions Bottom Drawer (Theme + Quick Add Section) -->
@@ -221,7 +178,7 @@
 			{#if isAdmin}
 				<a
 					href="/admin"
-					class="duo-btn duo-btn-purple admin-cog-btn"
+					class="duo-btn duo-btn-theme admin-cog-btn"
 					title="Pannello Amministrazione"
 					aria-label="Pannello Amministrazione"
 					onclick={handleNavClick}
@@ -234,7 +191,7 @@
 		<!-- 🌙 / ☀️ / 🖤 Toggle Tema Ciclico: Scuro -> Chiaro -> AMOLED -->
 		<button
 			class="duo-btn duo-btn-gray desktop-theme-btn"
-			onclick={() => themeStore.toggleTheme()}
+			onclick={handleToggleTheme}
 			title="Alterna Scuro / Chiaro / AMOLED"
 		>
 			<span>
@@ -449,76 +406,6 @@
 		white-space: nowrap;
 	}
 
-	/* Collapsed Vault Panel inside Sidebar */
-	.collapsed-vault-sidebar-panel {
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-		height: 100%;
-		overflow: hidden;
-	}
-
-	.collapsed-notes-scroll {
-		flex: 1;
-		display: flex;
-		flex-direction: column;
-		gap: 0.35rem;
-		overflow-y: auto;
-		scrollbar-width: thin;
-		padding-right: 0.2rem;
-	}
-
-	.cv-empty {
-		font-size: 0.76rem;
-		color: var(--text-muted);
-		text-align: center;
-		padding: 1.5rem 0;
-	}
-
-	.cv-note-chip {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		padding: 0.5rem 0.65rem;
-		border-radius: 10px;
-		background: var(--card-bg-subtle);
-		border: 1.5px solid var(--border-color);
-		color: var(--text-color);
-		font-family: inherit;
-		font-size: 0.8rem;
-		font-weight: 700;
-		text-align: left;
-		cursor: pointer;
-		transition: all 0.12s ease;
-		width: 100%;
-		box-sizing: border-box;
-	}
-
-	.cv-note-chip:hover {
-		border-color: var(--accent-color);
-		background: var(--hover-bg);
-		transform: translateY(-1px);
-	}
-
-	.cv-note-chip.active {
-		border-color: var(--accent-color);
-		background: var(--accent-light-bg);
-		color: var(--accent-color);
-		font-weight: 900;
-	}
-
-	.cv-chip-icon {
-		font-size: 0.85rem;
-		flex-shrink: 0;
-	}
-
-	.cv-chip-text {
-		flex: 1;
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
-
 	/* Sidebar Actions */
 	.sidebar-actions {
 		display: flex;
@@ -531,7 +418,7 @@
 
 	.quick-add-row {
 		display: flex;
-		align-items: center;
+		align-items: stretch;
 		gap: 0.4rem;
 		width: 100%;
 	}
@@ -542,11 +429,12 @@
 		padding: 0.65rem;
 		text-align: center;
 		justify-content: center;
+		display: flex;
+		align-items: center;
 	}
 
 	.admin-cog-btn {
 		width: 44px;
-		height: 42px;
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -554,6 +442,7 @@
 		padding: 0;
 		flex-shrink: 0;
 		text-decoration: none;
+		box-sizing: border-box;
 	}
 
 	.desktop-theme-btn {

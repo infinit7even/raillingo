@@ -1,6 +1,6 @@
-import { writable } from 'svelte/store';
+import { writable } from "svelte/store";
 
-export type ToastType = 'info' | 'success' | 'warning' | 'error';
+export type ToastType = "info" | "success" | "warning" | "error";
 
 export interface ToastMessage {
 	id: string;
@@ -18,14 +18,14 @@ let activeTimeout: ReturnType<typeof setTimeout> | null = null;
 
 export const toastStore = {
 	subscribe,
-	show: (toast: Omit<ToastMessage, 'id'>) => {
+	show: (toast: Omit<ToastMessage, "id"> | { message: string; type?: ToastType; [key: string]: any }) => {
 		if (activeTimeout) clearTimeout(activeTimeout);
 		const id = Math.random().toString(36).substring(2);
 		const fullToast: ToastMessage = {
 			...toast,
 			id,
-			type: toast.type ?? 'info',
-			duration: toast.duration ?? 3500
+			type: (toast as any).type ?? "info",
+			duration: (toast as any).duration ?? 2200
 		};
 
 		set(fullToast);

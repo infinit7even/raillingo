@@ -154,7 +154,7 @@
 		title="Reels Memonici"
 		subtitle="Scorri le schede visive ed esplora foto e descrizioni in un feed dinamico ed infinito."
 		icon="/emoji/camera_3d.png"
-		variant="orange"
+		variant="red"
 		mobileOpenNav={true}
 	/>
 
@@ -181,12 +181,7 @@
 					{@const isFlipped = flippedMap[item.instanceId] || false}
 					{@const imgIdx = imageIndexMap[item.instanceId] || 0}
 					{@const isIgnoredCard = ignoredIds.has(card.id)}
-					{@const displayTitle = card.title?.trim() || card.fullName?.trim() || ''}
-					{@const hasDistinctFullName = Boolean(
-						card.fullName &&
-							card.title &&
-							card.fullName.trim().toLowerCase() !== card.title.trim().toLowerCase()
-					)}
+					{@const displayTitle = card.title?.trim() || ''}
 
 					<div class="reel-card-slide">
 						<!-- Top Action Bar -->
@@ -262,9 +257,6 @@
 										<div class="back-top">
 											{#if displayTitle}
 												<h3 class="back-title">{displayTitle}</h3>
-											{/if}
-											{#if hasDistinctFullName}
-												<span class="back-fullname-badge">{card.fullName}</span>
 											{/if}
 										</div>
 
@@ -540,13 +532,6 @@
 		margin: 0;
 		line-height: 1.2;
 	}
-
-	.back-fullname-badge {
-		font-size: 0.88rem;
-		font-weight: 800;
-		color: var(--green-color);
-	}
-
 	.back-desc-container {
 		flex: 1;
 		overflow-y: auto;

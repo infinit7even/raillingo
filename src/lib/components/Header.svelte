@@ -31,7 +31,11 @@
 
 		<div class="header-brand-title">
 			<img src="/emoji/triangular_flag_3d.png" alt="Bandiera" width="24" height="24" decoding="async" />
-			<span>Rail Focus</span>
+			<span class="brand-title">
+				Rai<span class="ll-track-box"
+					>l<img src="/emoji/railway_track_3d.png" alt="Binario" width="16" height="16" decoding="async" class="brand-track-img" />l</span
+				>ingo
+			</span>
 		</div>
 	</header>
 {/if}
@@ -95,10 +99,28 @@
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
-		font-family: 'Outfit', sans-serif;
-		font-size: 1.15rem;
+	}
+
+	.brand-title {
+		font-family: "Outfit", sans-serif;
+		font-size: 1.35rem;
 		font-weight: 900;
+		color: var(--text-color);
+		letter-spacing: -0.02em;
+	}
+
+	.ll-track-box {
+		position: relative;
+		display: inline-block;
 		color: var(--brand-color, var(--green-color));
+	}
+
+	.brand-track-img {
+		position: absolute;
+		top: 52%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+		pointer-events: none;
 	}
 
 	.duo-header-btn {

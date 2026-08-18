@@ -488,7 +488,6 @@
 			const matchesQuery =
 				!q ||
 				c.title.toLowerCase().includes(q) ||
-				(c.fullName && c.fullName.toLowerCase().includes(q)) ||
 				(c.acronym && c.acronym.toLowerCase().includes(q)) ||
 				c.description.toLowerCase().includes(q) ||
 				(c.category && c.category.toLowerCase().includes(q));
@@ -503,7 +502,6 @@
 			return (
 				!q ||
 				c.title.toLowerCase().includes(q) ||
-				(c.fullName && c.fullName.toLowerCase().includes(q)) ||
 				(c.acronym && c.acronym.toLowerCase().includes(q)) ||
 				c.description.toLowerCase().includes(q) ||
 				(c.category && c.category.toLowerCase().includes(q))
@@ -536,6 +534,22 @@
 			return matchesAction && matchesQuery;
 		})
 	);
+
+	let logsPage = $state(1);
+	const logsPerPage = 12;
+
+	let totalLogsPages = $derived(Math.max(1, Math.ceil(filteredLogs.length / logsPerPage)));
+
+	let paginatedLogs = $derived.by(() => {
+		const start = (logsPage - 1) * logsPerPage;
+		return filteredLogs.slice(start, start + logsPerPage);
+	});
+
+	$effect(() => {
+		logsActionFilter;
+		logsSearchQuery;
+		logsPage = 1;
+	});
 </script>
 
 <div class="admin-container">
@@ -964,15 +978,14 @@
 													<span class="acronym-badge">[{card.acronym}]</span>
 												{/if}
 												{#if card.category}
-													<span class="category-pill">{card.category}</span>
+													{#each card.category.split(',').map((s) => s.trim()).filter(Boolean) as cat}
+														<span class="category-pill">{cat}</span>
+													{/each}
 												{/if}
 												{#if !card.showInWiki}
 													<span class="hidden-wiki-badge">Nascosta in Wiki</span>
 												{/if}
 											</div>
-											{#if card.fullName}
-												<div class="full-name-preview">{card.fullName}</div>
-											{/if}
 											<p class="card-item-desc">{card.description}</p>
 										</div>
 
@@ -1107,6 +1120,32 @@
 							</div>
 						{/each}
 					</div>
+
+					{#if totalLogsPages > 1}
+						<div class="logs-pagination-bar duo-card">
+							<button
+								type="button"
+								class="duo-btn duo-btn-subtle page-nav-btn"
+								disabled={logsPage <= 1}
+								onclick={() => (logsPage = Math.max(1, logsPage - 1))}
+							>
+								◀ Precedente
+							</button>
+
+							<span class="pagination-info">
+								Pagina <strong>{logsPage}</strong> di <strong>{totalLogsPages}</strong> ({filteredLogs.length} azioni)
+							</span>
+
+							<button
+								type="button"
+								class="duo-btn duo-btn-subtle page-nav-btn"
+								disabled={logsPage >= totalLogsPages}
+								onclick={() => (logsPage = Math.min(totalLogsPages, logsPage + 1))}
+							>
+								Successivo ▶
+							</button>
+						</div>
+					{/if}
 				{/if}
 			</div>
 		{:else if activeTab === 'logs'}
@@ -1161,7 +1200,7 @@
 					</div>
 				{:else}
 					<div class="logs-timeline-list">
-						{#each filteredLogs as log (log.id)}
+						{#each paginatedLogs as log (log.id)}
 							{@const badge = getActionBadge(log.action)}
 							<div class="log-item-card duo-card animated-card">
 								<div class="log-item-header">
@@ -1256,8 +1295,10 @@
 												<span class="acronym-badge">[{card.acronym}]</span>
 											{/if}
 											{#if card.category}
-												<span class="category-pill">{card.category}</span>
-											{/if}
+													{#each card.category.split(',').map((s) => s.trim()).filter(Boolean) as cat}
+														<span class="category-pill">{cat}</span>
+													{/each}
+												{/if}
 											<span class="trash-date-pill">Eliminata</span>
 										</div>
 										<p class="card-item-desc">{card.description}</p>
@@ -1955,13 +1996,6 @@
 		font-weight: 900;
 		color: var(--brand-color);
 	}
-
-	.full-name-preview {
-		font-size: 0.78rem;
-		color: var(--text-muted);
-		font-weight: 700;
-	}
-
 	.category-pill,
 	.hidden-wiki-badge,
 	.trash-date-pill {
@@ -2622,5 +2656,29 @@
 		.mobile-add-card-btn {
 			width: 100%;
 		}
+	}
+	.logs-pagination-bar {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.75rem;
+		padding: 0.75rem 1rem;
+		margin-top: 1rem;
+	}
+
+	.page-nav-btn {
+		padding: 0.45rem 0.85rem;
+		font-size: 0.78rem;
+		font-weight: 800;
+	}
+
+	.pagination-info {
+		font-size: 0.82rem;
+		font-weight: 700;
+		color: var(--text-muted);
+	}
+
+	.pagination-info strong {
+		color: var(--text-color);
 	}
 </style>

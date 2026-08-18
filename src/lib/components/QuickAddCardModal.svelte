@@ -48,7 +48,6 @@
 			list = list.filter(
 				(c) =>
 					c.title.toLowerCase().includes(q) ||
-					(c.fullName && c.fullName.toLowerCase().includes(q)) ||
 					(c.description && c.description.toLowerCase().includes(q)) ||
 					(c.category && c.category.toLowerCase().includes(q))
 			);
@@ -62,7 +61,6 @@
 			...card,
 			id: '', // Ensure new card creation
 			title: card.title,
-			fullName: card.fullName || '',
 			description: card.description || '',
 			category: card.category || '',
 			images: card.images ? [...card.images] : []
@@ -226,9 +224,6 @@
 										<div class="browse-card-details">
 											<div class="card-title-line">
 												<span class="bcard-title">{card.title}</span>
-												{#if card.fullName && card.fullName.trim().toLowerCase() !== card.title.trim().toLowerCase()}
-													<span class="bcard-fullname">({card.fullName})</span>
-												{/if}
 												{#if card.category}
 													<span class="bcard-cat-badge">{card.category}</span>
 												{/if}
@@ -628,13 +623,6 @@
 		font-weight: 900;
 		color: var(--text-color);
 	}
-
-	.bcard-fullname {
-		font-size: 0.78rem;
-		color: var(--text-muted);
-		font-weight: 700;
-	}
-
 	.bcard-cat-badge {
 		font-size: 0.65rem;
 		font-weight: 800;

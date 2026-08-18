@@ -17,11 +17,6 @@
 		if (!isEligibleWikiCard(c)) return false;
 		if (c.hasAcronym && c.acronym) return true;
 		const title = c.title.trim();
-		const fullName = c.fullName?.trim() || '';
-
-		if (fullName && fullName.toLowerCase() !== title.toLowerCase()) {
-			return true;
-		}
 
 		if (title.length > 12) return false;
 		const lower = title.toLowerCase();
@@ -149,14 +144,6 @@
 			icon: '/emoji/books_3d.png',
 			state: 'unlocked',
 			offset: -35
-		},
-		{
-			id: 5,
-			title: 'APPUNTI',
-			href: '/notes',
-			icon: '/emoji/clipboard_3d.png',
-			state: 'unlocked',
-			offset: 0
 		}
 	];
 </script>
@@ -189,8 +176,6 @@
 						<h2 class="wod-title">{wordOfTheDay.title}</h2>
 						{#if wordOfTheDay.acronym}
 							<span class="wod-fullname">{wordOfTheDay.acronym}</span>
-						{:else if wordOfTheDay.fullName && wordOfTheDay.fullName.trim().toLowerCase() !== wordOfTheDay.title.trim().toLowerCase()}
-							<span class="wod-fullname">{wordOfTheDay.fullName}</span>
 						{/if}
 					</div>
 
@@ -261,18 +246,6 @@
 		<!-- Footer Link to Privacy Policy & Account Details -->
 		<div class="sidebar-privacy-footer">
 			<a href="/privacy" class="privacy-link">Informativa sulla Privacy</a>
-
-			{#if user}
-				<div class="footer-account-details">
-					<span class="account-details-name">👤 Connesso come <strong>{user.name || user.username || user.email || 'Utente'}</strong></span>
-					{#if user.userId || user.id}
-						<span class="account-details-id">ID: {user.userId || user.id}</span>
-					{/if}
-					<button type="button" class="footer-logout-link" onclick={handleLogout}>
-						Esci dall'account
-					</button>
-				</div>
-			{/if}
 		</div>
 	</section>
 </div>
@@ -573,49 +546,6 @@
 	.privacy-link:hover {
 		color: var(--text-color);
 		text-decoration: underline;
-	}
-
-	.footer-account-details {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: 0.25rem;
-		margin-top: 0.65rem;
-		padding-top: 0.65rem;
-		border-top: 1px dashed var(--border-color);
-	}
-
-	.account-details-name {
-		font-size: 0.78rem;
-		color: var(--text-color);
-		font-weight: 700;
-	}
-
-	.account-details-name strong {
-		color: var(--accent-color);
-	}
-
-	.account-details-id {
-		font-size: 0.7rem;
-		color: var(--text-muted);
-		font-family: monospace;
-	}
-
-	.footer-logout-link {
-		background: none;
-		border: none;
-		font-size: 0.72rem;
-		color: var(--pink-color, #ef4444);
-		font-weight: 800;
-		cursor: pointer;
-		padding: 0.2rem 0.5rem;
-		border-radius: 6px;
-		text-decoration: underline;
-		transition: opacity 0.15s ease;
-	}
-
-	.footer-logout-link:hover {
-		opacity: 0.75;
 	}
 
 	@keyframes floatMascot {

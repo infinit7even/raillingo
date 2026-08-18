@@ -1,6 +1,6 @@
 import { json, type RequestHandler } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
-import { user, account, notes } from '$lib/server/db/schema';
+import { user, account } from '$lib/server/db/schema';
 import { eq, desc, sql } from 'drizzle-orm';
 import { isAuthorizedAdmin, DEFAULT_ADMIN_ID, getAdminIds } from '$lib/server/auth';
 import { logAdminAction } from '$lib/server/adminLogger';
@@ -34,22 +34,14 @@ export const GET: RequestHandler = async ({ locals }) => {
 			})
 			.from(account);
 
-		const notesCountList = await db
-			.select({
-				userId: notes.userId,
-				count: sql<number>`count(*)::int`
-			})
-			.from(notes)
-			.groupBy(notes.userId);
-
+		
 		const adminIds = getAdminIds();
 
 		const formattedUsers = usersList.map((u) => {
 			const discordAccount = accountsList.find(
 				(a) => a.userId === u.id && a.providerId === 'discord'
 			);
-			const userNotesCount = notesCountList.find((n) => n.userId === u.id)?.count || 0;
-			const isHardcodedAdmin =
+			const userNotesCount = 0;			const isHardcodedAdmin =
 				discordAccount?.accountId && adminIds.includes(discordAccount.accountId.trim());
 
 			const effectiveRole = isHardcodedAdmin ? 'admin' : u.role || 'user';

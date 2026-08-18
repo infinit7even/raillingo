@@ -1,40 +1,40 @@
-import fs from 'node:fs/promises';
-import path from 'node:path';
-import { db } from '$lib/server/db';
-import { cards, notes } from '$lib/server/db/schema';
-import type { Card } from '$lib/types/cards';
-import type { Note } from '$lib/types/notes';
+import fs from "node:fs/promises";
+import path from "node:path";
+import { db } from "$lib/server/db";
+import { cards } from "$lib/server/db/schema";
+import type { Card } from "$lib/types/cards";
 
 /**
- * Estrae tutti i nomi dei file immagine (es. "img-12345.webp") presenti in stringhe, array o contenuti Markdown/HTML.
+ * Estrae tutti i nomi file dei media referenziati in testi o array di immagini
  */
-export function extractMediaFilenames(sources: (string | string[] | undefined | null)[]): Set<string> {
+export function extractMediaFilenames(sources: any): Set<string> {
 	const filenames = new Set<string>();
-	const regex = /(?:\/uploads\/|\/uploads\/trash\/|\/api\/uploads\/)([a-zA-Z0-9_.-]+\.(?:webp|jpg|jpeg|png|gif|svg))/gi;
+	if (!sources) return filenames;
 
-	for (const src of sources) {
+	let items: any[] = [];
+	if (Array.isArray(sources)) {
+		items = sources;
+	} else if (typeof sources === "object") {
+		items = [sources.images, sources.description, sources.content, sources.title, ];
+	} else {
+		items = [sources];
+	}
+
+	for (const src of items) {
 		if (!src) continue;
 
 		if (Array.isArray(src)) {
 			for (const item of src) {
-				if (typeof item === 'string' && item.trim()) {
-					const clean = path.basename(item.split('?')[0].trim());
-					if (clean && !clean.includes('..') && clean.includes('.')) {
-						filenames.add(clean);
-					}
+				if (typeof item === "string") {
+					const match = item.match(/\/uploads\/([^"\s?#]+)/);
+					if (match && match[1]) filenames.add(path.basename(match[1]));
+					else if (item.startsWith("/uploads/")) filenames.add(path.basename(item));
 				}
 			}
-			continue;
-		}
-
-		if (typeof src === 'string') {
-			let match;
-			regex.lastIndex = 0;
-			while ((match = regex.exec(src)) !== null) {
-				const filename = path.basename(match[1].split('?')[0].trim());
-				if (filename && !filename.includes('..') && filename.includes('.')) {
-					filenames.add(filename);
-				}
+		} else if (typeof src === "string") {
+			const matches = src.matchAll(/\/uploads\/([^"\s?#)]+)/g);
+			for (const match of matches) {
+				if (match[1]) filenames.add(path.basename(match[1]));
 			}
 		}
 	}
@@ -42,111 +42,20 @@ export function extractMediaFilenames(sources: (string | string[] | undefined | 
 	return filenames;
 }
 
-export interface MediaItem {
-	id?: string;
-	images?: string[] | null | unknown;
-	description?: string | null;
-	content?: string | null;
-	title?: string | null;
-	fullName?: string | null;
-}
-
 /**
- * Assicura l'esistenza della cartella trash
- */
-async function ensureTrashDirExists(): Promise<string> {
-	const trashDir = path.resolve('static/uploads/trash');
-	try {
-		await fs.mkdir(trashDir, { recursive: true });
-	} catch {}
-	return trashDir;
-}
-
-/**
- * Sposta le immagini associate a una card/nota nella cartella trash
- */
-export async function moveImagesToTrash(item: MediaItem): Promise<void> {
-	const filenames = extractMediaFilenames([item.images as any, item.description || item.content]);
-	if (filenames.size === 0) return;
-
-	const trashDir = await ensureTrashDirExists();
-	const staticUploadDir = path.resolve('static/uploads');
-
-	for (const fn of filenames) {
-		const srcPath = path.join(staticUploadDir, fn);
-		const destPath = path.join(trashDir, fn);
-		try {
-			const stat = await fs.stat(srcPath);
-			if (stat.isFile()) {
-				await fs.rename(srcPath, destPath);
-			}
-		} catch {
-			// File potrebbe non essere presente sul disco o già spostato
-		}
-	}
-}
-
-/**
- * Ripristina le immagini dalla cartella trash alla cartella uploads
- */
-export async function restoreImagesFromTrash(item: MediaItem): Promise<void> {
-	const filenames = extractMediaFilenames([item.images as any, item.description || item.content]);
-	if (filenames.size === 0) return;
-
-	const trashDir = path.resolve('static/uploads/trash');
-	const staticUploadDir = path.resolve('static/uploads');
-
-	for (const fn of filenames) {
-		const srcPath = path.join(trashDir, fn);
-		const destPath = path.join(staticUploadDir, fn);
-		try {
-			const stat = await fs.stat(srcPath);
-			if (stat.isFile()) {
-				await fs.rename(srcPath, destPath);
-			}
-		} catch {
-			// Ignora
-		}
-	}
-}
-
-/**
- * Elimina definitivamente i file immagine di una scheda o nota dal disco
- */
-export async function permanentlyDeleteImages(item: MediaItem): Promise<void> {
-	const filenames = extractMediaFilenames([item.images as any, item.description || item.content]);
-	if (filenames.size === 0) return;
-
-	const staticUploadDir = path.resolve('static/uploads');
-	const trashDir = path.resolve('static/uploads/trash');
-
-	for (const fn of filenames) {
-		const normalPath = path.join(staticUploadDir, fn);
-		const trashPath = path.join(trashDir, fn);
-		await Promise.allSettled([
-			fs.unlink(normalPath).catch(() => {}),
-			fs.unlink(trashPath).catch(() => {})
-		]);
-	}
-}
-
-/**
- * Verifica se un file immagine è ancora referenziato da altre card o altre note nel database.
+ * Verifica se un file immagine è ancora referenziato da altre card nel database.
  */
 export async function isImageReferencedElsewhere(
 	filename: string,
-	options?: { excludeCardId?: string; excludeNoteId?: string }
+	options?: { excludeCardId?: string }
 ): Promise<boolean> {
-	if (!filename || filename.includes('..')) return false;
+	if (!filename || filename.includes("..")) return false;
 
-	const cleanFilename = path.basename(filename.split('?')[0].trim());
+	const cleanFilename = path.basename(filename.split("?")[0].trim());
 	if (!cleanFilename) return false;
 
 	try {
-		const [allCards, allNotes] = await Promise.all([
-			db.select().from(cards),
-			db.select().from(notes)
-		]);
+		const allCards = await db.select().from(cards);
 
 		for (const c of allCards) {
 			if (options?.excludeCardId && c.id === options.excludeCardId) continue;
@@ -154,26 +63,68 @@ export async function isImageReferencedElsewhere(
 				(c.images as string[]) || [],
 				c.description,
 				c.title,
-				c.fullName
+				
 			]);
 			if (cardFiles.has(cleanFilename)) return true;
 		}
-
-		for (const n of allNotes) {
-			if (options?.excludeNoteId && n.id === options.excludeNoteId) continue;
-			const noteFiles = extractMediaFilenames([
-				(n.images as string[]) || [],
-				n.content,
-				n.title
-			]);
-			if (noteFiles.has(cleanFilename)) return true;
-		}
 	} catch (e) {
-		console.error('Errore verifica referenze immagine:', e);
+		console.error("Errore verifica referenze immagine:", e);
 		return true;
 	}
 
 	return false;
+}
+
+/**
+ * Sposta le immagini associate ad una risorsa cestinata nella cartella trash
+ */
+export async function moveImagesToTrash(imageSources: any): Promise<void> {
+	const filenames = extractMediaFilenames(imageSources);
+	const staticUploadDir = path.resolve("static/uploads");
+	const trashDir = path.join(staticUploadDir, "trash");
+
+	await fs.mkdir(trashDir, { recursive: true }).catch(() => {});
+
+	for (const filename of filenames) {
+		const isUsed = await isImageReferencedElsewhere(filename);
+		if (!isUsed) {
+			const src = path.join(staticUploadDir, filename);
+			const dest = path.join(trashDir, filename);
+			await fs.rename(src, dest).catch(() => {});
+		}
+	}
+}
+
+/**
+ * Ripristina le immagini dal cestino alla cartella uploads
+ */
+export async function restoreImagesFromTrash(imageSources: any): Promise<void> {
+	const filenames = extractMediaFilenames(imageSources);
+	const staticUploadDir = path.resolve("static/uploads");
+	const trashDir = path.join(staticUploadDir, "trash");
+
+	for (const filename of filenames) {
+		const src = path.join(trashDir, filename);
+		const dest = path.join(staticUploadDir, filename);
+		await fs.rename(src, dest).catch(() => {});
+	}
+}
+
+/**
+ * Elimina definitivamente i file immagine
+ */
+export async function permanentlyDeleteImages(imageSources: any): Promise<void> {
+	const filenames = extractMediaFilenames(imageSources);
+	const staticUploadDir = path.resolve("static/uploads");
+	const trashDir = path.join(staticUploadDir, "trash");
+
+	for (const filename of filenames) {
+		const isUsed = await isImageReferencedElsewhere(filename);
+		if (!isUsed) {
+			await fs.unlink(path.join(trashDir, filename)).catch(() => {});
+			await fs.unlink(path.join(staticUploadDir, filename)).catch(() => {});
+		}
+	}
 }
 
 /**
@@ -187,25 +138,7 @@ export async function cleanupUnusedImagesOnCardUpdate(oldCard: Card, newCard: Ca
 		if (!newFiles.has(filename)) {
 			const isUsed = await isImageReferencedElsewhere(filename, { excludeCardId: oldCard.id });
 			if (!isUsed) {
-				const staticPath = path.resolve('static/uploads', filename);
-				await fs.unlink(staticPath).catch(() => {});
-			}
-		}
-	}
-}
-
-/**
- * Pulisce i file immagine rimossi durante l'aggiornamento di una Note.
- */
-export async function cleanupUnusedImagesOnNoteUpdate(oldNote: Note, newNote: Note): Promise<void> {
-	const oldFiles = extractMediaFilenames([oldNote.images, oldNote.content]);
-	const newFiles = extractMediaFilenames([newNote.images, newNote.content]);
-
-	for (const filename of oldFiles) {
-		if (!newFiles.has(filename)) {
-			const isUsed = await isImageReferencedElsewhere(filename, { excludeNoteId: oldNote.id });
-			if (!isUsed) {
-				const staticPath = path.resolve('static/uploads', filename);
+				const staticPath = path.resolve("static/uploads", filename);
 				await fs.unlink(staticPath).catch(() => {});
 			}
 		}

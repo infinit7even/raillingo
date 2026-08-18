@@ -67,7 +67,6 @@ export const verification = pgTable('verification', {
 export const cards = pgTable('cards', {
 	id: text('id').primaryKey(),
 	title: text('title').notNull(),
-	fullName: text('full_name'),
 	hasAcronym: boolean('has_acronym').default(false),
 	acronym: text('acronym'),
 	description: text('description').notNull().default(''),
@@ -82,27 +81,6 @@ export const cards = pgTable('cards', {
 	updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
 });
 
-// ─── NOTES SCHEMA (Appunti, Vault & Cestino) ─────────────────────────
-
-export const notes = pgTable('notes', {
-	id: text('id').primaryKey(),
-	userId: text('user_id'),
-	title: text('title').notNull().default('Nuovo Appunto'),
-	content: text('content').notNull().default(''),
-	category: text('category').notNull().default('Normativa RFI'),
-	tags: jsonb('tags').$type<string[]>().default([]),
-	images: jsonb('images').$type<string[]>().default([]),
-	isPinned: boolean('is_pinned').notNull().default(false),
-	isArchived: boolean('is_archived').default(false),
-	archivedAt: timestamp('archived_at', { withTimezone: true }),
-	isPublic: boolean('is_public').notNull().default(false),
-	shareId: text('share_id').unique(),
-	order: integer('order').notNull().default(0),
-	isDeleted: boolean('is_deleted').default(false),
-	deletedAt: timestamp('deleted_at', { withTimezone: true }),
-	createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-	updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
-});
 
 // ─── ADMIN LOGS SCHEMA (Tracciamento Azioni Amministratori) ──────────────
 
@@ -123,5 +101,4 @@ export type User = typeof user.$inferSelect;
 export type Session = typeof session.$inferSelect;
 export type Account = typeof account.$inferSelect;
 export type DbCard = typeof cards.$inferSelect;
-export type DbNote = typeof notes.$inferSelect;
 export type DbAdminLog = typeof adminLogs.$inferSelect;
